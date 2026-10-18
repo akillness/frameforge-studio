@@ -1,4 +1,5 @@
 import { createWorkflowEditor } from './workflow.js';
+import {episodeChanges,changesHtml,historyReason} from './history.js';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -18,6 +19,7 @@ let dirty = false;
 let editRevision = 0;
 let savePending = false;
 let history = [];
+let historyVersion = null;
 let playing = false;
 let playTimer;
 let toastTimer;
@@ -206,6 +208,7 @@ function render() {
     <main class="main" id="main">${renderView()}</main></div></div>`;
   if (view === 'studio') updatePreview();
   if (view === 'workflow') workflowEditor.mount();
+  updateSaveStatus();
 }
 
 function heading(title, description, actions = '') {
@@ -272,7 +275,23 @@ function templatesView() {
   return heading('좋은 형식은, 다음 이야기에도', '드라마, 재연, 정보 전달. 장면 구조를 불러와 나만의 연출로 바꾸세요.', episode ? '<button data-action="save-template">현재 장면을 템플릿으로 저장</button>' : '') + `<div class="cards">${state.templates.map(template => `<article class="panel"><div class="template-art" style="background:${safeColor(template.scenes?.[0]?.background)}">${esc(template.scenes?.[0]?.text || template.name)}</div><div class="template-info"><div class="row between"><h2>${esc(template.name)}</h2><span class="badge">${esc(template.format)}</span></div><p>${esc(categoryNames[template.category] || template.category)} · ${template.scenes?.length || 0} 장면</p><button class="primary small" data-action="apply-template" data-id="${esc(template.id)}">${episode ? '현재 에피소드에 적용' : '에피소드를 먼저 선택하세요'}</button></div></article>`).join('')}</div><p class="footnote">템플릿을 적용하면 현재 장면이 변경됩니다. 적용 전 버전은 제작 히스토리에 남습니다.</p>`;
 }
 function historyView() {
-  return heading('모든 버전에, 제작의 맥락을', '채널, 에피소드, 소재의 변경 이력을 함께 살펴보세요.', '<button data-action="reload-history">↻ 기록 새로고침</button>') + `<section class="panel"><div class="panel-header"><h2>${esc(episode?.title || '선택된 에피소드 없음')}</h2><span class="badge">${history.length} VERSIONS</span></div>${history.length ? history.map(item => { const snapshot = item.snapshot || item.episode || item.data || item; return `<details><summary class="data-row" style="cursor:pointer"><span>버전 ${esc(item.version || snapshot.version || '—')} · ${date(item.createdAt || snapshot.updatedAt)}</span><span class="hint">${esc(item.action || item.reason || '제작 기록')} ＋</span></summary><pre class="history-snapshot">${esc(JSON.stringify(snapshot,null,2))}</pre></details>`; }).join('') : '<div class="empty">스튜디오에서 에피소드를 선택해 버전 기록을 확인하세요.</div>'}</section><section class="panel section-spacer"><div class="panel-header"><h2>워크스페이스 활동</h2></div>${state.events.slice().reverse().slice(0,30).map(event => `<div class="data-row"><div><h3>${esc(event.type || event.action || '작업 기록')}</h3><p>${esc(event.message || event.entityId || event.episodeId || '')}</p></div><span class="hint">${date(event.createdAt)}</span></div>`).join('') || '<div class="empty">아직 기록된 활동이 없습니다.</div>'}</section>`;
+  const selected=history.find(item=>item.version===historyVersion) || history[0];
+  const changes=selected && episode ? episodeChanges(selected.snapshot,episode) : [];
+  return heading('무엇이 바뀌었는지, 한눈에', '이전 버전과 현재 편집본을 비교하고, 필요한 버전을 새 기록으로 복원하세요.', '<button data-action="reload-history">↻ 기록 새로고침</button>') +
+    `<section class="panel history-panel"><div class="panel-header history-header"><div><span class="eyebrow">EPISODE HISTORY</span><h2>${esc(episode?.title || '선택된 에피소드 없음')}</h2></div><span class="badge">${history.length} VERSIONS</span></div><div class="panel-body"><label>기록을 볼 에피소드<select id="history-episode" aria-label="기록을 볼 에피소드">${state.episodes.map(item=>`<option value="${esc(item.id)}" ${item.id===episode?.id?'selected':''}>${esc(state.channels.find(channel=>channel.id===item.channelId)?.name || '')} · ${esc(item.title)}</option>`).join('')}</select></label></div>${selected ? `<div class="history-layout"><nav class="history-versions" aria-label="에피소드 버전">${history.map(item=>`<button data-action="history-version" data-version="${Number(item.version)}" class="history-version ${item.version===selected.version?'selected':''}" aria-pressed="${item.version===selected.version}"><strong>v${Number(item.version)} ${item.version===episode.version?'<span class="badge">현재</span>':''}</strong><span>${esc(historyReason(item.reason))}</span><small>${date(item.createdAt)}</small></button>`).join('')}</nav><div class="history-comparison" data-testid="episode-history-comparison"><div class="row between history-compare-heading"><div><h3>v${selected.version} → ${dirty?'편집 중 초안':`현재 v${episode.version}`}</h3><p class="hint">${changes.length}개 변경 · 장면은 고유 ID로 비교합니다.</p></div><button data-action="restore-episode" data-version="${selected.version}" ${dirty || savePending || selected.version===episode.version?'disabled':''}>이 버전으로 복원</button></div>${dirty?'<p class="wf-review-warning">저장되지 않은 편집을 먼저 저장해야 복원할 수 있습니다. 현재 초안은 유지됩니다.</p><button data-action="save-history-draft">초안 저장 후 비교</button>':''}${changesHtml(changes,esc,`선택 v${selected.version}`,dirty?'현재 초안':`현재 v${episode.version}`)}<details class="history-advanced"><summary>고급 · 원본 기록 JSON</summary><pre class="history-snapshot">${esc(JSON.stringify(selected.snapshot,null,2))}</pre></details><p class="hint">복원은 새 버전을 만듭니다. 이전 기록과 렌더 파일은 그대로 보존됩니다.</p></div></div>`:'<div class="empty">에피소드를 만들면 버전별 변경 기록이 표시됩니다.</div>'}</section><section class="panel section-spacer"><details><summary class="panel-header history-activity-heading"><h2>최근 워크스페이스 활동</h2><span aria-hidden="true">⌄</span></summary>${state.events.slice().reverse().slice(0,15).map(event=>`<div class="data-row"><div><h3>${esc(event.type || '작업 기록')}</h3><p>${esc(event.message || event.entityId || '')}</p></div><span class="hint">${date(event.createdAt)}</span></div>`).join('') || '<div class="empty">아직 기록된 활동이 없습니다.</div>'}</details></section>`;
+}
+
+function restoreEpisode(version) {
+  if (!episode || dirty || savePending) throw new Error('먼저 현재 초안을 저장해 주세요. 저장되지 않은 편집은 보존됩니다.');
+  const entry=history.find(item=>item.version===version);
+  if (!entry) throw new Error('복원할 버전을 다시 선택해 주세요.');
+  const targetId=episode.id,expectedVersion=episode.version,revision=editRevision;
+  openModal(`v${version}을 새 버전으로 복원`, `<p class="hint">현재 v${expectedVersion}의 내용이 아래 선택 버전으로 바뀝니다. 기존 모든 버전은 보존되며, 복원 결과는 새 버전으로 저장됩니다.</p>${changesHtml(episodeChanges(episode,entry.snapshot),esc,`현재 v${expectedVersion}`,`복원할 v${version}`)}`,async()=>{
+    if (episode?.id!==targetId || editRevision!==revision || dirty || episode.version!==expectedVersion) throw new Error('비교 이후 편집본이 변경되었습니다. 복원 내용을 다시 확인해 주세요.');
+    const restored=await post(`/api/episodes/${targetId}/restore`,{version,expectedVersion});
+    if (episode?.id!==targetId || editRevision!==revision || dirty) {await refresh();throw new Error('복원 기록은 저장됐으며, 진행 중인 로컬 편집은 보존했습니다. 최신 기록과 비교해 주세요.');}
+    episode=restored;sceneIndex=0;historyVersion=restored.version;await refresh();await loadHistory();render();toast(`v${version}의 내용을 새 버전 v${restored.version}으로 복원했습니다.`);
+  },'새 버전으로 복원');
 }
 function knowledgeView() {
   const graph = state.graph || {nodes:[],edges:[]};
@@ -296,6 +315,7 @@ function markDirty() {
   updatePreview();
   if ($('#scenes')) $('#scenes').innerHTML = sceneCards();
   if ($('#total-duration')) $('#total-duration').textContent = `총 ${duration()}초`;
+  updateSaveStatus();
 }
 async function save(quiet = false) {
   if (!episode || !dirty) return;
@@ -303,6 +323,7 @@ async function save(quiet = false) {
   const revision = editRevision;
   const targetId = episode.id;
   savePending = true;
+  updateSaveStatus();
   try {
     const updated = await api(`/api/episodes/${targetId}`, {method:'PUT',body:JSON.stringify({title:episode.title,topic:episode.topic,status:episode.status,format:episode.format,scenes:episode.scenes,notes:episode.notes,expectedVersion:episode.version})});
     const index = state.episodes.findIndex(item => item.id === updated.id);
@@ -315,7 +336,12 @@ async function save(quiet = false) {
     episode = updated;
     dirty = false;
     if (!quiet) toast('새 버전으로 저장했습니다.');
-  } finally { savePending = false; }
+  } finally { savePending = false; updateSaveStatus(); }
+}
+function updateSaveStatus() {
+  const status=$('#save-status');
+  if (status) {status.textContent=savePending?'저장 중…':dirty?'저장되지 않은 변경':`버전 ${episode?.version} · 저장됨`;status.className=dirty?'unsaved':'hint';status.setAttribute('role','status');}
+  if ($('#save-button')) $('#save-button').disabled=savePending || !dirty;
 }
 function stopPlayback() { playing = false; clearTimeout(playTimer); if (previewAudio) { previewAudio.pause(); previewAudio=null; } }
 function playNext() {
@@ -368,6 +394,7 @@ function newEpisode(topic = '') {
 async function loadHistory() {
   history = episode ? await api(`/api/episodes/${episode.id}/history`) : [];
   if (!Array.isArray(history)) history = history.history || [];
+  if (!history.some(item=>item.version===historyVersion)) historyVersion=history[0]?.version || null;
 }
 
 async function handleAction(button) {
@@ -382,10 +409,13 @@ async function handleAction(button) {
     episode=clone(result); dirty=false; pendingNarrations.delete(episode.id); sceneIndex=Math.min(sceneIndex,episode.scenes.length-1); render(); toast('현재 초안을 JSON 파일로 보관하고 생성 결과를 불러왔습니다.'); return;
   }
   if (action === 'reload') { location.reload(); }
-  else if (action === 'view') { stopPlayback(); await save(true); view = button.dataset.view; if (view === 'history') await loadHistory(); if (view === 'settings') await loadCommands(); if (view === 'workflow') await workflowEditor.load(); render(); }
+  else if (action === 'history-version') {historyVersion=Number(button.dataset.version);render();}
+  else if (action === 'restore-episode') restoreEpisode(Number(button.dataset.version));
+  else if (action === 'save-history-draft') {await save(true);await loadHistory();render();}
+  else if (action === 'view') { stopPlayback(); if (view==='workflow' && workflowEditor.hasChanges()) await workflowEditor.save(); await save(true); view = button.dataset.view; if (view === 'history') await loadHistory(); if (view === 'settings') await loadCommands(); if (view === 'workflow') await workflowEditor.load(); render(); }
   else if (action === 'new-channel') newChannel();
   else if (action === 'new-episode') newEpisode();
-  else if (action === 'channel') { stopPlayback(); await save(true); channelId = button.dataset.id; episode = clone(state.episodes.find(item => item.channelId === channelId) || null); sceneIndex = 0; view = 'studio'; render(); }
+  else if (action === 'channel') { stopPlayback(); if (workflowEditor.hasChanges()) await workflowEditor.save(); await save(true); channelId = button.dataset.id; episode = clone(state.episodes.find(item => item.channelId === channelId) || null); sceneIndex = 0; view = 'studio'; render(); }
   else if (action === 'episode') { stopPlayback(); await save(true); episode = clone(state.episodes.find(item => item.id === button.dataset.id)); sceneIndex = 0; render(); }
   else if (action === 'scene') { stopPlayback(); sceneIndex = Number(button.dataset.index); render(); }
   else if (action === 'save') { await save(); render(); }
@@ -406,7 +436,7 @@ async function handleAction(button) {
   else if (action === 'refresh-trends') { const result = await post('/api/trends/refresh'); await refresh(); render(); const sources = Array.isArray(result.sources) ? result.sources : Object.values(result.sources || {}); const errors = sources.filter(source => source.error || source.ok === false || source.status === 'error'); toast(errors.length ? `수집 결과를 확인하세요: ${errors.map(source => source.error || source.message || '일부 출처 연결 실패').join(' · ')}` : `${result.trends?.length || 0}개의 트렌드를 수집했습니다.`,errors.length > 0); }
   else if (action === 'trend-episode') { newEpisode(state.trends.find(trend => trend.id === button.dataset.id)?.keyword || ''); }
   else if (action === 'new-reference') { openModal('연출 레퍼런스 추가', `<label>레퍼런스 제목<input name="title" required placeholder="좋은 도입부, 자막, 장면 전환"></label><label>원본 링크<input name="url" type="url" required placeholder="https://..."></label><label>콘텐츠 유형<select name="category">${categoryOptions(activeChannel()?.category)}</select></label><label>참고할 연출 요소<textarea name="notes" placeholder="구도, 템포, 색감 등 참고할 점"></textarea></label>`, async data => { await post('/api/references',{...data,channelId}); await refresh(); render(); toast('레퍼런스를 기록했습니다.'); },'기록'); }
-  else if (action === 'reload-history') { await refresh(); await loadHistory(); render(); }
+  else if (action === 'reload-history') { await refresh(); if (episode && !dirty) episode=clone(state.episodes.find(item=>item.id===episode.id) || episode); await loadHistory(); render(); }
   else if (action === 'refresh-knowledge') { const knowledge = await api('/api/knowledge'); state.graph = knowledge.graph || knowledge; render(); toast('최신 지식을 불러왔습니다.'); }
   else if (action === 'refresh-integrations') { state.integrations = await api('/api/integrations'); render(); toast('연결 상태를 확인했습니다.'); }
 }
@@ -419,6 +449,13 @@ document.addEventListener('click', async event => {
   try { await handleAction(button); }
   catch (error) { toast(error.status === 409 ? '다른 작업에서 이 에피소드가 수정되었습니다. 현재 편집은 보존했습니다. 페이지를 다시 열기 전에 편집 내용을 복사해 주세요.' : error.message,true); }
   finally { busy = false; button.disabled = false; }
+});
+
+document.addEventListener('change',async event=>{
+  if (event.target.id!=='history-episode') return;
+  const targetId=event.target.value;
+  try {await save(true);episode=clone(state.episodes.find(item=>item.id===targetId));channelId=episode.channelId;sceneIndex=0;historyVersion=null;await loadHistory();render();}
+  catch(error) {event.target.value=episode?.id || '';toast(error.message,true);}
 });
 
 document.addEventListener('input', event => {

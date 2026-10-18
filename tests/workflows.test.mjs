@@ -76,6 +76,50 @@ test('workflow CRUD persists versioned snapshots and rejects stale edits', async
   assert.equal(workflows.find((item) => item.id === created.id).name, '수정한 DAG');
 });
 
+test('node labels, notes and bounded stage settings normalize and reject invalid values', () => {
+  const workflow = defaultWorkflow();
+  const normalized = validateWorkflow({ ...workflow, nodes: workflow.nodes.map((node) => ({ ...node, label: '  Custom label  ', notes: '  Editing notes  ', config: node.type === 'trend' ? { query: '  소재  ' } : node.type === 'research' ? { limit: 2 } : node.type === 'review' ? { instructions: '  Check sources  ' } : node.config })) });
+  assert.equal(normalized.nodes[0].label, 'Custom label');
+  assert.equal(normalized.nodes[0].notes, 'Editing notes');
+  assert.deepEqual(normalized.nodes.find((node) => node.type === 'trend').config, { query: '소재' });
+  assert.deepEqual(normalized.nodes.find((node) => node.type === 'review').config, { instructions: 'Check sources' });
+  for (const patch of [{ label: 'x'.repeat(81) }, { notes: 'x'.repeat(2001) }, { config: { query: 'x'.repeat(201) } }]) {
+    assert.throws(() => validateWorkflow({ ...workflow, nodes: workflow.nodes.map((node) => node.type === 'trend' ? { ...node, ...patch } : node) }), { status: 400 });
+  }
+  for (const limit of [0, 51, 1.5, '2', null]) assert.throws(() => validateWorkflow({ ...workflow, nodes: workflow.nodes.map((node) => node.type === 'research' ? { ...node, config: { limit } } : node) }), { status: 400 });
+  assert.throws(() => validateWorkflow({ ...workflow, nodes: workflow.nodes.map((node) => node.type === 'review' ? { ...node, config: { instructions: 'x'.repeat(2001) } } : node) }), { status: 400 });
+});
+
+test('saved node settings filter trends, bound research and retain instructions in the review checkpoint', async (t) => {
+  const f = await setup(t, { integrations: { ...baseIntegrations, fetchTrends: async () => ({ trends: [{ keyword: '검증 소재', source: 'Fixture RSS', url: 'https://example.com/a' }, { keyword: '무관 키워드', source: 'Fixture RSS', url: 'https://example.com/b' }], sources: [] }) } });
+  for (let i = 0; i < 3; i++) await f.request('/api/references', 'POST', { title: `Source ${i}`, category: 'information', url: `https://example.com/${i}`, channelId: f.episode.channelId });
+  const nodes = f.workflow.nodes.map((node) => ({ ...node, label: `Edited ${node.type}`, notes: 'Saved node note', config: node.type === 'trend' ? { query: '소재' } : node.type === 'research' ? { limit: 2 } : node.type === 'review' ? { instructions: 'Check source attribution and subtitles' } : node.config }));
+  const saved = await (await f.request(`/api/workflows/${f.workflow.id}`, 'PUT', { ...f.workflow, nodes, expectedVersion: 1 })).json();
+  assert.equal(saved.nodes[0].label, 'Edited trend');
+  assert.equal(saved.nodes[0].notes, 'Saved node note');
+  assert.equal((await f.request(`/api/workflows/${f.workflow.id}`, 'PUT', { ...saved, expectedVersion: 1 })).status, 409);
+  const started = await (await f.request(`/api/workflows/${f.workflow.id}/run`, 'POST', { episodeId: f.episode.id })).json();
+  const run = await waitRun(f, started.id);
+  assert.equal(run.status, 'awaiting_review');
+  assert.deepEqual(run.nodeRuns.find((node) => node.type === 'trend').output.trends.map((trend) => trend.keyword), ['검증 소재']);
+  assert.equal(run.nodeRuns.find((node) => node.type === 'research').output.references.length, 2);
+  assert.equal(run.nodeRuns.find((node) => node.type === 'review').output.instructions, 'Check source attribution and subtitles');
+  assert.equal(run.workflowSnapshot.nodes[0].label, 'Edited trend');
+  const history = await (await f.request(`/api/workflows/${f.workflow.id}/history`)).json();
+  assert.equal(history[0].snapshot.nodes[0].notes, 'Saved node note');
+});
+
+test('a trend filter with no matches fails downstream stages rather than fabricating research', async (t) => {
+  const f = await setup(t);
+  const nodes = f.workflow.nodes.map((node) => node.type === 'trend' ? { ...node, config: { query: 'does-not-match' } } : node);
+  await f.request(`/api/workflows/${f.workflow.id}`, 'PUT', { ...f.workflow, nodes, expectedVersion: 1 });
+  const started = await (await f.request(`/api/workflows/${f.workflow.id}/run`, 'POST', { episodeId: f.episode.id })).json();
+  const run = await waitRun(f, started.id);
+  assert.equal(run.status, 'failed');
+  assert.equal(run.nodeRuns[0].status, 'failed');
+  assert.equal(f.renderCount(), 0);
+});
+
 test('DAG executes trend, research, storyboard mutation and shared render queue then awaits human review', async (t) => {
   const f = await setup(t);
   await f.request('/api/references', 'POST', { title: '근거 자료', category: 'information', url: 'https://example.com/reference', channelId: f.episode.channelId, notes: '검증된 테스트 참고 자료' });

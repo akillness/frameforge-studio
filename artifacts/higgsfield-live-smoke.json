@@ -1,0 +1,38 @@
+{
+  "observedAt": "2026-10-18T09:54:32.769Z",
+  "provider": "higgsfield",
+  "transport": "official-cli-via-authenticated-host-bridge",
+  "runtime": "Docker production",
+  "entrypoint": "actual project MCP stdio -> authenticated FrameForge HTTP API",
+  "officialMcpOAuth": "pending",
+  "developerApiAuthentication": "not configured",
+  "model": "seedance_2_5",
+  "params": {
+    "duration": 4,
+    "resolution": "1080p",
+    "aspect_ratio": "9:16"
+  },
+  "estimatedCredits": 64,
+  "generationStatus": "completed",
+  "appliedVersion": 3,
+  "asset": {
+    "type": "video/mp4",
+    "kind": "video",
+    "size": 824923,
+    "sha256": "1b8aae0485b8aa1c2974c680c9cb068f467c0ea60ff3d66c000dcee0be622239",
+    "width": 1080,
+    "height": 1920,
+    "duration": 4.042
+  },
+  "render": {
+    "status": "completed",
+    "sha256": "b5a89ccb9bd4df4aedac5826245d37d5d2ebbbce0090efddb6477b293ca927ba",
+    "outputUrl": "/api/exports/035098b2-fce4-4411-9766-5cc4f921503a.mp4"
+  },
+  "assertions": {
+    "realPaidProvider": true,
+    "localMediaHashMatches": true,
+    "versionedApply": true,
+    "dockerRender": true
+  }
+}

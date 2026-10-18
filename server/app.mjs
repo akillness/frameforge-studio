@@ -6,8 +6,10 @@ import { join, resolve, relative, extname, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Store, entity, starterScene } from './store.mjs';
 import { HttpError, object, text, optionalText, choice, url, scenes, formats, episodePatch } from './validation.mjs';
-import { WorkflowEngine } from './workflows.mjs';
+import { WorkflowEngine, validateWorkflow } from './workflows.mjs';
 import { NarrationQueue, createSpeechProvider } from './narration.mjs';
+import { GenerationQueue } from './generations.mjs';
+import { createGenerationProvider } from './generation-provider.mjs';
 
 const PUBLIC_DIR = fileURLToPath(new URL('../public/', import.meta.url));
 const MAX_JSON = 1024 * 1024;
@@ -85,8 +87,16 @@ function safeError(error) {
   return error instanceof HttpError ? error.message : 'Operation failed. Check the local service logs.';
 }
 
+async function generationCall(operation) {
+  try { return await operation(); }
+  catch (error) {
+    if (error instanceof HttpError) throw error;
+    throw new HttpError([400,422,429,503].includes(error.statusCode) ? error.statusCode : 502, 'Higgsfield request failed. Check the selected model, parameters and provider connection.');
+  }
+}
+
 /** Dependency overrides are for local tests; production imports actual adapters. */
-export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), loginToken = process.env.LOGIN_TOKEN || '', publicOrigin = process.env.PUBLIC_ORIGIN, integrations, renderer, speech } = {}) {
+export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), loginToken = process.env.LOGIN_TOKEN || '', publicOrigin = process.env.PUBLIC_ORIGIN, integrations, renderer, speech, generation, generationOptions } = {}) {
   if (loginToken && (typeof loginToken !== 'string' || loginToken.length < 16)) throw new Error('LOGIN_TOKEN must contain at least 16 characters');
   if (publicOrigin) {
     const parsed = new URL(publicOrigin);
@@ -190,7 +200,9 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     return { trends: captured, sources: result.sources };
   }
 
-  const workflows = new WorkflowEngine({ store, fetchTrends: refreshTrends, runAgent: async (...args) => (await adapter()).runAgent(...args), render: (episode) => enqueueRender(episode, true), validateAssets });
+  const generationProvider = generation || createGenerationProvider();
+  const generations = new GenerationQueue({ store, provider: generationProvider, ...generationOptions });
+  const workflows = new WorkflowEngine({ store, fetchTrends: refreshTrends, runAgent: async (...args) => (await adapter()).runAgent(...args), render: (episode) => enqueueRender(episode, true), validateAssets, generations });
   const speechProvider = speech || createSpeechProvider();
   const narration = new NarrationQueue({ store, ...speechProvider });
 
@@ -248,12 +260,16 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       return json(response, 200, { authenticated: false }, { 'Set-Cookie': 'frameforge_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0' });
     }
     if (request.method === 'GET' && path === '/api/state') {
-      const state = Object.fromEntries(['channels', 'episodes', 'templates', 'trends', 'references', 'jobs', 'events', 'workflows', 'workflowRuns', 'narrationJobs'].map((kind) => [kind, store.list(kind)]));
+      const state = Object.fromEntries(['channels', 'episodes', 'templates', 'trends', 'references', 'jobs', 'events', 'workflows', 'workflowRuns', 'narrationJobs', 'generationJobs'].map((kind) => [kind, store.list(kind)]));
       const { nodes, edges } = store.knowledge();
       return json(response, 200, { ...state, integrations: await integrationStatus(), graph: { nodes, edges } });
     }
     if (request.method === 'GET' && path === '/api/integrations') return json(response, 200, await integrationStatus());
     if (request.method === 'GET' && path === '/api/speech/voices') return json(response, 200, await speechProvider.listVoices());
+    if (request.method === 'GET' && path === '/api/generation/status') return json(response, 200, await generationProvider.capability());
+    if (request.method === 'GET' && path === '/api/generation/models') return json(response, 200, await generationCall(() => requestUrl.searchParams.has('model') ? generationProvider.modelSchema(requestUrl.searchParams.get('model')) : generationProvider.models()));
+    const generationGet = /^\/api\/generations\/([^/]+)$/.exec(path);
+    if (request.method === 'GET' && generationGet) return json(response, 200, generations.get(generationGet[1]));
     if (request.method === 'GET' && path === '/api/knowledge') return json(response, 200, store.knowledge());
     if (request.method === 'GET' && path === '/api/commands') return json(response, 200, store.list('commands'));
     if (request.method === 'GET' && path === '/api/workflows') return json(response, 200, store.list('workflows'));
@@ -272,12 +288,36 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     }
     if (['POST', 'PUT'].includes(request.method) && path.startsWith('/api/')) {
       const body = await readJson(request);
+      if (request.method === 'POST' && path === '/api/generation/estimate') return json(response, 200, await generationCall(() => generationProvider.estimate(body)));
+      const generationStart = /^\/api\/episodes\/([^/]+)\/generations$/.exec(path);
+      if (request.method === 'POST' && generationStart) return json(response, 202, await generations.start(generationStart[1], body));
+      const generationApply = /^\/api\/generations\/([^/]+)\/apply$/.exec(path);
+      if (request.method === 'POST' && generationApply) return json(response, 200, generations.apply(generationApply[1], body));
+      const generationRecover = /^\/api\/generations\/([^/]+)\/recover$/.exec(path);
+      if (request.method === 'POST' && generationRecover) return json(response, 202, generations.recover(generationRecover[1]));
+      const generationNormalize = /^\/api\/generations\/([^/]+)\/normalize$/.exec(path);
+      if (request.method === 'POST' && generationNormalize) return json(response, 200, await generations.normalize(generationNormalize[1]));
       const write = (kind, fields) => json(response, 201, store.create(kind, fields));
+      const restoreRoute = /^\/api\/(episodes|workflows)\/([^/]+)\/restore$/.exec(path);
+      if (request.method === 'POST' && restoreRoute) {
+        for (const key of ['version', 'expectedVersion']) if (!Number.isInteger(body[key]) || body[key] < 1) throw new HttpError(400, `Restore requires a positive ${key}`);
+        const [, kind, id] = restoreRoute;
+        const history = kind === 'episodes' ? store.history(id) : store.workflowHistory(id);
+        const entry = history.find((item) => item.version === body.version);
+        if (!entry) throw new HttpError(404, 'Requested history version not found');
+        const reason = `restore:v${body.version}`;
+        if (kind === 'episodes') {
+          const patch = episodePatch({ ...entry.snapshot, status: 'draft' });
+          if (patch.scenes) validateAssets(patch.scenes);
+          return json(response, 200, store.updateEpisode(id, patch, body.expectedVersion, reason));
+        }
+        return json(response, 200, store.updateWorkflow(id, validateWorkflow(entry.snapshot), body.expectedVersion, reason));
+      }
       if (request.method === 'POST' && path === '/api/workflows') return json(response, 201, workflows.create(body));
       const workflowRoute = /^\/api\/workflows\/([^/]+)(?:\/(run)|\/runs\/([^/]+)\/(cancel))?$/.exec(path);
       if (workflowRoute) {
         if (request.method === 'PUT' && !workflowRoute[2] && !workflowRoute[3]) return json(response, 200, workflows.update(workflowRoute[1], body));
-        if (request.method === 'POST' && workflowRoute[2]) return json(response, 202, workflows.start(workflowRoute[1], body.episodeId));
+        if (request.method === 'POST' && workflowRoute[2]) return json(response, 202, workflows.start(workflowRoute[1], body.episodeId, { allowGeneration: body.allowGeneration }));
         if (request.method === 'POST' && workflowRoute[4]) return json(response, 200, workflows.cancel(workflowRoute[1], workflowRoute[3]));
       }
       if (request.method === 'POST' && path === '/api/channels') {
@@ -349,7 +389,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
   });
   server.requestTimeout = 120_000;
   server.headersTimeout = 15_000;
-  server.on('close', () => { closing = true; narration.close(); workflows.close(); store.close(); });
+  server.on('close', () => { closing = true; narration.close(); generations.close(); workflows.close(); store.close(); });
   return server;
 }
 

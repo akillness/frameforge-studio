@@ -1,0 +1,81 @@
+{
+  "verifiedAt": "2026-10-18T10:13:57.399322+00:00",
+  "base": "https://desktop-qrf3t5t.taila2003e.ts.net",
+  "scope": "Existing paid test generation; preservation-only render; no new generation or review approval",
+  "checks": {
+    "httpsSecureSessionCookie": true,
+    "latestFrontendServedOverHttps": true,
+    "paidGenerationPersistedAfterRebuild": true,
+    "importedAssetStillAttached": true,
+    "importedAssetHashMatches": true,
+    "originalProviderAssetPreserved": true,
+    "browserCompatibleNormalizedVideo": true,
+    "generationApplyHasBeforeAfterHistory": true,
+    "importedGeneratedVideoActuallyPlays": true,
+    "generationBeforeAfterReadableInHistory": true,
+    "preservationWorkflowRenderedWithoutGeneration": true,
+    "finalRenderActuallyPlays": true,
+    "finalRenderHashMatches": true,
+    "savedAssetAndSceneIdsPreservedByRerender": true,
+    "selectedNodeTabsWorkOnProduction": true,
+    "desktopNoOverflow": true,
+    "mobileNoOverflow": true,
+    "mobileHistoryNoOverflow": true,
+    "awaitingReviewNotApproved": true,
+    "noNewGenerationSubmission": true,
+    "zeroPageErrors": true
+  },
+  "screenshots": [
+    "docs/assets/higgsfield-live/paper-city-frame.png",
+    "docs/assets/higgsfield-live/editor-desktop.png",
+    "docs/assets/higgsfield-live/generation-history-desktop.png",
+    "docs/assets/higgsfield-live/workflow-desktop.png",
+    "docs/assets/higgsfield-live/workflow-mobile.png",
+    "docs/assets/higgsfield-live/generation-history-mobile.png"
+  ],
+  "workflowId": "0b58145d-1970-48e0-bf4a-24fb2daa7cc0",
+  "runId": "8c5d1000-5735-4156-b698-2485702a36d9",
+  "deployedAssetSha256": {
+    "app.js": "b6100c29ab83f766d6b8ad7f7165a6db78cb855ac46516fe0dbe90bfa8be20f0",
+    "workflow.js": "bc4c007761681bbe88e96b27fb071a9d063360a5c7e9d5d5183a62f4592857b1",
+    "workflow.css": "53bf22c3d6f1fdb71c04b47a406e6f88a8a582cdbd7791213eefd1a4614aef59",
+    "history.js": "64c6df913542b193083791512727d608d154b8d75796b6759101cdcc6ae45a78"
+  },
+  "importedPlayback": {
+    "duration": 4.041667,
+    "advancedTo": 0.16889,
+    "played": true,
+    "videoWidth": 1080,
+    "videoHeight": 1920
+  },
+  "renderPlayback": {
+    "duration": 4.063333,
+    "advancedTo": 0.183152,
+    "played": true,
+    "videoWidth": 1080,
+    "videoHeight": 1920
+  },
+  "desktopViewport": {
+    "width": 1440,
+    "documentWidth": 1440
+  },
+  "mobileViewport": {
+    "width": 390,
+    "documentWidth": 390
+  },
+  "status": "passed",
+  "secureCookie": true,
+  "episodeId": "6999b84b-99d9-419a-bbc8-dbf9b2044786",
+  "generationJobId": "b657e519-8c70-4c2e-9aff-f4a7ea7b0f1b",
+  "generationAppliedVersion": 5,
+  "renderedVersion": 6,
+  "assetSha256": "cdd5e2e6249c01d7e9400bfb1731ae273d609f0fd718008f1a1b407384f5aa30",
+  "originalAssetSha256": "1b8aae0485b8aa1c2974c680c9cb068f467c0ea60ff3d66c000dcee0be622239",
+  "renderSha256": "e0017c2a2fa2faf57e30fc72c4f4d98ece4fc63358e5af8ec8c2201c202f5e9e",
+  "renderUrl": "/api/exports/bd0b765a-694d-471a-b75f-9059c09f1a4e.mp4",
+  "reviewState": "awaiting_review",
+  "newGenerationSubmissions": 0,
+  "readOnlyReverification": false,
+  "preservationOnlyRerun": true,
+  "pageErrors": []
+}

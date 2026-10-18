@@ -1,5 +1,5 @@
 {
-  "observedAt": "2026-10-18T08:05:12.303435+00:00",
+  "observedAt": "2026-10-18T10:18:18.885396+00:00",
   "mexVersion": "0.8.3",
   "setup": {
     "command": "mex setup --cli (Codex choice 6)",
@@ -9,40 +9,40 @@
     "automaticGround": "not executed by provider; real CLI symbol fingerprints used directly"
   },
   "graphRebuild": {
-    "command": "mex graph rebuild --json",
     "state": "succeeded",
-    "filesIndexed": 47,
-    "nodesCreated": 1138,
-    "edgesCreated": 3526,
+    "filesIndexed": 70,
+    "nodesCreated": 1735,
+    "edgesCreated": 5331,
+    "command": "mex graph rebuild --json",
+    "observedAt": "2026-10-18T10:17:49.888Z",
     "parseHealth": {
-      "total": 47,
-      "ok": 47,
+      "total": 70,
+      "ok": 70,
       "partial": 0,
       "failed": 0,
       "failedPaths": [],
       "failedPathsTruncated": false
     },
-    "observedAt": "2026-10-18T08:03:33.996Z",
-    "receipt": ".mex/rebuild-receipt.json"
+    "receipt": "artifacts/mex-higgsfield-rebuild.json"
   },
   "check": {
     "command": "mex check",
     "driftScore": 100,
     "errors": 0,
     "warnings": 0,
-    "filesChecked": 14,
+    "filesChecked": 15,
     "graphFreshAtCheck": true,
     "sourceChanges": 0,
     "receipt": ".mex/check-receipt.txt",
-    "observedAt": "2026-10-18T08:05:12.303435+00:00",
-    "currentHead": "5bdb2a13e47b32e738c8d30266a709cc7c2ae781",
-    "indexedHead": "5bdb2a13e47b32e738c8d30266a709cc7c2ae781"
+    "observedAt": "2026-10-18T10:18:18.885396+00:00",
+    "currentHead": "e0689f66d5bd0c3ad394e8cd935b1c1627178e5a",
+    "indexedHead": "e0689f66d5bd0c3ad394e8cd935b1c1627178e5a"
   },
   "knowledgeCheck": {
     "command": "python .mex/verify-knowledge.py",
     "exitCode": 0,
-    "wikiPages": 8,
-    "okfAtoms": 6,
+    "wikiPages": 9,
+    "okfAtoms": 7,
     "agentContracts": 5,
     "immutableSources": 1,
     "errors": []
@@ -59,11 +59,11 @@
   ],
   "sharingBoundary": "Authored context is in working tree; graph databases remain checkout-local and ignored.",
   "harnessVersioning": {
-    "observedAt": "2026-10-18T07:58:10.160Z",
-    "currentVersion": "1.3.0",
-    "previousVersion": "1.2.0",
-    "archive": "harness/archive/1.2.0",
-    "bundleSha256": "e35a843fc3ba44bc24ce6368cb59f3c16c3df9e53b513e927df98a394c935186",
+    "observedAt": "2026-10-18T09:51:24.784Z",
+    "currentVersion": "1.4.0",
+    "previousVersion": "1.3.0",
+    "archive": "harness/archive/1.3.0",
+    "bundleSha256": "c664977c244b63f87ca8c0ea1f925b0db657fb6b7d358f4c8580c52df9ae45f4",
     "verifyCommand": "node scripts/version-harness.mjs verify",
     "verifyExitCode": 0,
     "testsCommand": "node --test tests/harness.test.mjs",
@@ -335,7 +335,7 @@
   },
   "wikiLint": {
     "project": {
-      "pages": 8,
+      "pages": 9,
       "missingPaths": 0,
       "brokenLinks": 0,
       "orphans": 0
@@ -346,5 +346,15 @@
       "brokenLinks": 0,
       "orphans": 0
     }
+  },
+  "higgsfieldEvidence": {
+    "receipt": "artifacts/higgsfield-live-smoke.json",
+    "realPaidGeneration": true,
+    "officialMcpOAuth": "pending",
+    "developerApiKey": "not configured",
+    "browser": "artifacts/higgsfield-browser-smoke.json",
+    "usability": "artifacts/usability-browser-smoke.json",
+    "normalization": "artifacts/higgsfield-normalization.json",
+    "persistence": "artifacts/higgsfield-persistence.json"
   }
 }

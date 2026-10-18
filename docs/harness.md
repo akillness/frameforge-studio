@@ -1,5 +1,13 @@
 # Production harness
 
+## Editing history and Higgsfield generation
+
+Version 1.4.0 adds readable episode/workflow comparisons, new-version restoration and per-node settings/results/history. Restoring requires the current expectedVersion and preserves every previous snapshot. Draft undo/redo is distinct from persisted versions.
+
+The optional `generate` stage runs after storyboard and before render. It uses the selected Higgsfield transport's real model schema; default graphs omit paid generation. The run requires explicit `allowGeneration:true`. Persist the client requestId, provider request ID, model, output hash and resulting episode version. Never recreate an uncertain submission. Recover polling/import failures against the existing provider ID; validate local media before explicit version-bound application. If the episode changed, retain generated output for later apply.
+
+Official remote MCP OAuth, Developer API credentials and the logged-in official CLI are distinct. The project MCP uses the authenticated studio API to retain production lineage. Check [connection evidence](higgsfield-integration.md); configured endpoints are not verified provider authentication. No credentials belong in role prompts, graphs, snapshots or Git.
+
 FrameForge uses a supervisor-led pipeline with independent review. Editable file-based roles live in `.claude/agents/`; production consumers first resolve `harness/manifest.json` and read the selected immutable bundle. Codex, jeo and jeopi can read the same contracts through the root `AGENTS.md`. These files define reusable work contracts. They do not prove that every runtime or external provider is connected. See [versioning and rollback](harness-versioning.md).
 
 ```mermaid

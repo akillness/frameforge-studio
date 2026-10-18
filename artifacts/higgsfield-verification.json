@@ -1,0 +1,66 @@
+{
+  "verifiedAt": "2026-10-18T10:17:05.867352+00:00",
+  "checks": {
+    "npm run check": {
+      "exitCode": 0,
+      "modules": 50
+    },
+    "npm test": {
+      "exitCode": 0,
+      "passed": 129,
+      "failed": 0,
+      "skipped": 0
+    },
+    "npm run test:render": {
+      "exitCode": 0,
+      "actualFfmpeg": true,
+      "width": 1080,
+      "height": 1920,
+      "duration": 2
+    },
+    "git diff --check": {
+      "exitCode": 0
+    },
+    "production browser": {
+      "passed": 21,
+      "failed": 0,
+      "actualDecodedWidth": 1080,
+      "actualDecodedHeight": 1920,
+      "pageErrors": 0
+    },
+    "production Docker restart": {
+      "passed": true,
+      "originalEpisodes": 5,
+      "originalMediaHashes": 16,
+      "providerJobs": 1,
+      "originalAndRenderedHashesPreserved": true
+    }
+  },
+  "independentReview": {
+    "method": "ECC implementation and independent native-subagent review",
+    "resolved": [
+      "Developer API catalog loading",
+      "existing paid-job recovery",
+      "known pre-submission rejection classification",
+      "real application session authentication for project MCP",
+      "preview media stacking",
+      "HEVC 10-bit browser incompatibility with preserved original",
+      "bounded local conversion and explicit apply concurrency"
+    ],
+    "jev": "artifacts/jev-higgsfield-review.json",
+    "jevAuthority": "proposal_only, unvalidated advisory"
+  },
+  "evidence": [
+    "artifacts/usability-browser-smoke.json",
+    "artifacts/higgsfield-live-smoke.json",
+    "artifacts/higgsfield-browser-smoke.json",
+    "artifacts/higgsfield-normalization.json",
+    "artifacts/higgsfield-persistence.json"
+  ],
+  "limits": [
+    "Official remote Higgsfield MCP OAuth remains pending",
+    "Developer REST credential absent; authenticated live generation uses official CLI",
+    "No channel publication or owner creative approval",
+    "Local browser alternate API and recovery paths use explicitly labeled HTTP fixtures"
+  ]
+}

@@ -8,6 +8,17 @@ const now = () => new Date().toISOString();
 export const entity = (fields) => ({ id: randomUUID(), createdAt: now(), updatedAt: now(), ...fields });
 export const starterScene = (title, text, background = '#282544') => ({ id: randomUUID(), title, text, duration: 5, background, kind: 'title', layout: 'center', narration: '' });
 
+const generationOutput = (upload) => ({ uploadId: upload.id, url: upload.url, type: upload.type, kind: upload.kind, size: upload.size, sha256: upload.sha256, width: upload.width, height: upload.height, ...(upload.duration ? { duration: upload.duration } : {}), ...(upload.codecName ? { codecName: upload.codecName, pixelFormat: upload.pixelFormat, audioCodec: upload.audioCodec } : {}), ...(upload.variant ? { variant: upload.variant } : {}), ...(upload.normalized ? { normalized: true, original: upload.provenance.original } : {}) });
+
+function validateGenerationUploads(id, uploads) {
+  if (!Array.isArray(uploads) || !uploads.length || uploads.length > 8 || !uploads.some((upload) => upload.variant !== 'original') || uploads.filter((upload) => upload.variant !== 'original').length > 4) throw new HttpError(400, 'Generation requires 1–4 outputs and at most 4 preserved originals');
+  const ids = new Set();
+  for (const upload of uploads) {
+    if (!upload || !/^[a-f0-9-]{36}$/.test(upload.id || '') || ids.has(upload.id) || !new RegExp(`^${upload.id}\\.(png|jpg|webp|mp4|mov)$`).test(upload.filename || '') || upload.url !== `/api/uploads/${upload.filename}` || !/^(image|video)\//.test(upload.type || '') || !/^[a-f0-9]{64}$/.test(upload.sha256 || '') || upload.generationJobId !== id) throw new HttpError(400, 'Invalid generated upload');
+    ids.add(upload.id);
+  }
+}
+
 export class Store {
   constructor(dataDir) {
     this.dataDir = dataDir;
@@ -116,6 +127,76 @@ export class Store {
     const entry = { id: randomUUID(), episodeId: episode.id, version: episode.version, reason, createdAt: now(), snapshot: episode };
     this.db.prepare('INSERT INTO history(episode_id,version,data) VALUES (?,?,?)').run(episode.id, episode.version, JSON.stringify(entry));
   }
+
+  completeGeneration(id, uploads) {
+    validateGenerationUploads(id, uploads);
+    this.db.exec('BEGIN IMMEDIATE');
+    let next;
+    try {
+      const job = this.get('generationJobs', id);
+      if (job.status !== 'downloading' || !job.providerRequestId) throw new HttpError(409, 'Generation is not awaiting imported output');
+      if (uploads.some((upload) => this.db.prepare('SELECT 1 FROM entities WHERE kind=? AND id=?').get('uploads', upload.id))) throw new HttpError(409, 'Generated upload already exists');
+      for (const upload of uploads) this.save('uploads', upload);
+      next = { ...job, status: 'completed', outputs: uploads.filter((upload) => upload.variant !== 'original').map(generationOutput), completedAt: now(), updatedAt: now() };
+      this.save('generationJobs', next);
+      this.record('generation.completed', { entityId: job.episodeId, jobId: id, uploadIds: uploads.map((upload) => upload.id) });
+      this.db.exec('COMMIT');
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+    try { this.exportKnowledge(); } catch (error) { console.error('Generation imported; knowledge export refresh failed:', error.message); }
+    return next;
+  }
+
+  normalizeGeneration(id, expectedOutputs, replacements) {
+    validateGenerationUploads(id, replacements.map((item) => item.browser));
+    this.db.exec('BEGIN IMMEDIATE');
+    let next;
+    try {
+      const job = this.get('generationJobs', id);
+      if (job.status !== 'completed' || JSON.stringify(job.outputs) !== JSON.stringify(expectedOutputs)) throw new HttpError(409, 'Generation output changed during normalization');
+      const byOriginal = new Map();
+      for (const { original, browser } of replacements) {
+        const stored = this.get('uploads', original.id);
+        if (byOriginal.has(original.id) || stored.generationJobId !== id || stored.sha256 !== original.sha256 || !job.outputs.some((output) => output.uploadId === original.id && output.sha256 === original.sha256) || browser.provenance?.original?.sha256 !== original.sha256 || browser.provenance?.original?.uploadId !== original.id || this.db.prepare('SELECT 1 FROM entities WHERE kind=? AND id=?').get('uploads', browser.id)) throw new HttpError(409, 'Original generation identity changed during normalization');
+        this.save('uploads', { ...stored, codecName: original.codecName, pixelFormat: original.pixelFormat, audioCodec: original.audioCodec, variant: 'original' });
+        this.save('uploads', browser);
+        byOriginal.set(original.id, browser);
+      }
+      const previousApplication = job.applied ? [{ version: job.appliedVersion, sceneId: job.appliedSceneId, appliedAt: job.appliedAt, outputs: job.outputs }] : [];
+      next = { ...job, outputs: job.outputs.map((output) => byOriginal.has(output.uploadId) ? generationOutput(byOriginal.get(output.uploadId)) : output), priorApplications: [...(job.priorApplications || []), ...previousApplication], applied: false, appliedVersion: undefined, appliedSceneId: undefined, appliedAt: undefined, normalizedAt: now(), updatedAt: now() };
+      this.save('generationJobs', next);
+      this.record('generation.normalized', { entityId: job.episodeId, jobId: id, originalIds: [...byOriginal.keys()], uploadIds: replacements.map((item) => item.browser.id) });
+      this.db.exec('COMMIT');
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+    try { this.exportKnowledge(); } catch (error) { console.error('Generation normalized; knowledge export refresh failed:', error.message); }
+    return next;
+  }
+
+  applyGeneration(id, expectedVersion, sceneId) {
+    if (!Number.isInteger(expectedVersion) || expectedVersion < 1) throw new HttpError(400, 'Applying generation requires a positive expectedVersion');
+    this.db.exec('BEGIN IMMEDIATE');
+    let episode, applied;
+    try {
+      const job = this.get('generationJobs', id);
+      if (job.status !== 'completed') throw new HttpError(409, 'Generation output is not ready to apply');
+      if (job.applied) throw new HttpError(409, 'Generation output has already been applied');
+      if (job.sceneId !== sceneId) throw new HttpError(400, 'Generation belongs to a different scene');
+      const previous = this.get('episodes', job.episodeId);
+      if (previous.version !== expectedVersion) throw new HttpError(409, `Episode changed: current version is ${previous.version}. Reload before applying generation.`);
+      if (!previous.scenes.some((scene) => scene.id === sceneId)) throw new HttpError(409, 'The generation target scene no longer exists');
+      const output = job.outputs[0], upload = this.get('uploads', output.uploadId);
+      if (upload.generationJobId !== id || upload.url !== output.url || upload.sha256 !== output.sha256 || !['image', 'video'].includes(upload.kind)) throw new HttpError(409, 'Generation output identity does not match its imported upload');
+      const scenes = validateScenes(previous.scenes.map((scene) => scene.id === sceneId ? { ...scene, kind: upload.kind, assetUrl: upload.url, trimStart: 0, ...(upload.kind === 'video' ? { duration: Math.max(0.5, Math.min(120, upload.duration)) } : {}) } : scene));
+      episode = { ...previous, scenes, status: 'draft', version: previous.version + 1, updatedAt: now() };
+      this.save('episodes', episode);
+      this.snapshot(episode, `generation:${id}`);
+      applied = { ...job, applied: true, appliedVersion: episode.version, appliedSceneId: sceneId, appliedAt: now(), updatedAt: now() };
+      this.save('generationJobs', applied);
+      this.record('generation.applied', { entityId: previous.id, jobId: id, sceneId, version: episode.version });
+      this.db.exec('COMMIT');
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+    try { this.exportKnowledge(); } catch (error) { console.error('Generation committed; knowledge export refresh failed:', error.message); }
+    return { job: applied, episode };
+  }
   history(id) { this.get('episodes', id); return this.db.prepare('SELECT data FROM history WHERE episode_id=? ORDER BY version DESC').all(id).map((row) => JSON.parse(row.data)); }
 
   workflowSnapshot(workflow, reason) {
@@ -125,7 +206,7 @@ export class Store {
 
   workflowHistory(id) { this.get('workflows', id); return this.db.prepare('SELECT data FROM workflow_history WHERE workflow_id=? ORDER BY version DESC').all(id).map((row) => JSON.parse(row.data)); }
 
-  updateWorkflow(id, patch, expectedVersion) {
+  updateWorkflow(id, patch, expectedVersion, reason = 'edited') {
     this.db.exec('BEGIN IMMEDIATE');
     let next;
     try {
@@ -133,8 +214,8 @@ export class Store {
       if (expectedVersion !== undefined && previous.version !== expectedVersion) throw new HttpError(409, `Workflow changed: current version is ${previous.version}. Reload before saving.`);
       next = { ...previous, ...patch, version: previous.version + 1, updatedAt: now() };
       this.save('workflows', next);
-      this.workflowSnapshot(next, 'edited');
-      this.record('workflows.updated', { entityId: id, version: next.version });
+      this.workflowSnapshot(next, reason);
+      this.record('workflows.updated', { entityId: id, version: next.version, reason });
       this.db.exec('COMMIT');
     } catch (error) { this.db.exec('ROLLBACK'); throw error; }
     return next;
@@ -189,6 +270,13 @@ export class Store {
     }
     for (const reference of this.list('references')) add(reference.id, 'reference', reference.title, reference.notes || reference.category, reference.updatedAt, reference.channelId ? [reference.channelId] : [], reference.url);
     for (const trend of this.list('trends')) add(trend.id, 'trend', trend.keyword, `Captured from ${trend.source}; ${trend.capturedAt}`, trend.updatedAt, [], trend.url);
+    for (const job of this.list('generationJobs')) {
+      add(job.id, 'generation', `Higgsfield · ${job.model}`, `${job.transport}; ${job.status}; source episode v${job.episodeVersion}${job.applied ? `; applied v${job.appliedVersion}` : '; not applied'}`, job.updatedAt, [job.episodeId]);
+      for (const output of job.outputs || []) {
+        add(output.uploadId, 'asset', `Generated ${output.kind}`, `Higgsfield ${job.model}; SHA-256 ${output.sha256}`, job.completedAt || job.updatedAt, [job.id, job.episodeId, ...(output.original ? [output.original.uploadId] : [])], output.url);
+        if (output.original) add(output.original.uploadId, 'asset', 'Original provider output', `Preserved original; SHA-256 ${output.original.sha256}; ${output.original.codecName || 'unknown codec'}`, job.completedAt || job.updatedAt, [job.id, job.episodeId], output.original.url);
+      }
+    }
     return { nodes, edges, atoms };
   }
 

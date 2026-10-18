@@ -37,6 +37,9 @@ flowchart LR
   R --> S[대본 · Codex/JEO/JEOPI]
   S --> B[스토리보드 · 버전 저장]
   B --> V[렌더 · FFmpeg MP4]
+  B -. 선택 생성 .-> H[Higgsfield · API / MCP]
+  H --> A[검사된 미디어 · 버전 적용]
+  A --> V
   V --> Q[영상 재생 · 승인 / 수정 요청]
   B -. 기록 .-> E[채널 / 소재 / 에피소드]
   E --> K[OKF + LLM Wiki]
@@ -45,7 +48,27 @@ flowchart LR
 
 노드를 이동하고 입·출력 포트를 연결하거나 연결 폼을 사용합니다. 확대·축소, 전체 보기, 자동 배치, 노드 설정, 저장·불러오기, 실행·취소와 노드별 실행 결과를 제공합니다. 저장 시 순환, 잘못된 포트, 끊어진 필수 경로를 거부합니다.
 
-현재 실행기는 `trend`, `research` 선택 노드와 `script → storyboard → render → review` 필수 노드로 구성됩니다. 각 종류는 한 번씩 사용하며 4–6개 노드를 지원합니다. 범용 ComfyUI 플러그인 런타임이나 무제한 모델 그래프가 아닙니다. `script`에서 에이전트와 연출 프롬프트 또는 **저장된 편집본 사용**을 선택합니다. 완료된 MP4는 `awaiting_review`로 멈추고 웹 검토 후 `approved` 또는 `changes_requested`로 기록됩니다. 승인해도 자동 공개되지 않습니다. 실행 시 워크플로우와 에피소드 스냅샷을 저장하고, 수정 충돌·실패·중단을 기록합니다.
+현재 실행기는 `trend`, `research` 선택 노드와 `script → storyboard → render → review` 필수 노드로 구성됩니다. 선택 `generate` 노드를 storyboard와 render 사이에 연결할 수 있습니다. 각 종류는 한 번씩 사용하며 4–7개 노드를 지원합니다. 범용 ComfyUI 플러그인 런타임이나 무제한 모델 그래프가 아닙니다. `script`에서 에이전트와 연출 프롬프트 또는 **저장된 편집본 사용**을 선택합니다. 완료된 MP4는 `awaiting_review`로 멈추고 웹 검토 후 `approved` 또는 `changes_requested`로 기록됩니다. 승인해도 자동 공개되지 않습니다. 실행 시 워크플로우와 에피소드 스냅샷을 저장하고, 수정 충돌·실패·중단을 기록합니다.
+
+## 노드 편집·이력·Higgsfield
+
+노드를 선택하면 **설정 / 실행 결과 / 변경 기록** 탭에서 이름·메모와 종류별 설정을 수정하고 실행 당시 버전과 결과를 확인합니다. 초안 Undo/Redo와 저장 상태를 제공하며, 에피소드·워크플로우의 이전 버전은 필드별 비교 후 **새 버전으로 복원**합니다.
+
+Higgsfield 노드는 모델 목록과 실제 스키마를 불러와 프롬프트·대상 장면·생성 설정을 편집합니다. 생성 포함 실행에는 비용 확인 단계가 있습니다. 결과는 다운로드·미디어 검사·해시 기록 후 장면에 적용하며, 편집 충돌이나 조회 실패가 나면 기존 유료 결과를 보존합니다. **상태 다시 확인**은 기존 작업만 조회합니다.
+
+[연결 및 인증 구분](docs/higgsfield-integration.md) · [Aside 딥리서치](docs/usability-higgsfield-research.md) · [Jev 실제 API 리뷰](artifacts/jev-higgsfield-review.json)
+
+![노드별 변경 기록과 버전 비교](docs/assets/usability/workflow-history-desktop.png)
+
+[에피소드 비교 화면](docs/assets/usability/history-desktop.png) · [모바일 생성 설정](docs/assets/usability/generation-mobile.png) · [사용성 23개 검증](artifacts/usability-browser-smoke.json)
+
+**실제 Higgsfield 생성 검증:** 프로젝트 MCP → 인증된 서비스 API → Docker/호스트 공식 CLI → Seedance 2.5 1080×1920 영상(4.042초) → 로컬 미디어 해시 확인 → 에피소드 v3 적용 → Docker MP4 렌더를 완료했습니다. [실행 영수증](artifacts/higgsfield-live-smoke.json). 견적은 64크레딧이며 실제 청구 명세 검증과는 구분합니다. 공식 원격 MCP는 OAuth 대기, Developer API는 키 설정 대기입니다.
+
+HEVC·10비트 생성 영상은 원본과 SHA-256을 보존하고 브라우저용 H.264 8비트/AAC 사본으로 변환합니다. 이미 받은 영상도 제공자 재호출 없이 변환할 수 있으며, 새 사본 적용은 버전 충돌을 검사합니다. [실제 원본 보존·변환 검증](artifacts/higgsfield-normalization.json).
+
+![실제 Higgsfield 생성 영상을 편집기에 적용한 화면](docs/assets/higgsfield-live/editor-desktop.png)
+
+[운영 HTTPS 재생 검사 21개](artifacts/higgsfield-browser-smoke.json)와 [Docker 재시작 후 기존 에피소드·미디어 보존](artifacts/higgsfield-persistence.json)을 확인했습니다. 영상 프레임 디코딩과 1440/390px 화면을 검사했으며 추가 생성·자동 게시 없이 저장된 편집본을 렌더했습니다.
 
 ## 실행
 
@@ -104,12 +127,12 @@ HTTPS 프록시를 사용할 때 `.env`에 `PUBLIC_ORIGIN=https://서비스주�
 
 ## 하니스 최신 버전과 아카이브
 
-활성 버전은 `harness/manifest.json`이 가리키는 **1.3.0**입니다. Docker 음성 브리지와 데이터 이전 검증 계약을 반영했고, 이전 **1.0.0·1.1.0·1.2.0** 번들은 `harness/archive/`에 원본 그대로 보존됩니다. 원본 `.claude/agents/`, `.claude/skills/` 및 `docs/harness.md`를 수정한 다음 새 버전을 승격합니다. 보존된 버전 파일은 직접 수정하지 않습니다.
+활성 버전은 `harness/manifest.json`이 가리키는 **1.4.0**입니다. 버전 비교·복원과 Higgsfield 생성·복구 계약을 반영했고, 이전 **1.0.0·1.1.0·1.2.0·1.3.0** 번들은 `harness/archive/`에 원본 그대로 보존됩니다. 원본 `.claude/agents/`, `.claude/skills/` 및 `docs/harness.md`를 수정한 다음 새 버전을 승격합니다. 보존된 버전 파일은 직접 수정하지 않습니다.
 
 ```powershell
 node scripts/version-harness.mjs verify
 # 다음 계약을 수정한 뒤 새 버전으로 승격
-node scripts/version-harness.mjs promote 1.4.0
+node scripts/version-harness.mjs promote 1.5.0
 node scripts/version-harness.mjs rollback 1.3.0
 ```
 
@@ -148,7 +171,7 @@ python scripts/production-browser-smoke.py
 
 자동 테스트는 인증·CSRF·경로 격리·업로드·버전 충돌·실행 실패·DAG·취소·재시작 복구·하니스 아카이브를 확인합니다. 실제 검증은 MP4 출력/다운로드, 영상 트리밍과 비무음 오디오, Google RSS, 각 에이전트 응답 및 브라우저 편집 흐름을 별도로 기록합니다. 테스트용 주입 렌더러와 실제 FFmpeg 결과를 구분합니다.
 
-Naver의 전체 실시간 순위를 자동 수집한다고 주장하지 않습니다. YouTube 채널 등록과 제작 관리를 지원하며 채널 생성·OAuth 게시 API는 포함하지 않습니다. 게시 전 YouTube Studio에서 검토합니다. 음성은 Windows 로컬 TTS 또는 업로드 자산을 사용합니다. 에이전트 채팅은 스토리보드 작성이며 이미지/배우 영상 생성 서비스의 유료 호출은 연결하지 않았습니다.
+Naver의 전체 실시간 순위를 자동 수집한다고 주장하지 않습니다. YouTube 채널 등록과 제작 관리를 지원하며 채널 생성·OAuth 게시 API는 포함하지 않습니다. 게시 전 YouTube Studio에서 검토합니다. 음성은 Windows 로컬 TTS 또는 업로드 자산을 사용합니다. 에이전트 채팅은 스토리보드를 작성하며, Higgsfield 생성 노드와 프로젝트 MCP는 이미지·영상 생성 작업을 에피소드에 연결합니다. Developer API 키와 공식 MCP OAuth는 별도이며, 현재 실제 인증 경로는 호스트의 공식 CLI입니다. 참고 미디어 업로드·배우/음성 참조·배치 생성은 이 연결 범위에 포함하지 않습니다.
 
 장면 편집기의 미리보기는 레이아웃 확인용이며 MP4와 자막 크기가 완전히 일치하지 않습니다. 최종 자막·음성·길이는 완성 영상 검토 플레이어에서 확인합니다.
 

@@ -1,0 +1,17 @@
+{
+  "verifiedAt": "2026-10-18T10:15:53.529Z",
+  "runtime": "production Docker after image replacement/restart",
+  "originalEntitiesPreserved": true,
+  "originalEpisodeCount": 5,
+  "originalMediaHashesVerified": 16,
+  "originalVersionsUnchanged": true,
+  "generationPreserved": true,
+  "generationAssetHashesVerified": 1,
+  "generationAppliedVersion": 5,
+  "generationKnowledgeLineage": true,
+  "providerRequests": 1,
+  "providerResubmittedByRestart": false,
+  "originalProviderAssetHashPreserved": true,
+  "finalRenderHashPreserved": true,
+  "finalRenderVersion": 6
+}

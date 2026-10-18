@@ -25,7 +25,9 @@ Then read this file fully before doing anything else in this session.
 
 ## Current Project State
 
-**Implemented:** browser video editor, channel/episode/template history, typed production DAG, per-node execution history, FFmpeg rendering, token-authenticated agent/speech bridge, queued Korean narration and exact-version/job/hash review decisions.
+**Implemented:** browser video editor, channel/episode/template history, typed production DAG, per-node execution history, FFmpeg rendering, token-authenticated agent/speech bridge, queued Korean narration and exact-version/job/hash review decisions. The latest usability slice adds readable scene/node/edge comparisons, version-preserving restore, draft undo/redo and dirty guards, editable node labels/notes/settings, and selected-node input/output inspection. Optional Higgsfield generation has an explicit spending confirmation and a separate version-checked apply action.
+
+**Higgsfield evidence:** `artifacts/higgsfield-live-smoke.json` records one completed paid Seedance 2.5 generation through actual project MCP stdio -> authenticated FrameForge API -> Docker -> authenticated Windows host CLI. The imported video is 1080x1920, 4.042 seconds, 824923 bytes; its local SHA-256 matches the receipt. Application produced episode version 3 and a completed Docker render. The estimate was 64 credits; it is not a measured final charge. Live CLI discovery returned 108 models. The separate official remote MCP still needs OAuth; Developer REST credentials are absent. Do not claim those two connections are authenticated.
 
 **Current deployment (2026-10-18):** the local Docker engine 29.5.2 is healthy. The production service now runs in a non-root/read-only Linux container on host loopback port 4310 behind the unchanged private Tailscale HTTPS URL. Windows hosts the authenticated agent/SAPI bridge. Earlier WSLService Stop Pending and privilege failures are historical; they no longer describe the current deployment. Preserve original host data and the migration snapshot.
 
@@ -35,15 +37,17 @@ Then read this file fully before doing anything else in this session.
 
 **Browser:** `artifacts/docker-production-browser-smoke.json` verifies staged narration controls, actual audio/video playback, persisted changes_requested review, zero page errors and no 1440/390px horizontal overflow. Its loopback HTTP cookie is not Secure; the private Tailscale HTTPS deployment has separate verification. `artifacts/docker-live-production-browser-smoke.json` verifies the production Tailscale HTTPS URL: Secure cookie, actual audio/video playback, persisted exact-hash changes_requested review, zero page errors and no 1440/390px overflow. `artifacts/live-container-smoke.json` verifies production restart persistence. Original IDs/versions and 10 media hashes were rechecked after that restart in `artifacts/docker-migration.json`. Preview caption scale can differ from final MP4.
 
-**Verification:** root local checks passed 77 tests and syntax checks for 38 files. Earlier successful CI39095384742 applies to c56cc4a3e706b978a1f091a3079fb289a59fcb36, not automatically to this Docker migration revision. New source CI and publication require their own receipts.
+**Verification:** the latest root local run passed 127 tests. `artifacts/usability-browser-smoke.json` passed 23 checks in disposable local records at 1440/390px with no page errors. Direct-API catalog and paid-output recovery browser checks used intercepted HTTP fixtures; that receipt did not submit generation. The separate live Higgsfield receipt proves the real paid generation/import/apply/render path. Earlier Docker/CI receipts remain scoped to their recorded source; current-source CI, final rebuild persistence and live HTTPS usability need their own receipts.
 
-**Harness:** immutable current 1.3.0 adds container host speech transport and safe migration/restart verification; 1.2.0 is archived and all prior bundle bytes remain intact. Resolve `harness/manifest.json` rather than guessing the active version.
+**Harness:** immutable current 1.4.0 covers node/history editing and Higgsfield submission, recovery and apply boundaries; 1.3.0 is archived. Resolve `harness/manifest.json` and verify the selected bundle rather than guessing its version. Earlier bundle bytes remain immutable.
 
 **Jev:** real TypeSafe API advisory evidence exists in `artifacts/jev-live-review.json`; current Docker work has `artifacts/jev-docker-plan.json` and final `artifacts/jev-docker-review.json` (real jev-1.13.0 API, 649 ms, proposal_only, unvalidated tier). The isolated frameforge-codex profile uses a pinned runtime. Model proposals are not automatic authority, and no global hook/catalog changes are implied. Keep all credential values outside tracked memory.
 
-**Boundaries:** no automatic channel ownership/OAuth verification or publication API; Naver collection remains manual. No new paid TTS/generative-video provider is connected. Automated review decisions are test evidence, not owner acceptance. SAPI remains Windows-hosted, never native Linux synthesis.
+The newer `artifacts/jev-higgsfield-review.json` records a real jev-1.13.0 API response in 525 ms, still `proposal_only` with an unvalidated tier. Its proposal predates the final live-generation receipt and does not grant execution authority.
 
-**Memory:** Final refresh: MEX 47 files, 1138 nodes/3526 edges, check100/100 with zero source changes; Graphify 1005 nodes/1961 whole-record-unique edges from 148 source files, zero duplicates and portable source paths. No semantic enrichment or provider calls were used. Read `.mex/verification.json` and `.graphify/verification.json` for exact receipts. Structural graphs are not semantic truth or execution evidence.
+**Boundaries:** no automatic channel ownership/OAuth verification or publication API; Naver collection remains manual. Paid Higgsfield video generation is now exercised through the official CLI transport; official remote MCP OAuth and Developer REST authentication remain separate unfinished connections. Hosted paid TTS is not connected. Automated review decisions are test evidence, not owner acceptance. SAPI remains Windows-hosted, never native Linux synthesis.
+
+**Memory:** the earlier Docker-only refresh recorded MEX 47 files, 1138 nodes/3526 edges and Graphify 1005 nodes/1961 unique edges. These counts predate the usability/Higgsfield changes and must not be presented as current freshness evidence. Read `.mex/verification.json` and `.graphify/verification.json` after the next refresh. Structural graphs are not semantic truth or execution evidence. The current narrative is in `llm-wiki/wiki/reports/usability-higgsfield-2026-10-18.md`.
 
 ## Routing Table
 
@@ -78,6 +82,11 @@ For every task, follow this loop:
 |---|---|
 | Episode version edits | [episode-edits](patterns/episode-edits.md) |
 | Provider availability or failures | [provider-evidence](patterns/provider-evidence.md) |
+| Higgsfield job recovery and apply conflicts | [generation-recovery](patterns/generation-recovery.md) |
 | Wiki and graph updates | [knowledge-refresh](patterns/knowledge-refresh.md) |
 
 **Docker release CI:** code commit `0f59211601cba11c7885ed2d28a76581cc695bad` passed [run 39110221470](https://github.com/akillness/frameforge-studio/actions/runs/39110221470): 77 regressions, immutable harness verification, Linux Docker build/render/exact-review/restart persistence. Receipts: `artifacts/docker-ci-run.json` and `artifacts/docker-ci-smoke.json`. Later documentation-only commits do not replace this tested source identity.
+
+
+
+**Current structural refresh:** MEX 70 files, 1735 nodes/5331 edges, check100 with zero drift; Graphify 1274 nodes/2858 unique edges from 183 source files. Wiki structural validation: 9 pages/7 OKF atoms, zero errors. These are structure checks, not semantic or provider authentication claims.

@@ -1,0 +1,86 @@
+{
+  "observedAt": "2026-10-18T09:45:58.364Z",
+  "runtimeMode": "advisory",
+  "hostAuthorizationGranted": false,
+  "task": "Review FrameForge node-editor usability and Higgsfield generation implementation for missing safeguards or practical integration risks. User authorized ECC/Jev review and implementation.",
+  "proposal": {
+    "history": "Readable scene/node/edge diffs by stable IDs, dirty guards, 40-step draft undo/redo, optimistic expectedVersion, restore creates a new snapshot and preserves old history/reviews.",
+    "generation": "Optional storyboard->generate->render node; defaults exclude paid generation; explicit allowGeneration required. Official REST Key credential or existing authenticated official CLI via token-protected Windows bridge. Live model catalog/schema, flat primitive prompt-only input, one provider output. Persist client-idempotent intent before submit; ambiguous submission never auto retries. On restart known providerID status polling only. Schema validation before submit. Download only exact verified providerCDN HTTPS hosts, public IPv4 DNS pinned, boundedbytes/time, no redirects. FFprobe standalone localdemuxer, SHA256, registered localassets, atomic exact-version scene apply. Stale edit retains paid output.",
+    "mcp": "Official https://mcp.higgsfield.ai/mcp repo config OAuthpending, publicmetadata verified; separate projectstdio MCP calls sameauthenticatedFrameForgeAPI. Never exportCLIcredentials or inventvendor toolnames.",
+    "evidence": "Existing auth and 108models/estimate checked with real CLI. 116 tests passed including media probe/import and queue restart/CAS/rollback. New workflow consent+generation apply integration3tests passed. Browser/Docker/livepaidgeneration checks next. No claim DeveloperREST authenticated untilkeyprovided."
+  },
+  "review": {
+    "verdict": "proposal_only",
+    "reason": "Below threshold or unfavorable in: evidence_supports (ans=yes, conf=0.69); unrelated_changes (ans=no, conf=0.73); needs_clarification (ans=no, conf=0.69)",
+    "failingQuestions": [
+      "evidence_supports (ans=yes, conf=0.69)",
+      "unrelated_changes (ans=no, conf=0.73)",
+      "needs_clarification (ans=no, conf=0.69)"
+    ],
+    "threshold": 0.8,
+    "mode": "jev",
+    "backend": {
+      "kind": "api",
+      "driver": "typesafe",
+      "model": "jev-1.13.0",
+      "configuredModel": "jev-latest",
+      "tier": "unvalidated",
+      "attestation": null
+    },
+    "attempted": [
+      "api"
+    ],
+    "receiptVersion": 2,
+    "receipt": "f841b89be89ff24d9f904b5e29265576110904fcefec99e8f9e0045a050916cd",
+    "review": {
+      "model": "jev-1.13.0",
+      "answers": {
+        "addresses_task": {
+          "probability": 0.83,
+          "answer": "yes",
+          "confidence": 0.83
+        },
+        "evidence_supports": {
+          "probability": 0.69,
+          "answer": "yes",
+          "confidence": 0.69
+        },
+        "unrelated_changes": {
+          "probability": 0.27,
+          "answer": "no",
+          "confidence": 0.73
+        },
+        "needs_clarification": {
+          "probability": 0.31,
+          "answer": "no",
+          "confidence": 0.69
+        }
+      },
+      "usage": {
+        "input_tokens": 710,
+        "output_tokens": 80
+      },
+      "requests": 1,
+      "source": "api",
+      "backend": {
+        "kind": "api",
+        "driver": "typesafe",
+        "model": "jev-1.13.0",
+        "configuredModel": "jev-latest",
+        "tier": "unvalidated",
+        "attestation": null
+      },
+      "attempted": [
+        "api"
+      ],
+      "attemptDetails": [
+        {
+          "kind": "api",
+          "error": null
+        }
+      ],
+      "error": null,
+      "latencyMs": 525
+    }
+  }
+}

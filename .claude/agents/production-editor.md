@@ -22,6 +22,7 @@ The speech bridge accepts only text, voice and rate, returns bounded raw WAV byt
 After a data migration, confirm the supervisor's snapshot/import receipt preserves episode/workflow IDs, versions, history and reviewed export hashes. Verify persistence after container restart before treating the migrated service as ready. Keep original data and partial failed imports; never reset a database or volume to hide a migration failure.
 Listen to the final candidate and inspect captions, timing and audio levels. Preserve the exact render job ID, episode version, export URL and SHA-256 for review. A technical smoke-test decision is not owner acceptance.
 ## Error Handling
+For Higgsfield, preserve the generation job and provider request IDs. Inspect model, status and imported output before applying to the exact scene/version. Recover existing paid jobs through the recovery endpoint rather than rerunning the workflow. A stale apply keeps the media candidate. Historical restore produces a new version and must not erase intervening work.
 On stale version, stop the patch and report the current version. On uncertain render status, reconcile the existing job before retrying.
 ## Team Communication
 Report to supervisor and hand exact candidate evidence to reviewer. Cannot approve its own candidate or publish it.

@@ -2,18 +2,18 @@
 
 The editable role contracts live in `.claude/` and their workflow documentation in `docs/`. A release snapshots that exact file inventory into `harness/versions/<version>/`. Production agents resolve `harness/manifest.json` first and consume its referenced bundle; editable authoring files may contain changes for the next version.
 
-`1.0.0` is the initial linear supervisor production contract. `1.1.0` adds the executable node-graph contract and workflow/version handoffs. `1.2.0` adds native Windows narration handoffs, the `existing` saved-edit preservation mode and exact-version/job/hash review decisions. `1.3.0` adds authenticated Linux-container-to-Windows speech transport and verified snapshot/import migration with restart checks. The actual pointer and bundle manifests are authoritative; there are no fabricated releases predating 1.0.0. Existing external shorts harness repositories are historical references only; their credentials, account receipts and media are not imported.
+`1.0.0` is the initial linear supervisor production contract. `1.1.0` adds the executable node-graph contract and workflow/version handoffs. `1.2.0` adds native Windows narration handoffs, the `existing` saved-edit preservation mode and exact-version/job/hash review decisions. `1.3.0` adds authenticated Linux-container-to-Windows speech transport and verified snapshot/import migration with restart checks. `1.4.0` adds version comparison/restoration, per-node editing and idempotent Higgsfield generation/recovery contracts. The actual pointer and bundle manifests are authoritative; there are no fabricated releases predating 1.0.0. Existing external shorts harness repositories are historical references only; their credentials, account receipts and media are not imported.
 
 ```sh
 node scripts/version-harness.mjs verify
 # After real role or workflow changes and review:
-node scripts/version-harness.mjs promote 1.4.0
+node scripts/version-harness.mjs promote 1.5.0
 # Explicitly select a previously created, checksum-valid bundle:
 node scripts/version-harness.mjs rollback 1.0.0
 node --test tests/harness.test.mjs
 ```
 
-The 1.4.0 command illustrates the next promotion; it does not assert that release exists. Promotion rejects an already active or previously created version. With 1.3.0 selected, the archived 1.2.0, 1.1.0 and 1.0.0 bundles remain checksum-valid and readable. Their files are not edited to adopt newer contracts.
+The 1.5.0 command illustrates the next promotion; it does not assert that release exists. Promotion rejects an already active or previously created version. With 1.4.0 selected, the archived 1.3.0, 1.2.0, 1.1.0 and 1.0.0 bundles remain checksum-valid and readable. Their files are not edited to adopt newer contracts.
 
 Each bundle has a `bundle.json` listing each source path, byte count and SHA-256. The current pointer includes the bundle manifest's SHA-256. `verify` rejects modified content, extra files, symbolic links and mismatched identities.
 

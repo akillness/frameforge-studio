@@ -23,4 +23,9 @@ last_updated: 2026-10-18
 - Restrict uploaded media demuxers and protocols at decode/probe time. A DASH playlist disguised as MP4 can otherwise reference a file outside uploads despite a safe top-level path; executable regression tests exercise the escape and all 11 allowed formats.
 - Use a distinct `HOST_AGENT_BRIDGE_URL` Compose override so host loopback configuration cannot redirect container traffic to itself.
 - Migrate consistent read-only SQLite snapshots into new empty volumes with hash/identity checks and explicit non-root ownership. Preserve original data and failed outputs rather than resetting storage.
+- Restore episode/workflow snapshots as new current versions with required optimistic concurrency; preserve identity, old snapshots and review records. Episode restoration returns to draft, and comparisons use stable IDs rather than array positions.
+- Persist a client idempotency key and normalized request identity before provider submission. Unknown submission outcomes require provider-history inspection; never retry creation automatically. Known provider IDs can resume status polling/import through the recovery action without a new paid request.
+- Keep generation output import separate from episode apply. Register probed local assets with SHA-256 and provenance, retain paid candidates after stale edits, and atomically apply only to the intended surviving scene at the supplied current version.
+- Bound automatic polling to 30 minutes. Recovery resets the polling window, preserves the provider ID and checks transport/capacity. A changed transport must not reinterpret a request identifier.
+- Keep vendor MCP OAuth, Developer REST credentials, official CLI account login and the project-owned MCP bridge distinct. A configured connection or model catalog is weaker evidence than a completed generation/import/apply receipt.
 These are the current implementation rationale and boundaries, not historical claims about unrecorded decisions.

@@ -1,5 +1,9 @@
 # Knowledge maintenance log
 
+- 2026-10-18: After the usability/Higgsfield report update, project wiki lint passed with 9 pages, zero missing paths, zero broken links and zero orphan pages. Recorded runtime generation/asset-to-episode OKF relationships separately from source graph freshness. Canonical changes are in the working tree and require commit/push to share.
+
+- 2026-10-18: Filed [[wiki/reports/usability-higgsfield-2026-10-18]] and refreshed production-history/MEX context for readable comparisons, new-version restore, node settings and Higgsfield idempotent generation/recovery/apply. Read the completed real provider receipt: project MCP -> authenticated API -> Docker/host CLI produced a 1080x1920, 4.042-second video, verified its hash, applied version 3 and rendered MP4. Kept vendor MCP OAuth pending and Developer REST credentials absent; separated 23 local browser checks (including explicit HTTP fixtures) from live generation. Recorded 127 root tests, harness 1.4.0/archived 1.3.0 and Jev proposal_only. Historical Docker/CI receipts remain intact; source graphs and current-source CI require their own final refresh/receipt.
+
 - 2026-10-18: Exact-source CI39095384742 succeeded on c56cc4a3e706b978a1f091a3079fb289a59fcb36: 58 tests, 33-file syntax check, harness verification, Linux Docker render and exact-output review/restart persistence. Updated current CI state; preserved earlier receipts and local Windows WSL/host deployment boundaries. No graph rebuild followed metadata-only updates.
 
 - 2026-10-18: Final source graphs refreshed: MEX 37 files, 960 nodes/3098 edges, check 100/100 fresh; Graphify 839 nodes/1687 unique edges/124 source files, duplicate count zero and graph hash verified. Final browser evidence confirms actual media playback and persistent exact-hash review; noted preview/final caption scale difference. No additional model enrichment ran.

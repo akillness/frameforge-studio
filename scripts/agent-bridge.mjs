@@ -9,6 +9,7 @@ import { randomUUID, createHash, timingSafeEqual } from 'node:crypto';
 import { execute } from '../server/process.mjs';
 import { HttpError, scenes as validateScenes } from '../server/validation.mjs';
 import { listSpeechVoices, synthesizeSpeech, speechRequest, MAX_SPEECH_BYTES } from '../server/narration.mjs';
+import { createHiggsfieldCli } from '../server/higgsfield-cli.mjs';
 
 const main = process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
 if (main) { try { process.loadEnvFile('.env'); } catch {} }
@@ -76,9 +77,9 @@ async function readRequest(req, limit) {
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { throw new HttpError(400, 'Malformed JSON body'); }
 }
 
-export function createAgentBridge({ token = process.env.AGENT_BRIDGE_TOKEN, listVoices = listSpeechVoices, synthesize = synthesizeSpeech, agentRunner = run, speechRoot = path.resolve('data/bridge-speech-work') } = {}) {
+export function createAgentBridge({ token = process.env.AGENT_BRIDGE_TOKEN, listVoices = listSpeechVoices, synthesize = synthesizeSpeech, agentRunner = run, speechRoot = path.resolve('data/bridge-speech-work'), generation = createHiggsfieldCli() } = {}) {
   if (typeof token !== 'string' || token.length < 24) throw new Error('Configure a private AGENT_BRIDGE_TOKEN (24+ characters) first');
-  let busy = false, speechBusy = false, voicesPending, voicesCached, voicesExpire = 0;
+  let busy = false, speechBusy = false, generationBusy = false, voicesPending, voicesCached, voicesExpire = 0;
   const getVoices = () => {
     if (voicesCached && Date.now() < voicesExpire) return Promise.resolve(voicesCached);
     if (!voicesPending) voicesPending = Promise.resolve().then(listVoices).then(result => {
@@ -92,6 +93,20 @@ export function createAgentBridge({ token = process.env.AGENT_BRIDGE_TOKEN, list
     res.setHeader('X-Content-Type-Options', 'nosniff');
     try {
       if (!timingSafeEqual(hash(req.headers.authorization || ''), hash(`Bearer ${token}`))) { res.writeHead(401); return res.end('{"error":"Unauthorized"}'); }
+      const requestUrl = new URL(req.url, 'http://localhost');
+      if (req.method === 'GET' && requestUrl.pathname === '/generation/status') return res.end(JSON.stringify(await generation.capability()));
+      if (req.method === 'GET' && requestUrl.pathname === '/generation/models') return res.end(JSON.stringify(requestUrl.searchParams.has('model') ? await generation.modelSchema(requestUrl.searchParams.get('model')) : await generation.models()));
+      const generationJob = /^\/generation\/jobs\/([A-Za-z0-9_-]+)$/.exec(requestUrl.pathname);
+      if (req.method === 'GET' && generationJob) return res.end(JSON.stringify(await generation.status(generationJob[1])));
+      if (req.method === 'POST' && ['/generation/create', '/generation/estimate'].includes(requestUrl.pathname)) {
+        if (generationBusy) throw Object.assign(new HttpError(429, 'Another Higgsfield submission is in progress'), { code: 'RATE_LIMITED' });
+        generationBusy = true;
+        try {
+          const body = await readRequest(req, 24576);
+          if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => !['model','prompt','params'].includes(key))) throw new HttpError(400, 'Invalid generation request');
+          return res.end(JSON.stringify(await generation[requestUrl.pathname.endsWith('/create') ? 'create' : 'estimate'](body)));
+        } finally { generationBusy = false; }
+      }
       if (req.method === 'GET' && req.url === '/status') return res.end(JSON.stringify({ agents: availability(), busy, speechBusy }));
       if (req.method === 'GET' && req.url === '/speech/voices') return res.end(JSON.stringify(await getVoices()));
       if (req.method === 'POST' && req.url === '/speech/synthesize') {
@@ -137,8 +152,9 @@ export function createAgentBridge({ token = process.env.AGENT_BRIDGE_TOKEN, list
     } catch (error) {
       console.error('Bridge operation failed:', error instanceof HttpError ? `HTTP ${error.status}` : 'provider error');
       if (res.headersSent || res.destroyed) return res.destroy();
-      res.writeHead(error instanceof HttpError ? error.status : 502);
-      res.end(JSON.stringify({ error: error instanceof HttpError ? error.message : 'Bridge execution failed. Check host provider availability and local logs.' }));
+      res.writeHead(error instanceof HttpError ? error.status : [400,422,429,503].includes(error.statusCode) ? error.statusCode : 502);
+      const code = ['INVALID_INPUT','UNSUPPORTED','NOT_CONFIGURED','AUTH_REQUIRED','RATE_LIMITED','AMBIGUOUS_SUBMISSION','PROVIDER_UNAVAILABLE'].includes(error.code) ? error.code : undefined;
+      res.end(JSON.stringify({ error: error instanceof HttpError ? error.message : 'Bridge execution failed. Check host provider availability and local logs.', ...(code ? { code } : {}) }));
     }
   });
   server.requestTimeout = 20000;

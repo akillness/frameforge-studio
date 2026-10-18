@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "higgsfield-official": {
+      "type": "http",
+      "url": "https://mcp.higgsfield.ai/mcp"
+    },
+    "frameforge-higgsfield": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["--env-file=.env", "scripts/higgsfield-mcp.mjs"]
+    }
+  }
+}

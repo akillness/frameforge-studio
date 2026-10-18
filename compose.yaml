@@ -11,6 +11,7 @@ services:
       AGENT_BRIDGE_URL: ${HOST_AGENT_BRIDGE_URL:-http://host.docker.internal:4311}
       AGENT_BRIDGE_TOKEN: ${AGENT_BRIDGE_TOKEN:-}
       SPEECH_PROVIDER: host-bridge
+      HF_API_KEY: ${HF_API_KEY:-}
       NAVER_CLIENT_ID: ${NAVER_CLIENT_ID:-}
       NAVER_CLIENT_SECRET: ${NAVER_CLIENT_SECRET:-}
     extra_hosts:

@@ -1,0 +1,43 @@
+{
+  "verifiedAt": "2026-10-18T09:51:46.235095+00:00",
+  "base": "http://127.0.0.1:4322",
+  "scope": "Disposable local test records; no generation submission or publication",
+  "checks": {
+    "episodeReadableComparison": true,
+    "episodeRestoreCreatesVersionAndPreservesHistory": true,
+    "episodeNavigationSavesDraft": true,
+    "nodeEditsPreserveFocusAndCanvas": true,
+    "dirtyWorkflowBlocksRestore": true,
+    "nodeUndoRedo": true,
+    "nodeFieldsSaved": true,
+    "nodeHistoryComparison": true,
+    "nodeHistoryRestoreAsDraftThenSave": true,
+    "workflowRestoreCreatesNewVersion": true,
+    "selectedNodeReadableRunInputsAndOutputs": true,
+    "unsupportedReferenceInputsHidden": true,
+    "higgsfieldSchemaControlsAndConnection": true,
+    "generationNodeConnectionsAndSettingsPersist": true,
+    "generationRequiresExplicitConfirmationWithoutSubmission": true,
+    "desktopNoHorizontalOverflow": true,
+    "mobileNoHorizontalOverflow": true,
+    "historyMobileNoHorizontalOverflow": true,
+    "directApiCatalogFixtureKeepsSelectableModelsAfterInvalidSavedModel": true,
+    "configuredApiFixtureIsNotClaimedAuthenticated": true,
+    "generationRecoveryFixtureStaleApplyPreservesDraft": true,
+    "generationRecoveryFixtureUsesExistingIdAndAppliesCompletedOutput": true,
+    "zeroPageErrors": true
+  },
+  "episodeId": "7e75bfd2-d7fc-4c47-a22c-f87b92279af2",
+  "workflowId": "ddeea300-4a80-447b-b591-24ce25e74685",
+  "desktopViewport": {
+    "width": 1440,
+    "documentWidth": 1440
+  },
+  "mobileViewport": {
+    "width": 390,
+    "documentWidth": 390
+  },
+  "fixtureScope": "Direct API catalog and paid-output recovery controls used intercepted browser HTTP fixtures. Actual provider generation/recovery was not invoked.",
+  "status": "passed",
+  "pageErrors": []
+}
