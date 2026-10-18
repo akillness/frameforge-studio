@@ -72,7 +72,9 @@ tailscale serve --bg --https=443 http://127.0.0.1:4310
 
 컨테이너의 에이전트 호출 대상은 `host.docker.internal:4311`입니다. 호스트 브리지 기본 바인딩은 루프백입니다. Docker 환경에서 호스트 접근이 가능한지 확인하고 필요한 인터페이스와 방화벽만 설정해야 합니다. 브리지 토큰은 `.env`로 공급하며 인증 정보를 컨테이너에 복사하지 않습니다.
 
-**현재 배포 검증 제한:** 이 Windows의 WSLService가 `Stop Pending` 상태이고 서비스 제어가 `Access is denied`로 거부됩니다. Compose 설정 검증은 통과했으나 Docker 이미지 빌드·컨테이너 실행은 검증하지 못했습니다. 현재 운영 URL은 동일한 Node 서버의 호스트 실행에 연결됩니다. Docker 실행 성공으로 표시하지 않습니다. [운영 검증 기록](docs/verification.md)을 확인하세요.
+**Docker 실동작 검증:** [GitHub CI 39091649080](https://github.com/akillness/frameforge-studio/actions/runs/39091649080)에서 이미지 빌드, 비루트·읽기 전용 Compose 기동, 인증된 1080×1920 H.264/AAC 렌더링·다운로드와 재시작 후 에피소드·이력·동일 MP4 해시 보존까지 통과했습니다. [컨테이너 검증 결과](artifacts/container-smoke.json)를 저장했습니다.
+
+**현재 로컬 배포 제한:** 이 Windows의 WSLService가 `Stop Pending` 상태이고 서비스 제어가 `Access is denied`로 거부됩니다. 현재 운영 URL은 호스트 Node 서버에 연결됩니다. Linux CI의 Docker 성공과 별개로, 이 PC의 Docker 전환 및 컨테이너→호스트 에이전트 브리지 경로는 아직 검증하지 못했습니다. [운영 검증 기록](docs/verification.md)을 확인하세요.
 
 HTTPS 프록시를 사용할 때 `.env`에 `PUBLIC_ORIGIN=https://서비스주소`를 지정합니다. Compose에도 전달되며 로그인 쿠키에 `Secure`가 적용되고 쓰기 요청의 Origin을 제한합니다.
 

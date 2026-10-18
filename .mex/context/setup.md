@@ -27,6 +27,8 @@ Docker failure may originate in WSL rather than this app. No configured host bri
 ## Observed deployment on 2026-10-18
 The host Node service is reachable through private Tailscale HTTPS Serve. The service was accessed in Aside and the node workflow edited there. The host bridge returned real validated scenes from Codex, JEO and JEOPI; those observations do not guarantee future authentication availability.
 
-Docker Compose configuration validation passed, but Docker Desktop could not enumerate WSL distributions. WSLService remained Stop Pending; targeted process/service recovery was denied by Windows privileges. No container image build or container-side render is verified. Preserve existing host data when a future Docker deployment is prepared.
+Docker Compose configuration validation passed, but Docker Desktop could not enumerate WSL distributions. WSLService remained Stop Pending; targeted process/service recovery was denied by Windows privileges. No local Windows container image build or container-side render is verified. The separate Linux GitHub Actions run39091649080 passed build/start, real MP4 rendering and restart persistence; it does not verify container-to-host agent bridge connectivity. Preserve existing host data when a future Docker deployment is prepared.
 
 Read `docs/verification.md` and the `artifacts/` receipts for current limits. Public documentation does not contain the live access token or bridge credential. Git remote creation and a successful push are separate evidence states.
+
+The final browser smoke receipt records secureCookie=true after PUBLIC_ORIGIN pass-through and local HTTPS origin configuration. The private GitHub main commit f384821 was pushed; CI run39091649080 completed successfully. The running host service and the isolated Linux CI container are separate deployment environments.

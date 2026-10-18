@@ -1,23 +1,23 @@
 ﻿{
   "state": "succeeded",
-  "startedAt": "2026-10-18T02:50:51.245Z",
-  "finishedAt": "2026-10-18T02:51:03.530Z",
-  "durationMs": 12285,
+  "startedAt": "2026-10-18T02:54:19.473Z",
+  "finishedAt": "2026-10-18T02:54:33.912Z",
+  "durationMs": 14439,
   "diagnostics": [],
   "status": {
     "status": "fresh",
     "inspected": true,
-    "observedAt": "2026-10-18T02:51:02.770Z",
+    "observedAt": "2026-10-18T02:54:31.857Z",
     "currentRepo": {
       "branch": "main",
-      "head": null,
+      "head": "f384821e7c0d66719da52171721b00910c5b0d4e",
       "dirty": true,
-      "observedAt": "2026-10-18T02:51:02.770Z"
+      "observedAt": "2026-10-18T02:54:31.857Z"
     },
-    "lastSuccessfulIndexAt": "2026-10-18T02:51:01.150Z",
-    "indexedAt": "2026-10-18T02:51:01.150Z",
+    "lastSuccessfulIndexAt": "2026-10-18T02:54:30.266Z",
+    "indexedAt": "2026-10-18T02:54:30.266Z",
     "indexedBranch": "main",
-    "indexedHead": null,
+    "indexedHead": "f384821e7c0d66719da52171721b00910c5b0d4e",
     "schemaVersion": 4,
     "extractorVersion": "typescript-5.9-v5+tree-sitter-v2",
     "grammarVersion": "e3024e9e581533232ee11d4ed0bf6ace91588959e0e609ebcf5d6e80b51b5f9c",
@@ -43,6 +43,6 @@
     "diagnostics": []
   },
   "filesIndexed": 29,
-  "nodesCreated": 691,
-  "edgesCreated": 2246
+  "nodesCreated": 692,
+  "edgesCreated": 2247
 }

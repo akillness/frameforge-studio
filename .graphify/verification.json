@@ -1,5 +1,5 @@
 {
-  "observedAt": "2026-10-18T02:50:49.642815+00:00",
+  "observedAt": "2026-10-18T02:58:59.193178+00:00",
   "mode": "native deterministic code extraction; semantic enrichment not run",
   "commands": [
     {
@@ -18,7 +18,7 @@
         "--no-cluster"
       ],
       "exitCode": 0,
-      "output": "Re-extracting code files in . (no LLM needed)...\n  AST extraction: 117/117 files (100%) [8 workers]\n[graphify watch] Rebuilt (no clustering): 649 nodes, 3254 edges\n[graphify watch] graph.json updated in .graphify\nCode graph updated. For doc/paper/image changes run /graphify --update in your AI assistant.\nTip: set GEMINI_API_KEY or GOOGLE_API_KEY to use Gemini for semantic extraction.\n"
+      "output": "Re-extracting code files in . (no LLM needed)...\n  AST extraction: 119/119 files (100%) [8 workers]\n[graphify watch] Rebuilt (no clustering): 649 nodes, 1933 edges\n[graphify watch] graph.json updated in .graphify\nCode graph updated. For doc/paper/image changes run /graphify --update in your AI assistant.\nTip: set GEMINI_API_KEY or GOOGLE_API_KEY to use Gemini for semantic extraction.\n"
     },
     {
       "command": [
@@ -37,8 +37,15 @@
       "output": "wrote .graphify\\graph.html (57.9 KB)\nopen with: xdg-open .graphify\\graph.html  (or file://<repo>\\.graphify\\graph.html)\n"
     }
   ],
+  "edgeRecordAudit": {
+    "raw": 1933,
+    "exactUnique": 1133,
+    "exactDuplicatesRemoved": 800,
+    "remainingDuplicates": 0,
+    "method": "stable JSON of the whole edge record; distinct metadata preserved"
+  },
   "nodes": 649,
-  "edges": 3254,
+  "edges": 1133,
   "sourceFiles": [
     ".agents/skills/mex-inbox/SKILL.md",
     ".agents/skills/mex-inbox/references/cli-workflows.md",
@@ -141,7 +148,7 @@
     "tests/workflows.test.mjs"
   ],
   "portableSourcePaths": true,
-  "graphSha256": "6971f2db8d9b3380a25192f398a11ed7e3f2dc7fb04f683c8e2c6cf7c62b80da",
+  "graphSha256": "4385fdc3ef1043b0210a35d97c03c8a092790803af5d64908a58fbd32b485760",
   "limitations": [
     "scope command and newer update flags unavailable in installed version",
     "No semantic descriptions, provider calls or model-evaluated relationship claims",

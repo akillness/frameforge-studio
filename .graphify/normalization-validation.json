@@ -1,0 +1,47 @@
+{
+  "verifiedAt": "2026-10-18T02:59:57.559678+00:00",
+  "ok": true,
+  "regressionTests": {
+    "command": "python .graphify/test_refresh.py",
+    "passed": 2,
+    "checks": [
+      "JSON key order equality",
+      "distinct nested metadata preserved",
+      "nested array order preserved",
+      "idempotence"
+    ]
+  },
+  "runs": [
+    {
+      "observedAt": "2026-10-18T02:57:53.693053+00:00",
+      "nodes": 649,
+      "edges": 1133,
+      "audit": {
+        "raw": 4854,
+        "exactUnique": 1133,
+        "exactDuplicatesRemoved": 3721,
+        "remainingDuplicates": 0,
+        "method": "stable JSON of the whole edge record; distinct metadata preserved"
+      },
+      "graphSha256": "4385fdc3ef1043b0210a35d97c03c8a092790803af5d64908a58fbd32b485760"
+    },
+    {
+      "observedAt": "2026-10-18T02:58:59.193178+00:00",
+      "nodes": 649,
+      "edges": 1133,
+      "audit": {
+        "raw": 1933,
+        "exactUnique": 1133,
+        "exactDuplicatesRemoved": 800,
+        "remainingDuplicates": 0,
+        "method": "stable JSON of the whole edge record; distinct metadata preserved"
+      },
+      "graphSha256": "4385fdc3ef1043b0210a35d97c03c8a092790803af5d64908a58fbd32b485760"
+    }
+  ],
+  "stableNodesAndUniqueEdges": true,
+  "duplicateRecordsRemaining": 0,
+  "graphSha256": "4385fdc3ef1043b0210a35d97c03c8a092790803af5d64908a58fbd32b485760",
+  "htmlSha256": "f07b757e65d78e2e8ab9c8a3ece2f9214ee19c54f86e08758978ffde46f67f4d",
+  "htmlExportAfterNormalization": true
+}

@@ -27,11 +27,11 @@ Then read this file fully before doing anything else in this session.
 
 **Implemented:** browser video editor, channel/episode/template history, visual typed production DAG, per-node execution history, FFmpeg rendering, host agent bridge and a versioned immutable harness (current 1.1.0; archived 1.0.0).
 
-**Verified on 2026-10-18:** live Codex, JEO and JEOPI responses; an end-to-end Google RSS → references → Codex → episode scene update → FFmpeg → awaiting_review run; Tailscale HTTPS browser access. See `docs/verification.md`, `artifacts/workflow-smoke.json` and `artifacts/agent-*.json` for evidence. The private GitHub repository exists; inspect current Git state before claiming a particular commit was pushed.
+**Verified on 2026-10-18:** live Codex, JEO and JEOPI responses; an end-to-end Google RSS → references → Codex → episode scene update → FFmpeg → awaiting_review run; Tailscale HTTPS browser access. See `docs/verification.md`, `artifacts/workflow-smoke.json` and `artifacts/agent-*.json` for evidence. The private GitHub main branch received commit f384821e7c0d66719da52171721b00910c5b0d4e; CI run 39091649080 completed successfully, including Linux Docker render/download and restart persistence.
 
-**Browser evidence:** `artifacts/browser-smoke.json` verifies scene persistence, graph disconnect/reconnect and drag/save, a 390px mobile page without horizontal overflow, Aside command receipt, web command submission and zero page errors.
+**Browser evidence:** `artifacts/browser-smoke.json` verifies scene persistence, graph disconnect/reconnect and drag/save, a 390px mobile page without horizontal overflow, Aside command receipt, web command submission, zero page errors and a Secure session cookie over HTTPS.
 
-**Boundaries:** Docker image build/container execution remain blocked by WSLService privileges; current hosting uses Node on Windows. No automatic channel ownership verification or publication API; Naver collection remains manual. A workflow's awaiting_review status is not human acceptance.
+**Boundaries:** Local Windows Docker execution remains blocked by WSLService privileges; current hosting uses Node on Windows. Linux Docker CI passed; container-to-host agent bridge connectivity remains untested. No automatic channel ownership verification or publication API; Naver collection remains manual. A workflow's awaiting_review status is not human acceptance.
 
 **Memory:** project-specific context is populated; Graphify is deterministic structural extraction with explicit CLI version limits.
 

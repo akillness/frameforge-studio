@@ -15,9 +15,36 @@ commands = [
     ['graphify', 'tree', '--graph', '.graphify/graph.json', '--output', '.graphify/graph.html',
      '--root', '.', '--label', 'FrameForge structural code graph'],
 ]
+
+
+def normalize_edges(graph):
+    """Keep the first full record; metadata differences remain separate edges."""
+    field = 'links' if 'links' in graph else 'edges'
+    records = graph.get(field, [])
+    seen = set()
+    unique = []
+    for record in records:
+        key = json.dumps(record, sort_keys=True, ensure_ascii=False, separators=(',', ':'))
+        if key not in seen:
+            seen.add(key)
+            unique.append(record)
+    graph[field] = unique
+    return {'raw': len(records), 'exactUnique': len(unique),
+            'exactDuplicatesRemoved': len(records) - len(unique),
+            'remainingDuplicates': 0,
+            'method': 'stable JSON of the whole edge record; distinct metadata preserved'}
+
+
 receipt = {'observedAt': datetime.datetime.now(datetime.timezone.utc).isoformat(),
            'mode': 'native deterministic code extraction; semantic enrichment not run', 'commands': []}
 for command in commands:
+    if command[1] == 'tree':
+        graph_path = OUT / 'graph.json'
+        graph = json.loads(graph_path.read_text(encoding='utf-8'))
+        receipt['edgeRecordAudit'] = normalize_edges(graph)
+        temporary = graph_path.with_suffix('.json.tmp')
+        temporary.write_text(json.dumps(graph, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+        temporary.replace(graph_path)
     result = subprocess.run(command, cwd=ROOT, env=env, capture_output=True, text=True,
                             encoding='utf-8', timeout=120)
     receipt['commands'].append({'command': command, 'exitCode': result.returncode,
@@ -43,6 +70,14 @@ receipt.update(nodes=len(graph['nodes']), edges=len(graph.get('links', graph.get
 report = f'''# FrameForge structural graph
 
 Native Graphify code extraction: **{receipt['nodes']} nodes, {receipt['edges']} edges**.
+
+The installed native CLI can accumulate exact duplicate edge records. This refresh
+normalized {receipt['edgeRecordAudit']['raw']} native records to
+{receipt['edgeRecordAudit']['exactUnique']} whole-record-unique edges, removing
+{receipt['edgeRecordAudit']['exactDuplicatesRemoved']} exact duplicates before HTML
+export. Stable sorted-key JSON identifies equality of the entire record; edges
+with different metadata remain separate. graph.json, this report and graph.html
+all derive from the normalized artifact. No duplicate records remain.
 
 This is a deterministic AST graph, not an LLM semantic graph. Extraction and
 interactive tree export were executed through the installed Graphify CLI.

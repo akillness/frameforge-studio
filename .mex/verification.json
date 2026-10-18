@@ -1,5 +1,5 @@
 {
-  "observedAt": "2026-10-18T02:51:03.530Z",
+  "observedAt": "2026-10-18T02:54:33.912Z",
   "mexVersion": "0.8.3",
   "setup": {
     "command": "mex setup --cli (Codex choice 6)",
@@ -12,8 +12,8 @@
     "command": "mex graph rebuild --json",
     "state": "succeeded",
     "filesIndexed": 29,
-    "nodesCreated": 691,
-    "edgesCreated": 2246,
+    "nodesCreated": 692,
+    "edgesCreated": 2247,
     "parseHealth": {
       "total": 29,
       "ok": 29,
@@ -22,7 +22,7 @@
       "failedPaths": [],
       "failedPathsTruncated": false
     },
-    "observedAt": "2026-10-18T02:51:03.530Z",
+    "observedAt": "2026-10-18T02:54:33.912Z",
     "receipt": ".mex/rebuild-receipt.json"
   },
   "check": {
@@ -32,7 +32,10 @@
     "warnings": 0,
     "filesChecked": 14,
     "graphFreshAtCheck": true,
-    "receipt": ".mex/check-receipt.txt"
+    "receipt": ".mex/check-receipt.txt",
+    "observedAt": "2026-10-18T03:00:53.181040+00:00",
+    "sourceChanges": 0,
+    "note": "Checked after Graphify normalization code and regression test edits; no indexed source changes, so no rebuild required."
   },
   "knowledgeCheck": {
     "command": "python .mex/verify-knowledge.py",
@@ -75,11 +78,32 @@
       "artifacts/agent-jeo.json",
       "artifacts/agent-jeopi.json"
     ],
-    "deployment": "host Node via private Tailscale HTTPS; Docker container execution remains unverified"
+    "deployment": "Host Node via private Tailscale HTTPS; Linux Docker CI passed; local Windows Docker and container-to-host agent bridge remain unverified",
+    "browserReceipt": "artifacts/browser-smoke.json",
+    "secureCookie": true
   },
   "ci": {
     "workflow": ".github/workflows/verify.yml",
-    "status": "configured; not run at this receipt timestamp",
-    "scope": "Node checks, immutable harness validation, Docker render and restart persistence"
+    "runId": 39091649080,
+    "url": "https://github.com/akillness/frameforge-studio/actions/runs/39091649080",
+    "status": "completed",
+    "conclusion": "success",
+    "observedAt": "2026-10-18T02:55:58.518066+00:00",
+    "verified": [
+      "node-and-harness",
+      "Linux Docker build and startup",
+      "authenticated actual video render/download",
+      "exact output/history/job persistence after restart"
+    ],
+    "notVerified": [
+      "local Windows Docker execution",
+      "container-to-host agent bridge connectivity"
+    ]
+  },
+  "publication": {
+    "repository": "https://github.com/akillness/frameforge-studio",
+    "branch": "main",
+    "commit": "f384821e7c0d66719da52171721b00910c5b0d4e",
+    "status": "pushed"
   }
 }
