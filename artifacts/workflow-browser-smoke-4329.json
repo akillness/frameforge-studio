@@ -1,0 +1,33 @@
+{
+  "verifiedAt": "2026-10-18T16:16:30.346083+00:00",
+  "base": "http://127.0.0.1:4329",
+  "checks": {
+    "minimapRendersEveryWorkflowNode": true,
+    "minimapViewportTracksZoom": true,
+    "minimapViewportTracksPan": true,
+    "minimapSupportsKeyboardNavigation": true,
+    "minimapClickSelectsNode": true,
+    "editedWorkflowSavedBeforeStageRun": true,
+    "stageOverlayShowsSelectedRunnableStage": true,
+    "stageStartSendsSelectedStagePayload": true,
+    "runningStageVisibleInResultsOverlay": true,
+    "stageResumeSendsPriorRunAndSelectedStage": true,
+    "storyboardStageReusesTerminalScriptRun": true,
+    "renderOnlyStageDoesNotOpenGenerationConsent": true,
+    "toolsOverlayOpens": true,
+    "toolsOverlayCloseReopenPreservesEditAndSelection": true,
+    "toolsOverlayEscapeClosesAndRestoresFocus": true,
+    "resultsPollingPreservesFocusedRunSelector": true,
+    "pollingKeepsRunVisibleAcrossOverlayCloseAndReopen": true,
+    "resultsOverlayEscapeClosesAndRestoresFocus": true,
+    "delayedPollDoesNotRecreateAfterWorkflowDisposal": true,
+    "noBrowserPageErrors": true
+  },
+  "pageErrors": [],
+  "scope": "Workflow minimap and popup overlays; intercepted run polling fixture; no provider or publication",
+  "channelId": "05923f63-4e7e-4a56-9755-335128833a73",
+  "episodeId": "674d7e87-aa18-4b01-ba9e-d41903c58442",
+  "workflowId": "fad2e342-2c79-4ca3-a9d3-bd87f829763f",
+  "pollResponses": 5,
+  "status": "passed"
+}

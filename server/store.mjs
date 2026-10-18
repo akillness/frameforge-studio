@@ -1,10 +1,26 @@
 import { DatabaseSync } from 'node:sqlite';
-import { mkdirSync, writeFileSync, renameSync } from 'node:fs';
+import { mkdirSync, writeFileSync, renameSync, existsSync, unlinkSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
 import { HttpError, scenes as validateScenes } from './validation.mjs';
 
+const DEFAULT_TREND_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_TREND_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
+const DEFAULT_TREND_MAX_CONCURRENCY = 2;
+const MIN_TREND_RETENTION_MS = DEFAULT_TREND_RETENTION_MS;
 const now = () => new Date().toISOString();
+const trendDate = (value, fallback = now()) => {
+  const parsed = new Date(value || fallback);
+  return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : fallback;
+};
+const boundedNumber = (value, fallback, min, max) => Number.isFinite(Number(value)) ? Math.max(min, Math.min(max, Math.floor(Number(value)))) : fallback;
+const boundedText = (value, max) => typeof value === 'string' ? value.trim().slice(0, max) : '';
+const cloneJson = (value, max = 200000) => {
+  try {
+    const json = JSON.stringify(value);
+    return json.length > max ? undefined : JSON.parse(json);
+  } catch { return undefined; }
+};
 export const entity = (fields) => ({ id: randomUUID(), createdAt: now(), updatedAt: now(), ...fields });
 export const starterScene = (title, text, background = '#282544') => ({ id: randomUUID(), title, text, duration: 5, background, kind: 'title', layout: 'center', narration: '' });
 
@@ -30,9 +46,17 @@ export class Store {
       CREATE INDEX IF NOT EXISTS history_episode ON history(episode_id,version);
       CREATE TABLE IF NOT EXISTS workflow_history (id INTEGER PRIMARY KEY AUTOINCREMENT, workflow_id TEXT NOT NULL, version INTEGER NOT NULL, data TEXT NOT NULL, UNIQUE(workflow_id,version));
       CREATE TABLE IF NOT EXISTS workflow_reviews (id TEXT PRIMARY KEY, run_id TEXT NOT NULL UNIQUE, data TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);`);
+      CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+      CREATE INDEX IF NOT EXISTS entities_trend_captured ON entities(kind, json_extract(data, '$.capturedAt'));
+      CREATE INDEX IF NOT EXISTS entities_trend_runs ON entities(kind, json_extract(data, '$.startedAt'));`); 
     if (!this.db.prepare('SELECT value FROM settings WHERE key = ?').get('seeded')) this.seed();
     for (const job of this.list('jobs')) if (['queued', 'running'].includes(job.status)) this.save('jobs', { ...job, status: 'failed', error: 'Server restarted before render completed', updatedAt: now() });
+    const restartAt = now();
+    const trendSettings = this.getTrendCollectorSettings();
+    const trendRetryAt = new Date(Date.parse(restartAt) + trendSettings.intervalMs).toISOString();
+    const interruptedTrends = this.list('trendCollectionRuns').filter((run) => run.status === 'running');
+    for (const run of interruptedTrends) this.save('trendCollectionRuns', { ...run, status: 'failed', completedAt: restartAt, nextDueAt: trendRetryAt, error: 'Server restarted before trend collection completed', updatedAt: restartAt });
+    if (interruptedTrends.length && trendSettings.enabled) this.saveTrendCollectorSettings({ nextDueAt: trendRetryAt });
     this.exportKnowledge();
   }
 
@@ -61,6 +85,158 @@ export class Store {
     return item;
   }
   record(type, details = {}) { return this.save('events', entity({ type, ...details })); }
+  *iterate(kind) {
+    for (const row of this.db.prepare('SELECT data FROM entities WHERE kind = ? ORDER BY rowid DESC').iterate(kind)) yield JSON.parse(row.data);
+  }
+
+  getTrendCollectorSettings() {
+    const row = this.db.prepare('SELECT value FROM settings WHERE key = ?').get('trendCollector');
+    let stored = {};
+    try { stored = row ? JSON.parse(row.value) : {}; } catch { stored = {}; }
+    return {
+      enabled: stored.enabled === true,
+      intervalMs: boundedNumber(stored.intervalMs, DEFAULT_TREND_INTERVAL_MS, 60 * 1000, 30 * 24 * 60 * 60 * 1000),
+      retentionMs: boundedNumber(stored.retentionMs, DEFAULT_TREND_RETENTION_MS, MIN_TREND_RETENTION_MS, 90 * 24 * 60 * 60 * 1000),
+      maxConcurrency: boundedNumber(stored.maxConcurrency, DEFAULT_TREND_MAX_CONCURRENCY, 1, 8),
+      nextDueAt: stored.nextDueAt && Number.isFinite(Date.parse(stored.nextDueAt)) ? new Date(stored.nextDueAt).toISOString() : null,
+      selectedKeywords: Array.isArray(stored.selectedKeywords) ? [...new Set(stored.selectedKeywords.map((value) => boundedText(value, 300)).filter(Boolean))].slice(0, 500) : [],
+    };
+  }
+
+  saveTrendCollectorSettings(patch = {}) {
+    if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new HttpError(400, 'Invalid trend collector settings');
+    const current = this.getTrendCollectorSettings();
+    if (patch.retentionMs !== undefined && Number.isFinite(Number(patch.retentionMs)) && Number(patch.retentionMs) < MIN_TREND_RETENTION_MS) throw new HttpError(400, 'Trend retention must be at least 14 days');
+    const next = { ...current, ...patch };
+    next.enabled = next.enabled === true;
+    next.intervalMs = boundedNumber(next.intervalMs, current.intervalMs, 60 * 1000, 30 * 24 * 60 * 60 * 1000);
+    next.retentionMs = boundedNumber(next.retentionMs, current.retentionMs, MIN_TREND_RETENTION_MS, 90 * 24 * 60 * 60 * 1000);
+    next.maxConcurrency = boundedNumber(next.maxConcurrency, current.maxConcurrency, 1, 8);
+    next.nextDueAt = next.nextDueAt && Number.isFinite(Date.parse(next.nextDueAt)) ? new Date(next.nextDueAt).toISOString() : null;
+    next.selectedKeywords = Array.isArray(next.selectedKeywords) ? [...new Set(next.selectedKeywords.map((value) => boundedText(value, 300)).filter(Boolean))].slice(0, 500) : current.selectedKeywords;
+    this.db.prepare('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run('trendCollector', JSON.stringify(next));
+    return next;
+  }
+
+  collectTrendSnapshot(result = {}, { now: capturedNow = now(), runId } = {}) {
+    const trends = Array.isArray(result.trends) ? result.trends : [];
+    const sources = cloneJson(Array.isArray(result.sources) ? result.sources : [], 200000) || [];
+    const settings = this.getTrendCollectorSettings();
+    const selected = new Set(settings.selectedKeywords);
+    const captured = [];
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      for (const item of trends.slice(0, 200)) {
+        const keyword = boundedText(item?.keyword, 300);
+        if (!keyword) continue;
+        const source = boundedText(item?.source, 100) || boundedText(sources.find((entry) => entry?.name)?.name, 100) || 'unknown';
+        const capturedAt = trendDate(item?.capturedAt, capturedNow);
+        const fields = { keyword, source, capturedAt, collectedAt: capturedNow, selected: selected.has(keyword), ...(runId ? { runId } : {}) };
+        if (typeof item.url === 'string' && item.url.trim()) fields.url = item.url.trim().slice(0, 2000);
+        for (const key of ['relatedMedia', 'media', 'mediaUrl', 'imageUrl', 'videoUrl', 'thumbnailUrl', 'mediaType', 'mediaTitle', 'description', 'metadata']) {
+          const value = item[key];
+          if (value === undefined || value === null || value === '') continue;
+          const copy = cloneJson(value, key === 'relatedMedia' || key === 'media' ? 100000 : 20000);
+          if (copy !== undefined) fields[key] = Array.isArray(copy) ? copy.slice(0, 20) : copy;
+        }
+        const trend = entity(fields);
+        this.save('trends', trend);
+        captured.push(trend);
+      }
+      this.db.exec('COMMIT');
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+    return { trends: captured, sources };
+  }
+
+  _trendKeywordRows({ query, selected, since, limit, offset, popular = false } = {}) {
+    const boundedLimit = boundedNumber(limit, 50, 1, 200);
+    const boundedOffset = boundedNumber(offset, 0, 0, 10000);
+    const clauses = ["kind = 'trends'"];
+    const params = [];
+    let sinceIso;
+    if (query) { clauses.push("lower(json_extract(data, '$.keyword')) LIKE ?"); params.push(`%${String(query).toLocaleLowerCase()}%`); }
+    if (since) {
+      if (!Number.isFinite(Date.parse(since))) throw new HttpError(400, 'Invalid trend since date');
+      sinceIso = new Date(since).toISOString();
+      clauses.push("json_extract(data, '$.capturedAt') >= ?"); params.push(sinceIso);
+    }
+    if (selected === true) clauses.push("json_extract(data, '$.selected') = 1");
+    if (selected === false) clauses.push("COALESCE(json_extract(data, '$.selected'), 0) = 0");
+    const order = popular ? 'count DESC, firstRowId ASC' : 'firstRowId ASC';
+    const rows = this.db.prepare(`SELECT json_extract(data, '$.keyword') AS keyword, COUNT(*) AS count, MAX(json_extract(data, '$.capturedAt')) AS latestCapturedAt, MIN(rowid) AS firstRowId FROM entities WHERE ${clauses.join(' AND ')} GROUP BY json_extract(data, '$.keyword') ORDER BY ${order} LIMIT ? OFFSET ?`).all(...params, boundedLimit, boundedOffset);
+    return rows.map((row) => {
+      const latest = sinceIso ? this.db.prepare("SELECT data FROM entities WHERE kind='trends' AND json_extract(data, '$.keyword')=? AND json_extract(data, '$.capturedAt')>=? ORDER BY rowid DESC LIMIT 1").get(row.keyword, sinceIso) : this.db.prepare("SELECT data FROM entities WHERE kind='trends' AND json_extract(data, '$.keyword')=? ORDER BY rowid DESC LIMIT 1").get(row.keyword);
+      let detail = {};
+      try { detail = latest ? JSON.parse(latest.data) : {}; } catch { detail = {}; }
+      return { keyword: row.keyword, count: Number(row.count), capturedAt: row.latestCapturedAt, latestCapturedAt: row.latestCapturedAt, selected: detail.selected === true, ...(detail.source ? { source: detail.source } : {}), ...(detail.url ? { url: detail.url } : {}), ...(detail.relatedMedia ? { relatedMedia: detail.relatedMedia } : {}) };
+    });
+  }
+
+  listTrendKeywords(options = {}) { return this._trendKeywordRows(options); }
+  listPopularTrendKeywords(options = {}) { return this._trendKeywordRows({ ...options, popular: true }); }
+
+  setTrendKeywordSelection(keyword, selected) {
+    const value = boundedText(keyword, 300);
+    if (!value) throw new HttpError(400, 'Keyword is required');
+    const settings = this.getTrendCollectorSettings();
+    const selectedKeywords = new Set(settings.selectedKeywords);
+    if (selected === true) selectedKeywords.add(value); else selectedKeywords.delete(value);
+    const next = this.saveTrendCollectorSettings({ selectedKeywords: [...selectedKeywords] });
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const rows = this.db.prepare("SELECT id, data FROM entities WHERE kind='trends' AND json_extract(data, '$.keyword')=?").all(value);
+      for (const row of rows) {
+        let item;
+        try { item = JSON.parse(row.data); } catch { continue; }
+        this.save('trends', { ...item, selected: selected === true, updatedAt: now() });
+      }
+      this.db.exec('COMMIT');
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+    return next;
+  }
+
+  listTrendCollectionRuns({ limit = 50 } = {}) {
+    const boundedLimit = boundedNumber(limit, 50, 1, 200);
+    return this.db.prepare("SELECT data FROM entities WHERE kind='trendCollectionRuns' ORDER BY rowid DESC LIMIT ?").all(boundedLimit).map((row) => JSON.parse(row.data));
+  }
+
+  _isUploadReferenced(upload) {
+    const needles = [upload.id, upload.url, upload.filename].filter(Boolean);
+    for (const row of this.db.prepare("SELECT data FROM entities WHERE kind NOT IN ('uploads', 'events')").iterate()) {
+      if (needles.some((needle) => row.data.includes(needle))) return true;
+    }
+    for (const table of ['history', 'workflow_history', 'workflow_reviews']) {
+      for (const row of this.db.prepare(`SELECT data FROM ${table}`).iterate()) if (needles.some((needle) => row.data.includes(needle))) return true;
+    }
+    return false;
+  }
+
+  pruneTrendRetention({ now: pruneNow = now() } = {}) {
+    const settings = this.getTrendCollectorSettings();
+    const pruneTime = Date.parse(pruneNow);
+    if (!Number.isFinite(pruneTime)) throw new HttpError(400, 'Invalid trend retention time');
+    const cutoff = new Date(pruneTime - settings.retentionMs).toISOString();
+    let removed = 0, removedMedia = 0;
+    const files = [];
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const trends = this.db.prepare("SELECT id FROM entities WHERE kind='trends' AND json_extract(data, '$.capturedAt') < ?").all(cutoff);
+      for (const trend of trends) { this.db.prepare("DELETE FROM entities WHERE kind='trends' AND id=?").run(trend.id); removed += 1; }
+      const uploads = [...this.iterate('uploads')].filter((upload) => upload.trend === true && Number.isFinite(Date.parse(upload.createdAt || '')) && Date.parse(upload.createdAt || '') < Date.parse(cutoff) && !this._isUploadReferenced(upload));
+      for (const upload of uploads) {
+        this.db.prepare("DELETE FROM entities WHERE kind='uploads' AND id=?").run(upload.id);
+        if (typeof upload.filename === 'string' && /^[a-f0-9-]{36}\.[a-z0-9]+$/i.test(upload.filename)) files.push(join(this.dataDir, 'uploads', upload.filename));
+        removedMedia += 1;
+      }
+      this.db.exec('COMMIT');
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+    let cleanupFailures = 0;
+    for (const file of files) {
+      try { if (existsSync(file)) unlinkSync(file); } catch { cleanupFailures += 1; }
+    }
+    if (removed || removedMedia) this.exportKnowledge();
+    return { removed, removedMedia, cleanupFailures, cutoff };
+  }
 
   create(kind, fields) {
     const item = entity(fields);
@@ -107,9 +283,16 @@ export class Store {
     try {
       const previous = this.get('episodes', id);
       if (previous.version !== expectedVersion) throw new HttpError(409, `Episode changed: current version is ${previous.version}. Reload before attaching narration.`);
-      const existingUploads = this.list('uploads');
-      if (uploads.some((upload) => existingUploads.some((existing) => existing.id === upload.id || existing.filename === upload.filename))) throw new HttpError(409, 'Generated narration upload already exists');
-      const audioByUrl = new Map([...existingUploads, ...uploads].map((upload) => [upload.url, upload]));
+      const existingIds = new Set();
+      const existingFilenames = new Set();
+      const audioByUrl = new Map();
+      for (const existing of this.iterate('uploads')) {
+        existingIds.add(existing.id);
+        existingFilenames.add(existing.filename);
+        audioByUrl.set(existing.url, existing);
+      }
+      if (uploads.some((upload) => existingIds.has(upload.id) || existingFilenames.has(upload.filename))) throw new HttpError(409, 'Generated narration upload already exists');
+      for (const upload of uploads) audioByUrl.set(upload.url, upload);
       for (const scene of normalized) if (scene.audioUrl && !audioByUrl.get(scene.audioUrl)?.type.startsWith('audio/')) throw new HttpError(400, 'Narration scene refers to unknown audio');
       for (const upload of uploads) this.save('uploads', upload);
       next = { ...previous, scenes: normalized, status: 'draft', version: previous.version + 1, updatedAt: now() };
@@ -256,21 +439,23 @@ export class Store {
 
   knowledge() {
     const nodes = [], edges = [], atoms = [];
+    const nodeIds = new Set();
     const add = (id, type, title, description, timestamp, related = [], resource) => {
-      if (nodes.some((node) => node.id === id)) return;
+      if (nodeIds.has(id)) return;
+      nodeIds.add(id);
       nodes.push({ id, type, label: title, title });
       atoms.push({ id, type, title, description, timestamp, tags: ['frameforge', type], ...(resource ? { resource } : {}), related });
       for (const target of related) edges.push({ source: id, target, relation: type === 'episode' ? 'belongs_to' : 'references' });
     };
-    for (const channel of this.list('channels')) add(channel.id, 'channel', channel.name, `${channel.platform} / ${channel.category}${channel.sample ? ' / example only' : ''}`, channel.updatedAt);
-    for (const episode of this.list('episodes')) {
+    for (const channel of this.iterate('channels')) add(channel.id, 'channel', channel.name, `${channel.platform} / ${channel.category}${channel.sample ? ' / example only' : ''}`, channel.updatedAt);
+    for (const episode of this.iterate('episodes')) {
       const topicId = `topic-${createHash('sha256').update(episode.topic).digest('hex').slice(0, 20)}`;
       add(topicId, 'topic', episode.topic, `Production subject: ${episode.topic}`, episode.updatedAt);
       add(episode.id, 'episode', episode.title, `${episode.topic} — ${episode.status}; revision ${episode.version}`, episode.updatedAt, [episode.channelId, topicId]);
     }
-    for (const reference of this.list('references')) add(reference.id, 'reference', reference.title, reference.notes || reference.category, reference.updatedAt, reference.channelId ? [reference.channelId] : [], reference.url);
-    for (const trend of this.list('trends')) add(trend.id, 'trend', trend.keyword, `Captured from ${trend.source}; ${trend.capturedAt}`, trend.updatedAt, [], trend.url);
-    for (const job of this.list('generationJobs')) {
+    for (const reference of this.iterate('references')) add(reference.id, 'reference', reference.title, reference.notes || reference.category, reference.updatedAt, reference.channelId ? [reference.channelId] : [], reference.url);
+    for (const trend of this.iterate('trends')) add(trend.id, 'trend', trend.keyword, `Captured from ${trend.source}; ${trend.capturedAt}`, trend.updatedAt, [], trend.url);
+    for (const job of this.iterate('generationJobs')) {
       add(job.id, 'generation', `Higgsfield · ${job.model}`, `${job.transport}; ${job.status}; source episode v${job.episodeVersion}${job.applied ? `; applied v${job.appliedVersion}` : '; not applied'}`, job.updatedAt, [job.episodeId]);
       for (const output of job.outputs || []) {
         add(output.uploadId, 'asset', `Generated ${output.kind}`, `Higgsfield ${job.model}; SHA-256 ${output.sha256}`, job.completedAt || job.updatedAt, [job.id, job.episodeId, ...(output.original ? [output.original.uploadId] : [])], output.url);
@@ -288,6 +473,8 @@ export class Store {
       const body = `---\n${metadata}\n---\n\n# ${atom.title.replace(/[\r\n]/g, ' ')}\n\n${atom.description}\n\n${atom.related.map((id) => `- [[${id}]]`).join('\n')}\n`;
       writeFileSync(join(root, 'atoms', `${atom.id}.md`), body, { mode: 0o600 });
     }
+    const atomIds = new Set(graph.atoms.map((atom) => `${atom.id}.md`));
+    for (const file of readdirSync(join(root, 'atoms'))) if (file.endsWith('.md') && !atomIds.has(file)) unlinkSync(join(root, 'atoms', file));
     const temporary = join(root, 'graph.json.tmp');
     writeFileSync(temporary, JSON.stringify(graph, null, 2), { mode: 0o600 });
     renameSync(temporary, join(root, 'graph.json'));

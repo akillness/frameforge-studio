@@ -7,8 +7,8 @@ import path from 'node:path';
 
 const TYPES = ['trend', 'research', 'script', 'storyboard', 'generate', 'render', 'review'];
 const AGENTS = ['existing', 'studio', 'codex', 'jeo', 'jeopi', 'hermes'];
-const REQUIRED = ['script', 'storyboard', 'render', 'review'];
 const TERMINAL = ['completed', 'failed', 'cancelled', 'awaiting_review', 'approved', 'changes_requested'];
+const MAX_ACTIVE_RUNS = 4;
 const timestamp = () => new Date().toISOString();
 
 function identifier(value, name) {
@@ -21,14 +21,14 @@ function identifier(value, name) {
 export function validateWorkflow(raw) {
   const body = object(raw);
   const name = text(body.name, 'workflow name', 160);
-  if (!Array.isArray(body.nodes) || body.nodes.length < 4 || body.nodes.length > 7) throw new HttpError(400, 'Workflow requires 4–7 nodes');
-  if (!Array.isArray(body.edges) || body.edges.length < 3 || body.edges.length > 21) throw new HttpError(400, 'Workflow requires 3–21 edges');
+  if (!Array.isArray(body.nodes) || body.nodes.length < 1 || body.nodes.length > TYPES.length) throw new HttpError(400, 'Workflow requires 1–7 nodes');
+  if (!Array.isArray(body.edges) || body.edges.length > 21) throw new HttpError(400, 'Workflow requires 0–21 edges');
   const nodeIds = new Set(), types = new Set();
   const nodes = body.nodes.map((rawNode) => {
     const node = object(rawNode);
     const id = identifier(node.id, 'node id');
     const type = choice(node.type, TYPES, 'node type');
-    if (nodeIds.has(id) || types.has(type)) throw new HttpError(400, 'Node IDs and node types must be unique');
+    if (nodeIds.has(id) || types.has(type) || (TYPES.includes(id) && id !== type)) throw new HttpError(400, 'Node IDs must not shadow a different stage type');
     nodeIds.add(id); types.add(type);
     for (const key of ['x', 'y']) if (typeof node[key] !== 'number' || !Number.isFinite(node[key]) || Math.abs(node[key]) > 100000) throw new HttpError(400, 'Node coordinates must be finite and within ±100000');
     const config = object(node.config ?? {});
@@ -51,7 +51,6 @@ export function validateWorkflow(raw) {
     }
     return { id, type, x: node.x, y: node.y, ...(node.label !== undefined ? { label: optionalText(node.label, 'node label', 80) } : {}), ...(node.notes !== undefined ? { notes: optionalText(node.notes, 'node notes', 2000) } : {}), config: normalized };
   });
-  if (REQUIRED.some((type) => !types.has(type))) throw new HttpError(400, 'Workflow requires script, storyboard, render and review nodes');
   const byId = new Map(nodes.map((node) => [node.id, node]));
   const edgeIds = new Set(), pairs = new Set();
   const edges = body.edges.map((rawEdge) => {
@@ -66,21 +65,28 @@ export function validateWorkflow(raw) {
     edgeIds.add(id); pairs.add(`${source}:${target}`);
     return { id, source, target };
   });
+  if (nodes.length > 1) {
+    const connected = new Set([nodes[0].id]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const edge of edges) if (connected.has(edge.source) || connected.has(edge.target)) {
+        if (!connected.has(edge.source)) { connected.add(edge.source); changed = true; }
+        if (!connected.has(edge.target)) { connected.add(edge.target); changed = true; }
+      }
+    }
+    if (connected.size !== nodes.length) throw new HttpError(400, 'Every node must be connected to the workflow graph');
+  }
   const ancestors = (nodeId, seen = new Set()) => {
     for (const edge of edges.filter((item) => item.target === nodeId)) if (!seen.has(edge.source)) { seen.add(edge.source); ancestors(edge.source, seen); }
     return seen;
   };
-  for (let index = 1; index < REQUIRED.length; index++) {
-    const current = nodes.find((node) => node.type === REQUIRED[index]);
-    const previous = nodes.find((node) => node.type === REQUIRED[index - 1]);
-    if (!ancestors(current.id).has(previous.id)) throw new HttpError(400, `${current.type} must depend on ${previous.type}`);
-  }
+  const storyboard = nodes.find((node) => node.type === 'storyboard');
+  const render = nodes.find((node) => node.type === 'render');
+  const generate = nodes.find((node) => node.type === 'generate');
   const review = nodes.find((node) => node.type === 'review');
-  if (types.has('generate')) {
-    const generate = nodes.find(node => node.type === 'generate');
-    if (!ancestors(generate.id).has(nodes.find(node => node.type === 'storyboard').id) || !ancestors(nodes.find(node => node.type === 'render').id).has(generate.id)) throw new HttpError(400, 'Generation must depend on storyboard and feed render');
-  }
-  if (ancestors(review.id).size !== nodes.length - 1) throw new HttpError(400, 'Every node must be connected to the review output');
+  if (generate && (!storyboard || !render || !ancestors(generate.id).has(storyboard.id) || !ancestors(render.id).has(generate.id))) throw new HttpError(400, 'Generation must depend on storyboard and feed render');
+  if (review && ancestors(review.id).size !== nodes.length - 1) throw new HttpError(400, 'Every node must be connected to the review output');
   if (body.expectedVersion !== undefined && (!Number.isInteger(body.expectedVersion) || body.expectedVersion < 1)) throw new HttpError(400, 'expectedVersion must be a positive integer');
   return { name, nodes, edges };
 }
@@ -88,6 +94,90 @@ export function validateWorkflow(raw) {
 export function defaultWorkflow() {
   const nodes = TYPES.filter(type => type !== 'generate').map((type, index) => ({ id: type, type, x: 80 + index * 260, y: 180, config: type === 'script' ? { agent: 'studio', prompt: '출처가 확인된 내용으로 한국어 영상 스토리보드를 구성하세요.' } : {} }));
   return { name: '기본 제작 DAG · 트렌드에서 검토까지', nodes, edges: nodes.slice(1).map((node, index) => ({ id: `edge-${index + 1}`, source: nodes[index].id, target: node.id })), version: 1, sample: true };
+}
+
+function resolveStage(workflow, value, name = 'stage') {
+  const ref = identifier(value, name);
+  const node = workflow.nodes.find((item) => item.id === ref || item.type === ref);
+  if (!node) throw new HttpError(400, `Unknown ${name}: ${ref}`);
+  return node;
+}
+
+function reusableNodeRun(nodeRun) {
+  return Boolean(nodeRun?.output) && ['completed', 'reused', 'awaiting_review', 'approved', 'changes_requested'].includes(nodeRun.status);
+}
+
+function stageSelection(workflow, options, episode, store) {
+  const selectedValues = options.selectedStages;
+  if (selectedValues !== undefined && (!Array.isArray(selectedValues) || !selectedValues.length || selectedValues.length > workflow.nodes.length)) throw new HttpError(400, 'selectedStages must contain 1–7 stage ids or types');
+  const selected = new Map();
+  for (const value of selectedValues ?? workflow.nodes.map((node) => node.id)) {
+    const node = resolveStage(workflow, value, 'selected stage');
+    if (selected.has(node.id)) throw new HttpError(400, 'selectedStages must not contain duplicates');
+    selected.set(node.id, node);
+  }
+  const orderedSelected = [...selected.values()].sort((a, b) => TYPES.indexOf(a.type) - TYPES.indexOf(b.type));
+  const start = options.startStage === undefined ? orderedSelected[0] : resolveStage(workflow, options.startStage, 'startStage');
+  if (!selected.has(start.id)) throw new HttpError(400, 'startStage must be included in selectedStages');
+  if (orderedSelected.some((node) => TYPES.indexOf(node.type) < TYPES.indexOf(start.type))) throw new HttpError(400, 'selectedStages cannot include stages before startStage');
+
+  let source;
+  if (options.resumeRunId !== undefined) {
+    const resumeId = identifier(options.resumeRunId, 'resumeRunId');
+    source = store.get('workflowRuns', resumeId);
+    if (source.workflowId !== workflow.id) throw new HttpError(409, 'Resume evidence belongs to a different workflow');
+    if (source.status === 'queued' || source.status === 'running' || !TERMINAL.includes(source.status)) throw new HttpError(409, 'Resume requires a terminal workflow run');
+    if (source.workflowVersion !== workflow.version) throw new HttpError(409, 'Resume evidence is stale after a workflow edit');
+    if (source.episodeId !== episode.id || source.episodeVersion !== episode.version) throw new HttpError(409, 'Resume evidence is stale for this episode version');
+  }
+
+  const sourceById = new Map((source?.nodeRuns || []).map((nodeRun) => [nodeRun.nodeId, nodeRun]));
+  const hardDependency = { storyboard: 'script', generate: 'storyboard', review: 'render' };
+  const requiredReuse = new Set();
+  for (const node of orderedSelected) {
+    let dependencyType = hardDependency[node.type];
+    while (dependencyType) {
+      const dependency = workflow.nodes.find((item) => item.type === dependencyType);
+      if (!dependency || selected.has(dependency.id)) break;
+      requiredReuse.add(dependency.id);
+      dependencyType = hardDependency[dependency.type];
+    }
+  }
+  const outputs = new Map();
+  const reusedOutputs = [];
+  const nodeRuns = workflow.nodes.map((node) => {
+    const prior = sourceById.get(node.id);
+    const reusable = reusableNodeRun(prior);
+    if (selected.has(node.id) && node.type === 'generate' && reusable && !prior.output?.generationJobId) throw new HttpError(409, 'Completed generation evidence is missing its provider job identity; recover the original job before retrying');
+    const inheritedJob = source && node.type === 'generate'
+      ? store.list('generationJobs').find((job) => prior?.output?.generationJobId
+        ? job.id === prior.output.generationJobId
+        : job.requestId === `${source.resumedFrom || source.id}:${node.id}`)
+      : null;
+    const paidReplayGuard = selected.has(node.id) && node.type === 'generate' && reusable && prior.output?.generationJobId;
+    if (selected.has(node.id) && node.type === 'generate' && (paidReplayGuard || inheritedJob?.status === 'completed' || inheritedJob?.applied) && orderedSelected.some((stage) => stage.type === 'storyboard')) throw new HttpError(409, 'Cannot rerun storyboard while reusing completed generation; preserve the generated scenes and resume from generation or render');
+    const reusePrerequisite = !selected.has(node.id) && requiredReuse.has(node.id) && reusable;
+    if (paidReplayGuard || reusePrerequisite) {
+      outputs.set(node.id, prior.output);
+      reusedOutputs.push(node.id);
+      return { nodeId: node.id, type: node.type, status: node.type === 'review' ? 'awaiting_review' : 'completed', reused: true, output: prior.output, reusedFrom: source.id };
+    }
+    const lineage = node.type === 'generate' && prior?.output?.generationJobId
+      ? { output: prior.output }
+      : inheritedJob ? { output: { generationJobId: inheritedJob.id } } : {};
+    if (!selected.has(node.id)) return { nodeId: node.id, type: node.type, status: 'skipped', error: 'Stage was not selected for this execution', ...lineage };
+    return { nodeId: node.id, type: node.type, status: 'queued', ...lineage };
+  });
+
+  for (const node of orderedSelected) {
+    const dependencyType = hardDependency[node.type];
+    if (!dependencyType) continue;
+    const dependency = workflow.nodes.find((item) => item.type === dependencyType);
+    if (!dependency) throw new HttpError(409, `${node.type} requires a ${dependencyType} node in this workflow`);
+    if (outputs.has(dependency.id) || selected.has(dependency.id)) continue;
+    throw new HttpError(409, `${node.type} requires a completed ${dependencyType} prerequisite or valid resume evidence`);
+  }
+  return { selectedStages: orderedSelected.map((node) => node.id), startStage: start.id, source, nodeRuns, outputs, reusedOutputs };
 }
 
 export class WorkflowEngine {
@@ -99,6 +189,7 @@ export class WorkflowEngine {
     this.validateAssets = validateAssets;
     this.generations = generations;
     this.closed = false;
+    this.activeExecutions = new Map();
     if (!store.list('workflows').length) store.create('workflows', defaultWorkflow());
     for (const run of store.list('workflowRuns')) if (['queued', 'running'].includes(run.status)) {
       store.save('workflowRuns', { ...run, status: 'failed', error: 'Server restarted before workflow completed', updatedAt: timestamp(), nodeRuns: run.nodeRuns.map((node) => ['running', 'queued'].includes(node.status) ? { ...node, status: 'failed', error: 'Execution interrupted by server restart' } : node) });
@@ -109,25 +200,28 @@ export class WorkflowEngine {
   update(id, body) { return this.store.updateWorkflow(id, validateWorkflow(body), body.expectedVersion); }
   listRuns(id) { this.store.get('workflows', id); return this.store.list('workflowRuns').filter((run) => run.workflowId === id); }
 
-  start(id, episodeId, { allowGeneration = false, expectedWorkflowVersion, expectedEpisodeVersion } = {}) {
+  start(id, episodeId, { allowGeneration = false, expectedWorkflowVersion, expectedEpisodeVersion, selectedStages, startStage, resumeRunId } = {}) {
     const workflow = this.store.get('workflows', id);
     validateWorkflow(workflow);
     if (expectedWorkflowVersion !== undefined && (!Number.isInteger(expectedWorkflowVersion) || expectedWorkflowVersion < 1)) throw new HttpError(400, 'expectedWorkflowVersion must be a positive integer');
     if (expectedEpisodeVersion !== undefined && (!Number.isInteger(expectedEpisodeVersion) || expectedEpisodeVersion < 1)) throw new HttpError(400, 'expectedEpisodeVersion must be a positive integer');
     if (expectedWorkflowVersion !== undefined && workflow.version !== expectedWorkflowVersion) throw new HttpError(409, 'Workflow changed since this run was quoted. Refresh and quote the current version.');
-    if (workflow.nodes.some(node => node.type === 'generate')) {
-      if (allowGeneration !== true) throw new HttpError(400, 'This workflow includes paid Higgsfield generation; explicit allowGeneration is required');
-      if (!this.generations) throw new HttpError(503, 'Higgsfield generation is unavailable');
-    }
     const episode = this.store.get('episodes', text(episodeId, 'episodeId', 80));
     if (expectedEpisodeVersion !== undefined && episode.version !== expectedEpisodeVersion) throw new HttpError(409, 'Episode changed since this run was quoted. Refresh and quote the current version.');
+    const plan = stageSelection(workflow, { selectedStages, startStage, resumeRunId }, episode, this.store);
+    if (plan.selectedStages.some((nodeId) => workflow.nodes.find((node) => node.id === nodeId)?.type === 'generate')) {
+      if (allowGeneration !== true) throw new HttpError(400, 'This workflow selection includes paid Higgsfield generation; explicit allowGeneration is required');
+      if (!this.generations) throw new HttpError(503, 'Higgsfield generation is unavailable');
+    }
     const active = this.store.list('workflowRuns').filter((run) => ['queued', 'running'].includes(run.status));
     if (active.some((run) => run.episodeId === episode.id)) throw new HttpError(409, 'This episode already has an active workflow');
-    if (active.length >= 4) throw new HttpError(429, 'Workflow execution limit reached');
+    if (active.length >= MAX_ACTIVE_RUNS) throw new HttpError(429, 'Workflow execution limit reached');
     const run = this.store.create('workflowRuns', {
       workflowId: id, workflowVersion: workflow.version, workflowSnapshot: workflow,
       episodeId: episode.id, episodeVersion: episode.version, episodeSnapshot: episode, status: 'queued',
-      nodeRuns: workflow.nodes.map((node) => ({ nodeId: node.id, type: node.type, status: 'queued' })),
+      selectedStages: plan.selectedStages, startStage: plan.startStage,
+      ...(plan.source ? { resumedFrom: plan.source.id } : {}), reusedOutputs: plan.reusedOutputs,
+      nodeRuns: plan.nodeRuns,
     });
     setImmediate(() => this.execute(run.id));
     return run;
@@ -189,21 +283,45 @@ export class WorkflowEngine {
     if (!run) return;
     this.store.save('workflowRuns', { ...run, ...runPatch, updatedAt: timestamp(), nodeRuns: run.nodeRuns.map((node) => node.nodeId === nodeId ? { ...node, ...patch } : node) });
   }
+  persistNode(id, nodeId, patch) {
+    try {
+      const run = this.store.get('workflowRuns', id);
+      this.store.save('workflowRuns', { ...run, updatedAt: timestamp(), nodeRuns: run.nodeRuns.map((node) => node.nodeId === nodeId ? { ...node, ...patch } : node) });
+      return true;
+    } catch {
+      // The store may already be closed during shutdown; provider recovery remains external.
+      return false;
+    }
+  }
 
   async execute(id) {
+    if (this.activeExecutions.has(id)) return;
+    if (this.activeExecutions.size >= MAX_ACTIVE_RUNS) {
+      const retry = setTimeout(() => { if (!this.closed) this.execute(id); }, 25);
+      retry.unref?.();
+      return;
+    }
+    this.activeExecutions.set(id, true);
     let activeNode;
     try {
-      let run = this.current(id);
-      if (!run) return;
-      this.store.save('workflowRuns', { ...run, status: 'running', startedAt: timestamp(), updatedAt: timestamp() });
+      const initial = this.current(id);
+      if (!initial) return;
+      this.store.save('workflowRuns', { ...initial, status: 'running', startedAt: timestamp(), updatedAt: timestamp() });
+      const run = this.store.get('workflowRuns', id);
       const workflow = run.workflowSnapshot;
       const ordered = [...workflow.nodes].sort((a, b) => TYPES.indexOf(a.type) - TYPES.indexOf(b.type));
-      const outputs = new Map();
+      const outputs = new Map(run.nodeRuns.filter((node) => node.output && ['reused', 'completed', 'awaiting_review', 'approved', 'changes_requested'].includes(node.status)).map((node) => [node.nodeId, node.output]));
+      const source = run.resumedFrom ? this.store.get('workflowRuns', run.resumedFrom) : undefined;
+      const sourceById = new Map((source?.nodeRuns || []).map((node) => [node.nodeId, node]));
+      const selected = new Set(run.selectedStages || workflow.nodes.map((node) => node.id));
       let episode = run.episodeSnapshot;
+      let executed = false;
       for (const node of ordered) {
-        if (!this.current(id)) return;
+        const nodeRun = this.store.get('workflowRuns', id).nodeRuns.find((item) => item.nodeId === node.id);
+        if (!selected.has(node.id) || nodeRun?.reused || ['skipped', 'reused'].includes(nodeRun?.status)) continue;
         activeNode = node.id;
-        this.nodeUpdate(id, node.id, { status: 'running', startedAt: timestamp() });
+        executed = true;
+        this.nodeUpdate(id, node.id, { status: 'running', startedAt: timestamp(), error: undefined });
         const inputs = workflow.edges.filter((edge) => edge.target === node.id).map((edge) => ({ nodeId: edge.source, output: outputs.get(edge.source) }));
         let output;
         if (node.type === 'trend') {
@@ -224,31 +342,58 @@ export class WorkflowEngine {
             output = { agent: node.config.agent, mode: 'provider', message: text(result.message, 'agent response', 20000), scenes: this.validateAssets(scenes(result.scenes)) };
           }
         } else if (node.type === 'storyboard') {
-          const script = outputs.get(workflow.nodes.find((item) => item.type === 'script').id);
+          const script = outputs.get(workflow.nodes.find((item) => item.type === 'script')?.id);
+          if (!script?.scenes) throw new HttpError(409, 'storyboard requires a completed script prerequisite or valid resume evidence');
           const normalized = this.validateAssets(scenes(script.scenes));
           episode = this.store.updateEpisode(episode.id, { scenes: normalized }, episode.version, `workflow:${workflow.id}:${id}`);
           output = { episodeId: episode.id, version: episode.version, sceneCount: episode.scenes.length, scenes: episode.scenes };
         } else if (node.type === 'generate') {
           const scene = episode.scenes[node.config.sceneIndex ?? 0];
           if (!scene) throw new HttpError(400, 'Generation target scene does not exist');
-          const job = await this.generations.start(episode.id, { expectedVersion: episode.version, sceneId: scene.id, model: node.config.model, prompt: node.config.prompt || scene.text || episode.topic, params: node.config.params || {}, requestId: `${id}:${node.id}` });
-          this.nodeUpdate(id, node.id, { output: { generationJobId: job.id, provider: 'higgsfield', model: job.model, status: job.status } });
-          const completed = await this.generations.wait(job.id);
-          if (!this.current(id)) return; // Paid output remains available even when a workflow is cancelled.
-          const applied = this.generations.apply(job.id, { expectedVersion: episode.version, sceneId: scene.id });
-          episode = applied.episode;
-          output = { generationJobId: job.id, provider: 'higgsfield', model: job.model, transport: job.transport, status: completed.status, outputs: completed.outputs, episodeVersion: episode.version };
+          const prior = sourceById.get(node.id);
+          const priorJobId = nodeRun?.output?.generationJobId || prior?.output?.generationJobId;
+          const requestId = `${run.resumedFrom || id}:${node.id}`;
+          let job = priorJobId ? this.generations.get(priorJobId) : this.store.list('generationJobs').find((item) => item.requestId === requestId);
+          let completed;
+          if (job) {
+            if (!this.persistNode(id, node.id, { output: { generationJobId: job.id, provider: 'higgsfield', model: job.model, status: job.status } })) throw new HttpError(503, 'Existing generation job could not be durably linked; inspect provider history before retrying');
+            if (job.status === 'completed') completed = job;
+            else if (['queued', 'submitting', 'pending', 'in_progress', 'downloading'].includes(job.status)) completed = await this.generations.wait(job.id);
+            else throw new HttpError(409, 'Existing generation requires provider recovery before this workflow can resume');
+            if (!completed.applied) {
+              if (!this.current(id)) return;
+              const applied = this.generations.apply(job.id, { expectedVersion: episode.version, sceneId: scene.id });
+              episode = applied.episode;
+            }
+            output = { generationJobId: job.id, provider: 'higgsfield', model: job.model, transport: job.transport, status: completed.status, outputs: completed.outputs, episodeVersion: episode.version };
+          } else {
+            job = await this.generations.start(episode.id, { expectedVersion: episode.version, sceneId: scene.id, model: node.config.model, prompt: node.config.prompt || scene.text || episode.topic, params: node.config.params || {}, requestId });
+            if (!this.persistNode(id, node.id, { output: { generationJobId: job.id, provider: 'higgsfield', model: job.model, status: job.status } })) throw new HttpError(503, 'Generation job started but could not be durably linked; inspect provider history before retrying');
+            completed = await this.generations.wait(job.id);
+            if (!this.current(id)) return; // Paid output remains available even when a workflow is cancelled.
+            const applied = this.generations.apply(job.id, { expectedVersion: episode.version, sceneId: scene.id });
+            episode = applied.episode;
+            output = { generationJobId: job.id, provider: 'higgsfield', model: job.model, transport: job.transport, status: completed.status, outputs: completed.outputs, episodeVersion: episode.version };
+          }
         } else if (node.type === 'render') {
           output = await this.render(episode);
         } else {
-          output = { message: 'Rendered output requires human review. No channel publication was performed.', ...(node.config.instructions ? { instructions: node.config.instructions } : {}), episodeId: episode.id, render: outputs.get(workflow.nodes.find((item) => item.type === 'render').id), inputs };
+          const render = outputs.get(workflow.nodes.find((item) => item.type === 'render')?.id);
+          if (!render) throw new HttpError(409, 'review requires a completed render prerequisite or valid resume evidence');
+          output = { message: 'Rendered output requires human review. No channel publication was performed.', ...(node.config.instructions ? { instructions: node.config.instructions } : {}), episodeId: episode.id, render, inputs };
         }
         if (!this.current(id)) return;
         outputs.set(node.id, output);
         const review = node.type === 'review';
         this.nodeUpdate(id, node.id, { status: review ? 'awaiting_review' : 'completed', output, completedAt: timestamp() }, review ? { status: 'awaiting_review', completedAt: timestamp(), episodeVersion: episode.version } : { episodeVersion: episode.version });
       }
-      if (this.current(id)) this.store.record('workflow.awaiting_review', { entityId: workflow.id, runId: id, episodeId: episode.id });
+      const latest = this.current(id);
+      if (!latest) return;
+      const reviewNode = latest.nodeRuns.find((node) => node.type === 'review');
+      const hasReview = Boolean(reviewNode?.output && ['awaiting_review', 'completed'].includes(reviewNode.status));
+      const finalStatus = hasReview ? 'awaiting_review' : 'completed';
+      this.store.save('workflowRuns', { ...latest, status: finalStatus, completedAt: timestamp(), episodeVersion: episode.version, updatedAt: timestamp() });
+      this.store.record(hasReview ? 'workflow.awaiting_review' : 'workflow.completed', { entityId: workflow.id, runId: id, episodeId: episode.id, executed });
     } catch (error) {
       if (!this.current(id)) return;
       const message = error instanceof HttpError ? error.message : error.message?.includes('Trend source') ? error.message : 'Workflow step failed. Review integration availability and local service logs.';
@@ -257,6 +402,8 @@ export class WorkflowEngine {
       this.store.save('workflowRuns', { ...failed, nodeRuns: failed.nodeRuns.map((node) => node.status === 'queued' ? { ...node, status: 'skipped', error: 'An upstream stage failed' } : node) });
       this.store.record('workflow.failed', { entityId: id, nodeId: activeNode, error: message });
       console.error('Workflow step failed:', error.message);
+    } finally {
+      this.activeExecutions.delete(id);
     }
   }
 

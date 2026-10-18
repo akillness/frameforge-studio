@@ -5,6 +5,7 @@ import { open, stat, realpath, unlink } from 'node:fs/promises';
 import { join, resolve, relative, extname, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Store, entity, starterScene } from './store.mjs';
+import { TrendCollector } from './trend-collector.mjs';
 import { HttpError, object, text, optionalText, choice, url, scenes, formats, episodePatch } from './validation.mjs';
 import { WorkflowEngine, validateWorkflow } from './workflows.mjs';
 import { NarrationQueue, createSpeechProvider } from './narration.mjs';
@@ -187,17 +188,46 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     }
     return sceneList;
   }
+  const trendCollector = new TrendCollector({
+    store,
+    fetchTrends: async () => (await adapter()).fetchTrends(),
+  });
 
-  async function refreshTrends() {
-    const result = await (await adapter()).fetchTrends();
-    const captured = [];
-    for (const item of result.trends.slice(0, 100)) {
-      const fields = { keyword: text(item.keyword, 'keyword', 300), source: text(item.source, 'source', 100), url: url(item.url), capturedAt: new Date().toISOString() };
-      const existing = store.list('trends').find((trend) => trend.keyword === fields.keyword && trend.source === fields.source);
-      captured.push(existing || store.create('trends', fields));
-    }
-    store.record('trends.refreshed', { count: captured.length, sources: result.sources });
-    return { trends: captured, sources: result.sources };
+  async function refreshTrends(options = {}) {
+    return trendCollector.runNow({ force: options.force !== false });
+  }
+
+  function trendWindow(requestUrl, { defaultLimit = 50, maxLimit = 100 } = {}) {
+    const query = requestUrl.searchParams.get('query') ?? requestUrl.searchParams.get('q') ?? '';
+    if (query.length > 300) throw new HttpError(400, 'Trend query exceeds 300 characters');
+    const selectedParam = requestUrl.searchParams.get('selected');
+    const selected = selectedParam === null ? undefined : selectedParam === 'true' ? true : selectedParam === 'false' ? false : (() => { throw new HttpError(400, 'selected must be true or false'); })();
+    const sinceParam = requestUrl.searchParams.get('since');
+    const since = sinceParam ? new Date(sinceParam) : undefined;
+    if (sinceParam && Number.isNaN(since.getTime())) throw new HttpError(400, 'Invalid trend since date');
+    const rawLimit = requestUrl.searchParams.get('limit');
+    const limit = rawLimit === null ? defaultLimit : Number(rawLimit);
+    const rawOffset = requestUrl.searchParams.get('offset');
+    const offset = rawOffset === null ? 0 : Number(rawOffset);
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > maxLimit) throw new HttpError(400, `Trend limit must be between 1 and ${maxLimit}`);
+    if (!Number.isSafeInteger(offset) || offset < 0 || offset > 10000) throw new HttpError(400, 'Trend offset must be between 0 and 10000');
+    return { query: query.trim(), selected, since: since ? since.toISOString() : undefined, limit, offset };
+  }
+
+  function trendQuery(requestUrl) {
+    const window = trendWindow(requestUrl);
+    const keywords = store.listTrendKeywords(window);
+    const popular = store.listPopularTrendKeywords({ since: window.since, limit: Math.min(window.limit, 20) });
+    return { keywords, trends: keywords, popular, collector: trendCollector.status(), runs: store.listTrendCollectionRuns({ limit: Math.min(window.limit, 20) }) };
+  }
+
+  function trendState() {
+    return {
+      trendCollector: trendCollector.status(),
+      trendCollectionRuns: store.listTrendCollectionRuns({ limit: 20 }),
+      trendKeywords: store.listTrendKeywords({ limit: 100 }),
+      popularTrendKeywords: store.listPopularTrendKeywords({ limit: 20 }),
+    };
   }
 
   const generationProvider = generation || createGenerationProvider();
@@ -205,6 +235,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
   const workflows = new WorkflowEngine({ store, fetchTrends: refreshTrends, runAgent: async (...args) => (await adapter()).runAgent(...args), render: (episode) => enqueueRender(episode, true), validateAssets, generations });
   const speechProvider = speech || createSpeechProvider();
   const narration = new NarrationQueue({ store, ...speechProvider });
+  trendCollector.start();
 
   async function upload(request, requestUrl) {
     const name = text(requestUrl.searchParams.get('name'), 'upload name', 200);
@@ -259,10 +290,23 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       if (token) sessions.delete(digest(token).toString('hex'));
       return json(response, 200, { authenticated: false }, { 'Set-Cookie': 'frameforge_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0' });
     }
+    if (request.method === 'GET' && path === '/api/trends') return json(response, 200, trendQuery(requestUrl));
+    if (request.method === 'GET' && path === '/api/trends/status') return json(response, 200, trendCollector.status());
+    if (request.method === 'GET' && path === '/api/trends/runs') {
+      const rawLimit = requestUrl.searchParams.get('limit');
+      const limit = rawLimit === null ? 20 : Number(rawLimit);
+      if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw new HttpError(400, 'Trend run limit must be between 1 and 100');
+      return json(response, 200, store.listTrendCollectionRuns({ limit }));
+    }
+    if (request.method === 'GET' && path === '/api/trends/popular') {
+      const window = trendWindow(requestUrl, { defaultLimit: 20, maxLimit: 50 });
+      return json(response, 200, store.listPopularTrendKeywords({ since: window.since, limit: window.limit }));
+    }
     if (request.method === 'GET' && path === '/api/state') {
-      const state = Object.fromEntries(['channels', 'episodes', 'templates', 'trends', 'references', 'jobs', 'events', 'workflows', 'workflowRuns', 'narrationJobs', 'generationJobs'].map((kind) => [kind, store.list(kind)]));
+      const state = Object.fromEntries(['channels', 'episodes', 'templates', 'references', 'jobs', 'events', 'workflows', 'workflowRuns', 'narrationJobs', 'generationJobs'].map((kind) => [kind, store.list(kind)]));
+      state.trends = [...new Map(store.list('trends').map((trend) => [`${trend.keyword}\u0000${trend.source || ''}`, trend])).values()];
       const { nodes, edges } = store.knowledge();
-      return json(response, 200, { ...state, integrations: await integrationStatus(), graph: { nodes, edges } });
+      return json(response, 200, { ...state, ...trendState(), integrations: await integrationStatus(), graph: { nodes, edges } });
     }
     if (request.method === 'GET' && path === '/api/integrations') return json(response, 200, await integrationStatus());
     if (request.method === 'GET' && path === '/api/speech/voices') return json(response, 200, await speechProvider.listVoices());
@@ -298,6 +342,29 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       const generationNormalize = /^\/api\/generations\/([^/]+)\/normalize$/.exec(path);
       if (request.method === 'POST' && generationNormalize) return json(response, 200, await generations.normalize(generationNormalize[1]));
       const write = (kind, fields) => json(response, 201, store.create(kind, fields));
+      if (['POST', 'PUT'].includes(request.method) && path === '/api/trends/settings') {
+        const patch = {};
+        if (body.enabled !== undefined) {
+          if (typeof body.enabled !== 'boolean') throw new HttpError(400, 'Trend collector enabled must be boolean');
+          patch.enabled = body.enabled;
+        }
+        for (const key of ['intervalMs', 'retentionMs', 'maxConcurrency']) {
+          if (body[key] !== undefined) {
+            if (!Number.isSafeInteger(body[key]) || body[key] < 1) throw new HttpError(400, `${key} must be a positive integer`);
+            patch[key] = body[key];
+          }
+        }
+        const settings = store.saveTrendCollectorSettings(patch);
+        if (settings.enabled) trendCollector.start();
+        else trendCollector.stop();
+        return json(response, 200, { settings, collector: trendCollector.status() });
+      }
+      if (request.method === 'POST' && path === '/api/trends/select') {
+        const keyword = text(body.keyword, 'keyword', 300);
+        if (typeof body.selected !== 'boolean') throw new HttpError(400, 'Trend selection must be boolean');
+        const settings = store.setTrendKeywordSelection(keyword, body.selected);
+        return json(response, 200, { keyword, selected: body.selected, settings, keywords: store.listTrendKeywords({ query: keyword, limit: 20 }) });
+      }
       const restoreRoute = /^\/api\/(episodes|workflows)\/([^/]+)\/restore$/.exec(path);
       if (request.method === 'POST' && restoreRoute) {
         for (const key of ['version', 'expectedVersion']) if (!Number.isInteger(body[key]) || body[key] < 1) throw new HttpError(400, `Restore requires a positive ${key}`);
@@ -317,7 +384,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       const workflowRoute = /^\/api\/workflows\/([^/]+)(?:\/(run)|\/runs\/([^/]+)\/(cancel))?$/.exec(path);
       if (workflowRoute) {
         if (request.method === 'PUT' && !workflowRoute[2] && !workflowRoute[3]) return json(response, 200, workflows.update(workflowRoute[1], body));
-        if (request.method === 'POST' && workflowRoute[2]) return json(response, 202, workflows.start(workflowRoute[1], body.episodeId, { allowGeneration: body.allowGeneration, expectedWorkflowVersion: body.expectedWorkflowVersion, expectedEpisodeVersion: body.expectedEpisodeVersion }));
+        if (request.method === 'POST' && workflowRoute[2]) return json(response, 202, workflows.start(workflowRoute[1], body.episodeId, { allowGeneration: body.allowGeneration, selectedStages: body.selectedStages, startStage: body.startStage, resumeRunId: body.resumeRunId, expectedWorkflowVersion: body.expectedWorkflowVersion, expectedEpisodeVersion: body.expectedEpisodeVersion }));
         if (request.method === 'POST' && workflowRoute[4]) return json(response, 200, workflows.cancel(workflowRoute[1], workflowRoute[3]));
       }
       if (request.method === 'POST' && path === '/api/channels') {
@@ -389,7 +456,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
   });
   server.requestTimeout = 120_000;
   server.headersTimeout = 15_000;
-  server.on('close', () => { closing = true; narration.close(); generations.close(); workflows.close(); store.close(); });
+  server.on('close', () => { closing = true; trendCollector.close(); narration.close(); generations.close(); workflows.close(); store.close(); });
   return server;
 }
 

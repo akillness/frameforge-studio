@@ -11,7 +11,7 @@ const categories = ['information','drama','reenactment'];
 const categoryNames = {information:'정보 전달',drama:'드라마',reenactment:'재연'};
 const statusNames = {draft:'제작 중',review:'검토 대기',ready:'제작 완료',queued:'대기 중',running:'렌더링 중',completed:'완료',failed:'실패'};
 const views = [['studio','▣','스튜디오'],['workflow','⤳','워크플로우 빌더'],['trends','↗','트렌드 & 리서치'],['templates','▦','템플릿'],['history','◷','제작 히스토리'],['knowledge','⌘','지식 그래프'],['settings','⚙','연결 & 설정']];
-let state = {channels:[],episodes:[],templates:[],trends:[],references:[],jobs:[],events:[],integrations:{},graph:{nodes:[],edges:[]}};
+let state = {channels:[],episodes:[],templates:[],trends:[],trendKeywords:[],popularTrendKeywords:[],trendCollectionRuns:[],trendCollector:null,references:[],jobs:[],events:[],integrations:{},graph:{nodes:[],edges:[]}};
 let view = 'studio';
 let channelId = null;
 let episode = null;
@@ -92,12 +92,37 @@ function currentScene() { return episode?.scenes?.[sceneIndex]; }
 function duration() { return episode?.scenes?.reduce((sum, scene) => sum + Number(scene.duration || 0), 0) || 0; }
 function time(value) { return `${String(Math.floor(value / 60)).padStart(2,'0')}:${String(Math.floor(value % 60)).padStart(2,'0')}`; }
 
+function trendItems() { return Array.isArray(state.trendKeywords) && state.trendKeywords.length ? state.trendKeywords : state.trends; }
+function trendById(targetId) { return trendItems().find(item => item.id === targetId) || state.trends.find(item => item.id === targetId); }
+function trendCollectorStatus() { return state.trendCollector || {}; }
+function trendDays(value) { const days = Number(value) / (24 * 60 * 60 * 1000); return Number.isFinite(days) ? `${Math.round(days)}일` : '14일'; }
+function trendInterval(value) { const hours = Number(value) / (60 * 60 * 1000); return Number.isFinite(hours) && hours >= 1 ? `${hours % 24 === 0 ? hours / 24 : Math.round(hours * 10) / 10}${hours % 24 === 0 ? '일' : '시간'}` : '24시간'; }
+function trendMediaHtml(trend) {
+  const raw = trend.relatedMedia ?? trend.related_media ?? trend.media;
+  const media = Array.isArray(raw) ? raw : raw ? [raw] : trend.mediaUrl ? [{url:trend.mediaUrl,type:trend.mediaType,title:trend.mediaTitle}] : [];
+  return media.slice(0, 4).map(item => {
+    const url = typeof item === 'string' ? item : item?.url || item?.mediaUrl;
+    const label = typeof item === 'string' ? '관련 미디어' : item?.title || item?.name || item?.type || '관련 미디어';
+    return url ? `<a class="hint" href="${safeUrl(url)}" target="_blank" rel="noopener noreferrer">${esc(label)} ↗</a>` : `<span class="hint">${esc(label)}</span>`;
+  }).join(' · ');
+}
+async function loadTrendBrowser(params = {}) {
+  const query = new URLSearchParams({limit:'100', ...params});
+  const result = await api(`/api/trends?${query}`);
+  state.trendKeywords = Array.isArray(result.keywords) ? result.keywords : [];
+  state.popularTrendKeywords = Array.isArray(result.popular) ? result.popular : [];
+  state.trendCollectionRuns = Array.isArray(result.runs) ? result.runs : [];
+  state.trendCollector = result.collector || state.trendCollector;
+  return result;
+}
+
 async function refresh() {
   state = {...state, ...await api('/api/state')};
   authenticated = true;
   if (!channelId || !state.channels.some(channel => channel.id === channelId)) channelId = state.channels[0]?.id || null;
   if (!episode) episode = clone(state.episodes.find(item => item.channelId === channelId) || null);
   if (!speechLoaded) await loadSpeechVoices();
+  if (view === 'trends') await loadTrendBrowser();
 }
 
 async function loadSpeechVoices() {
@@ -276,7 +301,20 @@ function chatHtml() {
 }
 
 function trendsView() {
-  return heading('트렌드 수집', '검색 소재를 수집하고 출처를 확인합니다.', '<button class="primary" data-action="refresh-trends">트렌드 수집</button>') + `<div class="source-note">Google Trends의 실제 RSS를 수집합니다. 네이버 자료는 원문 링크와 함께 직접 기록할 수 있습니다. 아래 목록은 수집 기록이며 실시간 순위가 아닙니다.</div><div class="research-grid"><section class="panel"><div class="panel-header"><h2>소재 보관함</h2><span class="badge">${state.trends.length}개</span></div><div class="data-list">${state.trends.length ? state.trends.slice().reverse().map(trend => `<div class="data-row"><div><h3>${esc(trend.keyword)}</h3><p>${esc(trend.source)} · ${date(trend.capturedAt || trend.createdAt)}</p>${trend.url ? `<a class="hint" href="${safeUrl(trend.url)}" target="_blank" rel="noopener noreferrer">원문 확인 ↗</a>` : ''}</div><button class="small" data-action="trend-episode" data-id="${esc(trend.id)}">에피소드로 만들기</button></div>`).join('') : '<div class="empty">아직 수집한 소재가 없습니다.<br>트렌드를 수집하거나 관심 키워드를 직접 기록하세요.</div>'}</div></section><section class="panel"><div class="panel-header"><h3>키워드 직접 기록</h3></div><form class="panel-body" id="trend-form"><label>키워드<input name="keyword" required placeholder="지금 사람들이 궁금해하는 것"></label><label>출처<select name="source"><option>Naver</option><option>Google</option><option>YouTube</option><option>직접 조사</option></select></label><label>원문 링크<input name="url" type="url" required placeholder="https://..."></label><button class="primary" type="submit">소재 저장</button><p class="hint" style="margin-top:14px">관심도와 사실 여부는 원문을 확인해 판단하세요.</p></form></section></div><section class="panel section-spacer"><div class="panel-header"><h2>연출 레퍼런스</h2><button class="small" data-action="new-reference">＋ 레퍼런스 추가</button></div>${state.references.length ? state.references.map(reference => `<div class="data-row"><div><h3>${esc(reference.title)}</h3><p>${esc(categoryNames[reference.category] || reference.category)} · ${esc(reference.notes)}</p></div><a href="${safeUrl(reference.url)}" target="_blank" rel="noopener noreferrer">원본 보기 ↗</a></div>`).join('') : '<div class="empty">같은 카테고리 크리에이터의 구도, 템포, 자막 스타일을 기록하세요.</div>'}</section>`;
+  const collector = trendCollectorStatus();
+  const settings = collector.settings || {};
+  const lastRun = collector.lastRun;
+  const records = trendItems().slice().reverse();
+  const popular = (state.popularTrendKeywords || []).slice(0, 12);
+  const runs = (state.trendCollectionRuns || []).slice(0, 5);
+  const enabled = settings.enabled === true;
+  const intervalHours = Math.max(1, Math.round(Number(settings.intervalMs || 24 * 60 * 60 * 1000) / (60 * 60 * 1000)));
+  const activeRunId = typeof collector.activeRunId === 'string' ? collector.activeRunId : '';
+  const status = activeRunId ? `수집 중 · ${activeRunId.slice(0, 8)}` : enabled ? '자동 수집 켜짐' : '자동 수집 꺼짐';
+  const statusTone = activeRunId || enabled ? 'lime' : '';
+  const sourceNote = collector.lastError ? `최근 수집 실패: ${collector.lastError}` : 'Google Trends RSS와 수동 기록을 함께 관리합니다. 자동 수집 실패는 숨기지 않고 최근 상태에 표시합니다.';
+  return heading('트렌드 수집', '검색 소재를 수집하고 출처와 보존 상태를 확인합니다.', '<button class="primary" data-action="refresh-trends">지금 수집</button>') +
+    `<div class="source-note">${esc(sourceNote)}</div><div class="research-grid"><section class="panel"><div class="panel-header"><div><span class="eyebrow">COLLECTOR STATUS</span><h2>수집 상태</h2></div><span class="badge ${statusTone}">${esc(status)}</span></div><div class="panel-body"><div class="two-cols"><div><p class="hint">마지막 수집</p><strong>${lastRun?.completedAt ? date(lastRun.completedAt) : '아직 없음'}</strong></div><div><p class="hint">다음 수집</p><strong>${collector.nextDueAt ? date(collector.nextDueAt) : enabled ? '예약 대기' : '자동 수집 꺼짐'}</strong></div><div><p class="hint">수집 주기</p><strong>${esc(trendInterval(settings.intervalMs))}</strong></div><div><p class="hint">보존 기간</p><strong>${esc(trendDays(settings.retentionMs))}</strong><span class="hint"> · 오래된 트렌드 스냅샷만 정리</span></div></div>${lastRun?.error ? `<p class="danger" role="alert">${esc(lastRun.error)}</p>` : ''}<form id="trend-settings-form" class="section-spacer"><div class="two-cols"><label>자동 수집<input name="enabled" type="checkbox" ${enabled ? 'checked' : ''}></label><label>수집 주기 (시간)<input name="intervalHours" type="number" min="1" max="168" step="1" value="${intervalHours}"></label></div><button class="small" type="submit">설정 저장</button><p class="hint" style="margin-top:12px">자동 수집은 기본 꺼짐이며, 켜면 서버 재시작 후에도 설정을 유지합니다.</p></form></div></section><section class="panel"><div class="panel-header"><h2>인기 키워드</h2><span class="badge">최근 14일</span></div><div class="panel-body">${popular.length ? `<div class="row" style="flex-wrap:wrap">${popular.map(item => `<button class="small quiet" data-action="trend-popular" data-query="${esc(item.keyword)}">${esc(item.keyword)} · ${Number(item.count) || 0}</button>`).join('')}</div>` : '<p class="empty">최근 14일 동안 수집된 인기 키워드가 없습니다.</p>'}</div></section></div><section class="panel section-spacer"><div class="panel-header"><div><h2>소재 보관함</h2><p class="hint">${records.length}개 표시 · 검색 결과는 서버에서 제한됩니다.</p></div><form id="trend-search-form" class="row"><label class="sr-only" for="trend-query">키워드 검색</label><input id="trend-query" name="query" maxlength="300" placeholder="키워드 검색"><button class="small" type="submit">검색</button></form></div><div class="data-list">${records.length ? records.map(trend => `<div class="data-row"><div><h3>${esc(trend.keyword)}</h3><p>${esc(trend.source || '수동 기록')} · ${date(trend.capturedAt || trend.lastCapturedAt || trend.createdAt)} ${trend.selected ? ' · 선택됨' : ''}</p>${trend.url ? `<a class="hint" href="${safeUrl(trend.url)}" target="_blank" rel="noopener noreferrer">원문 확인 ↗</a>` : ''}${trendMediaHtml(trend) ? `<p>${trendMediaHtml(trend)}</p>` : ''}</div><div class="row"><button class="small quiet" data-action="trend-select" data-keyword="${esc(trend.keyword)}" data-selected="${trend.selected ? 'false' : 'true'}">${trend.selected ? '선택 해제' : '선택'}</button><button class="small" data-action="trend-episode" data-keyword="${esc(trend.keyword)}">에피소드로 만들기</button></div></div>`).join('') : '<div class="empty">아직 수집한 소재가 없습니다.<br>지금 수집하거나 관심 키워드를 직접 기록하세요.</div>'}</div></section><section class="panel section-spacer"><div class="panel-header"><h2>최근 수집 기록</h2><span class="badge">${runs.length}건</span></div>${runs.length ? runs.map(run => `<div class="data-row"><div><h3>${esc(run.status === 'completed' ? '수집 완료' : '수집 실패')}</h3><p>${date(run.completedAt || run.startedAt)} · ${Number(run.inserted) || 0}개 추가 · ${Number(run.pruned) || 0}개 정리</p></div><span class="badge ${run.status === 'completed' ? 'lime' : 'coral'}">${esc(run.status)}</span></div>`).join('') : '<div class="empty">아직 수집 실행 기록이 없습니다.</div>'}</section><section class="panel section-spacer"><div class="panel-header"><h2>키워드 직접 기록</h2></div><form class="panel-body" id="trend-form"><label>키워드<input name="keyword" required maxlength="300" placeholder="지금 사람들이 궁금해하는 것"></label><label>출처<select name="source"><option>Naver</option><option>Google</option><option>YouTube</option><option>직접 조사</option></select></label><label>원문 링크<input name="url" type="url" required placeholder="https://..."></label><button class="primary" type="submit">소재 저장</button><p class="hint" style="margin-top:14px">관심도와 사실 여부는 원문을 확인해 판단하세요.</p></form></section><section class="panel section-spacer"><div class="panel-header"><h2>연출 레퍼런스</h2><button class="small" data-action="new-reference">＋ 레퍼런스 추가</button></div>${state.references.length ? state.references.map(reference => `<div class="data-row"><div><h3>${esc(reference.title)}</h3><p>${esc(categoryNames[reference.category] || reference.category)} · ${esc(reference.notes)}</p></div><a href="${safeUrl(reference.url)}" target="_blank" rel="noopener noreferrer">원본 보기 ↗</a></div>`).join('') : '<div class="empty">같은 카테고리 크리에이터의 구도, 템포, 자막 스타일을 기록하세요.</div>'}</section>`;
 }
 function templatesView() {
   return heading('템플릿', '장면 구조를 불러와 현재 에피소드에 적용합니다.', episode ? '<button data-action="save-template">현재 장면을 템플릿으로 저장</button>' : '') + `<div class="cards">${state.templates.map(template => `<article class="panel"><div class="template-art" style="background:${safeColor(template.scenes?.[0]?.background)}">${esc(template.scenes?.[0]?.text || template.name)}</div><div class="template-info"><div class="row between"><h2>${esc(template.name)}</h2><span class="badge">${esc(template.format)}</span></div><p>${esc(categoryNames[template.category] || template.category)} · ${template.scenes?.length || 0} 장면</p><button class="primary small" data-action="apply-template" data-id="${esc(template.id)}">${episode ? '현재 에피소드에 적용' : '에피소드를 먼저 선택하세요'}</button></div></article>`).join('')}</div><p class="footnote">템플릿을 적용하면 현재 장면이 변경됩니다. 적용 전 버전은 제작 히스토리에 남습니다.</p>`;
@@ -419,7 +457,7 @@ async function handleAction(button) {
   else if (action === 'history-version') {historyVersion=Number(button.dataset.version);render();}
   else if (action === 'restore-episode') restoreEpisode(Number(button.dataset.version));
   else if (action === 'save-history-draft') {await save(true);await loadHistory();render();}
-  else if (action === 'view') { stopPlayback(); if (view==='workflow' && workflowEditor.hasChanges()) await workflowEditor.save(); await save(true); view = button.dataset.view; if (view === 'history') await loadHistory(); if (view === 'settings') await loadCommands(); if (view === 'workflow') await workflowEditor.load(); render(); }
+  else if (action === 'view') { stopPlayback(); if (view==='workflow' && workflowEditor.hasChanges()) await workflowEditor.save(); await save(true); view = button.dataset.view; if (view === 'history') await loadHistory(); if (view === 'settings') await loadCommands(); if (view === 'workflow') await workflowEditor.load(); if (view === 'trends') await loadTrendBrowser(); render(); }
   else if (action === 'new-channel') newChannel();
   else if (action === 'new-episode') newEpisode();
   else if (action === 'channel') { stopPlayback(); if (workflowEditor.hasChanges()) await workflowEditor.save(); await save(true); channelId = button.dataset.id; episode = clone(state.episodes.find(item => item.channelId === channelId) || null); sceneIndex = 0; view = 'studio'; render(); }
@@ -442,7 +480,9 @@ async function handleAction(button) {
   else if (action === 'save-template') { if (!episode) return; openModal('내 템플릿 저장', `<label>템플릿 이름<input name="name" required value="${esc(episode.title)} 템플릿"></label><label>콘텐츠 유형<select name="category">${categoryOptions(episode.category)}</select></label>`, async data => { await post('/api/templates',{...data,format:episode.format,scenes:episode.scenes}); await refresh(); render(); toast('템플릿을 저장했습니다.'); },'저장'); }
   else if (action === 'apply-template') { if (!episode) { toast('스튜디오에서 에피소드를 먼저 만들어 주세요.',true); return; } await save(true); episode = await post(`/api/episodes/${episode.id}/template`,{templateId:button.dataset.id}); sceneIndex = 0; dirty = false; view = 'studio'; await refresh(); render(); toast('템플릿을 적용했습니다.'); }
   else if (action === 'refresh-trends') { const result = await post('/api/trends/refresh'); await refresh(); render(); const sources = Array.isArray(result.sources) ? result.sources : Object.values(result.sources || {}); const errors = sources.filter(source => source.error || source.ok === false || source.status === 'error'); toast(errors.length ? `수집 결과를 확인하세요: ${errors.map(source => source.error || source.message || '일부 출처 연결 실패').join(' · ')}` : `${result.trends?.length || 0}개의 트렌드를 수집했습니다.`,errors.length > 0); }
-  else if (action === 'trend-episode') { newEpisode(state.trends.find(trend => trend.id === button.dataset.id)?.keyword || ''); }
+  else if (action === 'trend-episode') { newEpisode(button.dataset.keyword || ''); }
+  else if (action === 'trend-select') { await post('/api/trends/select',{keyword:button.dataset.keyword,selected:button.dataset.selected === 'true'}); await refresh(); render(); }
+  else if (action === 'trend-popular') { await loadTrendBrowser({query:button.dataset.query}); render(); const query = $('#trend-query'); query?.focus(); }
   else if (action === 'new-reference') { openModal('연출 레퍼런스 추가', `<label>레퍼런스 제목<input name="title" required placeholder="좋은 도입부, 자막, 장면 전환"></label><label>원본 링크<input name="url" type="url" required placeholder="https://..."></label><label>콘텐츠 유형<select name="category">${categoryOptions(activeChannel()?.category)}</select></label><label>참고할 연출 요소<textarea name="notes" placeholder="구도, 템포, 색감 등 참고할 점"></textarea></label>`, async data => { await post('/api/references',{...data,channelId}); await refresh(); render(); toast('레퍼런스를 기록했습니다.'); },'기록'); }
   else if (action === 'reload-history') { await refresh(); if (episode && !dirty) episode=clone(state.episodes.find(item=>item.id===episode.id) || episode); await loadHistory(); render(); }
   else if (action === 'refresh-knowledge') { const knowledge = await api('/api/knowledge'); state.graph = knowledge.graph || knowledge; render(); toast('최신 지식을 불러왔습니다.'); }
@@ -478,7 +518,7 @@ document.addEventListener('input', event => {
 });
 
 document.addEventListener('submit', async event => {
-  if (!['chat-form','trend-form','command-form'].includes(event.target.id)) return;
+  if (!['chat-form','trend-form','trend-settings-form','trend-search-form','command-form'].includes(event.target.id)) return;
   event.preventDefault();
   const form = event.target;
   const data = Object.fromEntries(new FormData(form));
@@ -487,6 +527,13 @@ document.addEventListener('submit', async event => {
   try {
     if (form.id === 'command-form') { await post('/api/commands',{message:data.message,source:'web'}); await loadCommands(); render(); }
     else if (form.id === 'trend-form') { await post('/api/trends',data); await refresh(); render(); toast('키워드를 기록했습니다.'); }
+    else if (form.id === 'trend-settings-form') {
+      const intervalHours = Number(data.intervalHours);
+      if (!Number.isSafeInteger(intervalHours) || intervalHours < 1 || intervalHours > 168) throw new Error('수집 주기는 1~168시간이어야 합니다.');
+      await api('/api/trends/settings',{method:'PUT',body:JSON.stringify({enabled:data.enabled === 'on',intervalMs:intervalHours * 60 * 60 * 1000})});
+      await refresh(); render(); toast('트렌드 수집 설정을 저장했습니다.');
+    }
+    else if (form.id === 'trend-search-form') { await loadTrendBrowser({query:data.query || ''}); render(); }
     else {
       await save(true);
       const requestId = episode.id;

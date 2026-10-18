@@ -1,0 +1,49 @@
+{
+  "scope": "server/store.mjs knowledge() runtime hotspot",
+  "method": "Synthetic before/after comparison on the same temporary SQLite dataset. Baseline reimplemented the prior list()+nodes.some() graph scan; optimized used the landed Store.knowledge() implementation with iterate(kind) and Set-backed nodeIds.",
+  "dataset": {
+    "episodes": 3000,
+    "distinctTopics": 50,
+    "graphCounts": {
+      "baselineNodes": 3051,
+      "optimizedNodes": 3051,
+      "baselineAtoms": 3051,
+      "optimizedAtoms": 3051,
+      "baselineEdges": 6000,
+      "optimizedEdges": 6000
+    }
+  },
+  "command": "node --expose-gc /tmp/frameforge-store-bench.mjs",
+  "baseline": {
+    "implementation": "list() materialization plus Array.some() node dedupe",
+    "elapsedMs": 51.880375000000015
+  },
+  "optimized": {
+    "implementation": "iterate(kind) row streaming plus Set node dedupe",
+    "elapsedMs": 11.315249999999992
+  },
+  "observedSpeedup": 4.584995912595837,
+  "allocationClaim": "No heap/allocation reduction claim is made; this receipt records timing and graph-equivalence evidence only.",
+  "verification": [
+    {
+      "command": "node --test tests/store-knowledge.test.mjs",
+      "result": "3 passed, 0 failed"
+    },
+    {
+      "command": "node --test tests/narration.test.mjs",
+      "result": "7 passed, 0 failed"
+    },
+    {
+      "command": "node --test tests/generations.test.mjs",
+      "result": "19 passed, 0 failed"
+    },
+    {
+      "command": "node --check server/store.mjs",
+      "result": "passed (code-review verification)"
+    }
+  ],
+  "limitations": [
+    "Synthetic local benchmark, one run, not a production SLA.",
+    "attachNarration() retains O(N) ID/filename sets and URL map while validating existing uploads; durable data is not truncated."
+  ]
+}

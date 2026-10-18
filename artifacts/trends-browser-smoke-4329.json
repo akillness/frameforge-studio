@@ -1,0 +1,21 @@
+{
+  "verifiedAt": "2026-10-18T16:16:36.192833+00:00",
+  "base": "http://127.0.0.1:4329",
+  "checks": {
+    "validRetentionSettingAccepted": true,
+    "statusBadgeDistinguishesDisabledScheduler": true,
+    "queryControlFiltersKeywordRows": true,
+    "selectionControlPersistsSelectedState": true,
+    "popularControlLoadsKeywordQuery": true,
+    "aggregateKeywordCanOpenEpisodeComposer": true,
+    "settingsControlPersistsSchedulerWithoutCollection": true,
+    "settingsPersistedAndNoRunWasStarted": true,
+    "collectionActionWasNeverInvoked": true,
+    "browserMadeNoOutboundProviderRequests": true,
+    "noBrowserPageErrors": true
+  },
+  "pageErrors": [],
+  "scope": "Trend status/settings/query/selection/popular/episode controls; manual fixtures only; no collection",
+  "browserRequests": 19,
+  "status": "passed"
+}

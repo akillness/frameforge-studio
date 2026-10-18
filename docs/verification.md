@@ -2,7 +2,27 @@
 
 최종 갱신: 2026-10-18. 최신 macOS 로컬 검증, 최종 Linux Docker 전체 테스트와 이전 Windows/Tailscale 운영 근거를 아래에서 구분합니다. fixture를 라이브 제공자 성공으로 취급하지 않습니다.
 
-## 흰색 제작실 — 최신 macOS 로컬 QA
+## 몰입형 워크플로우와 트렌드 보존
+
+워크플로우 미니맵은 확대·축소와 현재 뷰포트를 표시하며 클릭·방향키로 이동합니다. 도구와 실행 결과는 팝업으로 열고 닫아도 선택 노드·편집값·키보드 포커스를 보존합니다. 현재 단계의 실제 완료 상태는 유지하고, 비과금 단계는 선행 결과를 재사용하여 다시 실행할 수 있습니다. 선택 실행은 `selectedStages`, 이후 실행은 `startStage`, 이전 실행의 결과 재사용은 `resumeRunId`로 구분합니다. 유료 생성은 별도 동의가 필요하며 기존 생성 요청을 재제출하는 복구 경로로 사용하지 않습니다.
+
+완료된 생성 결과를 재사용하면서 스토리보드를 다시 만드는 조합은 기존 유료 미디어를 덮어쓰지 않도록 실행 생성 전에 409로 거부합니다. 취소·재개가 이어져도 기존 생성 작업 ID를 보존하고 재사용합니다.
+
+트렌드 수집은 실행 중복을 막는 예약 작업으로 관리합니다. 보존 기간은 최소 14일이며 더 짧은 설정은 거부합니다. 인기·선택 키워드를 조회할 수 있고, 보존 정리에서 에피소드와 과거 이력이 참조하는 미디어는 삭제하지 않습니다. Naver 수동 출처 기록과 실제 수집 성공은 구분합니다.
+
+- `scripts/workflow-browser-smoke.py`는 격리 루프백에서 미니맵·팝업·단계 실행 요청·폴링 종료를 검사합니다. 실행 응답은 fixture이며 유료 생성이나 외부 게시를 검증하지 않습니다.
+- `scripts/trends-browser-smoke.py`는 격리 루프백에서 키워드 조회·선택·설정·에피소드 생성 흐름을 검사합니다. 실제 외부 수집 버튼은 실행하지 않습니다.
+- [성능 측정](../artifacts/runtime-efficiency.json)은 동일 SQLite fixture에서 지식 그래프 순회·중복 제거 변경의 약 4.58배 속도 향상을 기록합니다. 단일 합성 측정이며 실제 운영 처리량이나 힙 감소를 입증하지 않습니다.
+- [채널 게시 감사](../artifacts/channel-publication-audit.json)는 채널 메타데이터와 실제 업로드를 구분합니다. OAuth·업로드·게시 확인 어댑터가 없으므로 연결 채널로 직접 게시 완료를 주장하지 않습니다.
+- [Jev 검토](../artifacts/jev-immersive-workflow-review.json)는 `proposal_only` 자문이며 자동 실행 권한이나 QA 통과 판정이 아닙니다.
+
+최종 격리 Docker(`127.0.0.1:4329`)에서 [워크플로우 브라우저 20개 검사](../artifacts/workflow-browser-smoke-4329.json)와 [트렌드 브라우저 11개 검사](../artifacts/trends-browser-smoke-4329.json)가 통과했습니다. [컨테이너 렌더·재시작 영수증](../artifacts/immersive-container-smoke.json)은 인증 다운로드, 1080×1920 H.264/AAC 출력과 동일 해시·편집 이력의 재시작 보존을 확인합니다. 컨테이너에서 생성한 다운로드 파일의 코덱은 호스트 `ffprobe`로 검사했습니다.
+
+최종 회귀 명령 `node --test tests/workflows.test.mjs tests/trend-collector.test.mjs tests/trends-api.test.mjs tests/store-knowledge.test.mjs tests/narration.test.mjs tests/generations.test.mjs`는 64개 통과·실패 0개를 기록했습니다. `npm run check`는 59개 모듈의 구문 검사를 통과했고, `docker build -t frameforge-studio:immersive-20261018 .`로 위 격리 검증 이미지를 빌드했습니다. 이 검증은 운영 배포나 새로운 유료 제공자 요청을 포함하지 않습니다.
+
+아래 흰색 제작실 영수증은 앞선 변경의 근거입니다. 새 변경의 최종 이미지·브라우저·회귀 결과는 별도 영수증으로 구분합니다.
+
+## 흰색 제작실 — 앞선 macOS 로컬 QA
 
 Studio·Workflow·Trends·Templates·History·Knowledge·Settings 7개 화면의 흰색 UI와 기존 Higgsfield 검사기 재사용, 개인 작업 창을 검증했습니다. 개인 작업 창은 `자동 맞춤`(도킹형), `컴팩트` 1024×768(오버레이), `표준` 1280×800(도킹형), `와이드` 1600×900(도킹형), `집중` 1280×800(오버레이) 프리셋을 제공하고, 숫자 입력(폭 320–2560px·높이 320–1800px·검사기 240–480px), 포인터 드래그와 방향키(Shift 큰 간격)로 사용자 지정 크기를 조절합니다. 검사기·내레이션·어시스턴트는 기존 DOM을 옮기는 native dialog 오버레이이며, named profile은 브라우저 로컬에만 저장되고 서버 레이아웃 쓰기는 없습니다. 어시스턴트 제출 전 초안은 에피소드 범위의 일시 상태이고 검사기 편집은 선택 장면 범위입니다. 이번 변경에서 유료 생성·공개 배포·Windows/Tailscale 운영 전환은 수행하지 않았습니다. [조사 영수증](../artifacts/white-studio-research.json)은 16개 디자인 근거, 12개 공식 Higgsfield 근거와 Aside 공개 UI 관찰을 담습니다. 관찰된 웹 크레딧 표시는 계정별 API 견적이 아닙니다.
 

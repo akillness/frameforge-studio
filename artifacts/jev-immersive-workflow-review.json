@@ -1,0 +1,14 @@
+{
+  "schema": "frameforge-jev-advisory/v1",
+  "observedAt": "2026-10-18",
+  "profile": "jeopi",
+  "runtimeMode": "advisory",
+  "hostAuthorizationGranted": false,
+  "backend": {"kind": "api", "driver": "typesafe", "model": "jev-1.13.0", "tier": "unvalidated"},
+  "verdict": "proposal_only",
+  "receiptVersion": 2,
+  "receipt": "d157b66fbbd199415a39b45ebe6afec28d9b43f3969c7fffd0fbaa32f165cd9b",
+  "failingQuestions": ["addresses_task (ans=no, conf=0.51)", "evidence_supports (ans=no, conf=0.66)", "unrelated_changes (ans=yes, conf=0.65)", "needs_clarification (ans=yes, conf=0.57)"],
+  "interpretation": "This proposal-only check is not an approval or verification. Its task envelope did not include the full user request or implementation evidence. Independent behavior tests and source-bound browser evidence remain required.",
+  "usage": {"input_tokens": 552, "output_tokens": 80, "requests": 1}
+}

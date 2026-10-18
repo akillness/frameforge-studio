@@ -1,0 +1,13 @@
+{
+  "schema": "frameforge-publication-audit/v1",
+  "observedAt": "2026-10-18",
+  "reviewer": "UploadAudit",
+  "directUploadImplemented": false,
+  "liveUploadVerified": false,
+  "platforms": ["youtube", "instagram", "tiktok", "other"],
+  "observedCapability": "Channel metadata registration only; YouTube integration is manual",
+  "sourceAnchors": ["server/integrations.mjs:17-27", "server/app.mjs:262-270", "server/app.mjs:323-327", "server/workflows.mjs:241-244", "server/store.mjs:238-250", "scripts/jev-review.mjs:27"],
+  "scope": "Read-only source and disposable loopback service on port4328. Line numbers refer to audit snapshot, before concurrent edits. No production requests or upload/publish calls.",
+  "probes": {"health": 200, "integrations": 200, "generationStatus": 200, "state": 200},
+  "missingPrerequisites": ["Approved per-platform OAuth identity and token lifecycle", "Provider upload, polling and idempotency adapter", "Provider media ID, URL, status, channel and hash publication receipt", "Owner publication consent bound to reviewed render hash and version"]
+}

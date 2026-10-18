@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { DatabaseSync } from 'node:sqlite';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
@@ -29,7 +30,7 @@ async function setup(t, overrides = {}) {
   const request = (url, method = 'GET', body) => fetch(base + url, { method, ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}) });
   const state = await (await request('/api/state')).json();
   const episode = await (await request('/api/episodes', 'POST', { channelId: state.channels[0].id, title: 'DAG 제작', topic: '출처 검토' })).json();
-  return { request, episode, workflow: state.workflows[0], renderCount: () => renderCount, restart: async () => { await stop(); await start(); } };
+  return { request, episode, workflow: state.workflows[0], dataDir, renderCount: () => renderCount, restart: async () => { await stop(); await start(); } };
 }
 
 async function waitRun(fixture, id, statuses = ['awaiting_review', 'failed', 'cancelled']) {
@@ -41,6 +42,396 @@ async function waitRun(fixture, id, statuses = ['awaiting_review', 'failed', 'ca
   }
   throw new Error('Workflow did not reach expected state');
 }
+
+function partialWorkflow() {
+  const workflow = defaultWorkflow();
+  workflow.nodes = workflow.nodes.filter((node) => !['trend', 'research'].includes(node.type));
+  workflow.edges = [
+    { id: 'edge-script-storyboard', source: 'script', target: 'storyboard' },
+    { id: 'edge-storyboard-render', source: 'storyboard', target: 'render' },
+    { id: 'edge-render-review', source: 'render', target: 'review' },
+  ];
+  return workflow;
+}
+
+function generationWorkflow() {
+  const workflow = partialWorkflow();
+  workflow.nodes.push({ id: 'generate', type: 'generate', x: 600, y: 180, config: { model: 'fixture', prompt: 'Fixture visual', params: {}, sceneIndex: 0 } });
+  workflow.edges = [
+    { id: 'edge-script-storyboard', source: 'script', target: 'storyboard' },
+    { id: 'edge-storyboard-generate', source: 'storyboard', target: 'generate' },
+    { id: 'edge-generate-render', source: 'generate', target: 'render' },
+    { id: 'edge-render-review', source: 'render', target: 'review' },
+  ];
+  return workflow;
+}
+
+
+test('typed DAG validator accepts a partial workflow that omits fixed trend and research stages', () => {
+  const normalized = validateWorkflow(partialWorkflow());
+  assert.deepEqual(normalized.nodes.map((node) => node.type), ['script', 'storyboard', 'render', 'review']);
+  assert.deepEqual(normalized.edges.map(({ source, target }) => `${source}->${target}`), ['script->storyboard', 'storyboard->render', 'render->review']);
+});
+
+test('selected stage execution skips omitted stages while preserving the selected DAG order', async (t) => {
+  const f = await setup(t);
+  const started = await f.request(`/api/workflows/${f.workflow.id}/run`, 'POST', { episodeId: f.episode.id, selectedStages: ['script', 'storyboard', 'render', 'review'], startStage: 'script' });
+  assert.equal(started.status, 202);
+  const run = await waitRun(f, (await started.json()).id);
+  assert.equal(run.status, 'awaiting_review');
+  assert.equal(run.nodeRuns.find((node) => node.type === 'trend').status, 'skipped');
+  assert.equal(run.nodeRuns.find((node) => node.type === 'research').status, 'skipped');
+  assert.deepEqual(run.nodeRuns.filter((node) => ['script', 'storyboard', 'render', 'review'].includes(node.type)).map((node) => node.status), ['completed', 'completed', 'completed', 'awaiting_review']);
+});
+
+test('selected start stage rejects a missing prerequisite instead of executing a partial DAG with undefined inputs', async (t) => {
+  const f = await setup(t);
+  const response = await f.request(`/api/workflows/${f.workflow.id}/run`, 'POST', { episodeId: f.episode.id, selectedStages: ['storyboard', 'render', 'review'], startStage: 'storyboard' });
+  assert.equal(response.status, 409);
+  assert.match((await response.json()).error, /prerequisite|resume/i);
+});
+
+test('storyboard-only workflow rejects a selected storyboard without a script prerequisite', async (t) => {
+  const f = await setup(t);
+  const workflow = {
+    ...defaultWorkflow(),
+    name: 'Storyboard-only workflow',
+    nodes: defaultWorkflow().nodes.filter((node) => ['storyboard', 'render', 'review'].includes(node.type)),
+    edges: [
+      { id: 'edge-storyboard-render', source: 'storyboard', target: 'render' },
+      { id: 'edge-render-review', source: 'render', target: 'review' },
+    ],
+  };
+  const created = await (await f.request('/api/workflows', 'POST', workflow)).json();
+  const response = await f.request(`/api/workflows/${created.id}/run`, 'POST', {
+    episodeId: f.episode.id,
+    selectedStages: ['storyboard'],
+    startStage: 'storyboard',
+  });
+  assert.equal(response.status, 409);
+  assert.match((await response.json()).error, /prerequisite|resume|script/i);
+  assert.deepEqual(await (await f.request(`/api/workflows/${created.id}/runs`)).json(), []);
+});
+
+test('resumeRunId reruns selected downstream stages with reused prerequisites and accepts the new render candidate', async (t) => {
+  const f = await setup(t);
+  const firstResponse = await f.request(`/api/workflows/${f.workflow.id}/run`, 'POST', { episodeId: f.episode.id, selectedStages: ['script', 'storyboard', 'render', 'review'], startStage: 'script' });
+  const first = await waitRun(f, (await firstResponse.json()).id);
+  const firstScript = first.nodeRuns.find((node) => node.type === 'script');
+  const firstStoryboard = first.nodeRuns.find((node) => node.type === 'storyboard');
+  const firstRender = first.nodeRuns.find((node) => node.type === 'render');
+  const secondResponse = await f.request(`/api/workflows/${f.workflow.id}/run`, 'POST', { episodeId: f.episode.id, selectedStages: ['storyboard', 'render', 'review'], startStage: 'storyboard', resumeRunId: first.id });
+  assert.equal(secondResponse.status, 202);
+  const second = await waitRun(f, (await secondResponse.json()).id);
+  const secondTrend = second.nodeRuns.find((node) => node.type === 'trend');
+  const secondResearch = second.nodeRuns.find((node) => node.type === 'research');
+  const secondScript = second.nodeRuns.find((node) => node.type === 'script');
+  const secondStoryboard = second.nodeRuns.find((node) => node.type === 'storyboard');
+  const secondRender = second.nodeRuns.find((node) => node.type === 'render');
+  const secondReview = second.nodeRuns.find((node) => node.type === 'review');
+  assert.equal(second.status, 'awaiting_review');
+  assert.equal(f.renderCount(), 2);
+  assert.equal(secondTrend.status, 'skipped');
+  assert.equal(secondResearch.status, 'skipped');
+  assert.equal(secondScript.status, 'completed');
+  assert.equal(secondScript.reused, true);
+  assert.deepEqual(secondScript.output, firstScript.output);
+  assert.equal(secondStoryboard.status, 'completed');
+  assert.equal(secondStoryboard.output.version, firstStoryboard.output.version + 1);
+  assert.equal(secondRender.status, 'completed');
+  assert.notDeepEqual(secondRender.output, firstRender.output);
+  assert.equal(secondReview.status, 'awaiting_review');
+  assert.deepEqual(secondReview.output.render, secondRender.output);
+  const reviewResponse = await f.request(`/api/workflows/${f.workflow.id}/runs/${second.id}/review`, 'POST', { decision: 'approved', notes: 'Approve the second render candidate.', expectedEpisodeVersion: second.episodeVersion });
+  assert.equal(reviewResponse.status, 200);
+  const reviewed = await reviewResponse.json();
+  assert.equal(reviewed.status, 'approved');
+  assert.equal(reviewed.review.jobId, secondRender.output.jobId);
+  assert.equal(reviewed.review.outputUrl, secondRender.output.outputUrl);
+});
+
+test('script-only resume skips all omitted descendants and completes without a review candidate', async (t) => {
+  const f = await setup(t);
+  const firstResponse = await f.request(`/api/workflows/${f.workflow.id}/run`, 'POST', { episodeId: f.episode.id, selectedStages: ['script', 'storyboard', 'render', 'review'], startStage: 'script' });
+  const first = await waitRun(f, (await firstResponse.json()).id);
+  const secondResponse = await f.request(`/api/workflows/${f.workflow.id}/run`, 'POST', { episodeId: f.episode.id, selectedStages: ['script'], startStage: 'script', resumeRunId: first.id });
+  assert.equal(secondResponse.status, 202);
+  const second = await waitRun(f, (await secondResponse.json()).id, ['completed', 'failed', 'cancelled']);
+  assert.equal(second.status, 'completed');
+  assert.equal(f.renderCount(), 1);
+  for (const type of ['trend', 'research', 'storyboard', 'render', 'review']) {
+    const node = second.nodeRuns.find((item) => item.type === type);
+    assert.equal(node.status, 'skipped', `${type} should remain skipped`);
+  }
+  assert.equal(second.nodeRuns.find((node) => node.type === 'review').output, undefined);
+});
+
+test('resuming a generation workflow reuses the completed generation output without another provider request', async (t) => {
+  let createCalls = 0;
+  const generation = {
+    transport: 'api',
+    capability: async () => ({ available: true }),
+    models: async () => [],
+    modelSchema: async () => ({ type: 'image', parameters: [{ name: 'prompt', type: 'string', required: true }] }),
+    create: async () => { createCalls++; return { requestId: 'fixture-provider', status: 'completed', outputs: [{ url: 'https://images.higgs.ai/fixture.png', type: 'image' }] }; },
+    status: async () => { throw new Error('unexpected poll'); },
+  };
+  const f = await setup(t, { generation, generationOptions: { pollIntervalMs: 1, download: async (_url, file) => { await writeFile(file, 'fixture bytes'); return { bytes: 13, contentType: 'image/png' }; }, probe: async () => ({ kind: 'image', width: 64, height: 64 }) } });
+  const workflow = await (await f.request('/api/workflows', 'POST', generationWorkflow())).json();
+  const fixture = { ...f, workflow };
+  const firstResponse = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['script', 'storyboard', 'generate', 'render', 'review'], startStage: 'script' });
+  assert.equal(firstResponse.status, 202);
+  const first = await waitRun(fixture, (await firstResponse.json()).id);
+  assert.equal(first.status, 'awaiting_review');
+  assert.equal(createCalls, 1);
+  const firstOutput = first.nodeRuns.find((node) => node.type === 'generate').output;
+  const firstRender = first.nodeRuns.find((node) => node.type === 'render');
+  const secondResponse = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['generate', 'render', 'review'], startStage: 'generate', resumeRunId: first.id });
+  assert.equal(secondResponse.status, 202);
+  const second = await waitRun(fixture, (await secondResponse.json()).id);
+  assert.equal(second.status, 'awaiting_review');
+  assert.equal(createCalls, 1);
+  assert.equal(f.renderCount(), 2);
+  const secondGenerate = second.nodeRuns.find((node) => node.type === 'generate');
+  const secondRender = second.nodeRuns.find((node) => node.type === 'render');
+  const secondReview = second.nodeRuns.find((node) => node.type === 'review');
+  assert.equal(secondGenerate.status, 'completed');
+  assert.equal(secondGenerate.reused, true);
+  assert.deepEqual(secondGenerate.output, firstOutput);
+  assert.equal(secondRender.status, 'completed');
+  assert.notDeepEqual(secondRender.output, firstRender.output);
+  assert.equal(secondReview.status, 'awaiting_review');
+  assert.deepEqual(secondReview.output.render, secondRender.output);
+});
+
+test('completed generation resume with missing generationJobId rejects before another provider request', async (t) => {
+  let createCalls = 0;
+  const generation = {
+    transport: 'api',
+    capability: async () => ({ available: true }),
+    models: async () => [],
+    modelSchema: async () => ({ type: 'image', parameters: [{ name: 'prompt', type: 'string', required: true }] }),
+    create: async () => { createCalls++; return { requestId: 'fixture-provider', status: 'completed', outputs: [{ url: 'https://images.higgs.ai/fixture.png', type: 'image' }] }; },
+    status: async () => { throw new Error('unexpected poll'); },
+  };
+  const f = await setup(t, { generation, generationOptions: { pollIntervalMs: 1, download: async (_url, file) => { await writeFile(file, 'fixture bytes'); return { bytes: 13, contentType: 'image/png' }; }, probe: async () => ({ kind: 'image', width: 64, height: 64 }) } });
+  const workflow = await (await f.request('/api/workflows', 'POST', generationWorkflow())).json();
+  const fixture = { ...f, workflow };
+  const firstResponse = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['script', 'storyboard', 'generate', 'render', 'review'], startStage: 'script' });
+  assert.equal(firstResponse.status, 202);
+  const first = await waitRun(fixture, (await firstResponse.json()).id);
+  assert.equal(first.status, 'awaiting_review');
+  assert.equal(createCalls, 1);
+
+  const db = new DatabaseSync(path.join(f.dataDir, 'studio.sqlite'));
+  const stored = JSON.parse(db.prepare('SELECT data FROM entities WHERE kind=? AND id=?').get('workflowRuns', first.id).data);
+  stored.nodeRuns = stored.nodeRuns.map((node) => {
+    if (node.type !== 'generate') return node;
+    const { generationJobId: _generationJobId, ...output } = node.output;
+    return { ...node, output };
+  });
+  db.prepare('UPDATE entities SET data=? WHERE kind=? AND id=?').run(JSON.stringify(stored), 'workflowRuns', first.id);
+  db.close();
+
+  const response = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['generate', 'render', 'review'], startStage: 'generate', resumeRunId: first.id });
+  assert.equal(response.status, 409);
+  assert.match((await response.json()).error, /generation|job|resume|evidence/i);
+  assert.equal(createCalls, 1);
+  const runs = await (await f.request(`/api/workflows/${workflow.id}/runs`)).json();
+  assert.equal(runs.length, 1);
+});
+test('cancellation during generation submission preserves the job for resume without a second provider request', async (t) => {
+  let releaseCreate;
+  let announceCreate;
+  const createPending = new Promise((resolve) => { releaseCreate = resolve; });
+  const createCalled = new Promise((resolve) => { announceCreate = resolve; });
+  let createCalls = 0;
+  const generation = {
+    transport: 'api',
+    capability: async () => ({ available: true }),
+    models: async () => [],
+    modelSchema: async () => ({ type: 'image', parameters: [{ name: 'prompt', type: 'string', required: true }] }),
+    create: async () => { createCalls++; announceCreate(); return createPending; },
+    status: async () => { throw new Error('unexpected poll'); },
+  };
+  const f = await setup(t, { generation, generationOptions: { pollIntervalMs: 1, download: async (_url, file) => { await writeFile(file, 'fixture bytes'); return { bytes: 13, contentType: 'image/png' }; }, probe: async () => ({ kind: 'image', width: 64, height: 64 }) } });
+  const workflow = await (await f.request('/api/workflows', 'POST', generationWorkflow())).json();
+  const fixture = { ...f, workflow };
+  const firstResponse = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['script', 'storyboard', 'generate', 'render', 'review'], startStage: 'script' });
+  assert.equal(firstResponse.status, 202);
+  const firstId = (await firstResponse.json()).id;
+  await createCalled;
+  const cancelledResponse = await f.request(`/api/workflows/${workflow.id}/runs/${firstId}/cancel`, 'POST', {});
+  assert.equal(cancelledResponse.status, 200);
+  releaseCreate({ requestId: 'fixture-provider', status: 'completed', outputs: [{ url: 'https://images.higgs.ai/fixture.png', type: 'image' }] });
+  const cancelled = await waitRun(fixture, firstId);
+  assert.equal(cancelled.status, 'cancelled');
+  const firstOutput = cancelled.nodeRuns.find((node) => node.type === 'generate').output;
+  assert.equal(typeof firstOutput.generationJobId, 'string');
+  const secondResponse = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['generate', 'render', 'review'], startStage: 'generate', resumeRunId: firstId });
+  assert.equal(secondResponse.status, 202);
+  const second = await waitRun(fixture, (await secondResponse.json()).id);
+  assert.equal(second.status, 'awaiting_review');
+  assert.equal(createCalls, 1);
+  assert.equal(second.nodeRuns.find((node) => node.type === 'generate').output.generationJobId, firstOutput.generationJobId);
+});
+
+test('generation requestId lineage recovers after workflow output persistence fails', async (t) => {
+  let createCalls = 0;
+  const generation = {
+    transport: 'api',
+    capability: async () => ({ available: true }),
+    models: async () => [],
+    modelSchema: async () => ({ type: 'image', parameters: [{ name: 'prompt', type: 'string', required: true }] }),
+    create: async () => { createCalls++; return { requestId: 'fixture-provider', status: 'completed', outputs: [{ url: 'https://images.higgs.ai/fixture.png', type: 'image' }] }; },
+    status: async () => { throw new Error('unexpected poll'); },
+  };
+  const f = await setup(t, { generation, generationOptions: { pollIntervalMs: 1, download: async (_url, file) => { await writeFile(file, 'fixture bytes'); return { bytes: 13, contentType: 'image/png' }; }, probe: async () => ({ kind: 'image', width: 64, height: 64 }) } });
+  const workflow = await (await f.request('/api/workflows', 'POST', generationWorkflow())).json();
+  const fixture = { ...f, workflow };
+  const db = new DatabaseSync(path.join(f.dataDir, 'studio.sqlite'));
+  db.exec(`CREATE TRIGGER workflow_runs_generation_link_failure BEFORE UPDATE ON entities
+    WHEN NEW.kind = 'workflowRuns' AND json_extract(NEW.data, '$.status') = 'running' AND instr(NEW.data, '"generationJobId"') > 0
+    BEGIN SELECT RAISE(ABORT, 'Injected workflowRuns generation-link persistence failure'); END;`);
+  db.close();
+  const firstResponse = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['script', 'storyboard', 'generate', 'render', 'review'], startStage: 'script' });
+  assert.equal(firstResponse.status, 202);
+  const firstId = (await firstResponse.json()).id;
+  const failed = await waitRun(fixture, firstId, ['failed']);
+  assert.equal(failed.status, 'failed');
+  let generationJob;
+  for (let i = 0; i < 100; i++) {
+    const state = await (await f.request('/api/state')).json();
+    generationJob = state.generationJobs.find((job) => job.requestId === `${firstId}:generate`);
+    if (generationJob?.status === 'completed') break;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  assert.equal(generationJob?.status, 'completed');
+  assert.equal(createCalls, 1);
+  const restore = new DatabaseSync(path.join(f.dataDir, 'studio.sqlite'));
+  restore.exec('DROP TRIGGER workflow_runs_generation_link_failure');
+  restore.close();
+  const resumedResponse = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['generate', 'render', 'review'], startStage: 'generate', resumeRunId: firstId });
+  assert.equal(resumedResponse.status, 202);
+  const resumed = await waitRun(fixture, (await resumedResponse.json()).id);
+  assert.equal(resumed.status, 'awaiting_review');
+  assert.equal(createCalls, 1);
+  assert.equal(resumed.nodeRuns.find((node) => node.type === 'generate').output.generationJobId, generationJob.id);
+});
+test('cancelled queued generation resume inherits pending provider job without resubmitting', async (t) => {
+  let releaseStatus;
+  let announceStatus;
+  const pendingStatus = new Promise((resolve) => { releaseStatus = resolve; });
+  const statusStarted = new Promise((resolve) => { announceStatus = resolve; });
+  let statusCalls = 0;
+  let createCalls = 0;
+  const generation = {
+    transport: 'api',
+    capability: async () => ({ available: true }),
+    models: async () => [],
+    modelSchema: async () => ({ type: 'image', parameters: [{ name: 'prompt', type: 'string', required: true }] }),
+    create: async () => { createCalls++; return { requestId: 'fixture-provider', status: 'pending' }; },
+    status: async () => {
+      statusCalls++;
+      if (statusCalls === 1) {
+        announceStatus();
+        return pendingStatus;
+      }
+      return { requestId: 'fixture-provider', status: 'completed', outputs: [{ url: 'https://images.higgs.ai/fixture.png', type: 'image' }] };
+    },
+  };
+  const f = await setup(t, { generation, generationOptions: { pollIntervalMs: 1, download: async (_url, file) => { await writeFile(file, 'fixture bytes'); return { bytes: 13, contentType: 'image/png' }; }, probe: async () => ({ kind: 'image', width: 64, height: 64 }) } });
+  const workflow = await (await f.request('/api/workflows', 'POST', generationWorkflow())).json();
+  const fixture = { ...f, workflow };
+  const firstResponse = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['script', 'storyboard', 'generate', 'render', 'review'], startStage: 'script' });
+  assert.equal(firstResponse.status, 202);
+  const firstId = (await firstResponse.json()).id;
+  await statusStarted;
+  assert.equal((await f.request(`/api/workflows/${workflow.id}/runs/${firstId}/cancel`, 'POST', {})).status, 200);
+  const cancelledFirst = await waitRun(fixture, firstId);
+  const firstJobId = cancelledFirst.nodeRuns.find((node) => node.type === 'generate').output.generationJobId;
+  assert.equal(typeof firstJobId, 'string');
+
+  const childId = `${firstId}-queued-child`;
+  const queuedChild = {
+    ...cancelledFirst,
+    id: childId,
+    status: 'queued',
+    resumedFrom: firstId,
+    selectedStages: ['generate', 'render', 'review'],
+    startStage: 'generate',
+    nodeRuns: cancelledFirst.nodeRuns.map((node) => {
+      const { startedAt: _startedAt, completedAt: _completedAt, ...base } = node;
+      if (node.type === 'generate' || node.type === 'render' || node.type === 'review') return { ...base, status: 'queued' };
+      if (node.type === 'script' || node.type === 'storyboard') return { ...base, status: 'completed', reused: true };
+      return { ...base, status: 'skipped' };
+    }),
+  };
+  const childDb = new DatabaseSync(path.join(f.dataDir, 'studio.sqlite'));
+  childDb.prepare('INSERT INTO entities(kind,id,data) VALUES (?,?,?)').run('workflowRuns', childId, JSON.stringify(queuedChild));
+  childDb.close();
+  const childCancel = await f.request(`/api/workflows/${workflow.id}/runs/${childId}/cancel`, 'POST', {});
+  assert.equal(childCancel.status, 200);
+  const cancelledChild = await waitRun(fixture, childId);
+  const childGenerate = cancelledChild.nodeRuns.find((node) => node.type === 'generate');
+  assert.equal(childGenerate.status, 'cancelled');
+  assert.equal(childGenerate.startedAt, undefined);
+  const db = new DatabaseSync(path.join(f.dataDir, 'studio.sqlite'));
+  const storedChild = JSON.parse(db.prepare('SELECT data FROM entities WHERE kind=? AND id=?').get('workflowRuns', childId).data);
+  storedChild.nodeRuns = storedChild.nodeRuns.map((node) => node.type === 'generate' ? { ...node, output: {} } : node);
+  db.prepare('UPDATE entities SET data=? WHERE kind=? AND id=?').run(JSON.stringify(storedChild), 'workflowRuns', childId);
+  db.close();
+
+  const resumedResponse = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['generate', 'render', 'review'], startStage: 'generate', resumeRunId: childId });
+  const resumedBody = await resumedResponse.json();
+  assert.equal(resumedResponse.status, 202, JSON.stringify(resumedBody));
+  releaseStatus({ requestId: 'fixture-provider', status: 'completed', outputs: [{ url: 'https://images.higgs.ai/fixture.png', type: 'image' }] });
+  const resumed = await waitRun(fixture, resumedBody.id);
+  assert.equal(resumed.status, 'awaiting_review');
+  assert.equal(createCalls, 1);
+  assert.equal(resumed.nodeRuns.find((node) => node.type === 'generate').output.generationJobId, firstJobId);
+});
+
+test('completed generation resume rejects storyboard rerun before episode mutation', async (t) => {
+  let createCalls = 0;
+  const generation = {
+    transport: 'api',
+    capability: async () => ({ available: true }),
+    models: async () => [],
+    modelSchema: async () => ({ type: 'image', parameters: [{ name: 'prompt', type: 'string', required: true }] }),
+    create: async () => { createCalls++; return { requestId: 'fixture-provider', status: 'completed', outputs: [{ url: 'https://images.higgs.ai/fixture.png', type: 'image' }] }; },
+    status: async () => { throw new Error('unexpected poll'); },
+  };
+  const f = await setup(t, { generation, generationOptions: { pollIntervalMs: 1, download: async (_url, file) => { await writeFile(file, 'fixture bytes'); return { bytes: 13, contentType: 'image/png' }; }, probe: async () => ({ kind: 'image', width: 64, height: 64 }) } });
+  const workflow = await (await f.request('/api/workflows', 'POST', generationWorkflow())).json();
+  const fixture = { ...f, workflow };
+  const firstResponse = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['script', 'storyboard', 'generate', 'render', 'review'], startStage: 'script' });
+  assert.equal(firstResponse.status, 202);
+  const first = await waitRun(fixture, (await firstResponse.json()).id);
+  assert.equal(first.status, 'awaiting_review');
+  assert.equal(createCalls, 1);
+  const before = (await (await f.request('/api/state')).json()).episodes.find((episode) => episode.id === f.episode.id);
+  const beforeVersion = before.version;
+  const beforeScenes = before.scenes;
+  const beforeRenders = f.renderCount();
+  const scriptOnlyResponse = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['script'], startStage: 'script', resumeRunId: first.id });
+  assert.equal(scriptOnlyResponse.status, 202);
+  const scriptOnly = await waitRun(fixture, (await scriptOnlyResponse.json()).id, ['completed', 'failed', 'cancelled']);
+  assert.equal(scriptOnly.status, 'completed');
+  const resumeSourceId = scriptOnly.id;
+
+  const response = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['storyboard', 'generate', 'render'], startStage: 'storyboard', resumeRunId: resumeSourceId });
+  assert.equal(response.status, 409);
+  assert.match((await response.json()).error, /storyboard|generated|preserve/i);
+  assert.equal(createCalls, 1);
+  assert.equal(f.renderCount(), beforeRenders);
+  const afterState = await (await f.request('/api/state')).json();
+  const after = afterState.episodes.find((episode) => episode.id === f.episode.id);
+  assert.equal(after.version, beforeVersion);
+  assert.deepEqual(after.scenes, beforeScenes);
+  assert.equal((await f.request(`/api/workflows/${workflow.id}/runs`)).status, 200);
+  assert.equal((await (await f.request(`/api/workflows/${workflow.id}/runs`)).json()).length, 2);
+});
 
 test('typed DAG validator rejects cycles, unknown/disconnected nodes, invalid ports and missing agent config', () => {
   const valid = defaultWorkflow();
