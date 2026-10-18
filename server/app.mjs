@@ -317,7 +317,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       const workflowRoute = /^\/api\/workflows\/([^/]+)(?:\/(run)|\/runs\/([^/]+)\/(cancel))?$/.exec(path);
       if (workflowRoute) {
         if (request.method === 'PUT' && !workflowRoute[2] && !workflowRoute[3]) return json(response, 200, workflows.update(workflowRoute[1], body));
-        if (request.method === 'POST' && workflowRoute[2]) return json(response, 202, workflows.start(workflowRoute[1], body.episodeId, { allowGeneration: body.allowGeneration }));
+        if (request.method === 'POST' && workflowRoute[2]) return json(response, 202, workflows.start(workflowRoute[1], body.episodeId, { allowGeneration: body.allowGeneration, expectedWorkflowVersion: body.expectedWorkflowVersion, expectedEpisodeVersion: body.expectedEpisodeVersion }));
         if (request.method === 'POST' && workflowRoute[4]) return json(response, 200, workflows.cancel(workflowRoute[1], workflowRoute[3]));
       }
       if (request.method === 'POST' && path === '/api/channels') {

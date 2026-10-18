@@ -1,0 +1,105 @@
+{
+  "observedAt": "2026-10-18T13:47:47.792Z",
+  "host": "jeopi",
+  "profile": "jeopi",
+  "runtimeMode": "advisory",
+  "hookTrust": "No automatic hook changes",
+  "hostAuthorizationGranted": false,
+  "task": "Review the completed user-authorized FrameForge white minimalist redesign and Higgsfield-first generation UX; advisory only, no execution authority.",
+  "proposal": {
+    "changes": [
+      "White/light UI all7views; desktop/mobile35viewport-viewpairs",
+      "Higgsfield CTA uses safe existing-script5node draft, stable live scene identity; no save/run/spend just opening",
+      "REST estimate exact schema/body, savedjobId Idempotency-Key; no automatic replay",
+      "Fresh quote/explicit unavailable-quote consent, truthful autoapply/render disclosure, exactworkflow/episodeversion409 guards",
+      "Preserved connection form, history/CAS and retained-output recover/apply"
+    ],
+    "evidence": [
+      "16authoredNode tests passed",
+      "52modules syntaxcheck",
+      "Authenticated finalDockerbrowser101checks passed,0pageerrors,0generationcreates/acceptedruns",
+      "FinalDockerrealrender1080x1920H264AAC,14080bytes1.021333s; exacthashreview and restartpersistence",
+      "11/11built-sourceSHA256 matches",
+      "Independent code review finalgatePASS no remainingblockers"
+    ],
+    "limits": [
+      "Providercatalog/quote/recover/apply browserHTTPfixtures; no liveHiggsfieldAPIauth/pricing/dedup verification",
+      "No paid generation or publicproductiondeployment",
+      "Modelreview is not authority"
+    ]
+  },
+  "review": {
+    "verdict": "proposal_only",
+    "reason": "Below threshold or unfavorable in: evidence_supports (ans=yes, conf=0.66); unrelated_changes (ans=no, conf=0.71); needs_clarification (ans=no, conf=0.64)",
+    "failingQuestions": [
+      "evidence_supports (ans=yes, conf=0.66)",
+      "unrelated_changes (ans=no, conf=0.71)",
+      "needs_clarification (ans=no, conf=0.64)"
+    ],
+    "threshold": 0.8,
+    "mode": "jev",
+    "backend": {
+      "kind": "api",
+      "driver": "typesafe",
+      "model": "jev-1.13.0",
+      "configuredModel": "jev-latest",
+      "tier": "unvalidated",
+      "attestation": null
+    },
+    "attempted": [
+      "api"
+    ],
+    "receiptVersion": 2,
+    "receipt": "0e4a9d770fe73159fe244beca99fa96a0a466cbe11286c78ee550d0f39f24c68",
+    "review": {
+      "model": "jev-1.13.0",
+      "answers": {
+        "addresses_task": {
+          "probability": 0.85,
+          "answer": "yes",
+          "confidence": 0.85
+        },
+        "evidence_supports": {
+          "probability": 0.66,
+          "answer": "yes",
+          "confidence": 0.66
+        },
+        "unrelated_changes": {
+          "probability": 0.29,
+          "answer": "no",
+          "confidence": 0.71
+        },
+        "needs_clarification": {
+          "probability": 0.36,
+          "answer": "no",
+          "confidence": 0.64
+        }
+      },
+      "usage": {
+        "input_tokens": 699,
+        "output_tokens": 80
+      },
+      "requests": 1,
+      "source": "api",
+      "backend": {
+        "kind": "api",
+        "driver": "typesafe",
+        "model": "jev-1.13.0",
+        "configuredModel": "jev-latest",
+        "tier": "unvalidated",
+        "attestation": null
+      },
+      "attempted": [
+        "api"
+      ],
+      "attemptDetails": [
+        {
+          "kind": "api",
+          "error": null
+        }
+      ],
+      "error": null,
+      "latencyMs": 249
+    }
+  }
+}

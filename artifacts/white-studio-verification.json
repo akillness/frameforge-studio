@@ -1,0 +1,162 @@
+{
+  "schema": "frameforge-white-studio-verification/v1",
+  "observedAt": "2026-10-18T14:35:01.777Z",
+  "seedId": "seed_0e998af4d3b0",
+  "scope": "Local source, disposable test records, isolated production image; no paid provider generation or public deployment",
+  "checks": [
+    {
+      "command": "node --test tests/white-studio.test.mjs tests/white-studio-versions.test.mjs",
+      "result": "16/16 passed; matching-version fixtures intentionally end later at empty trend source, not a version-gate failure"
+    },
+    {
+      "command": "npm run check",
+      "result": "55 modules passed"
+    },
+    {
+      "command": "npm run test:render",
+      "result": "Actual local FFmpeg passed1080x1920H264/AAC2s",
+      "receipt": "artifacts/render-smoke.json"
+    },
+    {
+      "command": "docker build -t frameforge-studio:white-20261018 .",
+      "result": "Passed final source; linux/arm64, node user, read-only root",
+      "imageId": "sha256:d4424d7f59c495f97d72ea2e85fb643fe64e9f35b69ff374da90617ca9ce6023"
+    },
+    {
+      "command": "WHITE_STUDIO_URL=http://127.0.0.1:4329 WHITE_STUDIO_TOKEN=<ephemeral> python3 scripts/white-studio-browser-smoke.py",
+      "result": "101/101 passed,35view-widthpairs,authenticated true,0pageerrors,0generationcreate,0acceptedruns; providerHTTPfixtures",
+      "receipt": "artifacts/white-studio-browser-smoke.json"
+    },
+    {
+      "command": "runContainerSmoke(render) -> docker restart -> runContainerSmoke(verify-persistence)",
+      "result": "Passed final-image authenticated actual render/export/exact review/restart persistence1080x1920H264AAC1.021333s14080bytes",
+      "receipt": "artifacts/white-studio-container-smoke.json"
+    },
+    {
+      "command": "docker exec <ownQA> sha256sum <15 delivered files>",
+      "result": "15/15 image source SHA256 match checkout",
+      "files": [
+        {
+          "path": "package.json",
+          "sha256": "e77d48e5dc4b6b8a71aa8349f809e68eb4e50cefef928754f7afa38c161495ac",
+          "matches": true
+        },
+        {
+          "path": "public/app.js",
+          "sha256": "49b12d067aa97fe41f80692c42f83d0262608e7673174bc9cb3dee40a94fcc77",
+          "matches": true
+        },
+        {
+          "path": "public/workflow.js",
+          "sha256": "d047b08248d945890ef0a2511acf3a99ed85ee184237205f1394d691aa475784",
+          "matches": true
+        },
+        {
+          "path": "public/index.html",
+          "sha256": "086b9333234e664ae77302d88068f3aaeb5bf48301be91bb2bb7b9a38e9e5799",
+          "matches": true
+        },
+        {
+          "path": "public/styles.css",
+          "sha256": "fad03e048b42232b785899b2a9e688ce0e42c75131e8953fe3efa9451aa227f2",
+          "matches": true
+        },
+        {
+          "path": "public/workflow.css",
+          "sha256": "dbae74fedd4657982ebe8b054b7bfab952f93e4348ce7643f30b5a2a0a289b1d",
+          "matches": true
+        },
+        {
+          "path": "server/app.mjs",
+          "sha256": "212413af7c43fd478f4b7a393b72970775e5444294584eaa71679409a87259c5",
+          "matches": true
+        },
+        {
+          "path": "server/workflows.mjs",
+          "sha256": "61b24ac68020058356ecf1f956fc9d7e0139e4f1d5ba1e8dffab6a1d5df8b7dd",
+          "matches": true
+        },
+        {
+          "path": "server/higgsfield.mjs",
+          "sha256": "d6bc9c431356a99476c617c290d9c6662fe917f5005610d100fde4c273364dbf",
+          "matches": true
+        },
+        {
+          "path": "server/generations.mjs",
+          "sha256": "b13a81d6c3e9c29105dd773c8ac025af1f4fefb5c3c3b6b27e784e24ec1c3564",
+          "matches": true
+        },
+        {
+          "path": "scripts/white-studio-browser-smoke.py",
+          "sha256": "2aa22a2ed08e1f58d2d0fb01994acbe6bbf7a11c7ee209ac701dbb20692cfe53",
+          "matches": true
+        },
+        {
+          "path": "public/workspace.js",
+          "sha256": "8c93ee71c07f6b6d2f3b302cfb50a882c5798fbfcdf45fcb56cb897a0ca7c7b5",
+          "matches": true
+        },
+        {
+          "path": "public/workspace-state.js",
+          "sha256": "f3650ea0037b2c5ad7c11948aa27e539af8ff3259311286eb4028d2533a499cc",
+          "matches": true
+        },
+        {
+          "path": "public/workspace.css",
+          "sha256": "be5bee794ea0cc19ae3c5f253dbd3b7fd532d2e58f32673553aee54892f3c7e4",
+          "matches": true
+        },
+        {
+          "path": "scripts/workspace-browser-smoke.py",
+          "sha256": "ae990d3fef8362ce9691ed6ec663308bbe3366a9b150e0e26542ff3f6bb322e7",
+          "matches": true
+        }
+      ]
+    },
+    {
+      "command": "docker run --rm --read-only --tmpfs /tmp:size=536870912 --cap-drop ALL --security-opt no-new-privileges --mount type=bind,src=<checkout>,dst=/workspace,readonly --workdir /workspace frameforge-studio:white-20261018 npm test",
+      "result": "213 tests passed; 0 failures; 0 skipped"
+    },
+    {
+      "command": "WORKSPACE_STUDIO_URL=http://127.0.0.1:4329 WORKSPACE_STUDIO_TOKEN=<ephemeral> python3 scripts/workspace-browser-smoke.py",
+      "result": "157 checks passed; no page errors; intercepted chat fixtures; no external agent/provider calls",
+      "receipt": "artifacts/workspace-browser-smoke.json"
+    }
+  ],
+  "resolvedFailures": [
+    {
+      "issue": "320px editor-grid intrinsic track caused379px document",
+      "fix": "minmax(0,1fr) tracks; stylist browser reports320px across7views",
+      "gate": "Final101-check authenticated browser smoke passed"
+    },
+    {
+      "issue": "Independent reviews found quote/scene/connect-form/status/labeling gaps",
+      "fix": "Corrections under behavioral regression",
+      "gate": "Final101-check authenticated browser smoke passed"
+    }
+  ],
+  "providerBoundaries": [
+    "Higgsfield REST and CLI authentication remain separate",
+    "API estimate/idempotency are offline fixture verified, not live provider verification",
+    "Jev advisory served jev-1.13.0, unvalidated proposal_only, no automatic authority"
+  ],
+  "sourceSha256": {
+    "package.json": "e77d48e5dc4b6b8a71aa8349f809e68eb4e50cefef928754f7afa38c161495ac",
+    "public/app.js": "49b12d067aa97fe41f80692c42f83d0262608e7673174bc9cb3dee40a94fcc77",
+    "public/workflow.js": "d047b08248d945890ef0a2511acf3a99ed85ee184237205f1394d691aa475784",
+    "public/index.html": "086b9333234e664ae77302d88068f3aaeb5bf48301be91bb2bb7b9a38e9e5799",
+    "public/styles.css": "fad03e048b42232b785899b2a9e688ce0e42c75131e8953fe3efa9451aa227f2",
+    "public/workflow.css": "dbae74fedd4657982ebe8b054b7bfab952f93e4348ce7643f30b5a2a0a289b1d",
+    "server/app.mjs": "212413af7c43fd478f4b7a393b72970775e5444294584eaa71679409a87259c5",
+    "server/workflows.mjs": "61b24ac68020058356ecf1f956fc9d7e0139e4f1d5ba1e8dffab6a1d5df8b7dd",
+    "server/higgsfield.mjs": "d6bc9c431356a99476c617c290d9c6662fe917f5005610d100fde4c273364dbf",
+    "server/generations.mjs": "b13a81d6c3e9c29105dd773c8ac025af1f4fefb5c3c3b6b27e784e24ec1c3564",
+    "scripts/white-studio-browser-smoke.py": "2aa22a2ed08e1f58d2d0fb01994acbe6bbf7a11c7ee209ac701dbb20692cfe53",
+    "public/workspace.js": "8c93ee71c07f6b6d2f3b302cfb50a882c5798fbfcdf45fcb56cb897a0ca7c7b5",
+    "public/workspace-state.js": "f3650ea0037b2c5ad7c11948aa27e539af8ff3259311286eb4028d2533a499cc",
+    "public/workspace.css": "be5bee794ea0cc19ae3c5f253dbd3b7fd532d2e58f32673553aee54892f3c7e4",
+    "scripts/workspace-browser-smoke.py": "ae990d3fef8362ce9691ed6ec663308bbe3366a9b150e0e26542ff3f6bb322e7"
+  },
+  "finalStatus": "Implementation, final image, full Linux regressions, authenticated browser checks and render/restart persistence passed; Git delivery pending",
+  "workspaceSeedId": "seed_26a83872d3b4"
+}

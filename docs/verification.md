@@ -1,11 +1,37 @@
 # 실동작 검증 기록
 
-검증일: 2026-10-18. 아래는 실제 실행 결과와 제한을 분리한 기록입니다. 테스트 주입 데이터를 운영 성공으로 취급하지 않습니다.
+최종 갱신: 2026-10-18. 최신 macOS 로컬 검증, 최종 Linux Docker 전체 테스트와 이전 Windows/Tailscale 운영 근거를 아래에서 구분합니다. fixture를 라이브 제공자 성공으로 취급하지 않습니다.
+
+## 흰색 제작실 — 최신 macOS 로컬 QA
+
+Studio·Workflow·Trends·Templates·History·Knowledge·Settings 7개 화면의 흰색 UI와 기존 Higgsfield 검사기 재사용, 개인 작업 창을 검증했습니다. 개인 작업 창은 `자동 맞춤`(도킹형), `컴팩트` 1024×768(오버레이), `표준` 1280×800(도킹형), `와이드` 1600×900(도킹형), `집중` 1280×800(오버레이) 프리셋을 제공하고, 숫자 입력(폭 320–2560px·높이 320–1800px·검사기 240–480px), 포인터 드래그와 방향키(Shift 큰 간격)로 사용자 지정 크기를 조절합니다. 검사기·내레이션·어시스턴트는 기존 DOM을 옮기는 native dialog 오버레이이며, named profile은 브라우저 로컬에만 저장되고 서버 레이아웃 쓰기는 없습니다. 어시스턴트 제출 전 초안은 에피소드 범위의 일시 상태이고 검사기 편집은 선택 장면 범위입니다. 이번 변경에서 유료 생성·공개 배포·Windows/Tailscale 운영 전환은 수행하지 않았습니다. [조사 영수증](../artifacts/white-studio-research.json)은 16개 디자인 근거, 12개 공식 Higgsfield 근거와 Aside 공개 UI 관찰을 담습니다. 관찰된 웹 크레딧 표시는 계정별 API 견적이 아닙니다.
+
+| 범위 | 확인한 결과 | 근거 |
+| --- | --- | --- |
+| 선택 회귀 | 16개 통과. REST 견적·영속 작업 ID 멱등성·안전한 생성 초안·실행 전 버전 거부 | `node --test tests/white-studio.test.mjs tests/white-studio-versions.test.mjs` |
+| 구문 검사 | JS 55개 모듈 통과 | `npm run check` |
+| 최종 전체 테스트 | Linux Docker에서 213개 통과·실패 0·skip 0 | `npm test`, [전체 테스트 영수증](artifact://453) |
+| 호스트 MP4 | 실제 FFmpeg 1080×1920 H.264/AAC 약 2초 출력 | `node scripts/render-smoke.mjs`, [호스트 영수증](../artifacts/render-smoke.json) |
+| 흰색 제작실 브라우저 | 4329 포트 인증 브라우저 101/101개 통과, 페이지 오류 0·생성 create 0·허용된 실행 0 | `artifacts/white-studio-browser-smoke.json` |
+| 개인 작업 창 브라우저 | 4329 포트 인증 브라우저 157/157개 통과, 페이지 오류 0·레이아웃 API 쓰기 0; 프리셋·리사이즈·오버레이·profiles·scene/episode 상태 경계를 검사 | [작업 창 영수증](../artifacts/workspace-browser-smoke.json), [작업 창 이미지](assets/workspace/final-workspace.png) |
+| 비용·버전 경계 | 정확한 입력의 새 견적/취소, 견적 실패의 명시적 미확인 동의, 실제 서버의 오래된 워크플로우·에피소드 버전 409 2건, 별도 fixture 409 1건 | 흰색 브라우저 영수증; 제공자 catalog·quote는 fixture |
+| 복구·적용 | 기존 요청 복구 1건·별도 Apply 1건, 대상 sceneId·현재 버전 전송, 새 생성 없음 | 흰색 브라우저 영수증; recovery·apply 응답은 fixture이며 라이브 제공자 복구 증거 아님 |
+| 최종 격리 컨테이너 | 실제 렌더·인증 다운로드 1080×1920 H.264/AAC, 1.021333초·14080바이트, 동일 SHA-256의 정확한 출력 검토와 재시작 영속성 통과 | [컨테이너 영수증](../artifacts/white-studio-container-smoke.json), `stage: persistence-verified`, `persistenceVerified: true` |
+
+최종 이미지 SHA-256은 `d4424d7f59c495f97d72ea2e85fb643fe64e9f35b69ff374da90617ca9ce6023`이며, 최종 영수증은 검사한 이미지 소스 SHA-256 **15/15개 일치**를 기록합니다. 같은 최종 이미지의 인증 브라우저 검사와 `runContainerSmoke(render) → docker restart → runContainerSmoke(verify-persistence)` 결과는 [최종 로컬 검증 영수증](../artifacts/white-studio-verification.json)에 기록합니다. 이는 공개 운영 배포·라이브 Higgsfield 생성·Developer REST 인증 또는 최종 독립 리뷰 통과의 증거가 아니며, 이전 Docker CI·Windows/Tailscale 기록과 구분합니다.
+
+Studio CTA는 저장·실행·과금 없이 현재 선택 장면을 안정 ID로 추적하는 기존 검사기를 엽니다. 안전한 기존 대본 경로가 없으면 `script(existing) → storyboard → generate → render → review` 5노드 초안을 생성합니다. 전체 생성 워크플로우는 동의 후 결과를 버전 검사하여 **자동 적용한 다음 렌더**하며, 보존·복구한 출력은 별도 Apply로 적용합니다. 실행 API의 선택적 `expectedWorkflowVersion`·`expectedEpisodeVersion`은 제공 시 오래된 값을 작업 생성 전에 409로 거부합니다.
+
+REST는 공식 `POST /estimate/{model}`을 호출하고 영속 `generationJobs.id`를 `Idempotency-Key`로 전송합니다. 자동 재제출은 추가하지 않았습니다. 모호한 제출은 제공자 기록 확인, 알려진 ID는 polling/import 복구로 처리합니다. 인증·API·CLI·공식 MCP·프로젝트 MCP 구분은 [연결 문서](higgsfield-integration.md)를 따릅니다. 설정·목록·fixture 성공은 실제 인증·생성 성공과 다릅니다. 하니스 1.4.0 및 보존 번들은 변경하지 않았습니다.
+
+## 이전 Windows/Tailscale 및 소스별 검증 기록
+
+아래 결과는 각 영수증의 당시 소스·호스트에서 관찰한 역사적 근거입니다. 최신 흰색 UI와 개인 작업 창의 최종 전체 테스트·브라우저 검증은 위 표와 최종 영수증에서 별도로 확인합니다.
 
 | 범위 | 확인한 결과 | 근거 |
 | --- | --- | --- |
 | 자동 테스트 | API·DAG·버전 아카이브·어댑터·경로 격리·음성 큐·정확한 파일 검토·HEVC 호환 변환 129개 통과, 실패·skip 0 | `npm test` |
-| 정적 검사 | JS 50개 모듈 구문 검사 통과 | `npm run check` |
+| 당시 정적 검사 | JS 50개 모듈 구문 검사 통과; 최종 로컬 검사는 위 55개 | 당시 `npm run check` |
 | MP4 | 실제 FFmpeg 1080×1920, H.264/AAC, 2초 출력 | `artifacts/render-smoke.json` |
 | 실제 API 제작 | 채널→에피소드→템플릿→장면 저장→렌더→인증 다운로드, 3개 스냅샷 | `artifacts/acceptance.json` |
 | 미디어 편집 | 업로드 영상 1초 시작점·1초 출력, 별도 음원 볼륨 0.5, 비무음 검출 | `artifacts/media-smoke.json` |
@@ -24,11 +50,11 @@
 | Tailscale | 요청 계정으로 HTTPS Serve 활성화, 실제 브라우저 접근 | `tailscale serve status`; Funnel 비활성 |
 | Docker | Linux CI에서 이미지 빌드·비루트/읽기전용 Compose 기동·실제 1080×1920 H.264/AAC 렌더·인증 다운로드·저장 편집본 검토·재시작 후 에피소드/이력/작업/검토/MP4 SHA-256 보존 통과 | `artifacts/docker-ci-smoke.json`, [CI 39110221470](https://github.com/akillness/frameforge-studio/actions/runs/39110221470) |
 
-## 로컬 Docker 복구와 운영 전환
+## 이전 Windows Docker 복구와 운영 전환
 
 2026-10-18에 멈춘 `WSLService`를 정상 Windows UAC 관리자 동의 후 복구했습니다. 스크립트는 같은 PID의 Stop Pending 상태, Microsoft 서명, 실행 중인 WSL 게스트 부재를 재확인했습니다. 배포판·볼륨 삭제, Docker reset, 재부팅은 수행하지 않았습니다. 이후 별도 호스트 재시작으로 세션이 중단된 것을 관찰했으므로, 서비스 복구만으로 연속 운영을 증명했다고 주장하지 않습니다. 재개 후 Docker 29.5.2와 실제 제품을 새로 검증했습니다.
 
-운영 URL은 이제 `frameforge-studio` Compose의 비루트·읽기 전용 컨테이너에 연결됩니다. 호스트 브리지와 Aside 명령 수신기는 Windows에서 실행됩니다. `scripts/start-docker.ps1`의 빌드 시작과 반복 시작을 실제로 확인했습니다. 기존 볼륨과 비어 있지 않은 DB를 확인하고, 다른 서비스의 포트를 종료하지 않습니다.
+당시 운영 URL을 `frameforge-studio` Compose의 비루트·읽기 전용 컨테이너에 연결했습니다. 호스트 브리지와 Aside 명령 수신기는 Windows에서 실행했습니다. `scripts/start-docker.ps1`의 빌드 시작과 반복 시작을 확인했고, 기존 볼륨과 비어 있지 않은 DB를 확인하며 다른 서비스의 포트를 종료하지 않았습니다. 최신 macOS QA는 이 경로의 재배포·현재 가용성을 입증하지 않습니다.
 
 | 실제 검증 | 결과 | 근거 |
 | --- | --- | --- |
@@ -47,7 +73,7 @@
 - 지식 그래프는 근거 관계이며, 워크플로우 그래프는 실행 의존성입니다. 둘을 같은 그래프로 위장하지 않습니다.
 - `awaiting_review`는 검토 대기이며, `approved`·`changes_requested`는 정확한 렌더 파일에 대한 내부 결정입니다. smoke의 결정은 자동화된 기능 검사이며 소유자의 콘텐츠 수락이 아닙니다. YouTube 게시 및 신규 외부 채널 생성 API는 연결하지 않았습니다.
 - Naver는 DataLab 출처를 수동 기록하며 전체 인기검색어 실시간 순위를 가장하지 않습니다.
-- Windows SAPI로 원고를 실제 음성으로 생성합니다. Linux Docker는 인증된 Windows 호스트 음성 브리지를 사용합니다. Higgsfield 공식 CLI를 통한 유료 영상 생성은 별도로 검증했습니다. Developer API 인증과 공식 MCP OAuth는 아직 설정 대기입니다.
+- Windows SAPI 한국어 음성과 Linux Docker의 인증된 Windows 호스트 브리지 경로는 이전 영수증으로 검증했습니다. Higgsfield 공식 CLI의 유료 영상 생성도 별도 과거 근거입니다. 당시 Developer API 인증과 공식 MCP OAuth는 설정 대기였으며, 이번 로컬 QA에서 재인증하거나 유료 생성하지 않았습니다.
 - 워크플로우 취소는 이후 단계와 쓰기를 중지합니다. 이미 시작한 외부 추론·렌더링 프로세스가 완료될 수 있습니다.
 - 외부 CLI 인증과 provider availability는 바뀔 수 있습니다. 브리지는 실패를 성공 데이터로 바꾸지 않습니다.
 - Graphify 구조 추출과 placeholder community labels는 의미 추론 완료와 구분합니다. MEX 파일 형식 인식 범위는 실제 설치 버전의 결과를 따릅니다.
@@ -79,6 +105,6 @@ docker compose config --quiet
 - 공식 원격 MCP는 OAuth 대기, Developer API 키는 미설정. `.mcp.json` 등록과 계약테스트를 인증 완료로 주장하지 않음. 실제 로그인·생성은 공식CLI 경로.
 - Jev 실제 API 리뷰는 `proposal_only`/`unvalidated`이며 자동권한이 아님. ECC 독립리뷰에서 API카탈로그 오류, 복구경로 부재, 제출 전429분류 및 MCP 쿠키 인증을 수정.
 
-최신 로컬 검증은 129개 테스트와 JS 50개 모듈 구문 검사를 통과했습니다. HEVC 10비트 실제 파일의 변환, 원본 해시 보존, 변환 트랜잭션 실패 시 복구, 이전 적용 이력 유지, 명시적 재적용, 중복 변환 방지 및 동시 변환 제한을 검증했습니다.
+이전 개선의 로컬 실행은 129개 테스트와 JS 50개 모듈 구문 검사를 통과했습니다. HEVC 10비트 실제 파일의 변환, 원본 해시 보존, 변환 트랜잭션 실패 시 복구, 이전 적용 이력 유지, 명시적 재적용, 중복 변환 방지 및 동시 변환 제한을 검증했습니다. 최신 흰색 UI·개인 작업 창 변경은 선택 회귀 16개, 최종 55개 모듈 구문 검사, Linux Docker 전체 테스트 213개(실패·skip 0), 흰색 브라우저 101개와 작업 창 브라우저 157개로 검증했습니다.
 
 운영 컨테이너 재시작 후 기존 에피소드 5개와 미디어 16개의 ID·버전·해시, 생성 결과·적용 기록·지식 관계가 보존되었습니다. 제공자 작업은 최초 1개이며 재시작으로 재제출되지 않았습니다. `artifacts/higgsfield-persistence.json`.

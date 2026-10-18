@@ -1,0 +1,853 @@
+{
+  "observedAt": "2026-10-18T13:11:22.838Z",
+  "seedId": "seed_0e998af4d3b0",
+  "design": {
+    "project": "FrameForge Studio",
+    "research_date": "2026-10-18",
+    "scope": "Minimal white creative-studio/video-editor UI patterns with Higgsfield as primary generation service",
+    "method": {
+      "sources": "Primary documentation and official product/help pages read directly where available; live pages can be dynamic or reader-incomplete.",
+      "uncertainty": "Recommendations are design translations, not claims that FrameForge must copy any vendor UI. Exact product behavior should be rechecked against current provider APIs before shipping."
+    },
+    "sources": [
+      {
+        "title": "Adobe Spectrum",
+        "url": "https://spectrum.adobe.com/",
+        "type": "official design system",
+        "observed_principles": [
+          "Spectrum presents foundations, tokens, patterns, and components as one connected system rather than isolated widgets.",
+          "The system emphasizes components in context and consistent behavior across platforms."
+        ],
+        "frameforge_translation": "Define a small neutral token layer first, then use the same panel, field, badge, button, disclosure, and dialog rules in Studio, Workflow, History, and Settings.",
+        "confidence": "high"
+      },
+      {
+        "title": "React Aria Dialog",
+        "url": "https://react-spectrum.adobe.com/react-aria/Dialog.html",
+        "type": "official Adobe accessibility documentation",
+        "observed_principles": [
+          "Dialogs expose a focused interaction surface and associate title/description semantics.",
+          "Focus management and keyboard behavior are treated as part of the component contract, not optional styling."
+        ],
+        "frameforge_translation": "Keep existing native dialog flow, ensure every title is labelled, put focus on the safe action for destructive/paid confirmations, preserve focus on close, and make Escape/cancel reliable.",
+        "confidence": "high"
+      },
+      {
+        "title": "React Aria Disclosure",
+        "url": "https://react-spectrum.adobe.com/react-aria/Disclosure.html",
+        "type": "official Adobe accessibility documentation",
+        "observed_principles": [
+          "Disclosure lets users reveal secondary content without making the initial surface dense.",
+          "The trigger and expanded state must remain understandable to keyboard and assistive technology users."
+        ],
+        "frameforge_translation": "In generation inspector, show connection state, model, target scene, prompt, and primary action first; place model parameters, advanced coordinates, and recovery details behind labelled details/disclosure sections.",
+        "tradeoff": "Hidden options reduce cognitive load but can reduce discoverability; use explicit labels such as '고급 모델 설정' and preserve expanded state during edits.",
+        "confidence": "high"
+      },
+      {
+        "title": "React Spectrum Form",
+        "url": "https://react-spectrum.adobe.com/react-spectrum/Form.html",
+        "type": "official Adobe component documentation",
+        "observed_principles": [
+          "Forms pair labels, validation, and submission affordances as one pattern.",
+          "Required/invalid states should be communicated in the field context, not only through color."
+        ],
+        "frameforge_translation": "Keep labels visible, use hint text for model parameters, expose validation beside the field, and avoid relying on pale borders or color-only status badges.",
+        "confidence": "high"
+      },
+      {
+        "title": "GOV.UK Details component",
+        "url": "https://design-system.service.gov.uk/components/details/",
+        "type": "official government design system",
+        "observed_principles": [
+          "Details makes a page easier to scan by revealing additional information only when needed.",
+          "The component is intentionally simple and works with native disclosure semantics."
+        ],
+        "frameforge_translation": "Use native details/summary for advanced workflow settings, provider diagnostics, and long explanatory copy; do not hide safety-critical cost, status, or error information.",
+        "tradeoff": "Progressive disclosure is unsuitable for side-by-side comparisons or information users must always see; keep current status and paid-action warnings visible.",
+        "confidence": "high"
+      },
+      {
+        "title": "GOV.UK Error summary",
+        "url": "https://design-system.service.gov.uk/components/error-summary/",
+        "type": "official government design system",
+        "observed_principles": [
+          "Validation errors should be summarized and linked to the relevant fields so users can recover quickly.",
+          "Error copy should explain what is wrong and how to fix it."
+        ],
+        "frameforge_translation": "For generation model/parameter failures, show a compact alert summary above the inspector and field-level messages with recovery guidance; retain requestId/providerRequestId for support and recovery instead of hiding them in a toast.",
+        "confidence": "high"
+      },
+      {
+        "title": "GOV.UK Task list",
+        "url": "https://design-system.service.gov.uk/components/task-list/",
+        "type": "official government design system",
+        "observed_principles": [
+          "Complex multi-step work benefits from explicit task states such as not started, in progress, and complete.",
+          "The task list is a progress/navigation aid, not a replacement for simplifying a process."
+        ],
+        "frameforge_translation": "Represent Workflow node states with text labels and status hierarchy; do not make users infer queued/running/completed/failed from color or icons alone.",
+        "confidence": "high"
+      },
+      {
+        "title": "GOV.UK Validation pattern",
+        "url": "https://design-system.service.gov.uk/patterns/validation/",
+        "type": "official government design system",
+        "observed_principles": [
+          "Validation should tell users what is wrong and how to correct it, close to the affected answer.",
+          "A clear page-level error summary supports scanning while field messages support correction."
+        ],
+        "frameforge_translation": "Keep provider status distinction explicit: 연결 확인 필요, 설정됨·검증 필요, 연결됨; when a generation call fails, name the next safe action (refresh, recover known request, or inspect history) rather than suggesting blind retry.",
+        "confidence": "high"
+      },
+      {
+        "title": "Nielsen Norman Group Progressive Disclosure",
+        "url": "https://www.nngroup.com/articles/progressive-disclosure/",
+        "type": "usability research",
+        "observed_principles": [
+          "Advanced or rarely used features can move to secondary surfaces so the initial interface stays learnable.",
+          "Progressive disclosure is not appropriate where users need side-by-side comparison or continuously visible safety-critical information."
+        ],
+        "frameforge_translation": "Keep the editor's first view calm: primary scene controls and one obvious next action; disclose advanced generation parameters, workflow coordinates, and diagnostics only on demand.",
+        "tradeoff": "Do not collapse history comparisons, paid cost details, provider request identity, or unsaved-change warnings; these are needed for safe decisions and recovery.",
+        "confidence": "medium-high"
+      },
+      {
+        "title": "WCAG 2.2 Contrast (Minimum)",
+        "url": "https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html",
+        "type": "W3C official accessibility guidance",
+        "observed_principles": [
+          "Normal text requires at least 4.5:1 contrast; large text requires at least 3:1.",
+          "Faint gray helper text on a white canvas is not acceptable simply because it looks minimal."
+        ],
+        "frameforge_translation": "Use dark neutral body text (#101828 or similar), readable secondary text (#475467 or darker), and verify every intended text/color pair with a contrast checker.",
+        "confidence": "high"
+      },
+      {
+        "title": "WCAG 2.2 Target Size Minimum",
+        "url": "https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html",
+        "type": "W3C official accessibility guidance",
+        "observed_principles": [
+          "Pointer targets should be at least 24 by 24 CSS pixels unless an exception applies.",
+          "Spacing can prevent small adjacent controls from accidentally colliding."
+        ],
+        "frameforge_translation": "Set compact buttons/icon buttons to at least 24px hit areas, preferably 32px for the white toolbar; add spacing between nav, history version, close, and disclosure controls.",
+        "confidence": "high"
+      },
+      {
+        "title": "WCAG 2.2 Status Messages",
+        "url": "https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html",
+        "type": "W3C official accessibility guidance",
+        "observed_principles": [
+          "Important status changes that do not move focus must be programmatically determinable so assistive technologies can announce them.",
+          "A toast alone is insufficient when the underlying status is important to the workflow."
+        ],
+        "frameforge_translation": "Keep an aria-live region for save/generation state, but also render durable status text in the generation result panel and workflow node; do not rely on color or transient toasts.",
+        "confidence": "high"
+      },
+      {
+        "title": "WCAG 2.2 Error Prevention",
+        "url": "https://www.w3.org/WAI/WCAG22/Understanding/error-prevention-legal-financial-data.html",
+        "type": "W3C official accessibility guidance",
+        "observed_principles": [
+          "Important submissions that modify/delete data or cause financial commitments need reversibility, checking, or confirmation.",
+          "The user should be able to confirm, correct, or reverse consequential submissions."
+        ],
+        "frameforge_translation": "Preserve FrameForge's explicit Higgsfield consent dialog, show model/cost context before send, persist submission intent before spending, recover only known provider IDs, and require an explicit Apply action for completed output.",
+        "confidence": "high"
+      },
+      {
+        "title": "Adobe Premiere workspace documentation",
+        "url": "https://helpx.adobe.com/premiere/desktop/get-started/tour-the-workspace/what-are-workspaces.html",
+        "type": "official production product help",
+        "observed_principles": [
+          "Premiere organizes complex post-production work into named workspaces and dockable panels instead of putting every control into one screen.",
+          "Workspaces make role-specific tasks discoverable while preserving a stable editing context."
+        ],
+        "frameforge_translation": "Keep FrameForge's Studio, Workflow, History, and Settings as clear top-level destinations, but use one consistent white shell and local panel hierarchy rather than decorative dashboard cards.",
+        "tradeoff": "Too many top-level destinations can dilute focus; keep generation and history near the workflow where users need them, while preserving existing routes for compatibility.",
+        "confidence": "medium (page is long and reader extraction is partial)"
+      },
+      {
+        "title": "Higgsfield AI product surface",
+        "url": "https://higgsfield.ai/",
+        "type": "official provider product page",
+        "observed_principles": [
+          "Higgsfield positions itself as a creative suite for image, video, voice, editing/upscale, and automated workflows across web and mobile.",
+          "The product surface is model/content oriented, so FrameForge should keep provider-specific complexity behind a stable generation inspector."
+        ],
+        "frameforge_translation": "Use Higgsfield as the named provider in connection/status and generation result surfaces, while keeping the editor's task language model-agnostic enough to preserve history and provider-state distinctions.",
+        "uncertainty": "The public homepage is dynamic and does not establish exact API credit or billing semantics; treat provider pricing as a confirmation-time fact from the authenticated adapter, not a hardcoded UI claim.",
+        "confidence": "medium"
+      },
+      {
+        "title": "Higgsfield pricing",
+        "url": "https://higgsfield.ai/pricing",
+        "type": "official provider pricing page",
+        "observed_principles": [
+          "Pricing is presented as a separate product surface and may vary by plan/model.",
+          "A public pricing page alone does not provide a reliable per-request estimate for every model/parameter combination."
+        ],
+        "frameforge_translation": "Do not hardcode a generic cost label. Show the provider estimate returned by /api/generation/status or estimate flow when available, otherwise state that cost verification is required before submission.",
+        "uncertainty": "Reader extraction returned page metadata but not detailed plan values, likely due dynamic rendering/auth context.",
+        "confidence": "medium"
+      }
+    ],
+    "design_brief": {
+      "direction": "Calm white production tool: content first, neutral surfaces, compact but readable controls, one primary action per panel, visible workflow state, no marketing hero treatment.",
+      "tokens": {
+        "background": "#f7f8fa",
+        "surface": "#ffffff",
+        "surface_subtle": "#f2f4f7",
+        "text": "#101828",
+        "text_secondary": "#475467",
+        "text_muted": "#667085",
+        "border_decorative": "#d0d5dd",
+        "border_control": "#667085",
+        "primary": "#1d4ed8",
+        "primary_hover": "#1e40af",
+        "danger": "#b42318",
+        "success": "#067647",
+        "focus": "#1d4ed8",
+        "radii": "6px controls, 8px panels, 10px dialog",
+        "spacing": "4/8/12/16/24/32px",
+        "type": "13px UI base, 14-16px body, 28-32px page heading; use weight/spacing before oversized type"
+      },
+      "layout": [
+        "Use a white content canvas with a low-contrast page background and 1px panel boundaries; avoid heavy shadows.",
+        "Keep sidebar/nav stable, but make the active route obvious through text, background tint, and aria-current rather than icon-only highlighting.",
+        "Use a single-column field stack in inspectors; reserve two-column layouts for truly related short fields on wide screens and reflow them on narrow screens.",
+        "Keep current generation status, request identity, cost/confirmation state, and unsaved-change warnings visible; disclose advanced parameters and diagnostics."
+      ],
+      "accessibility": [
+        "Text contrast >=4.5:1; large text >=3:1; validate intended border/focus treatment for non-text contrast.",
+        "At least 24x24 CSS px targets; 32px preferred for toolbar/icon controls.",
+        "Preserve visible focus rings (2px or stronger), keyboard order, and native dialog Escape/cancel behavior.",
+        "Use aria-live for asynchronous save/generation updates plus durable status text in the relevant panel.",
+        "Error summaries should link to fields and tell the user the next corrective/recovery action; never expose provider secrets."
+      ]
+    },
+    "priority_fixes": [
+      {
+        "priority": "P0",
+        "file": "public/styles.css",
+        "symbols": ":root, body, .panel, button/input/select/textarea, focus-visible rules",
+        "change": "Replace dark green/lime palette with white/neutral tokens above; preserve hierarchy using border, spacing, and restrained blue primary; ensure text and focus contrast.",
+        "why": "The current root declares color-scheme:dark and dark surfaces, contrary to requested white calm tool direction and W3C contrast guidance."
+      },
+      {
+        "priority": "P0",
+        "file": "public/index.html",
+        "symbols": "meta[name=theme-color]",
+        "change": "Set theme-color to the white/neutral shell value (for example #f7f8fa) so browser chrome does not contradict the UI.",
+        "why": "The current value is #121512 while the redesign is white."
+      },
+      {
+        "priority": "P0",
+        "file": "public/workflow.css",
+        "symbols": ".wf-layout, .wf-side, .wf-primary, .wf-secondary, .history-layout, .history-versions, .history-comparison",
+        "change": "Use neutral panel hierarchy, low-contrast dividers, and clear primary/secondary ordering; retain existing responsive breakpoints and disclosure behavior.",
+        "why": "Workflow and history are dense product surfaces where progressive disclosure and explicit states matter more than decorative color."
+      },
+      {
+        "priority": "P1",
+        "file": "public/workflow.js",
+        "symbols": "generationControlsHtml(node), generationParameterHtml(field, params), dialogsHtml(), generationJobHtml(id), nodeResultsHtml(node)",
+        "change": "Keep connection badge and status text visible; group secondary model parameters in labelled details; make paid confirmation show exact model and provider estimate when available; keep recover/apply semantics and request IDs visible in result/recovery panel.",
+        "why": "WCAG error prevention/status messages plus existing FrameForge safety contract require cost confirmation, known-request recovery, and explicit Apply."
+      },
+      {
+        "priority": "P1",
+        "file": "public/app.js",
+        "symbols": "render(), heading(), studioView(), historyView(), toast/status regions",
+        "change": "Clarify one primary page action, reduce heading/action competition, use durable inline status beside transient toast, and style history as an explicit version list/comparison rather than decorative cards.",
+        "why": "Premiere-style named workspaces and GOV.UK task/status patterns support stable navigation and visible state for complex production work."
+      },
+      {
+        "priority": "P2",
+        "file": "public/index.html and public/app.js",
+        "symbols": "skip-link, #toast, render shell nav",
+        "change": "Keep skip link and aria-current, verify all icon-only buttons have labels, and ensure async generation/save messages are announced without moving focus.",
+        "why": "WCAG target size/status message guidance; minimal visual design must not remove semantic cues."
+      }
+    ],
+    "non_goals": [
+      "Do not redesign provider/server safety semantics.",
+      "Do not remove episode/workflow history, optimistic concurrency, requestId recovery, or explicit generation Apply.",
+      "Do not claim Higgsfield credits/prices from public marketing pages when the authenticated provider estimate is unavailable.",
+      "Do not add hero cards, marketing gradients, or a second component framework."
+    ]
+  },
+  "higgsfield": {
+    "title": "FrameForge Studio Higgsfield generation UX/API research",
+    "researchedAt": "2026-10-18",
+    "scope": {
+      "repository": ".",
+      "filesReviewed": [
+        "server/higgsfield.mjs:1-179",
+        "server/generation-provider.mjs:1-37",
+        "server/generations.mjs:1-310",
+        "server/higgsfield-cli.mjs:1-130",
+        "scripts/higgsfield-mcp.mjs:1-106",
+        "public/workflow.js:264-307",
+        "tests/generations.test.mjs:37-267"
+      ],
+      "boundary": "Research only. No provider credentials, paid generation, or repository edits were performed."
+    },
+    "sources": [
+      {
+        "kind": "official-docs",
+        "title": "Higgsfield API documentation index",
+        "url": "https://docs.higgsfield.ai/docs/llms.txt",
+        "evidence": [
+          "The selected model's model-specific documentation is authoritative for endpoint and schema; /docs/openapi.json is supplementary.",
+          "The API is server-side and model availability is account-dependent."
+        ]
+      },
+      {
+        "kind": "official-docs",
+        "title": "Authentication",
+        "url": "https://docs.higgsfield.ai/docs/authentication",
+        "evidence": [
+          "Use Authorization: Key YOUR_KEY_ID:YOUR_KEY_SECRET; legacy hf-api-key/hf-secret headers remain accepted.",
+          "Credentials must remain server-side; browser/mobile API calls are explicitly prohibited.",
+          "Authentication identifies the account, but a model can still be unavailable and return 404, 423, or 503."
+        ]
+      },
+      {
+        "kind": "official-docs",
+        "title": "How the API works",
+        "url": "https://docs.higgsfield.ai/docs/how-to/introduction",
+        "evidence": [
+          "Generation is asynchronous: submit JSON, store request_id, poll status_url or receive a webhook, then download output.",
+          "Base URL is https://api.higgsfield.ai."
+        ]
+      },
+      {
+        "kind": "official-docs",
+        "title": "Requests and lifecycle",
+        "url": "https://docs.higgsfield.ai/docs/concepts/requests",
+        "evidence": [
+          "Documented states are queued, in_progress, completed, failed, nsfw, and canceled.",
+          "The initial receipt contains request_id, status_url, and cancel_url; clients should use returned URLs rather than reconstructing them.",
+          "Completed output shape varies by media type (images[], video.url, audio.url, and some additional artifacts)."
+        ]
+      },
+      {
+        "kind": "official-docs",
+        "title": "Idempotent requests",
+        "url": "https://docs.higgsfield.ai/docs/concepts/idempotency",
+        "evidence": [
+          "Generation POSTs accept Idempotency-Key (1-255 visible ASCII characters, UUID recommended).",
+          "On ambiguous timeout/network/5xx, repeat the same endpoint/body/webhook with the same key; the original request_id is returned without another charge.",
+          "Reusing a key with changed endpoint/body/webhook returns 422 and must not trigger automatic new-key generation.",
+          "Status polling, uploads, estimates, and webhook deliveries use their existing retry behavior."
+        ]
+      },
+      {
+        "kind": "official-docs",
+        "title": "Polling",
+        "url": "https://docs.higgsfield.ai/docs/concepts/polling",
+        "evidence": [
+          "Start around two seconds, increase gradually up to ten seconds, and add jitter.",
+          "Stop on completed, failed, nsfw, or canceled.",
+          "Retry GET status after network failures/5xx with backoff; stop on 401 or 404.",
+          "Use webhooks for long-running production workloads while retaining polling as recovery."
+        ]
+      },
+      {
+        "kind": "official-docs",
+        "title": "Errors and retries",
+        "url": "https://docs.higgsfield.ai/docs/concepts/errors",
+        "evidence": [
+          "400 includes malformed/rejected input or concurrency reached; 401 credentials; 403 insufficient credits; 404 account/model/request not found; 422 validation or idempotency mismatch; 423 temporarily blocked; 500/503 later retry cases.",
+          "Accepted jobs may later end failed or nsfw; these are not charged and reserved credits are refunded.",
+          "Every response includes X-Correlation-ID; record it with request_id for support."
+        ]
+      },
+      {
+        "kind": "official-docs",
+        "title": "Billing, estimation, and retention",
+        "url": "https://docs.higgsfield.ai/docs/concepts/billing-and-retention",
+        "evidence": [
+          "POST /estimate/{model} with the exact generation parameters returns authoritative account-specific credits and usd values.",
+          "Successful generation requests consume credits; output URLs are available for at least seven days and should be copied to owned storage for long-term retention.",
+          "Canceled queued requests are refunded; failed/nsfw requests are not charged."
+        ]
+      },
+      {
+        "kind": "official-docs",
+        "title": "Official client libraries",
+        "url": "https://docs.higgsfield.ai/docs/how-to/sdk",
+        "evidence": [
+          "Official Python and TypeScript SDKs are server-side only and handle auth, submission, polling, cancellation, uploads, and retries.",
+          "Explicit lifecycle APIs (submit/status/result/cancel) are recommended for workers; webhooks plus polling recovery are recommended for production event-driven integration."
+        ]
+      },
+      {
+        "kind": "official-cli",
+        "title": "Higgsfield CLI README",
+        "url": "https://raw.githubusercontent.com/higgsfield-ai/cli/main/README.md",
+        "evidence": [
+          "CLI is a separate terminal product with auth login/logout/token, model list/get, generate create, wait, cost, and jobs commands.",
+          "The CLI documents short-lived auth sessions, HIGGSFIELD_TOKEN as a non-interactive alternative, and dynamic model discovery via higgsfield model list.",
+          "CLI install/release is independent from the REST API credentials and from FrameForge's MCP bridge."
+        ]
+      },
+      {
+        "kind": "official-cli",
+        "title": "CLI model catalog",
+        "url": "https://raw.githubusercontent.com/higgsfield-ai/cli/main/MODELS.md",
+        "evidence": [
+          "Generated catalog lists current CLI job_set_type schemas, required flags, defaults, enum values, and media-reference constraints.",
+          "Local media flags can accept UUIDs or paths that the CLI uploads; this is distinct from FrameForge's REST asset URL allowlist."
+        ]
+      },
+      {
+        "kind": "official-sdk-source",
+        "title": "Higgsfield Node/TypeScript SDK",
+        "url": "https://github.com/higgsfield-ai/higgsfield-js",
+        "evidence": [
+          "The v2 client exposes server-side credentials, automatic polling/retries, and explicit lifecycle methods; its documented defaults include a two-minute timeout, maxRetries 3, retry backoff, and two-second poll interval.",
+          "SDK usage is a possible future dependency, but the current no-dependency FrameForge architecture can preserve its own bounded adapter instead."
+        ]
+      }
+    ],
+    "transportAndAuthentication": {
+      "restApi": {
+        "owner": "server/higgsfield.mjs",
+        "credential": "HF_API_KEY or HF_CREDENTIALS, sent as Authorization: Key <id>:<secret>",
+        "browserExposure": "forbidden",
+        "currentStatus": "Configured means a non-empty credential is present; capability reports configured/available without making a verification request.",
+        "importantGap": "createHiggsfieldApi.call does not send Idempotency-Key or retain X-Correlation-ID/status_url/cancel_url from the receipt."
+      },
+      "cli": {
+        "owner": "server/higgsfield-cli.mjs plus host bridge",
+        "credential": "Higgsfield CLI login session or HIGGSFIELD_TOKEN on the host; FrameForge receives only AGENT_BRIDGE_TOKEN to call the local bridge.",
+        "browserExposure": "forbidden",
+        "currentStatus": "Dynamic catalog/schema and create/status are delegated to the authenticated host process; transport is recorded as cli.",
+        "importantGap": "CLI cost/estimate and provider correlation headers are not represented in the FrameForge provider contract."
+      },
+      "projectOwnedMcp": {
+        "owner": "scripts/higgsfield-mcp.mjs",
+        "credential": "FRAMEFORGE_TOKEN or LOGIN_TOKEN authenticates to FrameForge /api/login; it is not an official Higgsfield MCP credential.",
+        "tools": [
+          "higgsfield_models",
+          "higgsfield_create",
+          "higgsfield_status",
+          "higgsfield_recover",
+          "higgsfield_apply"
+        ],
+        "safety": "The bridge explicitly labels itself project-owned, never replays POSTs after a 401/network ambiguity, and separates recover from create/apply."
+      }
+    },
+    "currentFrameForgeCapabilities": {
+      "modelDiscovery": {
+        "api": "Hardcoded and manually verified Seedance 2.5 mapping in server/higgsfield.mjs:13-24; unknown API models fail with INVALID_INPUT.",
+        "cli": "Dynamic /generation/models and /generation/models?model=... through the host bridge (server/generation-provider.mjs:28-35).",
+        "ui": "public/workflow.js:278-290 loads status and catalog concurrently, then fetches the selected schema; it preserves a saved model even when the current catalog no longer contains it."
+      },
+      "schemaValidation": "GenerationQueue.start validates model schema and parameters before persisting a billable job or spending (server/generations.mjs:96-117). It rejects prompt overrides and bounds JSON size.",
+      "estimate": "CLI bridge exposes estimate, but the API adapter deliberately throws UNSUPPORTED at server/higgsfield.mjs:114-116. UI currently has no authoritative credits/USD preflight in generationControlsHtml.",
+      "asyncLifecycle": "GenerationQueue persists intent, submits once, stores providerRequestId, polls, imports owned media, and distinguishes queued/submitting/pending/in_progress/downloading/completed/failed/nsfw/canceled/polling_failed/import_failed/manual_recovery (server/generations.mjs:32-183).",
+      "idempotency": "FrameForge requestId deduplicates locally and rejects changed payloads (server/generations.mjs:71-94; tests/generations.test.mjs:69-83), but provider REST idempotency is not sent. An ambiguous provider submission becomes submission_unknown rather than an automatic replay.",
+      "outputApply": "Completed provider URLs are downloaded through a strict Higgsfield host allowlist, hashed/probed, stored as generated uploads with provenance, and applied only by an explicit versioned action (server/generations.mjs:186-221, 271-277). UI exposes refresh/recover/apply separately (public/workflow.js:292-307).",
+      "concurrencyAndRecovery": "Queue maxActive defaults to four; polling has a max duration and failure count; restart resumes only known provider IDs and refuses changed transports (server/generations.mjs:49-69, 134-183).",
+      "mediaBoundary": "Scene generation accepts image/video only; audio and other API artifacts are not attachable even though Higgsfield REST lifecycle docs include audio and additional artifacts."
+    },
+    "prioritizedRecommendations": [
+      {
+        "priority": "P0",
+        "title": "Bind FrameForge requestId to Higgsfield REST Idempotency-Key",
+        "files": [
+          "server/higgsfield.mjs:89-124",
+          "server/generations.mjs:71-117",
+          "server/store.mjs generationJobs schema"
+        ],
+        "change": "Create/persist a provider idempotency key before the first REST POST (for example a stable FrameForge-scoped key derived from requestId), send it unchanged on ambiguous retry, and persist the exact model endpoint/body fingerprint. On replay, accept the original request_id and continue status polling; never mint a new key automatically for a changed body.",
+        "why": "Local requestId prevents duplicate FrameForge jobs but currently cannot make a lost REST submission safe at the vendor boundary. Official Higgsfield guidance requires Idempotency-Key for ambiguous timeout/network/5xx recovery.",
+        "safetyInvariant": "One intended generation has one provider idempotency key; unknown submission is recoverable by same-key replay or history inspection, never a fresh billable request."
+      },
+      {
+        "priority": "P0",
+        "title": "Make estimation authoritative before consent",
+        "files": [
+          "server/higgsfield.mjs:113-124",
+          "server/generation-provider.mjs:28-35",
+          "public/workflow.js:264-291 and generation run confirmation handler"
+        ],
+        "change": "Implement POST /estimate/{model} in the API adapter using the same validated model/body as create; normalize credits/usd plus account/model availability. Surface the estimate in the generation inspector and run-confirm dialog, and require explicit consent after showing the current estimate. Keep CLI estimate as a separate transport capability; show unavailable rather than guessing.",
+        "why": "Official billing docs define estimate as account-specific and authoritative. The current API adapter always returns UNSUPPORTED, so the UI cannot give a cost preview for the primary REST path.",
+        "safetyInvariant": "No provider create call occurs before user consent that names model, parameters, and current estimate or explicitly states estimate unavailable."
+      },
+      {
+        "priority": "P0",
+        "title": "Preserve provider receipt metadata and correlation evidence",
+        "files": [
+          "server/higgsfield.mjs:92-106, 116-123",
+          "server/generations.mjs:140-170",
+          "server/store.mjs generationJobs"
+        ],
+        "change": "Persist status_url, cancel_url when returned, X-Correlation-ID, provider error detail/status, and the account transport. Poll returned status_url rather than constructing it where possible; retain request_id as the stable identity.",
+        "why": "Official requests docs say returned URLs are the source of truth and errors docs require X-Correlation-ID with request_id for support. Current code reconstructs requests/{id}/status and drops response headers/details.",
+        "safetyInvariant": "Recovery/support can identify the exact account, transport, request_id, status URL, and correlation ID without exposing credentials."
+      },
+      {
+        "priority": "P1",
+        "title": "Adopt bounded backoff and jitter for REST polling",
+        "files": [
+          "server/generations.mjs:127-180",
+          "server/generation-provider.mjs:35"
+        ],
+        "change": "Replace the fixed 2500 ms queue cadence for provider polling with provider-aware backoff (start ~2 s, cap ~10 s, bounded random jitter), while retaining maxPollFailures/maxPollDurationMs and explicit recover. Do not retry 401/404 or terminal states.",
+        "why": "This follows official polling guidance and reduces load/concurrency pressure. Existing fixed polling is safe but less efficient and can synchronize many jobs."
+      },
+      {
+        "priority": "P1",
+        "title": "Treat catalog and account access as separate facts",
+        "files": [
+          "server/higgsfield.mjs:11-24,108-115",
+          "server/generation-provider.mjs:7-35",
+          "public/workflow.js:264-290"
+        ],
+        "change": "Keep API model mappings explicitly verified and label them as documented/verified mapping, not a complete live catalog. Keep CLI dynamic catalog separate. Capability should distinguish credential configured, account authenticated, model accessible, and provider operational; 404/423/503 must not be flattened into generic connected.",
+        "why": "Higgsfield documentation says the model catalog is account-dependent and model-specific docs are authoritative. The existing UI already has a useful configured/verified distinction; preserve and extend it."
+      },
+      {
+        "priority": "P1",
+        "title": "Retain explicit output apply and owned-storage retention",
+        "files": [
+          "server/generations.mjs:186-221,271-277",
+          "public/workflow.js:292-307"
+        ],
+        "change": "Keep the current download/hash/probe/provenance/apply split. Consider a clear retention warning that provider output URLs may disappear after at least seven days; never auto-apply generated output. Continue preserving failed/nsfw/canceled terminal states and imported originals.",
+        "why": "The current architecture already matches the safest contract and official retention semantics. This is a UX/documentation reinforcement, not a migration."
+      },
+      {
+        "priority": "P2",
+        "title": "Keep CLI and MCP as optional operator paths, not the primary browser transport",
+        "files": [
+          "server/generation-provider.mjs:4-35",
+          "scripts/higgsfield-mcp.mjs:14-82"
+        ],
+        "change": "Make REST API the primary provider when configured; expose CLI as an authenticated host-bridge fallback and MCP as a project-owned agent interface over FrameForge. Do not put Higgsfield secrets in browser, workflow JSON, MCP arguments, logs, or URLs.",
+        "why": "The three auth surfaces are intentionally distinct: REST server credentials, host CLI session/token, and FrameForge session token for MCP. Conflating them would expand blast radius and violate vendor guidance."
+      }
+    ],
+    "safetyInvariantsToPreserve": [
+      "Credentials remain server/host-side; browser and project-owned MCP never receive Higgsfield key material.",
+      "Persist submission intent before any provider create call.",
+      "Local requestId is immutable for one generation intent and rejects changed payloads.",
+      "Ambiguous submission never auto-submits a new generation; recovery polls/replays only the same known provider identity or same provider idempotency key.",
+      "Provider transport is persisted and changed transports require manual recovery instead of silent cross-transport polling.",
+      "Schema/parameter validation and episode version checks complete before billable submission.",
+      "Provider statuses remain distinct, including nsfw and canceled/cancelled, and terminal failures are not mislabeled as success.",
+      "Generated media is downloaded only from trusted Higgsfield asset hosts, bounded, hashed, MIME/stream-probed, and stored with sanitized provenance.",
+      "Generation output is never applied automatically; apply requires explicit user action and the exact current episode version/scene.",
+      "Stale apply preserves the paid output and allows explicit reconciliation to the surviving scene; no output is discarded to hide concurrency conflicts.",
+      "No live paid generation, credential use, or publication is part of research or verification."
+    ],
+    "recommendedImplementationOrder": [
+      "1. Add provider idempotency key and receipt/correlation persistence without changing UI behavior.",
+      "2. Add REST estimate and estimate-unavailable UI state, then gate run confirmation on explicit consent.",
+      "3. Extend status handling to preserve returned status_url/cancel_url and account/model access distinctions.",
+      "4. Tune polling backoff/jitter and keep existing bounded recovery semantics.",
+      "5. Add retention/cost/recovery copy and regression tests for same-key replay, parameter mismatch, estimate gating, and metadata persistence."
+    ],
+    "bottomLine": "FrameForge already has the correct high-level safety shape for a Higgsfield-primary standalone studio: server-side credentials, schema discovery before spend, persisted intent, provider-ID recovery, bounded media import, optimistic versioning, and explicit apply. The highest-risk missing contract is vendor-level REST idempotency and receipt metadata; the highest UX gap is authoritative account-specific estimation before the existing generation-consent gate."
+  },
+  "analysis": {
+    "schema": "frameforge-studio-analysis/v1",
+    "observedAt": "2026-10-18",
+    "scope": {
+      "repository": ".",
+      "files": [
+        "public/index.html",
+        "public/app.js",
+        "public/styles.css",
+        "public/workflow.js",
+        "public/workflow.css",
+        "server/app.mjs",
+        "server/generations.mjs",
+        "server/store.mjs",
+        "tests/*.test.mjs",
+        "scripts/*.mjs",
+        "scripts/*.py"
+      ],
+      "mode": "read-only; no files in the repository edited; no formatter/linter/project-wide test suite run"
+    },
+    "architecture": {
+      "boot": {
+        "entry": "public/index.html:1-20",
+        "flow": "HTML shell loads styles.css, workflow.css, and ES module app.js; app.js constructs the workflow editor and then renders the selected view into #app. #modal and hidden media/audio file inputs are global shared surfaces."
+      },
+      "appShell": {
+        "file": "public/app.js",
+        "ranges": [
+          "1-77",
+          "92-106",
+          "249-307",
+          "310-345",
+          "394-442"
+        ],
+        "flow": "api() is the single same-origin fetch wrapper with credentials, JSON error conversion, and 401 login recovery. refresh() hydrates /api/state. handleAction() owns view/channel/episode navigation, save-on-navigation, rendering, narration, history and integration actions."
+      },
+      "workflowEditor": {
+        "file": "public/workflow.js",
+        "ranges": [
+          "1-70",
+          "72-155",
+          "166-187",
+          "194-238",
+          "264-307",
+          "468-476",
+          "491-547",
+          "622-623"
+        ],
+        "flow": "createWorkflowEditor() keeps an in-memory workflow draft, saved snapshot, revision, dirty state, 40-step draft undo/redo, history versions, selected node, run polling and generation job state. shell()/paint() render the canvas and inspector. selectNode() drives one inspector surface; generationControlsHtml()/generationJobHtml() are the only generation settings/recovery UI."
+      },
+      "serverContracts": {
+        "file": "server/app.mjs:239-393",
+        "readRoutes": [
+          "GET /api/state",
+          "GET /api/integrations",
+          "GET /api/generation/status",
+          "GET /api/generation/models[?model=]",
+          "GET /api/generations/:id",
+          "GET /api/episodes/:id/history",
+          "GET /api/workflows/:id/runs",
+          "GET /api/workflows/:id/history"
+        ],
+        "writeRoutes": [
+          "PUT /api/episodes/:id",
+          "PUT /api/workflows/:id",
+          "POST /api/episodes/:id/restore",
+          "POST /api/workflows/:id/restore",
+          "POST /api/workflows/:id/run",
+          "POST /api/episodes/:id/generations",
+          "POST /api/generations/:id/recover",
+          "POST /api/generations/:id/apply",
+          "POST /api/episodes/:id/render"
+        ],
+        "security": "Same-origin and loopback-host restrictions are checked before API access; API routes require authentication; CSP is self-only with media blob/data allowances."
+      },
+      "provider": {
+        "primaryUIPath": "Higgsfield generation node in public/workflow.js; model catalog/schema and status are loaded from /api/generation/status and /api/generation/models.",
+        "docs": [
+          "docs/usability-higgsfield-research.md:7-15",
+          "docs/higgsfield-integration.md:1-50",
+          "https://docs.higgsfield.ai/docs/concepts/polling",
+          "https://docs.higgsfield.ai/docs/api-reference/requests/cancel-a-queued-request",
+          "https://higgsfield.ai/mcp"
+        ],
+        "important": "Higgsfield transport can be Developer API or authenticated official CLI/bridge. The UI must preserve configured vs authenticated vs available distinctions and must not infer paid readiness from a configured credential alone."
+      }
+    },
+    "navigation_and_generation_flow": [
+      "Studio render() presents scene cards, preview, narration, jobs and assistant; app state has one current episode and sceneIndex.",
+      "Selecting Workflow calls workflowEditor.load(); workflow shell exposes saved workflow, target episode, save/run buttons, canvas and inspector.",
+      "Selecting a node calls selectNode(); selecting generate additionally triggers loadGeneration(), which concurrently fetches provider capability and model catalog/schema.",
+      "Running a workflow with a generate node opens a confirmation dialog; only confirm-generation-run sends allowGeneration:true to POST /api/workflows/:id/run. A normal run cannot spend generation credits.",
+      "Run results are shown in inspector results; generation jobs poll known IDs, can recover polling/import failures, and completed outputs require explicit apply to a scene. Applying is versioned and does not submit a new generation.",
+      "History and restore are separate views/controls. Navigation auto-saves dirty episode/workflow drafts, while restore and reload are blocked when dirty to protect local edits."
+    ],
+    "findings": [
+      {
+        "priority": "P0",
+        "title": "Current visual language is dark, dense and tokenless at component level",
+        "evidence": [
+          "public/index.html:6-9 sets dark #121512 theme-color and two global stylesheets",
+          "public/styles.css:1-3 defines --bg:#111411, --surface:#191d19, --raised:#222722, --text:#edf1e8 and --lime/#coral accents",
+          "public/workflow.css:1-50 uses the same dark variables and dense canvas/inspector rules"
+        ],
+        "impact": "A white-background redesign can be low-risk if it changes the shared tokens and semantic surface rules first; duplicated selector-level colors would create inconsistent editor/history/generation states.",
+        "recommendation": "Keep DOM and data attributes stable. Replace the root tokens and theme-color, then add explicit semantic tokens for canvas, panel, border, muted text, focus, success, warning and destructive states. Preserve status classes (.queued/.running/.completed/.failed/.awaiting_review), data-testid hooks and responsive media queries."
+      },
+      {
+        "priority": "P0",
+        "title": "Do not build a second Higgsfield form in Studio",
+        "evidence": [
+          "public/workflow.js:220-238 inspectorHtml() routes settings/results/history",
+          "public/workflow.js:264-290 generationControlsHtml() loads status/catalog/schema and renders model/parameter controls",
+          "public/workflow.js:292-307 generationJobHtml()/loadGenerationJob() own request status, recovery and apply affordances"
+        ],
+        "impact": "A separate CTA panel would duplicate schema fields and diverge from request recovery/apply safeguards.",
+        "recommendation": "Route the Studio CTA into the existing workflow inspector. Add a narrow public workflowEditor.openGeneration() seam, not a direct generation API call. Reuse inspectorHtml(), generationControlsHtml() and generationJobHtml() unchanged."
+      },
+      {
+        "priority": "P1",
+        "title": "A Higgsfield CTA needs a draft-only workflow entry seam",
+        "evidence": [
+          "public/app.js:40-53 constructs workflowEditor; public/app.js:415 switches view and calls workflowEditor.load()",
+          "public/workflow.js:127-140 load() returns no workflow when /api/workflows is empty",
+          "public/workflow.js:510-513 new/add-node create in-memory drafts and mark them dirty",
+          "public/workflow.js:622-623 public API currently exposes load,mount,save,hasChanges,html only"
+        ],
+        "impact": "Without a seam, a Studio CTA must either duplicate node creation or call internal DOM actions; both are fragile. Auto-saving would create an unintended workflow snapshot before the user reviews it.",
+        "recommendation": "Expose openGeneration() beside load/mount/save. It should await load() without force; if no workflow exists, create the same initialGraph() draft and add one generate node through a shared helper. If a workflow exists, select its existing generate node or add one to the in-memory draft. Set inspectorTab='settings', call changed()/paint(), and stop. The caller then sets view='workflow' and render(). Do not call save(), run, /api/episodes/:id/generations, or allowGeneration."
+      },
+      {
+        "priority": "P1",
+        "title": "Generated node is optional and currently absent from initialGraph",
+        "evidence": [
+          "public/workflow.js:24-27 initialGraph() excludes generate",
+          "public/workflow.js:67-69 validates generation only when present",
+          "public/workflow.js:513 creates generate with model seedance_2_5, empty prompt/params and sceneIndex 0",
+          "scripts/usability-browser-smoke.py:123-137 explicitly adds generate via UI before testing it"
+        ],
+        "impact": "The CTA must add the optional node without silently changing the saved workflow or bypassing graph validation. New draft must remain visibly unsaved until user chooses Save.",
+        "recommendation": "Factor the node literal from add-node into createNode(type, position). For CTA insertion, connect storyboard -> generate -> render and remove the direct storyboard -> render edge only if the product wants generation as the selected path; otherwise preserve the existing direct edge and let validation retain optional-branch semantics. Prefer preserving existing edges for an existing workflow."
+      },
+      {
+        "priority": "P1",
+        "title": "Status copy must preserve three provider states",
+        "evidence": [
+          "public/workflow.js:267 displays 연결됨 only when available && authenticated===true, 설정됨 · 검증 필요 when configured, otherwise 연결 확인 필요",
+          "server/app.mjs:269-270 exposes capability/catalog separately",
+          "docs/usability-higgsfield-research.md:7-15 distinguishes Developer API, CLI and MCP credential boundaries"
+        ],
+        "impact": "White UI contrast or new CTA copy must not collapse configured/authenticated/available into a misleading single ready badge.",
+        "recommendation": "Keep the existing status predicate and explanatory detail. For a CTA, label it as opening Higgsfield setup/review, not as guaranteed generation. Never claim a live provider call from catalog availability alone."
+      },
+      {
+        "priority": "P1",
+        "title": "Generation spend and recovery guards are already load-bearing",
+        "evidence": [
+          "public/workflow.js:517-521 only confirm-generation-run sends allowGeneration:true",
+          "public/workflow.js:535-542 requires completed, unapplied job and expectedVersion/sceneId for apply",
+          "server/generations.mjs:32-52 persists intent and only polls known provider IDs after restart",
+          "server/generations.mjs:73-90 validates requestId/idempotency",
+          "tests/generations.test.mjs:37-116 covers explicit apply, idempotency, stale apply and retained paid output",
+          "tests/higgsfield.test.mjs:15-55 covers fixed provider status URL, ambiguity and no automatic retry"
+        ],
+        "impact": "Any direct CTA implementation that starts generation, auto-saves, auto-applies or retries would violate paid-spend and recovery contracts.",
+        "recommendation": "CTA must be navigation plus draft mutation only. Keep requestId recovery, transport matching, ambiguous-submission handling, explicit apply and expectedVersion checks untouched."
+      },
+      {
+        "priority": "P2",
+        "title": "Navigation is safe but implicit auto-save needs visible feedback in a lighter UI",
+        "evidence": [
+          "public/app.js:415-419 saves workflow/episode before view/channel/episode changes",
+          "public/app.js:320-344 tracks savePending, dirty and expectedVersion",
+          "public/workflow.js:127-130 blocks forced reload with dirty draft",
+          "public/app.js:284-294 blocks episode restore with dirty draft"
+        ],
+        "impact": "A white redesign can make save state and destructive/restore boundaries easier to scan without changing behavior.",
+        "recommendation": "Retain #save-status/#wf-save-status role=status and disabled states. Use a high-contrast neutral status chip plus explicit warning color for unsaved changes; avoid relying on dark lime/coral contrast alone."
+      },
+      {
+        "priority": "P2",
+        "title": "The workflow canvas is an interaction surface, not a generic card grid",
+        "evidence": [
+          "public/workflow.js:199-206 renders draggable nodes with stable data-node-id",
+          "public/workflow.js:592-606 handles pointer drag/pan and keyboard movement",
+          "public/workflow.css:1-50 defines canvas, node, inspector and responsive behavior"
+        ],
+        "impact": "Changing card radii/spacing without preserving hit areas, selected state and focus outlines could regress node editing and mobile behavior.",
+        "recommendation": "Preserve .wf-node-header keyboard/pointer hit targets, .selected and data-node-id selectors, canvas overflow/zoom affordances, and inspector max-height/scroll behavior. Treat canvas and inspector as separate semantic zones in the white design."
+      }
+    ],
+    "preserved_invariants": [
+      "Episode and workflow identities, versions and immutable history snapshots remain stable; restore appends a new version with a restore reason rather than rewriting old history.",
+      "All episode/workflow writes carry expectedVersion semantics; stale edits return 409 and must not overwrite newer state.",
+      "Dirty drafts are protected across navigation and restore/reload; save conflicts preserve local edits and require a deliberate retry.",
+      "Workflow validation preserves required script/storyboard/render/review counts, acyclic graph, connected graph and required ordering; generate remains optional unless explicitly inserted.",
+      "No generation is submitted by ordinary workflow run; only explicit user confirmation sends allowGeneration:true.",
+      "Generation intent is persisted before provider spend; requestId is portable/idempotent; changed payloads reject; ambiguous provider submissions never auto-retry.",
+      "After restart/recovery, only a known provider request ID on the original transport is polled; submission_unknown/manual_recovery cannot silently resubmit.",
+      "Provider status distinctions remain truthful: configured, authenticated and available are separate facts; unavailable/error details stay visible without leaking credentials.",
+      "Provider outputs are imported into local storage with verified identity/hash and safe host/redirect constraints; provider CDN URLs are not treated as permanent app assets.",
+      "Generation results are never auto-applied: completed output requires explicit apply with expectedVersion and sceneId; stale apply retains the paid output for reconciliation.",
+      "Completed workflow runs remain awaiting_review until human review; no automatic approval or channel publication is introduced.",
+      "Same-origin/auth/CSP protections and safe URL/media rendering remain intact."
+    ],
+    "verification_surface": {
+      "documented_commands": [
+        "npm test",
+        "npm run check",
+        "npm run test:render",
+        "node scripts/media-smoke.mjs",
+        "node --env-file=.env scripts/workflow-smoke.mjs",
+        "node --env-file=.env scripts/production-smoke.mjs",
+        "python scripts/production-browser-smoke.py",
+        "python scripts/usability-browser-smoke.py"
+      ],
+      "command_sources": [
+        "package.json:7-13",
+        "README.md:163-169",
+        "scripts/check.mjs:1-13",
+        "scripts/usability-browser-smoke.py:1-24"
+      ],
+      "existing_receipts": [
+        "artifacts/usability-browser-smoke.json:1-42 (23 UX checks passed; local disposable records; no provider generation)",
+        "artifacts/production-browser-smoke.json (production narration/edit/review checks)",
+        "artifacts/higgsfield-browser-smoke.json (existing paid generation preservation-only browser checks; no new generation)",
+        "artifacts/tooling.json:1-7 (Jev advisory/offline self-test 8/8; no configured live API key; Docker build/run blocked on host service control)"
+      ],
+      "this_analysis": "No formatter, linter or project-wide test suite was executed for this read-only assignment."
+    },
+    "implementation_seam": {
+      "recommended_api": "workflowEditor.openGeneration()",
+      "caller": "public/app.js Studio Higgsfield CTA handler",
+      "caller_sequence": [
+        "await workflowEditor.openGeneration()",
+        "view='workflow'",
+        "render()"
+      ],
+      "editor_sequence": [
+        "await load()",
+        "reuse/create one generate node in memory",
+        "selected=generate.id",
+        "inspectorTab='settings'",
+        "changed('generation-cta')",
+        "paint()",
+        "return workflow"
+      ],
+      "must_not": [
+        "POST /api/episodes/:id/generations",
+        "POST /api/workflows/:id/run",
+        "allowGeneration:true",
+        "automatic save of a newly-created workflow",
+        "duplicate model/schema/job/recovery UI"
+      ],
+      "reuse": "The existing inspector pipeline is the single source of truth: selectNode() -> inspectorHtml() -> generationControlsHtml()/generationJobHtml()."
+    },
+    "confidence": "high for code-local flow and contracts; external Higgsfield capability claims are limited to checked-in research docs and linked official sources."
+  },
+  "implementationDecisions": [
+    "Use white/neutral UI without changing the standalone studio architecture",
+    "Reuse existing workflow inspector for episode/scene Higgsfield shortcut, with unsaved existing-script generation draft",
+    "Retain required parameters and paid consent; disclose optional technical settings",
+    "Implement documented REST estimate and stable provider idempotency header without automatic resubmission",
+    "Do not change provider polling/receipt schema or pretend unavailable credentials are authenticated",
+    "Preserve pre-existing workflow generate→atomic apply→render semantics and make confirmation explicit; manual Apply remains for retained/recovered results, not a false promise for full workflow execution"
+  ],
+  "asideBrowser": {
+    "observedAt": "2026-10-18T13:18:56.700Z",
+    "session": "read-only research session",
+    "sources": [
+      {
+        "url": "https://higgsfield.ai/ko/ai/video?model=seedance_2_5",
+        "observed": [
+          "Prompt field adjacent to model, duration, ratio, resolution and bitrate controls",
+          "Generate button displays a visible credit amount",
+          "History and instructions are separate tabs"
+        ],
+        "limits": [
+          "Observed displayed credit amount is not an API quote and is not used as product pricing",
+          "No generate button was pressed; no paid request or account change"
+        ]
+      },
+      {
+        "url": "https://higgsfield.ai/ko/ai/image?model=soul-cinematic",
+        "observed": [
+          "Image generation has its own mode and model-specific route"
+        ],
+        "limits": [
+          "No output generated"
+        ]
+      }
+    ],
+    "executionNote": "Aside exec launched but initial response timed out; recovered session identifier through CLI, retained observable public UI output, and stopped own research session after capture. No Canva UI claim was established."
+  }
+}

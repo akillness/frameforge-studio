@@ -109,14 +109,18 @@ export class WorkflowEngine {
   update(id, body) { return this.store.updateWorkflow(id, validateWorkflow(body), body.expectedVersion); }
   listRuns(id) { this.store.get('workflows', id); return this.store.list('workflowRuns').filter((run) => run.workflowId === id); }
 
-  start(id, episodeId, { allowGeneration = false } = {}) {
+  start(id, episodeId, { allowGeneration = false, expectedWorkflowVersion, expectedEpisodeVersion } = {}) {
     const workflow = this.store.get('workflows', id);
     validateWorkflow(workflow);
+    if (expectedWorkflowVersion !== undefined && (!Number.isInteger(expectedWorkflowVersion) || expectedWorkflowVersion < 1)) throw new HttpError(400, 'expectedWorkflowVersion must be a positive integer');
+    if (expectedEpisodeVersion !== undefined && (!Number.isInteger(expectedEpisodeVersion) || expectedEpisodeVersion < 1)) throw new HttpError(400, 'expectedEpisodeVersion must be a positive integer');
+    if (expectedWorkflowVersion !== undefined && workflow.version !== expectedWorkflowVersion) throw new HttpError(409, 'Workflow changed since this run was quoted. Refresh and quote the current version.');
     if (workflow.nodes.some(node => node.type === 'generate')) {
       if (allowGeneration !== true) throw new HttpError(400, 'This workflow includes paid Higgsfield generation; explicit allowGeneration is required');
       if (!this.generations) throw new HttpError(503, 'Higgsfield generation is unavailable');
     }
     const episode = this.store.get('episodes', text(episodeId, 'episodeId', 80));
+    if (expectedEpisodeVersion !== undefined && episode.version !== expectedEpisodeVersion) throw new HttpError(409, 'Episode changed since this run was quoted. Refresh and quote the current version.');
     const active = this.store.list('workflowRuns').filter((run) => ['queued', 'running'].includes(run.status));
     if (active.some((run) => run.episodeId === episode.id)) throw new HttpError(409, 'This episode already has an active workflow');
     if (active.length >= 4) throw new HttpError(429, 'Workflow execution limit reached');

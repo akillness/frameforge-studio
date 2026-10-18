@@ -140,7 +140,7 @@ export class GenerationQueue {
       if (!job.providerRequestId) {
         if (job.status !== 'queued') { this.update(id, { status: 'submission_unknown', error: 'Provider submission identifier is unavailable; inspect provider history.' }); return; }
         this.update(id, { status: 'submitting', submittedAt: stamp() });
-        try { result = await this.provider.create({ model: job.model, prompt: job.prompt, params: job.params }); }
+        try { result = await this.provider.create({ model: job.model, prompt: job.prompt, params: job.params, ...(this.provider.transport === 'api' ? { idempotencyKey: job.id } : {}) }); }
         catch (error) {
           const rejected = ['INVALID_INPUT', 'UNSUPPORTED', 'NOT_CONFIGURED', 'AUTH_REQUIRED', 'RATE_LIMITED'].includes(error.code);
           this.update(id, { status: rejected ? 'failed' : 'submission_unknown', error: rejected ? 'Provider rejected generation. Check model settings and provider access.' : 'Submission outcome is unknown. Inspect provider history before creating another request.' });

@@ -1,0 +1,1834 @@
+{
+  "verifiedAt": "2026-10-18T14:33:28.569151+00:00",
+  "base": "http://127.0.0.1:4329",
+  "checks": {
+    "320-autoDesiredDimensions": true,
+    "320-autoActualAutoFit": true,
+    "320-autoActualDimensionsAnnounced": true,
+    "320-autoNoHorizontalOverflow": true,
+    "320-compactDesiredDimensions": true,
+    "320-compactActualClamp": true,
+    "320-compactActualDimensionsAnnounced": true,
+    "320-compactNoHorizontalOverflow": true,
+    "320-standardDesiredDimensions": true,
+    "320-standardActualClamp": true,
+    "320-standardActualDimensionsAnnounced": true,
+    "320-standardNoHorizontalOverflow": true,
+    "320-wideDesiredDimensions": true,
+    "320-wideActualClamp": true,
+    "320-wideActualDimensionsAnnounced": true,
+    "320-wideNoHorizontalOverflow": true,
+    "320-focusDesiredDimensions": true,
+    "320-focusActualClamp": true,
+    "320-focusActualDimensionsAnnounced": true,
+    "320-focusNoHorizontalOverflow": true,
+    "320SettingsKeyboardNeverFocusesUnderlyingAppAndReentersModal": true,
+    "320SettingsProgrammaticBackgroundFocusBlocked": true,
+    "320SettingsNoOverflow": true,
+    "320SettingsEscapeRestoresOpener": true,
+    "390-autoDesiredDimensions": true,
+    "390-autoActualAutoFit": true,
+    "390-autoActualDimensionsAnnounced": true,
+    "390-autoNoHorizontalOverflow": true,
+    "390-compactDesiredDimensions": true,
+    "390-compactActualClamp": true,
+    "390-compactActualDimensionsAnnounced": true,
+    "390-compactNoHorizontalOverflow": true,
+    "390-standardDesiredDimensions": true,
+    "390-standardActualClamp": true,
+    "390-standardActualDimensionsAnnounced": true,
+    "390-standardNoHorizontalOverflow": true,
+    "390-wideDesiredDimensions": true,
+    "390-wideActualClamp": true,
+    "390-wideActualDimensionsAnnounced": true,
+    "390-wideNoHorizontalOverflow": true,
+    "390-focusDesiredDimensions": true,
+    "390-focusActualClamp": true,
+    "390-focusActualDimensionsAnnounced": true,
+    "390-focusNoHorizontalOverflow": true,
+    "390SettingsKeyboardNeverFocusesUnderlyingAppAndReentersModal": true,
+    "390SettingsProgrammaticBackgroundFocusBlocked": true,
+    "390SettingsNoOverflow": true,
+    "390SettingsEscapeRestoresOpener": true,
+    "768-autoDesiredDimensions": true,
+    "768-autoActualAutoFit": true,
+    "768-autoActualDimensionsAnnounced": true,
+    "768-autoNoHorizontalOverflow": true,
+    "768-compactDesiredDimensions": true,
+    "768-compactActualClamp": true,
+    "768-compactActualDimensionsAnnounced": true,
+    "768-compactNoHorizontalOverflow": true,
+    "768-standardDesiredDimensions": true,
+    "768-standardActualClamp": true,
+    "768-standardActualDimensionsAnnounced": true,
+    "768-standardNoHorizontalOverflow": true,
+    "768-wideDesiredDimensions": true,
+    "768-wideActualClamp": true,
+    "768-wideActualDimensionsAnnounced": true,
+    "768-wideNoHorizontalOverflow": true,
+    "768-focusDesiredDimensions": true,
+    "768-focusActualClamp": true,
+    "768-focusActualDimensionsAnnounced": true,
+    "768-focusNoHorizontalOverflow": true,
+    "768SettingsKeyboardNeverFocusesUnderlyingAppAndReentersModal": true,
+    "768SettingsProgrammaticBackgroundFocusBlocked": true,
+    "768SettingsNoOverflow": true,
+    "768SettingsEscapeRestoresOpener": true,
+    "1440-autoDesiredDimensions": true,
+    "1440-autoActualAutoFit": true,
+    "1440-autoActualDimensionsAnnounced": true,
+    "1440-autoNoHorizontalOverflow": true,
+    "1440-compactDesiredDimensions": true,
+    "1440-compactActualClamp": true,
+    "1440-compactActualDimensionsAnnounced": true,
+    "1440-compactNoHorizontalOverflow": true,
+    "1440-standardDesiredDimensions": true,
+    "1440-standardActualClamp": true,
+    "1440-standardActualDimensionsAnnounced": true,
+    "1440-standardNoHorizontalOverflow": true,
+    "1440-wideDesiredDimensions": true,
+    "1440-wideActualClamp": true,
+    "1440-wideActualDimensionsAnnounced": true,
+    "1440-wideNoHorizontalOverflow": true,
+    "1440-focusDesiredDimensions": true,
+    "1440-focusActualClamp": true,
+    "1440-focusActualDimensionsAnnounced": true,
+    "1440-focusNoHorizontalOverflow": true,
+    "1440SettingsKeyboardNeverFocusesUnderlyingAppAndReentersModal": true,
+    "1440SettingsProgrammaticBackgroundFocusBlocked": true,
+    "1440SettingsNoOverflow": true,
+    "1440SettingsEscapeRestoresOpener": true,
+    "DesiredWideDimensionsSurviveNarrowViewport": true,
+    "WideningRestoresActualAreaWithoutChangingDesiredLayout": true,
+    "NumericControlsApplyAllDimensions": true,
+    "KeyboardResizeUsesFineAndCoarseSteps": true,
+    "PointerResizeCommitsActualStartPlusDelta": true,
+    "VerticalOnlyPointerResizePreservesOtherDesiredAxisUnderClamp": true,
+    "HorizontalOnlyPointerResizePreservesOtherDesiredAxisUnderClamp": true,
+    "inspectorMovesExistingDomRatherThanClone": true,
+    "inspectorUniqueDomIds": true,
+    "inspectorKeyboardNeverFocusesUnderlyingAppAndReentersModal": true,
+    "inspectorProgrammaticBackgroundFocusBlocked": true,
+    "inspectorRestoresOriginalDom": true,
+    "inspectorCloseButtonRestoresFocus": true,
+    "narrationMovesExistingDomRatherThanClone": true,
+    "narrationUniqueDomIds": true,
+    "narrationKeyboardNeverFocusesUnderlyingAppAndReentersModal": true,
+    "narrationProgrammaticBackgroundFocusBlocked": true,
+    "narrationRestoresOriginalDom": true,
+    "narrationCloseButtonRestoresFocus": true,
+    "assistantMovesExistingDomRatherThanClone": true,
+    "assistantUniqueDomIds": true,
+    "assistantKeyboardNeverFocusesUnderlyingAppAndReentersModal": true,
+    "assistantProgrammaticBackgroundFocusBlocked": true,
+    "assistantRestoresOriginalDom": true,
+    "assistantCloseButtonRestoresFocus": true,
+    "NarrationRepaintRetainsOpenModalAndContainedFocus": true,
+    "InspectorCaretRetained": true,
+    "InspectorRepaintRetainedOpenDialogAndDraft": true,
+    "AssistantCaretRetained": true,
+    "AssistantRepaintRetainedOpenDialogAndDraft": true,
+    "DraftAndToolActionsZeroApiWrites": true,
+    "DraftAndToolActionsEpisodeUnchanged": true,
+    "ProfileARestoresIsolatedLayout": true,
+    "ProfileBRestoresIsolatedLayout": true,
+    "EditingSelectedProfileDidNotMutateSnapshot": true,
+    "XssProfileRenderedAsTextNotMarkupOrExecution": true,
+    "ProfilesZeroApiWrites": true,
+    "ProfilesEpisodeUnchanged": true,
+    "ProfileSelectionSurvivesReload": true,
+    "ResetKeepsBothNamedProfiles": true,
+    "ResetPreservesSelectableProfileSnapshot": true,
+    "StorageFailureHasExplicitNoticeAndLiveSession": true,
+    "AllLayoutActionsZeroApiWrites": true,
+    "AllLayoutActionsEpisodeUnchanged": true,
+    "SwitchingBetweenTwoCleanEpisodesUpdatesPreviewBothDirections": true,
+    "NavigationWhileModalOpenClosesSafely": true,
+    "NavigationUniqueDomIds": true,
+    "CleanModalNavigationMakesNoWrites": true,
+    "ExistingNavigationAutosaveSucceedsSeparately": true,
+    "BaselineAutosaveOnlyTouchesOwnFixture": true,
+    "BaselineAutosavePersistsRealSceneEdit": true,
+    "SuccessfulOverlayChatClearsOnlyJustSubmittedText": true,
+    "SuccessfulOverlayChatPreservesNewerUnsentTextAndCaret": true,
+    "NewSceneIdentityCannotReplayOldInspectorFieldsOverNewPreview": true,
+    "SceneReplacementUniqueDomIds": true,
+    "AssistantOverlayPreservesNewerDraftCaretAcrossSceneIdentityReplacement": true,
+    "ChatControlRequestsWereInterceptedNotRealProviderCalls": true,
+    "HydrationClearsIncoherentActiveProfileWithoutLosingLayoutOrSnapshot": true,
+    "HydrationMakesNoApiWrites": true,
+    "NoUnexpectedBrowserApiWrites": true,
+    "NoBrowserPageErrors": true
+  },
+  "screenshots": [
+    "docs/assets/workspace/320-auto.png",
+    "docs/assets/workspace/320-compact.png",
+    "docs/assets/workspace/320-standard.png",
+    "docs/assets/workspace/320-wide.png",
+    "docs/assets/workspace/320-focus.png",
+    "docs/assets/workspace/390-auto.png",
+    "docs/assets/workspace/390-compact.png",
+    "docs/assets/workspace/390-standard.png",
+    "docs/assets/workspace/390-wide.png",
+    "docs/assets/workspace/390-focus.png",
+    "docs/assets/workspace/768-auto.png",
+    "docs/assets/workspace/768-compact.png",
+    "docs/assets/workspace/768-standard.png",
+    "docs/assets/workspace/768-wide.png",
+    "docs/assets/workspace/768-focus.png",
+    "docs/assets/workspace/1440-auto.png",
+    "docs/assets/workspace/1440-compact.png",
+    "docs/assets/workspace/1440-standard.png",
+    "docs/assets/workspace/1440-wide.png",
+    "docs/assets/workspace/1440-focus.png",
+    "docs/assets/workspace/resized-desktop.png",
+    "docs/assets/workspace/overlay-inspector.png",
+    "docs/assets/workspace/overlay-narration.png",
+    "docs/assets/workspace/overlay-assistant.png",
+    "docs/assets/workspace/profiles.png",
+    "docs/assets/workspace/storage-failure.png",
+    "docs/assets/workspace/new-scene-context.png",
+    "docs/assets/workspace/assistant-scene-replacement.png",
+    "docs/assets/workspace/final-workspace.png"
+  ],
+  "requests": [
+    {
+      "method": "PUT",
+      "path": "/api/episodes/8d02538f-a988-46f5-b442-47def9ee43ea",
+      "body": "{\"title\":\"Workspace episode 20261018143329510026\",\"topic\":\"Layout changes stay browser-local\",\"status\":\"draft\",\"format\":\"9:16\",\"scenes\":[{\"id\":\"cc40a05c-0d08-47d4-b9cf-3cd72417f389\",\"title\":\"Workspace scene one\",\"text\":\"Saved scene one\",\"duration\":5,\"background\":\"#282544\",\"kind\":\"title\",\"layout\":\"center\",\"trimStart\":0,\"audioVolume\":1,\"narration\":\"\"},{\"id\":\"cc40a05c-0d08-47d4-b9cf-3cd72417f389-two\",\"title\":\"Workspace scene two\",\"text\":\"Own fixture navigation autosave baseline\",\"duration\":5,\"background\":\"#282544\",\"kind\":\"title\",\"layout\":\"center\",\"trimStart\":0,\"audioVolume\":1,\"narration\":\"\"}],\"notes\":\"\",\"expectedVersion\":2}",
+      "phase": "navigation-autosave",
+      "disposition": "real-own-fixture-autosave"
+    },
+    {
+      "method": "POST",
+      "path": "/api/episodes/8d02538f-a988-46f5-b442-47def9ee43ea/chat",
+      "body": "{\"agent\":\"studio\",\"message\":\"Just submitted message must clear\"}",
+      "phase": "intercepted-chat",
+      "disposition": "intercepted-success-fixture-never-sent-to-server"
+    },
+    {
+      "method": "POST",
+      "path": "/api/episodes/8d02538f-a988-46f5-b442-47def9ee43ea/chat",
+      "body": "{\"agent\":\"studio\",\"message\":\"Earlier submitted message\"}",
+      "phase": "intercepted-chat",
+      "disposition": "intercepted-success-fixture-never-sent-to-server"
+    },
+    {
+      "method": "POST",
+      "path": "/api/episodes/8d02538f-a988-46f5-b442-47def9ee43ea/chat",
+      "body": "{\"agent\":\"studio\",\"message\":\"Replace scene identity while inspector is open\"}",
+      "phase": "intercepted-chat",
+      "disposition": "intercepted-success-fixture-never-sent-to-server"
+    },
+    {
+      "method": "POST",
+      "path": "/api/episodes/8d02538f-a988-46f5-b442-47def9ee43ea/chat",
+      "body": "{\"agent\":\"studio\",\"message\":\"Assistant request with scene replacement\"}",
+      "phase": "intercepted-chat",
+      "disposition": "intercepted-success-fixture-never-sent-to-server"
+    }
+  ],
+  "fixtureRequests": [
+    {
+      "method": "POST",
+      "path": "/api/channels",
+      "status": 201
+    },
+    {
+      "method": "POST",
+      "path": "/api/episodes",
+      "status": 201
+    },
+    {
+      "method": "PUT",
+      "path": "/api/episodes/8d02538f-a988-46f5-b442-47def9ee43ea",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/episodes",
+      "status": 201
+    }
+  ],
+  "pageErrors": [],
+  "geometry": [
+    {
+      "viewport": 320,
+      "preset": "auto",
+      "width": 246,
+      "height": 3525.203125,
+      "top": 300.6875,
+      "shell": 246,
+      "available": 675.3125,
+      "desiredWidth": null,
+      "desiredHeight": null
+    },
+    {
+      "viewport": 320,
+      "preset": "compact",
+      "width": 246,
+      "height": 675.3125,
+      "top": 300.6875,
+      "shell": 246,
+      "available": 675.3125,
+      "desiredWidth": 1024,
+      "desiredHeight": 768
+    },
+    {
+      "viewport": 320,
+      "preset": "standard",
+      "width": 246,
+      "height": 675.3125,
+      "top": 300.6875,
+      "shell": 246,
+      "available": 675.3125,
+      "desiredWidth": 1280,
+      "desiredHeight": 800
+    },
+    {
+      "viewport": 320,
+      "preset": "wide",
+      "width": 246,
+      "height": 675.3125,
+      "top": 300.6875,
+      "shell": 246,
+      "available": 675.3125,
+      "desiredWidth": 1600,
+      "desiredHeight": 900
+    },
+    {
+      "viewport": 320,
+      "preset": "focus",
+      "width": 246,
+      "height": 675.3125,
+      "top": 300.6875,
+      "shell": 246,
+      "available": 675.3125,
+      "desiredWidth": 1280,
+      "desiredHeight": 800
+    },
+    {
+      "viewport": 390,
+      "preset": "auto",
+      "width": 316,
+      "height": 3353.65625,
+      "top": 300.6875,
+      "shell": 316,
+      "available": 675.3125,
+      "desiredWidth": null,
+      "desiredHeight": null
+    },
+    {
+      "viewport": 390,
+      "preset": "compact",
+      "width": 316,
+      "height": 675.3125,
+      "top": 300.6875,
+      "shell": 316,
+      "available": 675.3125,
+      "desiredWidth": 1024,
+      "desiredHeight": 768
+    },
+    {
+      "viewport": 390,
+      "preset": "standard",
+      "width": 316,
+      "height": 675.3125,
+      "top": 300.6875,
+      "shell": 316,
+      "available": 675.3125,
+      "desiredWidth": 1280,
+      "desiredHeight": 800
+    },
+    {
+      "viewport": 390,
+      "preset": "wide",
+      "width": 316,
+      "height": 675.3125,
+      "top": 300.6875,
+      "shell": 316,
+      "available": 675.3125,
+      "desiredWidth": 1600,
+      "desiredHeight": 900
+    },
+    {
+      "viewport": 390,
+      "preset": "focus",
+      "width": 316,
+      "height": 675.3125,
+      "top": 300.6875,
+      "shell": 316,
+      "available": 675.3125,
+      "desiredWidth": 1280,
+      "desiredHeight": 800
+    },
+    {
+      "viewport": 768,
+      "preset": "auto",
+      "width": 668,
+      "height": 2584.078125,
+      "top": 213,
+      "shell": 668,
+      "available": 763,
+      "desiredWidth": null,
+      "desiredHeight": null
+    },
+    {
+      "viewport": 768,
+      "preset": "compact",
+      "width": 668,
+      "height": 763,
+      "top": 213,
+      "shell": 668,
+      "available": 763,
+      "desiredWidth": 1024,
+      "desiredHeight": 768
+    },
+    {
+      "viewport": 768,
+      "preset": "standard",
+      "width": 668,
+      "height": 763,
+      "top": 213,
+      "shell": 668,
+      "available": 763,
+      "desiredWidth": 1280,
+      "desiredHeight": 800
+    },
+    {
+      "viewport": 768,
+      "preset": "wide",
+      "width": 668,
+      "height": 763,
+      "top": 213,
+      "shell": 668,
+      "available": 763,
+      "desiredWidth": 1600,
+      "desiredHeight": 900
+    },
+    {
+      "viewport": 768,
+      "preset": "focus",
+      "width": 668,
+      "height": 763,
+      "top": 213,
+      "shell": 668,
+      "available": 763,
+      "desiredWidth": 1280,
+      "desiredHeight": 800
+    },
+    {
+      "viewport": 1440,
+      "preset": "auto",
+      "width": 1164,
+      "height": 2092.859375,
+      "top": 173,
+      "shell": 1164,
+      "available": 803,
+      "desiredWidth": null,
+      "desiredHeight": null
+    },
+    {
+      "viewport": 1440,
+      "preset": "compact",
+      "width": 1024,
+      "height": 768,
+      "top": 173,
+      "shell": 1164,
+      "available": 803,
+      "desiredWidth": 1024,
+      "desiredHeight": 768
+    },
+    {
+      "viewport": 1440,
+      "preset": "standard",
+      "width": 1164,
+      "height": 800,
+      "top": 173,
+      "shell": 1164,
+      "available": 803,
+      "desiredWidth": 1280,
+      "desiredHeight": 800
+    },
+    {
+      "viewport": 1440,
+      "preset": "wide",
+      "width": 1164,
+      "height": 803,
+      "top": 173,
+      "shell": 1164,
+      "available": 803,
+      "desiredWidth": 1600,
+      "desiredHeight": 900
+    },
+    {
+      "viewport": 1440,
+      "preset": "focus",
+      "width": 1164,
+      "height": 800,
+      "top": 173,
+      "shell": 1164,
+      "available": 803,
+      "desiredWidth": 1280,
+      "desiredHeight": 800
+    }
+  ],
+  "phase": "final",
+  "scope": "Actual Chromium with real own server fixtures; no fixture-provider proof, provider/render/agent execution or 101-gate claim",
+  "channelId": "a7605ad3-5197-40be-8905-d1b4703fbf14",
+  "episodeId": "8d02538f-a988-46f5-b442-47def9ee43ea",
+  "nativeFocusObservations": {
+    "320Settings": [
+      {
+        "key": "Tab",
+        "step": 0,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Tab",
+        "step": 1,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 2,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-width",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 3,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-height",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 4,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-inspector-width",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 5,
+        "inside": true,
+        "tag": "SELECT",
+        "id": "workspace-tools-mode",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 6,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 7,
+        "inside": true,
+        "tag": "SELECT",
+        "id": "workspace-profile-select",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 8,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-profile-name",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 9,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 10,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 0,
+        "inside": true,
+        "tag": "DIALOG",
+        "id": "workspace-settings-dialog",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 1,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 2,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-profile-name",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 3,
+        "inside": true,
+        "tag": "SELECT",
+        "id": "workspace-profile-select",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 4,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 5,
+        "inside": true,
+        "tag": "SELECT",
+        "id": "workspace-tools-mode",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 6,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-inspector-width",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 7,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-height",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 8,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-width",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 9,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 10,
+        "inside": true,
+        "tag": "DIALOG",
+        "id": "workspace-settings-dialog",
+        "documentFocused": true,
+        "open": true
+      }
+    ],
+    "390Settings": [
+      {
+        "key": "Tab",
+        "step": 0,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Tab",
+        "step": 1,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-width",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 2,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-height",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 3,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-inspector-width",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 4,
+        "inside": true,
+        "tag": "SELECT",
+        "id": "workspace-tools-mode",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 5,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 6,
+        "inside": true,
+        "tag": "SELECT",
+        "id": "workspace-profile-select",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 7,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-profile-name",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 8,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 9,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Tab",
+        "step": 10,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-width",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 0,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 1,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-profile-name",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 2,
+        "inside": true,
+        "tag": "SELECT",
+        "id": "workspace-profile-select",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 3,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 4,
+        "inside": true,
+        "tag": "SELECT",
+        "id": "workspace-tools-mode",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 5,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-inspector-width",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 6,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-height",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 7,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-width",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 8,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 9,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 10,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-profile-name",
+        "documentFocused": true,
+        "open": true
+      }
+    ],
+    "768Settings": [
+      {
+        "key": "Tab",
+        "step": 0,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Tab",
+        "step": 1,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-width",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 2,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-height",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 3,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-inspector-width",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 4,
+        "inside": true,
+        "tag": "SELECT",
+        "id": "workspace-tools-mode",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 5,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 6,
+        "inside": true,
+        "tag": "SELECT",
+        "id": "workspace-profile-select",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 7,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-profile-name",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 8,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 9,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Tab",
+        "step": 10,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-width",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 0,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 1,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-profile-name",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 2,
+        "inside": true,
+        "tag": "SELECT",
+        "id": "workspace-profile-select",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 3,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 4,
+        "inside": true,
+        "tag": "SELECT",
+        "id": "workspace-tools-mode",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 5,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-inspector-width",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 6,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-height",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 7,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-width",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 8,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 9,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 10,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-profile-name",
+        "documentFocused": true,
+        "open": true
+      }
+    ],
+    "1440Settings": [
+      {
+        "key": "Tab",
+        "step": 0,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Tab",
+        "step": 1,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-width",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 2,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-height",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 3,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-inspector-width",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 4,
+        "inside": true,
+        "tag": "SELECT",
+        "id": "workspace-tools-mode",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 5,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 6,
+        "inside": true,
+        "tag": "SELECT",
+        "id": "workspace-profile-select",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 7,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-profile-name",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 8,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 9,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Tab",
+        "step": 10,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-width",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 0,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 1,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-profile-name",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 2,
+        "inside": true,
+        "tag": "SELECT",
+        "id": "workspace-profile-select",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 3,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 4,
+        "inside": true,
+        "tag": "SELECT",
+        "id": "workspace-tools-mode",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 5,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-inspector-width",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 6,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-height",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 7,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-width",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 8,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 9,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 10,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "workspace-profile-name",
+        "documentFocused": true,
+        "open": true
+      }
+    ],
+    "inspector": [
+      {
+        "key": "Tab",
+        "step": 0,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Tab",
+        "step": 1,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 2,
+        "inside": true,
+        "tag": "SUMMARY",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 3,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 4,
+        "inside": true,
+        "tag": "TEXTAREA",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 5,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 6,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 7,
+        "inside": true,
+        "tag": "SELECT",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 8,
+        "inside": true,
+        "tag": "TEXTAREA",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 9,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 10,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "scene-trim-start",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 11,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "scene-audio-volume",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 12,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 13,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 14,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 15,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 16,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 17,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 0,
+        "inside": true,
+        "tag": "DIALOG",
+        "id": "workspace-tool-dialog",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 1,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 2,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 3,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 4,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 5,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 6,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "scene-audio-volume",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 7,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "scene-trim-start",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 8,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 9,
+        "inside": true,
+        "tag": "TEXTAREA",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 10,
+        "inside": true,
+        "tag": "SELECT",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 11,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 12,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 13,
+        "inside": true,
+        "tag": "TEXTAREA",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 14,
+        "inside": true,
+        "tag": "INPUT",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 15,
+        "inside": true,
+        "tag": "SUMMARY",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 16,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 17,
+        "inside": true,
+        "tag": "DIALOG",
+        "id": "workspace-tool-dialog",
+        "documentFocused": true,
+        "open": true
+      }
+    ],
+    "narration": [
+      {
+        "key": "Tab",
+        "step": 0,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Tab",
+        "step": 1,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 2,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Tab",
+        "step": 3,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 0,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 1,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 2,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 3,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      }
+    ],
+    "assistant": [
+      {
+        "key": "Tab",
+        "step": 0,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Tab",
+        "step": 1,
+        "inside": true,
+        "tag": "SELECT",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 2,
+        "inside": true,
+        "tag": "TEXTAREA",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 3,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Tab",
+        "step": 4,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Tab",
+        "step": 5,
+        "inside": true,
+        "tag": "SELECT",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 0,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 1,
+        "inside": true,
+        "tag": "TEXTAREA",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 2,
+        "inside": true,
+        "tag": "SELECT",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 3,
+        "inside": true,
+        "tag": "BUTTON",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 4,
+        "inside": false,
+        "tag": "BODY",
+        "id": "",
+        "documentFocused": false,
+        "open": true,
+        "reenteredOnNextKey": true
+      },
+      {
+        "key": "Shift+Tab",
+        "step": 5,
+        "inside": true,
+        "tag": "TEXTAREA",
+        "id": "",
+        "documentFocused": true,
+        "open": true
+      }
+    ]
+  },
+  "nativeFocusLimitation": "Native showModal may focus browser chrome (BODY, document.hasFocus=false), with next-key modal reentry; strict always-inside DOM wrapping is not claimed and no custom trap is installed.",
+  "narrationRepaintFocus": {
+    "inside": true,
+    "action": "close-tool"
+  },
+  "narrationCaretScope": "Real voice service is unavailable; narration has no enabled text-editable field. Focus/repaint/Escape exercised on its enabled refresh control; caret exercised on inspector and assistant textareas.",
+  "interceptedChatSuccessFixture": {
+    "handlers": 1,
+    "requests": 4,
+    "realChatRequests": 0,
+    "scope": "UI response regression only, no provider/agent integration proof"
+  },
+  "layoutApiWriteCount": 0,
+  "navigationAutosaveWriteCount": 1,
+  "status": "passed",
+  "checkCount": 157
+}

@@ -1,0 +1,257 @@
+{
+  "verifiedAt": "2026-10-18T14:32:46.024363+00:00",
+  "base": "http://127.0.0.1:4329",
+  "scope": "Disposable fixture records, real UI and persistence/version rejection; stubbed provider catalog/quotes/recovery/apply; no accepted run or provider spend",
+  "checks": {
+    "studioNoOverflow1440": true,
+    "studioLightSurface1440": true,
+    "workflowNoOverflow1440": true,
+    "workflowLightSurface1440": true,
+    "trendsNoOverflow1440": true,
+    "trendsLightSurface1440": true,
+    "templatesNoOverflow1440": true,
+    "templatesLightSurface1440": true,
+    "historyNoOverflow1440": true,
+    "historyLightSurface1440": true,
+    "knowledgeNoOverflow1440": true,
+    "knowledgeLightSurface1440": true,
+    "settingsNoOverflow1440": true,
+    "settingsLightSurface1440": true,
+    "studioNoOverflow1024": true,
+    "studioLightSurface1024": true,
+    "workflowNoOverflow1024": true,
+    "workflowLightSurface1024": true,
+    "trendsNoOverflow1024": true,
+    "trendsLightSurface1024": true,
+    "templatesNoOverflow1024": true,
+    "templatesLightSurface1024": true,
+    "historyNoOverflow1024": true,
+    "historyLightSurface1024": true,
+    "knowledgeNoOverflow1024": true,
+    "knowledgeLightSurface1024": true,
+    "settingsNoOverflow1024": true,
+    "settingsLightSurface1024": true,
+    "studioNoOverflow768": true,
+    "studioLightSurface768": true,
+    "workflowNoOverflow768": true,
+    "workflowLightSurface768": true,
+    "trendsNoOverflow768": true,
+    "trendsLightSurface768": true,
+    "templatesNoOverflow768": true,
+    "templatesLightSurface768": true,
+    "historyNoOverflow768": true,
+    "historyLightSurface768": true,
+    "knowledgeNoOverflow768": true,
+    "knowledgeLightSurface768": true,
+    "settingsNoOverflow768": true,
+    "settingsLightSurface768": true,
+    "studioNoOverflow390": true,
+    "studioLightSurface390": true,
+    "workflowNoOverflow390": true,
+    "workflowLightSurface390": true,
+    "trendsNoOverflow390": true,
+    "trendsLightSurface390": true,
+    "templatesNoOverflow390": true,
+    "templatesLightSurface390": true,
+    "historyNoOverflow390": true,
+    "historyLightSurface390": true,
+    "knowledgeNoOverflow390": true,
+    "knowledgeLightSurface390": true,
+    "settingsNoOverflow390": true,
+    "settingsLightSurface390": true,
+    "studioNoOverflow320": true,
+    "studioLightSurface320": true,
+    "workflowNoOverflow320": true,
+    "workflowLightSurface320": true,
+    "trendsNoOverflow320": true,
+    "trendsLightSurface320": true,
+    "templatesNoOverflow320": true,
+    "templatesLightSurface320": true,
+    "historyNoOverflow320": true,
+    "historyLightSurface320": true,
+    "knowledgeNoOverflow320": true,
+    "knowledgeLightSurface320": true,
+    "settingsNoOverflow320": true,
+    "settingsLightSurface320": true,
+    "settingsConfiguredIsNotVerified": true,
+    "newEpisodeDialogHasTitleLabel": true,
+    "keyboardFocusVisible": true,
+    "saveHistoryPreservesScenes": true,
+    "unsavedAppendedSceneSelectedWithoutSpend": true,
+    "unsafeStudioWorkflowNotReused": true,
+    "configuredAvailableDoesNotClaimVerified": true,
+    "generationPromptHasVisibleLabel": true,
+    "generationModelPromptParamsPersist": true,
+    "safeExistingScriptTrendFreeFiveNodeDraft": true,
+    "unsafeSavedWorkflowUnchanged": true,
+    "successQuoteExactInputWithoutUnavailableAck": true,
+    "successfulQuoteCancellationCreatesNoRun": true,
+    "changedPromptFetchesFreshExactQuote": true,
+    "failedEstimateRequiresAckThenCancellationNoRun": true,
+    "staleWorkflowQuoteRejected409": true,
+    "staleWorkflowQuoteSentExactVersions": true,
+    "staleEpisodeQuoteRejected409": true,
+    "staleEpisodeQuoteSentExactVersions": true,
+    "connectionSubmitAddsEdgeWithoutNavigation": true,
+    "connectionNewLegalEdgePersisted": true,
+    "liveReorderedSceneUpdatesPersistedGenerateIndex": true,
+    "reorderRunRejectedByFixtureBeforeSpend": true,
+    "deletedStableTargetBlocksBeforeQuoteOrPaidRun": true,
+    "recoveryExactlyOnceUsesExistingRequest": true,
+    "applyExactlyOnceUsesCurrentSceneAndVersion": true,
+    "recoveryApplyRetainsOutputWithoutNewSpend": true,
+    "noGenerationCreateRequests": true,
+    "noAcceptedWorkflowRuns": true,
+    "serverCreatedNoGenerationJobsOrRunsForFixture": true,
+    "noUncaughtBrowserErrors": true
+  },
+  "screenshots": [
+    "docs/assets/white-studio/studio-1440.png",
+    "docs/assets/white-studio/workflow-1440.png",
+    "docs/assets/white-studio/trends-1440.png",
+    "docs/assets/white-studio/templates-1440.png",
+    "docs/assets/white-studio/history-1440.png",
+    "docs/assets/white-studio/knowledge-1440.png",
+    "docs/assets/white-studio/settings-1440.png",
+    "docs/assets/white-studio/studio-390.png",
+    "docs/assets/white-studio/workflow-390.png",
+    "docs/assets/white-studio/trends-390.png",
+    "docs/assets/white-studio/templates-390.png",
+    "docs/assets/white-studio/history-390.png",
+    "docs/assets/white-studio/knowledge-390.png",
+    "docs/assets/white-studio/settings-390.png",
+    "docs/assets/white-studio/generation-quote-1440.png",
+    "docs/assets/white-studio/generation-recovery-1440.png"
+  ],
+  "pageErrors": [],
+  "requests": {
+    "generationCreates": [],
+    "estimates": [
+      {
+        "model": "fixture-api-model",
+        "prompt": "quote fixture",
+        "params": {
+          "duration": 7,
+          "aspect_ratio": "9:16"
+        }
+      },
+      {
+        "model": "fixture-api-model",
+        "prompt": "quote changed after consent cancellation",
+        "params": {
+          "duration": 7,
+          "aspect_ratio": "9:16"
+        }
+      },
+      {
+        "model": "fixture-api-model",
+        "prompt": "quote changed after consent cancellation",
+        "params": {
+          "duration": 7,
+          "aspect_ratio": "9:16"
+        }
+      },
+      {
+        "model": "fixture-api-model",
+        "prompt": "quote changed after consent cancellation",
+        "params": {
+          "duration": 7,
+          "aspect_ratio": "9:16"
+        }
+      },
+      {
+        "model": "fixture-api-model",
+        "prompt": "quote changed after consent cancellation",
+        "params": {
+          "duration": 7,
+          "aspect_ratio": "9:16"
+        }
+      },
+      {
+        "model": "fixture-api-model",
+        "prompt": "quote changed after consent cancellation",
+        "params": {
+          "duration": 7,
+          "aspect_ratio": "9:16"
+        }
+      }
+    ],
+    "workflowRunAttempts": [
+      {
+        "path": "/api/workflows/c1828f53-ad90-4ef5-ab03-ae3f56c326b1/run",
+        "body": {
+          "episodeId": "85d627a3-310d-4b0b-ac8f-8981e63b6a3d",
+          "allowGeneration": true,
+          "expectedWorkflowVersion": 2,
+          "expectedEpisodeVersion": 4
+        }
+      },
+      {
+        "path": "/api/workflows/c1828f53-ad90-4ef5-ab03-ae3f56c326b1/run",
+        "body": {
+          "episodeId": "85d627a3-310d-4b0b-ac8f-8981e63b6a3d",
+          "allowGeneration": true,
+          "expectedWorkflowVersion": 3,
+          "expectedEpisodeVersion": 4
+        }
+      },
+      {
+        "path": "/api/workflows/c1828f53-ad90-4ef5-ab03-ae3f56c326b1/run",
+        "body": {
+          "episodeId": "85d627a3-310d-4b0b-ac8f-8981e63b6a3d",
+          "allowGeneration": true,
+          "expectedWorkflowVersion": 5,
+          "expectedEpisodeVersion": 6
+        }
+      }
+    ],
+    "workflowRunResponses": [
+      {
+        "path": "/api/workflows/c1828f53-ad90-4ef5-ab03-ae3f56c326b1/run",
+        "status": 409,
+        "boundary": "server",
+        "body": {
+          "error": "Workflow changed since this run was quoted. Refresh and quote the current version."
+        }
+      },
+      {
+        "path": "/api/workflows/c1828f53-ad90-4ef5-ab03-ae3f56c326b1/run",
+        "status": 409,
+        "boundary": "server",
+        "body": {
+          "error": "Episode changed since this run was quoted. Refresh and quote the current version."
+        }
+      },
+      {
+        "path": "/api/workflows/c1828f53-ad90-4ef5-ab03-ae3f56c326b1/run",
+        "status": 409,
+        "boundary": "fixture",
+        "body": {
+          "error": "Fixture safety boundary: execution intentionally rejected"
+        }
+      }
+    ],
+    "recoveryPosts": [
+      {
+        "path": "/api/generations/fixture-generation-recovery/recover",
+        "body": {}
+      }
+    ],
+    "applyPosts": [
+      {
+        "path": "/api/generations/fixture-generation-recovery/apply",
+        "body": {
+          "expectedVersion": 7,
+          "sceneId": "68943c19-1959-4e5f-b7a9-2b7ebf0c2bd1"
+        }
+      }
+    ]
+  },
+  "authenticatedFixture": true,
+  "channelId": "ba3c8545-9ea0-4c2c-83fb-9c08408af1b8",
+  "episodeId": "85d627a3-310d-4b0b-ac8f-8981e63b6a3d",
+  "unsafeWorkflowId": "dbf687b0-a1c8-42df-892e-8f5ace98a629",
+  "workflowId": "c1828f53-ad90-4ef5-ab03-ae3f56c326b1",
+  "status": "passed",
+  "checkCount": 101
+}

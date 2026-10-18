@@ -86,14 +86,33 @@ async function readBoundedJson(response) {
   catch { throw higgsfieldError('Higgsfield returned invalid JSON'); }
 }
 
+const IDEMPOTENCY_KEY = /^[\x21-\x7E]{1,255}$/;
+
+function validateHiggsfieldIdempotencyKey(value) {
+  if (typeof value !== 'string' || !IDEMPOTENCY_KEY.test(value)) throw higgsfieldError('Invalid Higgsfield idempotency key', 'INVALID_INPUT', 400);
+  return value;
+}
+
+function normalizeHiggsfieldEstimate(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw higgsfieldError('Invalid Higgsfield estimate response', 'PROVIDER_ERROR', 502);
+  const number = (value) => {
+    const parsed = typeof value === 'number' ? value : typeof value === 'string' && value.trim() ? Number(value) : NaN;
+    if (!Number.isFinite(parsed) || parsed < 0) throw higgsfieldError('Invalid Higgsfield estimate response', 'PROVIDER_ERROR', 502);
+    return parsed;
+  };
+  return { credits: number(raw.credits), usd: number(raw.usd) };
+}
+
 export function createHiggsfieldApi({ env = process.env, fetchImpl = fetch } = {}) {
   const credentials = env.HF_API_KEY || env.HF_CREDENTIALS || '';
   const configured = Boolean(credentials && !/[\r\n]/.test(credentials));
-  async function call(path, body) {
+  async function call(path, body, { ambiguousSubmission = false, idempotencyKey } = {}) {
     if (!configured) throw higgsfieldError('Higgsfield API key is not configured', 'NOT_CONFIGURED', 503);
     let response;
-    try { response = await fetchImpl(`${API_ORIGIN}/${path}`, { method: body === undefined ? 'GET' : 'POST', headers: { authorization: `Key ${credentials}`, 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body), redirect: 'error', signal: AbortSignal.timeout(30000) }); }
-    catch { throw higgsfieldError(body === undefined ? 'Higgsfield request could not be reached' : 'Higgsfield submission outcome is unknown; do not automatically resubmit', body === undefined ? 'PROVIDER_UNAVAILABLE' : 'AMBIGUOUS_SUBMISSION'); }
+    const headers = { authorization: `Key ${credentials}`, 'content-type': 'application/json' };
+    if (idempotencyKey !== undefined) headers['Idempotency-Key'] = validateHiggsfieldIdempotencyKey(idempotencyKey);
+    try { response = await fetchImpl(`${API_ORIGIN}/${path}`, { method: body === undefined ? 'GET' : 'POST', headers, body: body === undefined ? undefined : JSON.stringify(body), redirect: 'error', signal: AbortSignal.timeout(30000) }); }
+    catch { throw higgsfieldError(ambiguousSubmission ? 'Higgsfield submission outcome is unknown; do not automatically resubmit' : 'Higgsfield request could not be reached', ambiguousSubmission ? 'AMBIGUOUS_SUBMISSION' : 'PROVIDER_UNAVAILABLE'); }
     if (!response.ok) {
       response.body?.cancel().catch(() => {});
       const code = response.status === 401 || response.status === 403 ? 'AUTH_REQUIRED' : response.status === 429 ? 'RATE_LIMITED' : 'PROVIDER_ERROR';
@@ -101,7 +120,7 @@ export function createHiggsfieldApi({ env = process.env, fetchImpl = fetch } = {
     }
     try { return await readBoundedJson(response); }
     catch (error) {
-      if (body !== undefined) throw higgsfieldError('Higgsfield submission response is unreadable; do not automatically resubmit', 'AMBIGUOUS_SUBMISSION');
+      if (ambiguousSubmission) throw higgsfieldError('Higgsfield submission response is unreadable; do not automatically resubmit', 'AMBIGUOUS_SUBMISSION');
       throw error;
     }
   }
@@ -112,10 +131,13 @@ export function createHiggsfieldApi({ env = process.env, fetchImpl = fetch } = {
   };
   return {
     configured, transport: 'api', models: async () => structuredClone(HIGGSFIELD_API_MODELS), modelSchema,
-    estimate: async () => { throw higgsfieldError('API cost estimation is unavailable for this adapter', 'UNSUPPORTED', 422); },
-    create: async ({ model, prompt, params = {} }) => {
+    estimate: async ({ model, prompt, params = {} }) => {
       const schema = await modelSchema(model);
-      const raw = await call(schema.id, validateGenerationInput(schema, { ...params, prompt }));
+      return normalizeHiggsfieldEstimate(await call(`estimate/${schema.id}`, validateGenerationInput(schema, { ...params, prompt })));
+    },
+    create: async ({ model, prompt, params = {}, idempotencyKey }) => {
+      const schema = await modelSchema(model);
+      const raw = await call(schema.id, validateGenerationInput(schema, { ...params, prompt }), { ambiguousSubmission: true, ...(idempotencyKey === undefined ? {} : { idempotencyKey }) });
       try { return normalizeHiggsfieldJob(raw); }
       catch { throw higgsfieldError('Higgsfield submission returned an unrecognized receipt; do not automatically resubmit', 'AMBIGUOUS_SUBMISSION'); }
     },

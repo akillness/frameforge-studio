@@ -1,0 +1,319 @@
+{
+  "observedAt": "2026-10-18T13:18:56.702Z",
+  "reviews": [
+    {
+      "id": "Completeredesigncodereview",
+      "handle": "agent://Completeredesigncodereview",
+      "result": {
+        "verdict": "WARNING",
+        "scope": "Independent read-only review of all nine requested files against artifacts/white-studio-research.json. Findings describe the inspected snapshot; no files were edited.",
+        "findings": [
+          {
+            "severity": "HIGH",
+            "axis": "Spec",
+            "file": "public/workflow.js",
+            "lines": "266, 284, 534-538",
+            "title": "Paid confirmation never obtains or displays the required cost quote",
+            "evidence": "The run branch immediately opens the consent dialog, then confirmation executes post(`/api/workflows/${workflow.id}/run`, {episodeId, allowGeneration:true}). The dialog contains only a generic cost warning and model name. No browser call to /api/generation/estimate exists, although server/higgsfield.mjs:133-136 now implements estimation.",
+            "repro": "Use a valid saved generation workflow with a supported model and prompt. Click Workflow Run, then confirm. No account-specific credits/USD estimate is requested or shown before the paid workflow starts.",
+            "why_existing_guards_do_not_catch_it": "The existing allowGeneration boolean enforces consent, not quote-before-consent. Model validation and the new server estimate adapter do not require callers to request or acknowledge an estimate.",
+            "fix": "Fetch the exact selected model/prompt/parameters estimate before enabling confirmation; show its credits/USD or explicitly handle estimate-unavailable state according to the contract. Invalidate the quote when the generation input changes."
+          },
+          {
+            "severity": "MEDIUM",
+            "axis": "Spec",
+            "file": "public/workflow.js",
+            "lines": "99-101, 574, 608-610",
+            "title": "First-time Higgsfield entry selects a model the primary REST transport rejects",
+            "evidence": "generationDraft calls generationConfig before loadGeneration populates models. With an empty catalog cache, this chooses seedance_2_5. The REST adapter's only verified model is bytedance/seedance-2.5/text-to-video; loadGeneration preserves the incompatible default and reports that the saved model is unavailable.",
+            "repro": "In a fresh browser session with REST configured and no existing generate node, click Higgsfield scene generation. The new draft has seedance_2_5 selected rather than the sole supported REST model. Running without manually changing it fails schema validation.",
+            "fix": "For newly created generation nodes only, initialize the model from the fetched active transport catalog. Continue preserving explicitly saved model selections."
+          },
+          {
+            "severity": "MEDIUM",
+            "axis": "Spec",
+            "file": "public/workflow.js",
+            "lines": "567-577",
+            "title": "Scene-generation drafts unnecessarily depend on live trend collection",
+            "evidence": "generationDraft retains initialGraph's trend and research nodes ahead of the existing-scene script. server/app.mjs:209-211 wires the trend stage to refreshTrends, and server/workflows.mjs:205-208 throws when that fetch returns no verified keywords.",
+            "repro": "Open generation for an authored episode, select a supported model and prompt, then execute while the trend source is unavailable or returns no valid keywords. The workflow fails at trend and never reaches Higgsfield, despite generation requiring no new trend data.",
+            "fix": "Use the required existing-scene script/storyboard/generate/render/review chain for this shortcut; leave trend/research in user-authored workflows rather than imposing them on a scene-generation draft."
+          },
+          {
+            "severity": "MEDIUM",
+            "axis": "Spec",
+            "file": "public/workflow.js",
+            "lines": "574",
+            "title": "The generated node exactly covers the render node in every fresh shortcut draft",
+            "evidence": "initialGraph positions storyboard at (50,295) and render at (335,295). The inserted generate node uses storyboard.x + 285 and storyboard.y, also (335,295). It is appended last and therefore paints above render.",
+            "repro": "Click the primary generation CTA when the selected workflow has no generation node. The resulting canvas places generate and render in the same 210×140 position; render remains hidden until the user manually moves nodes or runs automatic layout.",
+            "fix": "Assign distinct positions to the fresh generation chain or apply the existing ordering/layout calculation before fitting the canvas."
+          },
+          {
+            "severity": "MEDIUM",
+            "axis": "Spec verification",
+            "file": "scripts/white-studio-browser-smoke.py",
+            "lines": "196-211",
+            "title": "The recovery/apply smoke section can silently skip the behavior it claims to verify",
+            "evidence": "fixture_run has nodeRuns:[] and no generationJobId. The script never selects a generation result with that job, executes recovery only under if recovery.count(), and never clicks or asserts Apply. It can reach status='passed' with neither operation exercised.",
+            "repro": "Provide the fixture run exactly as constructed. No generation recovery control can be rendered from an empty nodeRuns array; the conditional skips its assertion, and the script continues to mark the run passed.",
+            "fix": "Provide a generation node result referencing fixture-generation-recovery, select it explicitly, require the recovery control to exist, and separately assert that Apply is required and sends the current version/scene without creating a new generation."
+          },
+          {
+            "severity": "MEDIUM",
+            "axis": "Spec accessibility",
+            "file": "public/workflow.css",
+            "lines": "191-193",
+            "title": "The final-review download link loses readable contrast on its retained dark surface",
+            "evidence": "The review screen remains #111827. Its 12px download link has no scoped color and inherits the new #1d4ed8 anchor color from public/styles.css:69. This pair has approximately 2.65:1 contrast, below the research contract's 4.5:1 normal-text requirement.",
+            "repro": "Open a completed workflow's final video review. The '검토 영상 MP4 다운로드' link below the video appears blue on the dark review screen.",
+            "fix": "Give links and focus treatment inside the intentionally dark media-review surface an accessible light color."
+          }
+        ],
+        "verification": {
+          "command": "node --test tests/white-studio.test.mjs",
+          "result": "PASS — 7 tests, 0 failures, 0 skips.",
+          "coverage_observed": "REST estimate normalization/error handling, provider idempotency header, queue transport behavior, draft-only openGeneration behavior, and existing generation-node reuse.",
+          "not_run": "No formatter, linter, project-wide suite, browser smoke script, live provider request, paid generation, or publication.",
+          "existing_browser_receipt": "The inspected artifacts/white-studio-browser-smoke.json records failure at 320px: documentWidth 379 for width 320. This was not independently rerun or counted as another finding because WhiteStylist owns that active fix."
+        },
+        "coordination": {
+          "main_notified": true,
+          "related_findings_owned_by_peer": "Generationinteractioncorrectnessreview is reporting deleted connection-form submit handling, dirty-scene targeting, and the separate-apply contradiction in the unchanged workflow executor. I independently confirmed that server/workflows.mjs:230-235 automatically applies a completed generation, contrary to the new shortcut's separate-apply promise.",
+          "duplicates_excluded_from_counts": true
+        },
+        "standards": "No additional documented coding-standard violation is asserted. Findings prioritize concrete behavior and contract failures rather than style.",
+        "review_summary": "## Review Summary\n\n| Severity | Count | Status |\n|----------|-------|--------|\n| CRITICAL | 0 | pass |\n| HIGH | 1 | warn |\n| MEDIUM | 5 | info |\n| LOW | 0 | pass |\n\nVerdict: WARNING — quote-before-consent is not implemented in the inspected snapshot; the other five findings are reproducible correctness, verification, or readability defects.",
+        "self_evaluation": {
+          "accuracy": {
+            "score": 4,
+            "evidence": "Exact source anchors and 7 passing focused tests support the findings; browser failure scenarios were traced statically, not independently executed."
+          },
+          "completeness": {
+            "score": 4,
+            "evidence": "All requested files and research decisions were inspected; active 320px repair was intentionally left to its owner."
+          },
+          "clarity": {
+            "score": 4,
+            "evidence": "Each finding names trigger, outcome, and minimal corrective direction; cross-agent issues are separated from owned findings."
+          },
+          "actionability": {
+            "score": 5,
+            "evidence": "Each issue has exact lines and concrete reproduction steps, and Main received the material findings immediately."
+          },
+          "conciseness": {
+            "score": 4,
+            "evidence": "Six distinct defects are retained; stylistic observations and duplicate peer findings are excluded from the counts."
+          },
+          "overall": 4.2,
+          "improvements": [
+            "Add focused browser proof for quote gating and first-open model selection.",
+            "Make smoke recovery/apply assertions mandatory instead of conditional."
+          ],
+          "self_check": "The review distinguishes tested behavior from static traces and does not claim the current browser smoke passed."
+        }
+      }
+    },
+    {
+      "id": "Generationinteractioncorrectnessreview",
+      "handle": "agent://Generationinteractioncorrectnessreview",
+      "result": {
+        "verdict": "BLOCK",
+        "scope": "Read-only review of the staged public/app.js and public/workflow.js changes and tests/white-studio.test.mjs. No files edited. This is a local working-tree review; PR merge readiness and remote CI were not evaluated.",
+        "findings": [
+          {
+            "severity": "HIGH",
+            "title": "The shortcut can generate the wrong scene after adding an unsaved scene",
+            "location": "public/app.js:44,421; public/workflow.js:583-587",
+            "evidence": "The app passes getEpisodes: () => state.episodes, while Studio edits the separate episode clone. The new shortcut does not save or provide that live draft before openGeneration clamps sceneIndex against the persisted episode's scene count. An in-memory probe against the actual editor requested index 2 for a locally appended third scene and observed index 1 stored in the generation node. beforeRun later saves the three-scene draft, but it does not restore the intended generation index.",
+            "impact": "A paid request targets the previous scene instead of the scene selected in Studio.",
+            "recommendation": "Bind the shortcut to the live episode draft and selected scene identity without persisting or spending merely to open it; validate the same scene identity after the pre-run save."
+          },
+          {
+            "severity": "HIGH",
+            "title": "The existing connection form lost its submit handler",
+            "location": "public/workflow.js:203,615-618",
+            "evidence": "The diff removes host.addEventListener('submit', ...) for wf-connect-form while shell still renders that form and its submit button. The global app submit handler only handles chat-form, trend-form, and command-form. A probe mounting the actual editor confirmed that no submit listener is registered.",
+            "impact": "The '연결 추가' form no longer calls connect or prevents native submission; using it submits/navigates instead of adding the requested edge. Port-click connections do not repair this existing UI regression.",
+            "recommendation": "Restore the scoped form submit handling, including preventDefault and connect(source, target), and cover this path with a mounted-form regression."
+          },
+          {
+            "severity": "HIGH",
+            "title": "New safety copy promises separate application although execution applies results automatically",
+            "location": "public/workflow.js:284; server/workflows.mjs:233-236",
+            "evidence": "The new generation controls say '결과는 완료 후 별도로 적용합니다.' The actual workflow runner awaits the generation job, immediately calls this.generations.apply(...), replaces its episode with the applied result, and proceeds to rendering.",
+            "impact": "Users consenting to generation under the displayed assurance can have scene media changed automatically, without the promised separate Apply decision.",
+            "recommendation": "Make the displayed execution contract truthful, or change execution so a distinct apply decision really is required. Coordinate with the workflow owner rather than treating the recovery-only Apply button as the normal execution path."
+          },
+          {
+            "severity": "MEDIUM",
+            "title": "Configured integrations still receive the verified/usable label",
+            "location": "public/app.js:307; server/integrations.mjs:23",
+            "evidence": "settingsView computes verified from available === true and two authentication exclusions, then chooses that label before configured. The real Google integration response is {available:true,status:'configured'}, so it still receives green '사용 가능' instead of '설정됨 · 확인 필요'. The same precedence also mishandles authenticated:'configured', even though configured explicitly recognizes that value.",
+            "impact": "The concise status UI claims verified usability for a configuration-only response whose detail says live response verification happens on refresh.",
+            "recommendation": "Exclude every configuration-only state from verified, or prioritize configuration-only labeling unless explicit verification evidence is present."
+          },
+          {
+            "severity": "MEDIUM",
+            "title": "A rejected dirty-draft shortcut changes the selected execution episode",
+            "location": "public/workflow.js:587-590",
+            "evidence": "episodeId = targetEpisode.id executes before the dirty guard. An actual-editor probe selected episode A, made the workflow dirty, attempted openGeneration for episode B, and observed the expected rejection. After saving that unchanged workflow and reopening without an explicit episode, the generated draft was named 'Episode B 생성 초안', proving the rejected action had changed the internal episode selection.",
+            "impact": "The public editor API partially mutates execution state despite rejecting the operation. The normal app navigation auto-saves workflows, so reachability through the ordinary click path is narrower than the wrong-scene finding above.",
+            "recommendation": "Perform the dirty guard before mutating episodeId, or restore the previous target when rejecting the shortcut."
+          }
+        ],
+        "verification": [
+          {
+            "command": "node --test tests/white-studio.test.mjs",
+            "result": "PASS: 7 tests, 0 failures."
+          },
+          {
+            "command": "node --check public/workflow.js",
+            "result": "PASS."
+          },
+          {
+            "command": "node --check public/app.js",
+            "result": "PASS."
+          },
+          {
+            "command": "node --input-type=module --eval \"$READ_ONLY_REVIEW_PROBE\"",
+            "result": "Actual-editor in-memory probe reproduced requested scene index 2 becoming 1, confirmed zero writes while opening, found no registered form submit handler, and reproduced episode rebinding after a dirty-draft rejection."
+          },
+          {
+            "command": "node --input-type=module --eval \"$GENERATION_UI_PROBE\"",
+            "result": "Actual editor event handlers rendered provider unavailability without rejecting opening; model change selected the new model, cleared old params, fetched its schema, and accepted duration=8. There were 0 estimate calls and 0 provider writes."
+          },
+          {
+            "command": "node --input-type=module --eval \"$POLL_LIFECYCLE_PROBE\"",
+            "result": "With controlled timers, workflow and selected-generation polling each had one timer. Detaching the host allowed one final generation-status GET but no generation timer re-arm; workflow background polling remained scheduled. No lifecycle blocker established in that scenario."
+          }
+        ],
+        "coverage_assessment": {
+          "observed": "Five tests cover server/provider behavior and two directly invoke openGeneration. The editor tests never mount the UI, never load app.js, use one episode with two already-persisted scenes, return false for all dirty-episode checks, and return no workflow runs.",
+          "missing": [
+            "The actual Studio shortcut after adding unsaved scenes and after editing episode metadata.",
+            "Connection-form submit behavior, including default prevention and edge persistence.",
+            "Dirty workflow rejection preserving the previous execution episode.",
+            "Mounted model/parameter changes invalidating and replacing a cost quote.",
+            "Concurrent metadata completion, browser navigation, and long-running/error polling behavior.",
+            "An execution-level assertion that distinguishes merely opening a draft from running script/storyboard/generation and automatically applying output."
+          ]
+        },
+        "shared_findings": {
+          "quote_updates": "No frontend estimate/quote request is made when the model or duration changes; reproduced with actual input/change handlers. Completeredesigncodereview owns the full missing-estimate finding, along with the initial REST model mismatch and unnecessary trend prerequisite.",
+          "coordination": "All primary findings were sent to Main. Generationboundarysecurityreview agreed the separate-apply contradiction is a correctness/consent-contract finding rather than a newly introduced exploitable boundary vulnerability."
+        },
+        "missing_evidence": [
+          "No real-browser execution was completed: agent-browser is unavailable, and playwright, puppeteer, and jsdom cannot be resolved in this workspace. In-memory event probes are not browser DOM evidence.",
+          "No paid provider calls, real generation, automatic application, or rendered output were exercised.",
+          "No formatters, linters, or project-wide test suites were run. This scope is JavaScript-only and package.json defines no TypeScript check."
+        ],
+        "self_evaluation": {
+          "accuracy": {
+            "score": 4,
+            "evidence": "Source anchors and scoped test/probe outputs support the findings; native browser behavior remains unexercised."
+          },
+          "completeness": {
+            "score": 4,
+            "evidence": "All requested review dimensions were inspected, but real-browser, live provider, and long-duration lifecycle evidence are explicitly missing."
+          },
+          "clarity": {
+            "score": 5,
+            "evidence": "Each finding separates evidence, impact, and the smallest corrective direction."
+          },
+          "actionability": {
+            "score": 5,
+            "evidence": "Locations and concrete reproductions were delivered to the owning main agent without editing their files."
+          },
+          "conciseness": {
+            "score": 4,
+            "evidence": "Detailed probe and coverage reporting is useful for handoff but longer than a normal short PR review."
+          },
+          "overall": 4.4
+        }
+      }
+    },
+    {
+      "id": "Generationboundarysecurityreview",
+      "handle": "agent://Generationboundarysecurityreview",
+      "result": {
+        "verdict": "No introduced exploitable security blockers found in the reviewed changes.",
+        "findings": [],
+        "scope": {
+          "changed": [
+            "server/higgsfield.mjs",
+            "server/generations.mjs",
+            "public/app.js generation entry",
+            "public/workflow.js generation controls and openGeneration"
+          ],
+          "supporting_read_only_trace": [
+            "server/generation-provider.mjs",
+            "server/app.mjs authenticated routes",
+            "server/workflows.mjs consent and generation application",
+            "server/store.mjs atomic apply guard",
+            "server/validation.mjs"
+          ],
+          "constraints_observed": "No repository files changed; no live provider calls; no credential files read; fixture credentials only. No formatters, linters, dependency audit, or project-wide suites run."
+        },
+        "security_checks": [
+          {
+            "area": "REST estimate and bounded input/output",
+            "evidence": "server/higgsfield.mjs:35-52,78-86,96-104,128-136: fixed verified model mapping; schema validation before fetch; prompt/JSON limits; 1 MiB provider response cap; only finite nonnegative numeric credits/usd returned. Malformed estimates remain non-submission failures."
+          },
+          {
+            "area": "Idempotency and header injection",
+            "evidence": "server/higgsfield.mjs:89-94,112-114 and server/generations.mjs:143: printable ASCII key length 1–255; persisted local job.id supplies the REST Idempotency-Key; CLI input remains unchanged. Offline probes rejected embedded and terminal CR/LF, NUL, DEL, Unicode line separators, and oversized keys before fetch."
+          },
+          {
+            "area": "Provider origin, redirects, and secrets",
+            "evidence": "server/higgsfield.mjs:6,107-123,128-142: fixed HTTPS origin; allowlisted model/request paths; redirect:'error'; 30-second deadline; provider response bodies and network error text are not surfaced. Frontend metadata/status claims distinguish configured from authenticated rather than claiming key presence proves authentication."
+          },
+          {
+            "area": "No automatic replay and local requestId ambiguity",
+            "evidence": "server/generations.mjs:50-66,72-93,140-157: matching local requestId returns the existing job; changed input with the same requestId conflicts. An ambiguous create becomes submission_unknown, cannot be recovered automatically, and does not trigger create again after queue recreation. Provider idempotency does not replace this local deduplication."
+          },
+          {
+            "area": "Explicit paid-generation consent",
+            "evidence": "public/workflow.js:534-538,581-614 and server/workflows.mjs:112-117: opening generation builds/selects a local draft and fetches metadata without POST/save/generation; executing a graph containing generation first shows confirmation and the server requires allowGeneration === true."
+          },
+          {
+            "area": "Apply guard preservation",
+            "evidence": "public/workflow.js:552-559; server/generations.mjs:271-276; server/store.mjs:174-198: unsaved-edit checks and positive expectedVersion remain; atomic apply rejects stale versions, wrong scene, mismatched upload identity, and reapplication while recording the accepted result as a new episode version."
+          }
+        ],
+        "verification": [
+          {
+            "command": "node --test tests/white-studio.test.mjs",
+            "observed": "7 passed, 0 failed, 0 skipped. All providers/API calls are fixtures."
+          },
+          {
+            "command": "node --input-type=module --eval \"$BOUNDARY_PROBE\"",
+            "observed": "PASS: fixed origin/redirect policy, model and input validation, sanitized failures, 1 MiB output bound, create ambiguity, and invalid header rejection; 0 live provider calls."
+          },
+          {
+            "command": "node --input-type=module --eval \"$QUEUE_PROBE\"",
+            "observed": "PASS after correcting the temporary fixture URL to the required UUID media filename: same-key deduplication, changed-input conflict, one fixture create only, no ambiguous replay/recovery, restart preservation, stale/wrong-scene apply rejection, valid version increment, and reapply rejection. The initial invalid fixture was rejected by the existing local-media validator, not a product regression."
+          },
+          {
+            "command": "node --input-type=module --eval \"$HEADER_PROBE\"",
+            "observed": "PASS: five terminal control/line-separator suffix cases rejected before fetch; fetchCalls = 0."
+          }
+        ],
+        "scope_caveats": [
+          "This is a changed-boundary security review with offline fixtures, not verification of live Higgsfield pricing or provider-side idempotency guarantees.",
+          "The new frontend copy at public/workflow.js:284 incorrectly says completed results are applied separately, while unchanged server/workflows.mjs:234 automatically applies workflow generation. Coordinated with Generationinteractioncorrectnessreview, which owns this correctness/safety-copy finding; do not interpret this security verdict as approval of that copy."
+        ],
+        "self_evaluation": {
+          "accuracy": "4/5 — source and offline probes support the boundary conclusions; live provider behavior intentionally unverified.",
+          "completeness": "5/5 — all requested security surfaces reviewed, including local deduplication and atomic apply preservation.",
+          "clarity": "5/5 — no-security-blocker verdict separated from the independently owned UI correctness mismatch.",
+          "actionability": "5/5 — concrete file/line evidence and executed commands provided.",
+          "conciseness": "4/5 — verification details retained to make the bounded verdict auditable.",
+          "overall": 4.6,
+          "improvement": "If additional verification is authorized, corroborate provider-side estimate/idempotency semantics independently; this review deliberately makes no live-provider claim."
+        }
+      }
+    }
+  ],
+  "state": "findings under correction, not final acceptance"
+}

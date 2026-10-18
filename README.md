@@ -1,16 +1,22 @@
 # FrameForge Studio
 
+최종 갱신: 2026-10-18.
+
 채널의 소재 조사부터 연출, 장면 편집, MP4 출력과 검토까지 연결하는 개인 영상 제작 허브입니다. 드라마·재연·정보 전달용 템플릿을 수정하고, **ComfyUI에서 참고한 노드 연결 방식**으로 제작 순서를 구성합니다. 실행 워크플로우와 장기 지식 그래프는 서로 다른 화면과 데이터로 관리합니다.
 
 ![제작 워크플로우와 영구 지식 구조](docs/assets/workflow.svg)
 
-**운영 URL:** [Tailscale 개인 제작실](https://desktop-qrf3t5t.taila2003e.ts.net/) · 같은 tailnet에 연결된 기기에서 접근 토큰으로 로그인합니다. 인터넷 공개 Funnel은 켜지 않았습니다.
+**기존 Windows/Tailscale 운영 경로:** [Tailscale 개인 제작실](https://desktop-qrf3t5t.taila2003e.ts.net/) · 같은 tailnet과 접근 토큰을 사용하는 비공개 경로입니다. 아래 최신 macOS 로컬 QA는 이 운영 경로의 전환·재배포 증거가 아닙니다.
 
-![실제 서비스의 장면 편집 화면](docs/assets/studio-desktop.png)
+![흰색 제작실의 장면 편집 화면 — 로컬 QA 레코드](docs/assets/white-studio/studio-1440.png)
 
-![ComfyUI를 참고한 실행 가능한 노드 제작 워크플로우](docs/assets/workflow-desktop.png)
+![흰색 워크플로우와 기존 노드 검사기 — 로컬 QA 레코드](docs/assets/white-studio/workflow-1440.png)
 
-위 이미지는 운영 서비스에서 직접 캡처했습니다. [모바일 화면](docs/assets/workflow-mobile.png)과 [브라우저 검증 기록](artifacts/browser-smoke.json)도 제공합니다.
+최신 흰색 UI는 Studio·Workflow·Trends·Templates·History·Knowledge·Settings 7개 화면에 적용했습니다. [390px 장면 편집 화면](docs/assets/white-studio/studio-390.png)과 [101개 로컬 브라우저 검사](artifacts/white-studio-browser-smoke.json)는 별도 테스트 레코드이며, 제공자 모델 목록·견적·복구·적용에는 명시적 fixture를 사용했습니다. 실제 Higgsfield 연결·생성 성공을 뜻하지 않습니다.
+개인 작업 창은 브라우저 안의 작업 영역 크기와 도구 표시를 조절합니다. `자동 맞춤`은 가용 폭·높이에 맞춘 도킹형 기본값이고, `컴팩트`는 1024×768 오버레이, `표준`은 1280×800 도킹형, `와이드`는 1600×900 도킹형, `집중`은 1280×800 오버레이입니다. 숫자 입력은 사용자 지정 폭 320–2560px·높이 320–1800px·검사기 폭 240–480px 범위로 정규화하며, 모서리 핸들의 포인터 드래그와 방향키(Shift는 큰 간격)로도 크기를 바꿀 수 있습니다.
+검사기·내레이션·제작 어시스턴트는 기존 DOM 패널을 이동하는 native dialog 오버레이로 열고 닫습니다. 브라우저 로컬 named profile에 작업 창 레이아웃을 저장·복원하며 서버 레이아웃 쓰기는 하지 않습니다. 어시스턴트의 제출 전 초안은 에피소드 범위의 일시 상태이고, 검사기 편집은 선택한 장면 범위의 상태입니다. [작업 창 스크린샷](docs/assets/workspace/final-workspace.png)과 [인증 브라우저 영수증](artifacts/workspace-browser-smoke.json)을 함께 확인하세요.
+
+아래 음성·영상 화면은 이전 Windows/Tailscale 검증 기록입니다.
 
 ![실제 한국어 음성을 붙인 편집 화면](docs/assets/narration-desktop.png)
 
@@ -54,7 +60,11 @@ flowchart LR
 
 노드를 선택하면 **설정 / 실행 결과 / 변경 기록** 탭에서 이름·메모와 종류별 설정을 수정하고 실행 당시 버전과 결과를 확인합니다. 초안 Undo/Redo와 저장 상태를 제공하며, 에피소드·워크플로우의 이전 버전은 필드별 비교 후 **새 버전으로 복원**합니다.
 
-Higgsfield 노드는 모델 목록과 실제 스키마를 불러와 프롬프트·대상 장면·생성 설정을 편집합니다. 생성 포함 실행에는 비용 확인 단계가 있습니다. 결과는 다운로드·미디어 검사·해시 기록 후 장면에 적용하며, 편집 충돌이나 조회 실패가 나면 기존 유료 결과를 보존합니다. **상태 다시 확인**은 기존 작업만 조회합니다.
+Studio의 **Higgsfield 장면 생성**은 별도 폼 대신 기존 워크플로우 검사기를 엽니다. 기존 대본을 쓰는 생성 경로가 없으면 `script(existing) → storyboard → generate → render → review` 5노드 초안을 만들고, 선택한 장면을 안정 ID로 추적합니다. 열기만으로 저장·실행·과금하지 않으며, 장면 순서가 바뀌면 최신 인덱스를 사용하고 대상이 삭제되면 실행을 막습니다.
+
+실행 확인에는 현재 모델·프롬프트·설정의 새 견적을 표시합니다. 견적이 없으면 **비용 미확인 상태로 진행한다는 명시적 확인**이 필요합니다. 전체 생성 워크플로우는 결과를 버전 검사 후 **자동 적용하고 렌더**합니다. 충돌·취소 뒤 보존하거나 복구한 결과는 별도 **적용**으로 처리하며 새 생성 요청을 보내지 않습니다. UI는 견적 당시 워크플로우·에피소드 버전을 실행 요청에 보내고, 서버는 전달된 버전이 오래되면 실행·과금 전에 409로 거부합니다.
+
+Developer REST 어댑터는 공식 `POST /estimate/{model}`과 영속 생성 작업 ID를 사용하는 `Idempotency-Key`를 지원합니다. 이것은 생성 POST 자동 재시도가 아닙니다. 응답이 불명확하면 제공자 기록을 확인하고, 알려진 제공자 요청 ID만 복구합니다. **설정됨**은 **인증·가용성 검증됨**과 다릅니다. [16개 디자인 근거·12개 공식 Higgsfield 근거 및 Aside 공개 UI 관찰](artifacts/white-studio-research.json), [공식 비용 견적](https://docs.higgsfield.ai/docs/concepts/billing-and-retention), [공식 멱등성 계약](https://docs.higgsfield.ai/docs/concepts/idempotency)을 참고하세요.
 
 [연결 및 인증 구분](docs/higgsfield-integration.md) · [Aside 딥리서치](docs/usability-higgsfield-research.md) · [Jev 실제 API 리뷰](artifacts/jev-higgsfield-review.json)
 
@@ -62,13 +72,13 @@ Higgsfield 노드는 모델 목록과 실제 스키마를 불러와 프롬프트
 
 [에피소드 비교 화면](docs/assets/usability/history-desktop.png) · [모바일 생성 설정](docs/assets/usability/generation-mobile.png) · [사용성 23개 검증](artifacts/usability-browser-smoke.json)
 
-**실제 Higgsfield 생성 검증:** 프로젝트 MCP → 인증된 서비스 API → Docker/호스트 공식 CLI → Seedance 2.5 1080×1920 영상(4.042초) → 로컬 미디어 해시 확인 → 에피소드 v3 적용 → Docker MP4 렌더를 완료했습니다. [실행 영수증](artifacts/higgsfield-live-smoke.json). 견적은 64크레딧이며 실제 청구 명세 검증과는 구분합니다. 공식 원격 MCP는 OAuth 대기, Developer API는 키 설정 대기입니다.
+**이전 Windows/Tailscale의 실제 Higgsfield 생성 검증:** 프로젝트 MCP → 인증된 서비스 API → Docker/호스트 공식 CLI → Seedance 2.5 1080×1920 영상(4.042초) → 로컬 미디어 해시 확인 → 에피소드 v3 적용 → Docker MP4 렌더를 완료했습니다. [실행 영수증](artifacts/higgsfield-live-smoke.json). 견적은 64크레딧이며 실제 청구 명세 검증과는 구분합니다. 당시 공식 원격 MCP는 OAuth 대기, Developer API는 키 설정 대기였습니다. 이번 흰색 UI 변경에서는 유료 생성이나 공개 배포를 수행하지 않았습니다.
 
 HEVC·10비트 생성 영상은 원본과 SHA-256을 보존하고 브라우저용 H.264 8비트/AAC 사본으로 변환합니다. 이미 받은 영상도 제공자 재호출 없이 변환할 수 있으며, 새 사본 적용은 버전 충돌을 검사합니다. [실제 원본 보존·변환 검증](artifacts/higgsfield-normalization.json).
 
 ![실제 Higgsfield 생성 영상을 편집기에 적용한 화면](docs/assets/higgsfield-live/editor-desktop.png)
 
-[운영 HTTPS 재생 검사 21개](artifacts/higgsfield-browser-smoke.json)와 [Docker 재시작 후 기존 에피소드·미디어 보존](artifacts/higgsfield-persistence.json)을 확인했습니다. 영상 프레임 디코딩과 1440/390px 화면을 검사했으며 추가 생성·자동 게시 없이 저장된 편집본을 렌더했습니다.
+[이전 운영 HTTPS 재생 검사 21개](artifacts/higgsfield-browser-smoke.json)와 [당시 Docker 재시작 후 기존 에피소드·미디어 보존](artifacts/higgsfield-persistence.json)을 확인했습니다. 영상 프레임 디코딩과 1440/390px 화면을 검사했으며 추가 생성·자동 게시 없이 저장된 편집본을 렌더했습니다. 최신 로컬 QA와는 별도 근거입니다.
 
 ## 실행
 
@@ -105,9 +115,9 @@ docker compose -p frameforge-studio ps
 
 컨테이너의 에이전트·음성 호출 대상은 `host.docker.internal:4311`입니다. 이 PC의 Docker에서 호스트 루프백 브리지 접근과 실제 Codex 응답을 확인했습니다. `HOST_AGENT_BRIDGE_URL`로 대상만 별도 지정할 수 있습니다. 브리지 토큰은 비공개 환경변수로 공급하며 CLI OAuth 자격증명은 호스트에 유지합니다. [초기 이전·재시작·복구 운영 절차](docs/docker-operations.md)를 제공합니다. 런처는 기존 볼륨과 비어 있지 않은 DB를 확인하여 빈 제작실로 잘못 시작하지 않습니다.
 
-**Docker 실동작 검증:** [GitHub CI 39110221470](https://github.com/akillness/frameforge-studio/actions/runs/39110221470)에서 소스 `0f59211`의 77개 테스트, 이미지 빌드, 비루트·읽기 전용 Compose 기동, 인증된 1080×1920 H.264/AAC 렌더링·다운로드와 저장된 편집본의 검토를 통과했습니다. 재시작 후 에피소드·이력·검토 결정·동일 MP4 해시 보존도 확인했습니다. [컨테이너 검증 결과](artifacts/docker-ci-smoke.json)를 저장했습니다.
+**이전 소스의 Docker 실동작 검증:** [GitHub CI 39110221470](https://github.com/akillness/frameforge-studio/actions/runs/39110221470)에서 소스 `0f59211`의 77개 테스트, 이미지 빌드, 비루트·읽기 전용 Compose 기동, 인증된 1080×1920 H.264/AAC 렌더링·다운로드와 저장된 편집본의 검토를 통과했습니다. 재시작 후 에피소드·이력·검토 결정·동일 MP4 해시 보존도 확인했습니다. [컨테이너 검증 결과](artifacts/docker-ci-smoke.json)를 저장했습니다. 이 결과를 변경된 최신 소스의 검증으로 재사용하지 않습니다.
 
-**현재 로컬 배포:** WSL 서비스를 복구한 뒤 Docker 29.5.2로 운영 URL을 전환했습니다. 기존 채널 4개·에피소드 3개·미디어 10개의 ID·버전·해시를 보존했습니다. 한국어 음성, 실제 Codex 대본, MP4 렌더, HTTPS 브라우저 재생·검토와 컨테이너 재시작 보존을 검증했습니다. [이전 근거](artifacts/docker-migration.json), [운영 Docker 근거](artifacts/docker-verification.json), [재시작 근거](artifacts/live-container-smoke.json), [전체 검증 기록](docs/verification.md)을 확인하세요.
+**Windows 운영 전환의 역사적 기록:** WSL 서비스를 복구한 뒤 Docker 29.5.2로 운영 URL을 전환했고, 기존 채널 4개·에피소드 3개·미디어 10개의 ID·버전·해시를 보존했습니다. 한국어 음성, 실제 Codex 대본, MP4 렌더, HTTPS 브라우저 재생·검토와 컨테이너 재시작 보존을 검증했습니다. [이전 근거](artifacts/docker-migration.json), [당시 운영 Docker 근거](artifacts/docker-verification.json), [당시 재시작 근거](artifacts/live-container-smoke.json)를 보존합니다. 최신 macOS 흰색 UI·컨테이너 QA와 남은 검증은 [전체 검증 기록](docs/verification.md)에서 구분합니다.
 
 ```mermaid
 flowchart LR
@@ -158,6 +168,10 @@ python .mex/verify-knowledge.py
 ```
 
 ## 검증과 현재 경계
+
+흰색 UI와 개인 작업 창의 최종 검증은 `npm run check` **55개 모듈 통과**, Linux Docker의 전체 `npm test` **213개 통과·실패 0·skip 0**, 실제 호스트 FFmpeg 1080×1920 H.264/AAC 출력, 그리고 로컬 4329 포트의 인증 브라우저 영수증입니다. 흰색 제작실은 [101/101개 검사](artifacts/white-studio-browser-smoke.json), 개인 작업 창은 [157/157개 검사](artifacts/workspace-browser-smoke.json)를 통과했으며 두 영수증 모두 페이지 오류 0입니다. 최종 이미지 SHA-256은 `d4424d7f59c495f97d72ea2e85fb643fe64e9f35b69ff374da90617ca9ce6023`입니다. 이 증거는 유료 생성·공개 운영 배포·Developer REST 인증 재검증을 뜻하지 않으며, 이전 Windows/Tailscale와 실제 유료 Higgsfield 근거는 아래 역사 섹션에 따로 보존합니다. [검증 기록](docs/verification.md)과 [최종 검증 영수증](artifacts/white-studio-verification.json)을 참조하세요.
+
+최종 Linux Docker 전체 테스트의 213/213 결과는 위 영수증에 기록되어 있습니다. 아래 명령은 기능별 재검증 레시피이며, 각 명령을 다시 실행할 때 해당 범위의 영수증도 함께 갱신해야 합니다.
 
 ```powershell
 npm test
