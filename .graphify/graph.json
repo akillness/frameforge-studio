@@ -829,7 +829,7 @@
       "label": "root",
       "file_type": "code",
       "source_file": "scripts/agent-bridge.mjs",
-      "source_location": "L19",
+      "source_location": "L20",
       "_origin": "ast"
     },
     {
@@ -853,7 +853,7 @@
       "label": "verified",
       "file_type": "code",
       "source_file": "scripts/agent-bridge.mjs",
-      "source_location": "L28",
+      "source_location": "L27",
       "_origin": "ast"
     },
     {
@@ -861,7 +861,7 @@
       "label": "availability()",
       "file_type": "code",
       "source_file": "scripts/agent-bridge.mjs",
-      "source_location": "L29",
+      "source_location": "L28",
       "_origin": "ast"
     },
     {
@@ -869,7 +869,7 @@
       "label": "parseResult()",
       "file_type": "code",
       "source_file": "scripts/agent-bridge.mjs",
-      "source_location": "L33",
+      "source_location": "L32",
       "_origin": "ast"
     },
     {
@@ -877,7 +877,7 @@
       "label": "run()",
       "file_type": "code",
       "source_file": "scripts/agent-bridge.mjs",
-      "source_location": "L41",
+      "source_location": "L40",
       "_origin": "ast"
     },
     {
@@ -886,6 +886,22 @@
       "file_type": "code",
       "source_file": "scripts/agent-bridge.mjs",
       "source_location": "L69",
+      "_origin": "ast"
+    },
+    {
+      "id": "scripts_agent_bridge_readrequest",
+      "label": "readRequest()",
+      "file_type": "code",
+      "source_file": "scripts/agent-bridge.mjs",
+      "source_location": "L71",
+      "_origin": "ast"
+    },
+    {
+      "id": "scripts_agent_bridge_createagentbridge",
+      "label": "createAgentBridge()",
+      "file_type": "code",
+      "source_file": "scripts/agent-bridge.mjs",
+      "source_location": "L79",
       "_origin": "ast"
     },
     {
@@ -1025,6 +1041,78 @@
       "_origin": "ast"
     },
     {
+      "id": "scripts_import_snapshot",
+      "label": "import-snapshot.mjs",
+      "file_type": "code",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "scripts_import_snapshot_tables",
+      "label": "tables",
+      "file_type": "code",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L9",
+      "_origin": "ast"
+    },
+    {
+      "id": "scripts_import_snapshot_samepath",
+      "label": "samePath()",
+      "file_type": "code",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L10",
+      "_origin": "ast"
+    },
+    {
+      "id": "scripts_import_snapshot_within",
+      "label": "within()",
+      "file_type": "code",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L11",
+      "_origin": "ast"
+    },
+    {
+      "id": "scripts_import_snapshot_validhash",
+      "label": "validHash()",
+      "file_type": "code",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L15",
+      "_origin": "ast"
+    },
+    {
+      "id": "scripts_import_snapshot_plainpath",
+      "label": "plainPath()",
+      "file_type": "code",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L17",
+      "_origin": "ast"
+    },
+    {
+      "id": "scripts_import_snapshot_hashfile",
+      "label": "hashFile()",
+      "file_type": "code",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L23",
+      "_origin": "ast"
+    },
+    {
+      "id": "scripts_import_snapshot_verifydatabase",
+      "label": "verifyDatabase()",
+      "file_type": "code",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L29",
+      "_origin": "ast"
+    },
+    {
+      "id": "scripts_import_snapshot_importsnapshot",
+      "label": "importSnapshot()",
+      "file_type": "code",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L63",
+      "_origin": "ast"
+    },
+    {
       "id": "scripts_jeo_adapter",
       "label": "jeo-adapter.mjs",
       "file_type": "code",
@@ -1081,8 +1169,8 @@
       "_origin": "ast"
     },
     {
-      "id": "scripts_jev_review_production",
-      "label": "production",
+      "id": "scripts_jev_review_evidence",
+      "label": "evidence",
       "file_type": "code",
       "source_file": "scripts/jev-review.mjs",
       "source_location": "L19",
@@ -1093,7 +1181,7 @@
       "label": "proposal",
       "file_type": "code",
       "source_file": "scripts/jev-review.mjs",
-      "source_location": "L21",
+      "source_location": "L24",
       "_origin": "ast"
     },
     {
@@ -1101,7 +1189,7 @@
       "label": "review",
       "file_type": "code",
       "source_file": "scripts/jev-review.mjs",
-      "source_location": "L26",
+      "source_location": "L29",
       "_origin": "ast"
     },
     {
@@ -1109,7 +1197,7 @@
       "label": "receipt",
       "file_type": "code",
       "source_file": "scripts/jev-review.mjs",
-      "source_location": "L27",
+      "source_location": "L30",
       "_origin": "ast"
     },
     {
@@ -1165,7 +1253,7 @@
       "label": "checkpoint()",
       "file_type": "code",
       "source_file": "scripts/production-browser-smoke.py",
-      "source_location": "L26",
+      "source_location": "L37",
       "_origin": "ast"
     },
     {
@@ -1173,7 +1261,7 @@
       "label": "api()",
       "file_type": "code",
       "source_file": "scripts/production-browser-smoke.py",
-      "source_location": "L38",
+      "source_location": "L49",
       "_origin": "ast"
     },
     {
@@ -1181,7 +1269,7 @@
       "label": "wait_for_record()",
       "file_type": "code",
       "source_file": "scripts/production-browser-smoke.py",
-      "source_location": "L43",
+      "source_location": "L54",
       "_origin": "ast"
     },
     {
@@ -1189,7 +1277,7 @@
       "label": "select_workflow()",
       "file_type": "code",
       "source_file": "scripts/production-browser-smoke.py",
-      "source_location": "L54",
+      "source_location": "L65",
       "_origin": "ast"
     },
     {
@@ -1197,7 +1285,7 @@
       "label": "viewport_metrics()",
       "file_type": "code",
       "source_file": "scripts/production-browser-smoke.py",
-      "source_location": "L61",
+      "source_location": "L72",
       "_origin": "ast"
     },
     {
@@ -1217,11 +1305,35 @@
       "_origin": "ast"
     },
     {
+      "id": "scripts_production_smoke_base",
+      "label": "base",
+      "file_type": "code",
+      "source_file": "scripts/production-smoke.mjs",
+      "source_location": "L7",
+      "_origin": "ast"
+    },
+    {
+      "id": "scripts_production_smoke_receiptpath",
+      "label": "receiptPath",
+      "file_type": "code",
+      "source_file": "scripts/production-smoke.mjs",
+      "source_location": "L8",
+      "_origin": "ast"
+    },
+    {
+      "id": "scripts_production_smoke_mediadir",
+      "label": "mediaDir",
+      "file_type": "code",
+      "source_file": "scripts/production-smoke.mjs",
+      "source_location": "L9",
+      "_origin": "ast"
+    },
+    {
       "id": "scripts_production_smoke_pause",
       "label": "pause()",
       "file_type": "code",
       "source_file": "scripts/production-smoke.mjs",
-      "source_location": "L8",
+      "source_location": "L10",
       "_origin": "ast"
     },
     {
@@ -1229,7 +1341,7 @@
       "label": "api()",
       "file_type": "code",
       "source_file": "scripts/production-smoke.mjs",
-      "source_location": "L12",
+      "source_location": "L14",
       "_origin": "ast"
     },
     {
@@ -1237,7 +1349,7 @@
       "label": "voice",
       "file_type": "code",
       "source_file": "scripts/production-smoke.mjs",
-      "source_location": "L20",
+      "source_location": "L22",
       "_origin": "ast"
     },
     {
@@ -1245,7 +1357,7 @@
       "label": "nodes",
       "file_type": "code",
       "source_file": "scripts/production-smoke.mjs",
-      "source_location": "L37",
+      "source_location": "L39",
       "_origin": "ast"
     },
     {
@@ -1253,7 +1365,7 @@
       "label": "bytes",
       "file_type": "code",
       "source_file": "scripts/production-smoke.mjs",
-      "source_location": "L49",
+      "source_location": "L51",
       "_origin": "ast"
     },
     {
@@ -1261,7 +1373,7 @@
       "label": "sha256",
       "file_type": "code",
       "source_file": "scripts/production-smoke.mjs",
-      "source_location": "L50",
+      "source_location": "L52",
       "_origin": "ast"
     },
     {
@@ -1269,7 +1381,7 @@
       "label": "file",
       "file_type": "code",
       "source_file": "scripts/production-smoke.mjs",
-      "source_location": "L53",
+      "source_location": "L55",
       "_origin": "ast"
     },
     {
@@ -1277,7 +1389,7 @@
       "label": "probe",
       "file_type": "code",
       "source_file": "scripts/production-smoke.mjs",
-      "source_location": "L56",
+      "source_location": "L58",
       "_origin": "ast"
     },
     {
@@ -1285,7 +1397,7 @@
       "label": "meanVolume",
       "file_type": "code",
       "source_file": "scripts/production-smoke.mjs",
-      "source_location": "L60",
+      "source_location": "L62",
       "_origin": "ast"
     },
     {
@@ -1293,7 +1405,7 @@
       "label": "persisted",
       "file_type": "code",
       "source_file": "scripts/production-smoke.mjs",
-      "source_location": "L65",
+      "source_location": "L67",
       "_origin": "ast"
     },
     {
@@ -1301,7 +1413,7 @@
       "label": "result",
       "file_type": "code",
       "source_file": "scripts/production-smoke.mjs",
-      "source_location": "L67",
+      "source_location": "L69",
       "_origin": "ast"
     },
     {
@@ -1337,11 +1449,99 @@
       "_origin": "ast"
     },
     {
+      "id": "scripts_repair_docker_wsl",
+      "label": "repair-docker-wsl.ps1",
+      "file_type": "code",
+      "source_file": "scripts/repair-docker-wsl.ps1",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "scripts_repair_docker_wsl_save_receipt",
+      "label": "Save-Receipt()",
+      "file_type": "code",
+      "source_file": "scripts/repair-docker-wsl.ps1",
+      "source_location": "L6",
+      "_origin": "ast"
+    },
+    {
+      "id": "scripts_snapshot_data",
+      "label": "snapshot-data.mjs",
+      "file_type": "code",
+      "source_file": "scripts/snapshot-data.mjs",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "scripts_snapshot_data_tables",
+      "label": "tables",
+      "file_type": "code",
+      "source_file": "scripts/snapshot-data.mjs",
+      "source_location": "L8",
+      "_origin": "ast"
+    },
+    {
+      "id": "scripts_snapshot_data_samepath",
+      "label": "samePath()",
+      "file_type": "code",
+      "source_file": "scripts/snapshot-data.mjs",
+      "source_location": "L9",
+      "_origin": "ast"
+    },
+    {
+      "id": "scripts_snapshot_data_within",
+      "label": "within()",
+      "file_type": "code",
+      "source_file": "scripts/snapshot-data.mjs",
+      "source_location": "L10",
+      "_origin": "ast"
+    },
+    {
+      "id": "scripts_snapshot_data_hashfile",
+      "label": "hashFile()",
+      "file_type": "code",
+      "source_file": "scripts/snapshot-data.mjs",
+      "source_location": "L15",
+      "_origin": "ast"
+    },
+    {
+      "id": "scripts_snapshot_data_ensureplainfile",
+      "label": "ensurePlainFile()",
+      "file_type": "code",
+      "source_file": "scripts/snapshot-data.mjs",
+      "source_location": "L21",
+      "_origin": "ast"
+    },
+    {
+      "id": "scripts_snapshot_data_snapshotdata",
+      "label": "snapshotData()",
+      "file_type": "code",
+      "source_file": "scripts/snapshot-data.mjs",
+      "source_location": "L28",
+      "_origin": "ast"
+    },
+    {
       "id": "scripts_speech",
       "label": "speech.ps1",
       "file_type": "code",
       "source_file": "scripts/speech.ps1",
       "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "scripts_start_docker",
+      "label": "start-docker.ps1",
+      "file_type": "code",
+      "source_file": "scripts/start-docker.ps1",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "scripts_start_docker_invoke_dockerbounded",
+      "label": "Invoke-DockerBounded()",
+      "file_type": "code",
+      "source_file": "scripts/start-docker.ps1",
+      "source_location": "L8",
       "_origin": "ast"
     },
     {
@@ -1705,11 +1905,27 @@
       "_origin": "ast"
     },
     {
+      "id": "server_narration_speechrequest",
+      "label": "speechRequest()",
+      "file_type": "code",
+      "source_file": "server/narration.mjs",
+      "source_location": "L13",
+      "_origin": "ast"
+    },
+    {
+      "id": "server_narration_probespeechfile",
+      "label": "probeSpeechFile()",
+      "file_type": "code",
+      "source_file": "server/narration.mjs",
+      "source_location": "L21",
+      "_origin": "ast"
+    },
+    {
       "id": "server_narration_listspeechvoices",
       "label": "listSpeechVoices()",
       "file_type": "code",
       "source_file": "server/narration.mjs",
-      "source_location": "L12",
+      "source_location": "L28",
       "_origin": "ast"
     },
     {
@@ -1717,7 +1933,23 @@
       "label": "synthesizeSpeech()",
       "file_type": "code",
       "source_file": "server/narration.mjs",
-      "source_location": "L22",
+      "source_location": "L38",
+      "_origin": "ast"
+    },
+    {
+      "id": "server_narration_createbridgespeechprovider",
+      "label": "createBridgeSpeechProvider()",
+      "file_type": "code",
+      "source_file": "server/narration.mjs",
+      "source_location": "L48",
+      "_origin": "ast"
+    },
+    {
+      "id": "server_narration_createspeechprovider",
+      "label": "createSpeechProvider()",
+      "file_type": "code",
+      "source_file": "server/narration.mjs",
+      "source_location": "L111",
       "_origin": "ast"
     },
     {
@@ -1725,7 +1957,7 @@
       "label": "NarrationQueue",
       "file_type": "code",
       "source_file": "server/narration.mjs",
-      "source_location": "L34",
+      "source_location": "L118",
       "_origin": "ast"
     },
     {
@@ -1733,7 +1965,7 @@
       "label": ".constructor()",
       "file_type": "code",
       "source_file": "server/narration.mjs",
-      "source_location": "L35",
+      "source_location": "L119",
       "_origin": "ast"
     },
     {
@@ -1741,7 +1973,7 @@
       "label": ".start()",
       "file_type": "code",
       "source_file": "server/narration.mjs",
-      "source_location": "L46",
+      "source_location": "L130",
       "_origin": "ast"
     },
     {
@@ -1749,7 +1981,7 @@
       "label": ".process()",
       "file_type": "code",
       "source_file": "server/narration.mjs",
-      "source_location": "L72",
+      "source_location": "L156",
       "_origin": "ast"
     },
     {
@@ -1757,7 +1989,7 @@
       "label": ".close()",
       "file_type": "code",
       "source_file": "server/narration.mjs",
-      "source_location": "L119",
+      "source_location": "L203",
       "_origin": "ast"
     },
     {
@@ -2321,6 +2553,70 @@
       "_origin": "ast"
     },
     {
+      "id": "tests_bridge_speech_test",
+      "label": "bridge-speech.test.mjs",
+      "file_type": "code",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_bridge_speech_test_voices",
+      "label": "voices",
+      "file_type": "code",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L10",
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_bridge_speech_test_speech",
+      "label": "speech",
+      "file_type": "code",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L11",
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_bridge_speech_test_deferred",
+      "label": "deferred()",
+      "file_type": "code",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L12",
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_bridge_speech_test_wav",
+      "label": "wav()",
+      "file_type": "code",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L13",
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_bridge_speech_test_fixture",
+      "label": "fixture()",
+      "file_type": "code",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L21",
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_bridge_speech_test_cleanwork",
+      "label": "cleanWork()",
+      "file_type": "code",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L32",
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_bridge_speech_test_start",
+      "label": "start()",
+      "file_type": "code",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L104",
+      "_origin": "ast"
+    },
+    {
       "id": "tests_harness_test",
       "label": "harness.test.mjs",
       "file_type": "code",
@@ -2334,6 +2630,22 @@
       "file_type": "code",
       "source_file": "tests/harness.test.mjs",
       "source_location": "L8",
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_import_snapshot_test",
+      "label": "import-snapshot.test.mjs",
+      "file_type": "code",
+      "source_file": "tests/import-snapshot.test.mjs",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_import_snapshot_test_fixture",
+      "label": "fixture()",
+      "file_type": "code",
+      "source_file": "tests/import-snapshot.test.mjs",
+      "source_location": "L11",
       "_origin": "ast"
     },
     {
@@ -2501,6 +2813,30 @@
       "label": "candidate()",
       "file_type": "code",
       "source_file": "tests/reviews.test.mjs",
+      "source_location": "L12",
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_snapshot_data_test",
+      "label": "snapshot-data.test.mjs",
+      "file_type": "code",
+      "source_file": "tests/snapshot-data.test.mjs",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_snapshot_data_test_hash",
+      "label": "hash()",
+      "file_type": "code",
+      "source_file": "tests/snapshot-data.test.mjs",
+      "source_location": "L10",
+      "_origin": "ast"
+    },
+    {
+      "id": "tests_snapshot_data_test_fixture",
+      "label": "fixture()",
+      "file_type": "code",
+      "source_file": "tests/snapshot-data.test.mjs",
       "source_location": "L12",
       "_origin": "ast"
     },
@@ -2885,7 +3221,7 @@
       "label": "Error Handling",
       "file_type": "document",
       "source_file": ".claude/agents/production-editor.md",
-      "source_location": "L22",
+      "source_location": "L24",
       "_origin": "ast"
     },
     {
@@ -2893,7 +3229,7 @@
       "label": "Team Communication",
       "file_type": "document",
       "source_file": ".claude/agents/production-editor.md",
-      "source_location": "L24",
+      "source_location": "L26",
       "_origin": "ast"
     },
     {
@@ -3125,7 +3461,7 @@
       "label": "Examples",
       "file_type": "document",
       "source_file": ".claude/skills/production-orchestrator/SKILL.md",
-      "source_location": "L24",
+      "source_location": "L25",
       "_origin": "ast"
     },
     {
@@ -3133,7 +3469,7 @@
       "label": "Best practices",
       "file_type": "document",
       "source_file": ".claude/skills/production-orchestrator/SKILL.md",
-      "source_location": "L29",
+      "source_location": "L30",
       "_origin": "ast"
     },
     {
@@ -3245,7 +3581,7 @@
       "label": "Routing Table",
       "file_type": "document",
       "source_file": ".mex/ROUTER.md",
-      "source_location": "L46",
+      "source_location": "L48",
       "_origin": "ast"
     },
     {
@@ -3253,7 +3589,7 @@
       "label": "Behavioural Contract",
       "file_type": "document",
       "source_file": ".mex/ROUTER.md",
-      "source_location": "L59",
+      "source_location": "L61",
       "_origin": "ast"
     },
     {
@@ -3261,7 +3597,7 @@
       "label": "Production task patterns",
       "file_type": "document",
       "source_file": ".mex/ROUTER.md",
-      "source_location": "L73",
+      "source_location": "L75",
       "_origin": "ast"
     },
     {
@@ -3565,7 +3901,7 @@
       "label": "Native narration and Jev availability",
       "file_type": "document",
       "source_file": ".mex/context/setup.md",
-      "source_location": "L36",
+      "source_location": "L40",
       "_origin": "ast"
     },
     {
@@ -4013,7 +4349,7 @@
       "label": "하니스 최신 버전과 아카이브",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L91",
+      "source_location": "L105",
       "_origin": "ast"
     },
     {
@@ -4021,7 +4357,7 @@
       "label": "지속되는 지식",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L104",
+      "source_location": "L118",
       "_origin": "ast"
     },
     {
@@ -4029,7 +4365,7 @@
       "label": "검증과 현재 경계",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L123",
+      "source_location": "L137",
       "_origin": "ast"
     },
     {
@@ -4078,6 +4414,62 @@
       "file_type": "document",
       "source_file": "docs/contract.md",
       "source_location": "L46",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_docker_operations",
+      "label": "docker-operations.md",
+      "file_type": "document",
+      "source_file": "docs/docker-operations.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_docker_operations_docker_operations_on_windows",
+      "label": "Docker operations on Windows",
+      "file_type": "document",
+      "source_file": "docs/docker-operations.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_docker_operations_normal_start",
+      "label": "Normal start",
+      "file_type": "document",
+      "source_file": "docs/docker-operations.md",
+      "source_location": "L5",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_docker_operations_native_to_docker_data_migration",
+      "label": "Native-to-Docker data migration",
+      "file_type": "document",
+      "source_file": "docs/docker-operations.md",
+      "source_location": "L23",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_docker_operations_configuration_and_authentication",
+      "label": "Configuration and authentication",
+      "file_type": "document",
+      "source_file": "docs/docker-operations.md",
+      "source_location": "L55",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_docker_operations_failure_diagnosis",
+      "label": "Failure diagnosis",
+      "file_type": "document",
+      "source_file": "docs/docker-operations.md",
+      "source_location": "L61",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_docker_operations_evidence_without_overwriting_prior_receipts",
+      "label": "Evidence without overwriting prior receipts",
+      "file_type": "document",
+      "source_file": "docs/docker-operations.md",
+      "source_location": "L71",
       "_origin": "ast"
     },
     {
@@ -4149,7 +4541,15 @@
       "label": "Exact-candidate review",
       "file_type": "document",
       "source_file": "docs/harness.md",
-      "source_location": "L62",
+      "source_location": "L64",
+      "_origin": "ast"
+    },
+    {
+      "id": "docs_harness_md_docs_harness_container_migration_and_recovery",
+      "label": "Container migration and recovery",
+      "file_type": "document",
+      "source_file": "docs/harness.md",
+      "source_location": "L74",
       "_origin": "ast"
     },
     {
@@ -4157,7 +4557,7 @@
       "label": "Durable memory",
       "file_type": "document",
       "source_file": "docs/harness.md",
-      "source_location": "L72",
+      "source_location": "L82",
       "_origin": "ast"
     },
     {
@@ -4165,7 +4565,7 @@
       "label": "Acceptance scenarios",
       "file_type": "document",
       "source_file": "docs/harness.md",
-      "source_location": "L81",
+      "source_location": "L91",
       "_origin": "ast"
     },
     {
@@ -4189,7 +4589,7 @@
       "label": "실행 경계",
       "file_type": "document",
       "source_file": "docs/jev.md",
-      "source_location": "L7",
+      "source_location": "L9",
       "_origin": "ast"
     },
     {
@@ -4197,7 +4597,7 @@
       "label": "재현",
       "file_type": "document",
       "source_file": "docs/jev.md",
-      "source_location": "L15",
+      "source_location": "L17",
       "_origin": "ast"
     },
     {
@@ -4313,8 +4713,8 @@
       "_origin": "ast"
     },
     {
-      "id": "docs_verification_docker_실행이_막힌_지점",
-      "label": "Docker 실행이 막힌 지점",
+      "id": "docs_verification_로컬_docker_복구와_운영_전환",
+      "label": "로컬 Docker 복구와 운영 전환",
       "file_type": "document",
       "source_file": "docs/verification.md",
       "source_location": "L27",
@@ -4325,7 +4725,7 @@
       "label": "현재 기능 경계",
       "file_type": "document",
       "source_file": "docs/verification.md",
-      "source_location": "L35",
+      "source_location": "L45",
       "_origin": "ast"
     },
     {
@@ -4333,7 +4733,7 @@
       "label": "재검증",
       "file_type": "document",
       "source_file": "docs/verification.md",
-      "source_location": "L46",
+      "source_location": "L56",
       "_origin": "ast"
     },
     {
@@ -5206,6 +5606,462 @@
       "file_type": "document",
       "source_file": "harness/archive/1.1.0/docs/harness.md",
       "source_location": "L63",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_director_md_agents_production_director",
+      "label": "production-director.md",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-director.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_director_md_agents_production_director_production_director",
+      "label": "Production director",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-director.md",
+      "source_location": "L7",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_director_md_agents_production_director_core_responsibilities",
+      "label": "Core Responsibilities",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-director.md",
+      "source_location": "L8",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_director_md_agents_production_director_input_protocol",
+      "label": "Input Protocol",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-director.md",
+      "source_location": "L10",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_director_md_agents_production_director_output_protocol",
+      "label": "Output Protocol",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-director.md",
+      "source_location": "L12",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_director_md_agents_production_director_operational_principles",
+      "label": "Operational Principles",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-director.md",
+      "source_location": "L14",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_director_md_agents_production_director_error_handling",
+      "label": "Error Handling",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-director.md",
+      "source_location": "L16",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_director_md_agents_production_director_team_communication",
+      "label": "Team Communication",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-director.md",
+      "source_location": "L18",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_editor_md_agents_production_editor",
+      "label": "production-editor.md",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-editor.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_editor_md_agents_production_editor_production_editor",
+      "label": "Production editor",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-editor.md",
+      "source_location": "L7",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_editor_md_agents_production_editor_core_responsibilities",
+      "label": "Core Responsibilities",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-editor.md",
+      "source_location": "L8",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_editor_md_agents_production_editor_input_protocol",
+      "label": "Input Protocol",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-editor.md",
+      "source_location": "L10",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_editor_md_agents_production_editor_output_protocol",
+      "label": "Output Protocol",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-editor.md",
+      "source_location": "L15",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_editor_md_agents_production_editor_operational_principles",
+      "label": "Operational Principles",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-editor.md",
+      "source_location": "L19",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_editor_md_agents_production_editor_error_handling",
+      "label": "Error Handling",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-editor.md",
+      "source_location": "L22",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_editor_md_agents_production_editor_team_communication",
+      "label": "Team Communication",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-editor.md",
+      "source_location": "L24",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_researcher_md_agents_production_researcher",
+      "label": "production-researcher.md",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-researcher.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_researcher_md_agents_production_researcher_production_researcher",
+      "label": "Production researcher",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-researcher.md",
+      "source_location": "L7",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_researcher_md_agents_production_researcher_core_responsibilities",
+      "label": "Core Responsibilities",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-researcher.md",
+      "source_location": "L8",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_researcher_md_agents_production_researcher_input_protocol",
+      "label": "Input Protocol",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-researcher.md",
+      "source_location": "L10",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_researcher_md_agents_production_researcher_output_protocol",
+      "label": "Output Protocol",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-researcher.md",
+      "source_location": "L12",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_researcher_md_agents_production_researcher_operational_principles",
+      "label": "Operational Principles",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-researcher.md",
+      "source_location": "L14",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_researcher_md_agents_production_researcher_error_handling",
+      "label": "Error Handling",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-researcher.md",
+      "source_location": "L16",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_researcher_md_agents_production_researcher_team_communication",
+      "label": "Team Communication",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-researcher.md",
+      "source_location": "L18",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_reviewer_md_agents_production_reviewer",
+      "label": "production-reviewer.md",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-reviewer.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_reviewer_md_agents_production_reviewer_production_reviewer",
+      "label": "Production reviewer",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-reviewer.md",
+      "source_location": "L7",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_reviewer_md_agents_production_reviewer_core_responsibilities",
+      "label": "Core Responsibilities",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-reviewer.md",
+      "source_location": "L8",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_reviewer_md_agents_production_reviewer_input_protocol",
+      "label": "Input Protocol",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-reviewer.md",
+      "source_location": "L10",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_reviewer_md_agents_production_reviewer_output_protocol",
+      "label": "Output Protocol",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-reviewer.md",
+      "source_location": "L13",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_reviewer_md_agents_production_reviewer_operational_principles",
+      "label": "Operational Principles",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-reviewer.md",
+      "source_location": "L16",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_reviewer_md_agents_production_reviewer_error_handling",
+      "label": "Error Handling",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-reviewer.md",
+      "source_location": "L19",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_reviewer_md_agents_production_reviewer_team_communication",
+      "label": "Team Communication",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-reviewer.md",
+      "source_location": "L22",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_supervisor_md_agents_production_supervisor",
+      "label": "production-supervisor.md",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-supervisor.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_supervisor_md_agents_production_supervisor_production_supervisor",
+      "label": "Production supervisor",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-supervisor.md",
+      "source_location": "L7",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_supervisor_md_agents_production_supervisor_core_responsibilities",
+      "label": "Core Responsibilities",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-supervisor.md",
+      "source_location": "L8",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_supervisor_md_agents_production_supervisor_input_protocol",
+      "label": "Input Protocol",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-supervisor.md",
+      "source_location": "L10",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_supervisor_md_agents_production_supervisor_output_protocol",
+      "label": "Output Protocol",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-supervisor.md",
+      "source_location": "L13",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_supervisor_md_agents_production_supervisor_operational_principles",
+      "label": "Operational Principles",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-supervisor.md",
+      "source_location": "L16",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_supervisor_md_agents_production_supervisor_error_handling",
+      "label": "Error Handling",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-supervisor.md",
+      "source_location": "L18",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_agents_production_supervisor_md_agents_production_supervisor_team_communication",
+      "label": "Team Communication",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-supervisor.md",
+      "source_location": "L20",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill",
+      "label": "SKILL.md",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/skills/production-orchestrator/SKILL.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_production_orchestrator",
+      "label": "Production orchestrator",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/skills/production-orchestrator/SKILL.md",
+      "source_location": "L8",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_when_to_use_this_skill",
+      "label": "When to use this skill",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/skills/production-orchestrator/SKILL.md",
+      "source_location": "L9",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_instructions",
+      "label": "Instructions",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/skills/production-orchestrator/SKILL.md",
+      "source_location": "L11",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_examples",
+      "label": "Examples",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/skills/production-orchestrator/SKILL.md",
+      "source_location": "L24",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_best_practices",
+      "label": "Best practices",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/.claude/skills/production-orchestrator/SKILL.md",
+      "source_location": "L29",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_docs_harness_versioning_md_docs_harness_versioning",
+      "label": "harness-versioning.md",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/docs/harness-versioning.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_docs_harness_versioning_md_docs_harness_versioning_harness_promotion_and_rollback",
+      "label": "Harness promotion and rollback",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/docs/harness-versioning.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_docs_harness_md_docs_harness",
+      "label": "harness.md",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/docs/harness.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_docs_harness_md_docs_harness_production_harness",
+      "label": "Production harness",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/docs/harness.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_docs_harness_md_docs_harness_roles_and_handoffs",
+      "label": "Roles and handoffs",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/docs/harness.md",
+      "source_location": "L17",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_docs_harness_md_docs_harness_runtime_boundary",
+      "label": "Runtime boundary",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/docs/harness.md",
+      "source_location": "L31",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_docs_harness_md_docs_harness_executable_production_graph",
+      "label": "Executable production graph",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/docs/harness.md",
+      "source_location": "L35",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_docs_harness_md_docs_harness_saved_editing_and_native_narration",
+      "label": "Saved editing and native narration",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/docs/harness.md",
+      "source_location": "L54",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_docs_harness_md_docs_harness_exact_candidate_review",
+      "label": "Exact-candidate review",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/docs/harness.md",
+      "source_location": "L62",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_docs_harness_md_docs_harness_durable_memory",
+      "label": "Durable memory",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/docs/harness.md",
+      "source_location": "L72",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_archive_1_2_0_docs_harness_md_docs_harness_acceptance_scenarios",
+      "label": "Acceptance scenarios",
+      "file_type": "document",
+      "source_file": "harness/archive/1.2.0/docs/harness.md",
+      "source_location": "L81",
       "_origin": "ast"
     },
     {
@@ -6553,6 +7409,470 @@
       "_origin": "ast"
     },
     {
+      "id": "harness_versions_1_3_0_claude_agents_production_director_md_agents_production_director",
+      "label": "production-director.md",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-director.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_director_md_agents_production_director_production_director",
+      "label": "Production director",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-director.md",
+      "source_location": "L7",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_director_md_agents_production_director_core_responsibilities",
+      "label": "Core Responsibilities",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-director.md",
+      "source_location": "L8",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_director_md_agents_production_director_input_protocol",
+      "label": "Input Protocol",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-director.md",
+      "source_location": "L10",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_director_md_agents_production_director_output_protocol",
+      "label": "Output Protocol",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-director.md",
+      "source_location": "L12",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_director_md_agents_production_director_operational_principles",
+      "label": "Operational Principles",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-director.md",
+      "source_location": "L14",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_director_md_agents_production_director_error_handling",
+      "label": "Error Handling",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-director.md",
+      "source_location": "L16",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_director_md_agents_production_director_team_communication",
+      "label": "Team Communication",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-director.md",
+      "source_location": "L18",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_editor_md_agents_production_editor",
+      "label": "production-editor.md",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-editor.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_editor_md_agents_production_editor_production_editor",
+      "label": "Production editor",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-editor.md",
+      "source_location": "L7",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_editor_md_agents_production_editor_core_responsibilities",
+      "label": "Core Responsibilities",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-editor.md",
+      "source_location": "L8",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_editor_md_agents_production_editor_input_protocol",
+      "label": "Input Protocol",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-editor.md",
+      "source_location": "L10",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_editor_md_agents_production_editor_output_protocol",
+      "label": "Output Protocol",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-editor.md",
+      "source_location": "L15",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_editor_md_agents_production_editor_operational_principles",
+      "label": "Operational Principles",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-editor.md",
+      "source_location": "L19",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_editor_md_agents_production_editor_error_handling",
+      "label": "Error Handling",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-editor.md",
+      "source_location": "L24",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_editor_md_agents_production_editor_team_communication",
+      "label": "Team Communication",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-editor.md",
+      "source_location": "L26",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_researcher_md_agents_production_researcher",
+      "label": "production-researcher.md",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-researcher.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_researcher_md_agents_production_researcher_production_researcher",
+      "label": "Production researcher",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-researcher.md",
+      "source_location": "L7",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_researcher_md_agents_production_researcher_core_responsibilities",
+      "label": "Core Responsibilities",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-researcher.md",
+      "source_location": "L8",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_researcher_md_agents_production_researcher_input_protocol",
+      "label": "Input Protocol",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-researcher.md",
+      "source_location": "L10",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_researcher_md_agents_production_researcher_output_protocol",
+      "label": "Output Protocol",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-researcher.md",
+      "source_location": "L12",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_researcher_md_agents_production_researcher_operational_principles",
+      "label": "Operational Principles",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-researcher.md",
+      "source_location": "L14",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_researcher_md_agents_production_researcher_error_handling",
+      "label": "Error Handling",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-researcher.md",
+      "source_location": "L16",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_researcher_md_agents_production_researcher_team_communication",
+      "label": "Team Communication",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-researcher.md",
+      "source_location": "L18",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_reviewer_md_agents_production_reviewer",
+      "label": "production-reviewer.md",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-reviewer.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_reviewer_md_agents_production_reviewer_production_reviewer",
+      "label": "Production reviewer",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-reviewer.md",
+      "source_location": "L7",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_reviewer_md_agents_production_reviewer_core_responsibilities",
+      "label": "Core Responsibilities",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-reviewer.md",
+      "source_location": "L8",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_reviewer_md_agents_production_reviewer_input_protocol",
+      "label": "Input Protocol",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-reviewer.md",
+      "source_location": "L10",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_reviewer_md_agents_production_reviewer_output_protocol",
+      "label": "Output Protocol",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-reviewer.md",
+      "source_location": "L13",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_reviewer_md_agents_production_reviewer_operational_principles",
+      "label": "Operational Principles",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-reviewer.md",
+      "source_location": "L16",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_reviewer_md_agents_production_reviewer_error_handling",
+      "label": "Error Handling",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-reviewer.md",
+      "source_location": "L19",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_reviewer_md_agents_production_reviewer_team_communication",
+      "label": "Team Communication",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-reviewer.md",
+      "source_location": "L22",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_supervisor_md_agents_production_supervisor",
+      "label": "production-supervisor.md",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-supervisor.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_supervisor_md_agents_production_supervisor_production_supervisor",
+      "label": "Production supervisor",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-supervisor.md",
+      "source_location": "L7",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_supervisor_md_agents_production_supervisor_core_responsibilities",
+      "label": "Core Responsibilities",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-supervisor.md",
+      "source_location": "L8",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_supervisor_md_agents_production_supervisor_input_protocol",
+      "label": "Input Protocol",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-supervisor.md",
+      "source_location": "L10",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_supervisor_md_agents_production_supervisor_output_protocol",
+      "label": "Output Protocol",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-supervisor.md",
+      "source_location": "L13",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_supervisor_md_agents_production_supervisor_operational_principles",
+      "label": "Operational Principles",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-supervisor.md",
+      "source_location": "L16",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_supervisor_md_agents_production_supervisor_error_handling",
+      "label": "Error Handling",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-supervisor.md",
+      "source_location": "L18",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_agents_production_supervisor_md_agents_production_supervisor_team_communication",
+      "label": "Team Communication",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-supervisor.md",
+      "source_location": "L20",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill",
+      "label": "SKILL.md",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/skills/production-orchestrator/SKILL.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_production_orchestrator",
+      "label": "Production orchestrator",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/skills/production-orchestrator/SKILL.md",
+      "source_location": "L8",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_when_to_use_this_skill",
+      "label": "When to use this skill",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/skills/production-orchestrator/SKILL.md",
+      "source_location": "L9",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_instructions",
+      "label": "Instructions",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/skills/production-orchestrator/SKILL.md",
+      "source_location": "L11",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_examples",
+      "label": "Examples",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/skills/production-orchestrator/SKILL.md",
+      "source_location": "L25",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_best_practices",
+      "label": "Best practices",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/.claude/skills/production-orchestrator/SKILL.md",
+      "source_location": "L30",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_docs_harness_versioning_md_docs_harness_versioning",
+      "label": "harness-versioning.md",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/docs/harness-versioning.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_docs_harness_versioning_md_docs_harness_versioning_harness_promotion_and_rollback",
+      "label": "Harness promotion and rollback",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/docs/harness-versioning.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_docs_harness_md_docs_harness",
+      "label": "harness.md",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/docs/harness.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_docs_harness_md_docs_harness_production_harness",
+      "label": "Production harness",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/docs/harness.md",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_docs_harness_md_docs_harness_roles_and_handoffs",
+      "label": "Roles and handoffs",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/docs/harness.md",
+      "source_location": "L17",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_docs_harness_md_docs_harness_runtime_boundary",
+      "label": "Runtime boundary",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/docs/harness.md",
+      "source_location": "L31",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_docs_harness_md_docs_harness_executable_production_graph",
+      "label": "Executable production graph",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/docs/harness.md",
+      "source_location": "L35",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_docs_harness_md_docs_harness_saved_editing_and_native_narration",
+      "label": "Saved editing and native narration",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/docs/harness.md",
+      "source_location": "L54",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_docs_harness_md_docs_harness_exact_candidate_review",
+      "label": "Exact-candidate review",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/docs/harness.md",
+      "source_location": "L64",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_docs_harness_md_docs_harness_container_migration_and_recovery",
+      "label": "Container migration and recovery",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/docs/harness.md",
+      "source_location": "L74",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_docs_harness_md_docs_harness_durable_memory",
+      "label": "Durable memory",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/docs/harness.md",
+      "source_location": "L82",
+      "_origin": "ast"
+    },
+    {
+      "id": "harness_versions_1_3_0_docs_harness_md_docs_harness_acceptance_scenarios",
+      "label": "Acceptance scenarios",
+      "file_type": "document",
+      "source_file": "harness/versions/1.3.0/docs/harness.md",
+      "source_location": "L91",
+      "_origin": "ast"
+    },
+    {
       "id": "llm_wiki_agents",
       "label": "AGENTS.md",
       "file_type": "document",
@@ -6689,11 +8009,19 @@
       "_origin": "ast"
     },
     {
-      "id": "reports_runtime_verification_2026_10_18_runtime_verification",
-      "label": "Runtime verification",
+      "id": "reports_runtime_verification_2026_10_18_current_docker_deployment",
+      "label": "Current Docker deployment",
       "file_type": "document",
       "source_file": "llm-wiki/wiki/reports/runtime-verification-2026-10-18.md",
       "source_location": "L9",
+      "_origin": "ast"
+    },
+    {
+      "id": "reports_runtime_verification_2026_10_18_historical_evidence_and_limits",
+      "label": "Historical evidence and limits",
+      "file_type": "document",
+      "source_file": "llm-wiki/wiki/reports/runtime-verification-2026-10-18.md",
+      "source_location": "L23",
       "_origin": "ast"
     },
     {
@@ -8793,7 +10121,7 @@
     },
     {
       "source": "scripts_agent_bridge",
-      "target": "node_crypto",
+      "target": "promises",
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -8803,12 +10131,22 @@
     },
     {
       "source": "scripts_agent_bridge",
-      "target": "server_process",
+      "target": "node_crypto",
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "scripts/agent-bridge.mjs",
       "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_agent_bridge",
+      "target": "server_process",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/agent-bridge.mjs",
+      "source_location": "L9",
       "weight": 1.0
     },
     {
@@ -8818,7 +10156,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "scripts/agent-bridge.mjs",
-      "source_location": "L8",
+      "source_location": "L9",
       "weight": 1.0
     },
     {
@@ -8828,7 +10166,17 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "scripts/agent-bridge.mjs",
-      "source_location": "L9",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_agent_bridge",
+      "target": "server_validation_httperror",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/agent-bridge.mjs",
+      "source_location": "L10",
       "weight": 1.0
     },
     {
@@ -8838,7 +10186,57 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "scripts/agent-bridge.mjs",
-      "source_location": "L9",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_agent_bridge",
+      "target": "server_narration",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/agent-bridge.mjs",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_agent_bridge",
+      "target": "server_narration_listspeechvoices",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/agent-bridge.mjs",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_agent_bridge",
+      "target": "server_narration_synthesizespeech",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/agent-bridge.mjs",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_agent_bridge",
+      "target": "server_narration_speechrequest",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/agent-bridge.mjs",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_agent_bridge",
+      "target": "server_narration_max_speech_bytes",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/agent-bridge.mjs",
+      "source_location": "L11",
       "weight": 1.0
     },
     {
@@ -8847,7 +10245,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/agent-bridge.mjs",
-      "source_location": "L19",
+      "source_location": "L20",
       "weight": 1.0
     },
     {
@@ -8874,7 +10272,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/agent-bridge.mjs",
-      "source_location": "L28",
+      "source_location": "L27",
       "weight": 1.0
     },
     {
@@ -8883,7 +10281,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/agent-bridge.mjs",
-      "source_location": "L29",
+      "source_location": "L28",
       "weight": 1.0
     },
     {
@@ -8892,7 +10290,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/agent-bridge.mjs",
-      "source_location": "L33",
+      "source_location": "L32",
       "weight": 1.0
     },
     {
@@ -8901,7 +10299,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/agent-bridge.mjs",
-      "source_location": "L41",
+      "source_location": "L40",
       "weight": 1.0
     },
     {
@@ -8914,13 +10312,31 @@
       "weight": 1.0
     },
     {
+      "source": "scripts_agent_bridge",
+      "target": "scripts_agent_bridge_readrequest",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/agent-bridge.mjs",
+      "source_location": "L71",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_agent_bridge",
+      "target": "scripts_agent_bridge_createagentbridge",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/agent-bridge.mjs",
+      "source_location": "L79",
+      "weight": 1.0
+    },
+    {
       "source": "scripts_agent_bridge_run",
       "target": "scripts_agent_bridge_availability",
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/agent-bridge.mjs",
-      "source_location": "L42",
+      "source_location": "L41",
       "weight": 1.0
     },
     {
@@ -9294,6 +10710,218 @@
       "weight": 1.0
     },
     {
+      "source": "scripts_import_snapshot",
+      "target": "node_sqlite",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_import_snapshot",
+      "target": "node_fs",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_import_snapshot",
+      "target": "promises",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_import_snapshot",
+      "target": "node_crypto",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_import_snapshot",
+      "target": "node_util",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_import_snapshot",
+      "target": "node_path",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_import_snapshot",
+      "target": "node_url",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_import_snapshot",
+      "target": "scripts_import_snapshot_tables",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_import_snapshot",
+      "target": "scripts_import_snapshot_samepath",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_import_snapshot",
+      "target": "scripts_import_snapshot_within",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_import_snapshot",
+      "target": "scripts_import_snapshot_validhash",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_import_snapshot",
+      "target": "scripts_import_snapshot_plainpath",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_import_snapshot",
+      "target": "scripts_import_snapshot_hashfile",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L23",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_import_snapshot",
+      "target": "scripts_import_snapshot_verifydatabase",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L29",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_import_snapshot",
+      "target": "scripts_import_snapshot_importsnapshot",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L63",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_import_snapshot_plainpath",
+      "target": "scripts_import_snapshot_samepath",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_import_snapshot_importsnapshot",
+      "target": "scripts_import_snapshot_plainpath",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L67",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_import_snapshot_importsnapshot",
+      "target": "scripts_import_snapshot_samepath",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L69",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_import_snapshot_importsnapshot",
+      "target": "scripts_import_snapshot_within",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L69",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_import_snapshot_importsnapshot",
+      "target": "scripts_import_snapshot_validhash",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L77",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_import_snapshot_importsnapshot",
+      "target": "scripts_import_snapshot_hashfile",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L91",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_import_snapshot_importsnapshot",
+      "target": "scripts_import_snapshot_verifydatabase",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/import-snapshot.mjs",
+      "source_location": "L109",
+      "weight": 1.0
+    },
+    {
       "source": "scripts_jeo_adapter",
       "target": "node_url",
       "relation": "imports_from",
@@ -9390,7 +11018,7 @@
     },
     {
       "source": "scripts_jev_review",
-      "target": "scripts_jev_review_production",
+      "target": "scripts_jev_review_evidence",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/jev-review.mjs",
@@ -9403,7 +11031,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/jev-review.mjs",
-      "source_location": "L21",
+      "source_location": "L24",
       "weight": 1.0
     },
     {
@@ -9412,7 +11040,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/jev-review.mjs",
-      "source_location": "L26",
+      "source_location": "L29",
       "weight": 1.0
     },
     {
@@ -9421,7 +11049,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/jev-review.mjs",
-      "source_location": "L27",
+      "source_location": "L30",
       "weight": 1.0
     },
     {
@@ -9527,7 +11155,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "scripts/production-browser-smoke.py",
-      "source_location": "L6",
+      "source_location": "L9",
       "weight": 1.0
     },
     {
@@ -9537,7 +11165,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "scripts/production-browser-smoke.py",
-      "source_location": "L7",
+      "source_location": "L10",
       "weight": 1.0
     },
     {
@@ -9547,7 +11175,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "scripts/production-browser-smoke.py",
-      "source_location": "L8",
+      "source_location": "L11",
       "weight": 1.0
     },
     {
@@ -9557,7 +11185,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "scripts/production-browser-smoke.py",
-      "source_location": "L9",
+      "source_location": "L12",
       "weight": 1.0
     },
     {
@@ -9567,7 +11195,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "scripts/production-browser-smoke.py",
-      "source_location": "L10",
+      "source_location": "L13",
       "weight": 1.0
     },
     {
@@ -9577,7 +11205,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "scripts/production-browser-smoke.py",
-      "source_location": "L12",
+      "source_location": "L15",
       "weight": 1.0
     },
     {
@@ -9586,7 +11214,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/production-browser-smoke.py",
-      "source_location": "L26",
+      "source_location": "L37",
       "weight": 1.0
     },
     {
@@ -9595,7 +11223,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/production-browser-smoke.py",
-      "source_location": "L38",
+      "source_location": "L49",
       "weight": 1.0
     },
     {
@@ -9604,7 +11232,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/production-browser-smoke.py",
-      "source_location": "L43",
+      "source_location": "L54",
       "weight": 1.0
     },
     {
@@ -9613,7 +11241,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/production-browser-smoke.py",
-      "source_location": "L54",
+      "source_location": "L65",
       "weight": 1.0
     },
     {
@@ -9622,7 +11250,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/production-browser-smoke.py",
-      "source_location": "L61",
+      "source_location": "L72",
       "weight": 1.0
     },
     {
@@ -9632,7 +11260,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/production-browser-smoke.py",
-      "source_location": "L46",
+      "source_location": "L57",
       "weight": 1.0
     },
     {
@@ -9706,7 +11334,16 @@
     },
     {
       "source": "scripts_production_smoke",
-      "target": "scripts_production_smoke_pause",
+      "target": "scripts_production_smoke_base",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/production-smoke.mjs",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_production_smoke",
+      "target": "scripts_production_smoke_receiptpath",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/production-smoke.mjs",
@@ -9715,11 +11352,29 @@
     },
     {
       "source": "scripts_production_smoke",
+      "target": "scripts_production_smoke_mediadir",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/production-smoke.mjs",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_production_smoke",
+      "target": "scripts_production_smoke_pause",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/production-smoke.mjs",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_production_smoke",
       "target": "scripts_production_smoke_api",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/production-smoke.mjs",
-      "source_location": "L12",
+      "source_location": "L14",
       "weight": 1.0
     },
     {
@@ -9728,7 +11383,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/production-smoke.mjs",
-      "source_location": "L20",
+      "source_location": "L22",
       "weight": 1.0
     },
     {
@@ -9737,7 +11392,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/production-smoke.mjs",
-      "source_location": "L37",
+      "source_location": "L39",
       "weight": 1.0
     },
     {
@@ -9746,7 +11401,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/production-smoke.mjs",
-      "source_location": "L49",
+      "source_location": "L51",
       "weight": 1.0
     },
     {
@@ -9755,7 +11410,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/production-smoke.mjs",
-      "source_location": "L50",
+      "source_location": "L52",
       "weight": 1.0
     },
     {
@@ -9764,7 +11419,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/production-smoke.mjs",
-      "source_location": "L53",
+      "source_location": "L55",
       "weight": 1.0
     },
     {
@@ -9773,7 +11428,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/production-smoke.mjs",
-      "source_location": "L56",
+      "source_location": "L58",
       "weight": 1.0
     },
     {
@@ -9782,7 +11437,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/production-smoke.mjs",
-      "source_location": "L60",
+      "source_location": "L62",
       "weight": 1.0
     },
     {
@@ -9791,7 +11446,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/production-smoke.mjs",
-      "source_location": "L65",
+      "source_location": "L67",
       "weight": 1.0
     },
     {
@@ -9800,7 +11455,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/production-smoke.mjs",
-      "source_location": "L67",
+      "source_location": "L69",
       "weight": 1.0
     },
     {
@@ -9888,6 +11543,198 @@
       "confidence": "EXTRACTED",
       "source_file": "scripts/render-smoke.mjs",
       "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_repair_docker_wsl",
+      "target": "scripts_repair_docker_wsl_save_receipt",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/repair-docker-wsl.ps1",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_snapshot_data",
+      "target": "node_sqlite",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/snapshot-data.mjs",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_snapshot_data",
+      "target": "node_fs",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/snapshot-data.mjs",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_snapshot_data",
+      "target": "promises",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/snapshot-data.mjs",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_snapshot_data",
+      "target": "node_crypto",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/snapshot-data.mjs",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_snapshot_data",
+      "target": "node_path",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/snapshot-data.mjs",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_snapshot_data",
+      "target": "node_url",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/snapshot-data.mjs",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_snapshot_data",
+      "target": "scripts_snapshot_data_tables",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/snapshot-data.mjs",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_snapshot_data",
+      "target": "scripts_snapshot_data_samepath",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/snapshot-data.mjs",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_snapshot_data",
+      "target": "scripts_snapshot_data_within",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/snapshot-data.mjs",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_snapshot_data",
+      "target": "scripts_snapshot_data_hashfile",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/snapshot-data.mjs",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_snapshot_data",
+      "target": "scripts_snapshot_data_ensureplainfile",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/snapshot-data.mjs",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_snapshot_data",
+      "target": "scripts_snapshot_data_snapshotdata",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/snapshot-data.mjs",
+      "source_location": "L28",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_snapshot_data_ensureplainfile",
+      "target": "scripts_snapshot_data_samepath",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/snapshot-data.mjs",
+      "source_location": "L23",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_snapshot_data_ensureplainfile",
+      "target": "scripts_snapshot_data_within",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/snapshot-data.mjs",
+      "source_location": "L23",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_snapshot_data_snapshotdata",
+      "target": "scripts_snapshot_data_within",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/snapshot-data.mjs",
+      "source_location": "L34",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_snapshot_data_snapshotdata",
+      "target": "scripts_snapshot_data_samepath",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/snapshot-data.mjs",
+      "source_location": "L35",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_snapshot_data_snapshotdata",
+      "target": "scripts_snapshot_data_ensureplainfile",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/snapshot-data.mjs",
+      "source_location": "L46",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_snapshot_data_snapshotdata",
+      "target": "scripts_snapshot_data_hashfile",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/snapshot-data.mjs",
+      "source_location": "L97",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_start_docker",
+      "target": "scripts_start_docker_invoke_dockerbounded",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/start-docker.ps1",
+      "source_location": "L8",
       "weight": 1.0
     },
     {
@@ -10497,7 +12344,7 @@
     },
     {
       "source": "server_app",
-      "target": "server_narration_listspeechvoices",
+      "target": "server_narration_createspeechprovider",
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -10904,11 +12751,29 @@
     },
     {
       "source": "server_narration",
+      "target": "server_narration_speechrequest",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server/narration.mjs",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "server_narration",
+      "target": "server_narration_probespeechfile",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server/narration.mjs",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "server_narration",
       "target": "server_narration_listspeechvoices",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "server/narration.mjs",
-      "source_location": "L12",
+      "source_location": "L28",
       "weight": 1.0
     },
     {
@@ -10917,7 +12782,25 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "server/narration.mjs",
-      "source_location": "L22",
+      "source_location": "L38",
+      "weight": 1.0
+    },
+    {
+      "source": "server_narration",
+      "target": "server_narration_createbridgespeechprovider",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server/narration.mjs",
+      "source_location": "L48",
+      "weight": 1.0
+    },
+    {
+      "source": "server_narration",
+      "target": "server_narration_createspeechprovider",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server/narration.mjs",
+      "source_location": "L111",
       "weight": 1.0
     },
     {
@@ -10926,7 +12809,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "server/narration.mjs",
-      "source_location": "L34",
+      "source_location": "L118",
       "weight": 1.0
     },
     {
@@ -10935,7 +12818,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "server/narration.mjs",
-      "source_location": "L35",
+      "source_location": "L119",
       "weight": 1.0
     },
     {
@@ -10944,7 +12827,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "server/narration.mjs",
-      "source_location": "L46",
+      "source_location": "L130",
       "weight": 1.0
     },
     {
@@ -10953,7 +12836,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "server/narration.mjs",
-      "source_location": "L72",
+      "source_location": "L156",
       "weight": 1.0
     },
     {
@@ -10962,7 +12845,37 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "server/narration.mjs",
-      "source_location": "L119",
+      "source_location": "L203",
+      "weight": 1.0
+    },
+    {
+      "source": "server_narration_synthesizespeech",
+      "target": "server_narration_speechrequest",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "server/narration.mjs",
+      "source_location": "L40",
+      "weight": 1.0
+    },
+    {
+      "source": "server_narration_synthesizespeech",
+      "target": "server_narration_probespeechfile",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "server/narration.mjs",
+      "source_location": "L44",
+      "weight": 1.0
+    },
+    {
+      "source": "server_narration_createspeechprovider",
+      "target": "server_narration_createbridgespeechprovider",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "server/narration.mjs",
+      "source_location": "L113",
       "weight": 1.0
     },
     {
@@ -10972,7 +12885,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "server/narration.mjs",
-      "source_location": "L43",
+      "source_location": "L127",
       "weight": 1.0
     },
     {
@@ -10982,7 +12895,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "server/narration.mjs",
-      "source_location": "L96",
+      "source_location": "L180",
       "weight": 1.0
     },
     {
@@ -12622,6 +14535,189 @@
       "weight": 1.0
     },
     {
+      "source": "tests_bridge_speech_test",
+      "target": "node_test",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_bridge_speech_test",
+      "target": "strict",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_bridge_speech_test",
+      "target": "promises",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_bridge_speech_test",
+      "target": "node_os",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_bridge_speech_test",
+      "target": "node_path",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_bridge_speech_test",
+      "target": "scripts_agent_bridge",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_bridge_speech_test",
+      "target": "scripts_agent_bridge_createagentbridge",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_bridge_speech_test",
+      "target": "server_narration",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_bridge_speech_test",
+      "target": "server_narration_createbridgespeechprovider",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_bridge_speech_test",
+      "target": "server_narration_createspeechprovider",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_bridge_speech_test",
+      "target": "server_narration_listspeechvoices",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_bridge_speech_test",
+      "target": "server_narration_max_speech_bytes",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_bridge_speech_test",
+      "target": "tests_bridge_speech_test_voices",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_bridge_speech_test",
+      "target": "tests_bridge_speech_test_speech",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_bridge_speech_test",
+      "target": "tests_bridge_speech_test_deferred",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_bridge_speech_test",
+      "target": "tests_bridge_speech_test_wav",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_bridge_speech_test",
+      "target": "tests_bridge_speech_test_fixture",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_bridge_speech_test",
+      "target": "tests_bridge_speech_test_cleanwork",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L32",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_bridge_speech_test",
+      "target": "tests_bridge_speech_test_start",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L104",
+      "weight": 1.0
+    },
+    {
       "source": "tests_harness_test",
       "target": "node_test",
       "relation": "imports_from",
@@ -12728,6 +14824,125 @@
       "confidence": "EXTRACTED",
       "source_file": "tests/harness.test.mjs",
       "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_import_snapshot_test",
+      "target": "node_test",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/import-snapshot.test.mjs",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_import_snapshot_test",
+      "target": "strict",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/import-snapshot.test.mjs",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_import_snapshot_test",
+      "target": "node_sqlite",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/import-snapshot.test.mjs",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_import_snapshot_test",
+      "target": "promises",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/import-snapshot.test.mjs",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_import_snapshot_test",
+      "target": "node_crypto",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/import-snapshot.test.mjs",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_import_snapshot_test",
+      "target": "node_path",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/import-snapshot.test.mjs",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_import_snapshot_test",
+      "target": "node_os",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/import-snapshot.test.mjs",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_import_snapshot_test",
+      "target": "scripts_snapshot_data",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/import-snapshot.test.mjs",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_import_snapshot_test",
+      "target": "scripts_snapshot_data_snapshotdata",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/import-snapshot.test.mjs",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_import_snapshot_test",
+      "target": "scripts_import_snapshot",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/import-snapshot.test.mjs",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_import_snapshot_test",
+      "target": "scripts_import_snapshot_importsnapshot",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/import-snapshot.test.mjs",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_import_snapshot_test",
+      "target": "tests_import_snapshot_test_fixture",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/import-snapshot.test.mjs",
+      "source_location": "L11",
       "weight": 1.0
     },
     {
@@ -13375,6 +15590,114 @@
       "weight": 1.0
     },
     {
+      "source": "tests_snapshot_data_test",
+      "target": "node_test",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/snapshot-data.test.mjs",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_snapshot_data_test",
+      "target": "strict",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/snapshot-data.test.mjs",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_snapshot_data_test",
+      "target": "node_crypto",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/snapshot-data.test.mjs",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_snapshot_data_test",
+      "target": "node_sqlite",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/snapshot-data.test.mjs",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_snapshot_data_test",
+      "target": "promises",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/snapshot-data.test.mjs",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_snapshot_data_test",
+      "target": "node_path",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/snapshot-data.test.mjs",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_snapshot_data_test",
+      "target": "node_os",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/snapshot-data.test.mjs",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_snapshot_data_test",
+      "target": "scripts_snapshot_data",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/snapshot-data.test.mjs",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_snapshot_data_test",
+      "target": "scripts_snapshot_data_snapshotdata",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/snapshot-data.test.mjs",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_snapshot_data_test",
+      "target": "tests_snapshot_data_test_hash",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/snapshot-data.test.mjs",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_snapshot_data_test",
+      "target": "tests_snapshot_data_test_fixture",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/snapshot-data.test.mjs",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
       "source": "tests_workflows_test",
       "target": "node_test",
       "relation": "imports_from",
@@ -13840,7 +16163,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": ".claude/agents/production-editor.md",
-      "source_location": "L22",
+      "source_location": "L24",
       "weight": 1.0
     },
     {
@@ -13849,7 +16172,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": ".claude/agents/production-editor.md",
-      "source_location": "L24",
+      "source_location": "L26",
       "weight": 1.0
     },
     {
@@ -14074,7 +16397,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": ".claude/skills/production-orchestrator/SKILL.md",
-      "source_location": "L24",
+      "source_location": "L25",
       "weight": 1.0
     },
     {
@@ -14083,7 +16406,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": ".claude/skills/production-orchestrator/SKILL.md",
-      "source_location": "L29",
+      "source_location": "L30",
       "weight": 1.0
     },
     {
@@ -14191,7 +16514,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": ".mex/ROUTER.md",
-      "source_location": "L46",
+      "source_location": "L48",
       "weight": 1.0
     },
     {
@@ -14200,7 +16523,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": ".mex/ROUTER.md",
-      "source_location": "L59",
+      "source_location": "L61",
       "weight": 1.0
     },
     {
@@ -14209,7 +16532,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": ".mex/ROUTER.md",
-      "source_location": "L73",
+      "source_location": "L75",
       "weight": 1.0
     },
     {
@@ -14497,7 +16820,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": ".mex/context/setup.md",
-      "source_location": "L36",
+      "source_location": "L40",
       "weight": 1.0
     },
     {
@@ -14929,7 +17252,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L91",
+      "source_location": "L105",
       "weight": 1.0
     },
     {
@@ -14938,7 +17261,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L104",
+      "source_location": "L118",
       "weight": 1.0
     },
     {
@@ -14947,7 +17270,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L123",
+      "source_location": "L137",
       "weight": 1.0
     },
     {
@@ -14993,6 +17316,60 @@
       "confidence": "EXTRACTED",
       "source_file": "docs/contract.md",
       "source_location": "L46",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_docker_operations",
+      "target": "docs_docker_operations_docker_operations_on_windows",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/docker-operations.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_docker_operations_docker_operations_on_windows",
+      "target": "docs_docker_operations_normal_start",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/docker-operations.md",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_docker_operations_docker_operations_on_windows",
+      "target": "docs_docker_operations_native_to_docker_data_migration",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/docker-operations.md",
+      "source_location": "L23",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_docker_operations_docker_operations_on_windows",
+      "target": "docs_docker_operations_configuration_and_authentication",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/docker-operations.md",
+      "source_location": "L55",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_docker_operations_docker_operations_on_windows",
+      "target": "docs_docker_operations_failure_diagnosis",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/docker-operations.md",
+      "source_location": "L61",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_docker_operations_docker_operations_on_windows",
+      "target": "docs_docker_operations_evidence_without_overwriting_prior_receipts",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/docker-operations.md",
+      "source_location": "L71",
       "weight": 1.0
     },
     {
@@ -15055,7 +17432,16 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/harness.md",
-      "source_location": "L62",
+      "source_location": "L64",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_harness_md_docs_harness_production_harness",
+      "target": "docs_harness_md_docs_harness_container_migration_and_recovery",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/harness.md",
+      "source_location": "L74",
       "weight": 1.0
     },
     {
@@ -15064,7 +17450,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/harness.md",
-      "source_location": "L72",
+      "source_location": "L82",
       "weight": 1.0
     },
     {
@@ -15073,7 +17459,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/harness.md",
-      "source_location": "L81",
+      "source_location": "L91",
       "weight": 1.0
     },
     {
@@ -15091,7 +17477,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/jev.md",
-      "source_location": "L7",
+      "source_location": "L9",
       "weight": 1.0
     },
     {
@@ -15100,7 +17486,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/jev.md",
-      "source_location": "L15",
+      "source_location": "L17",
       "weight": 1.0
     },
     {
@@ -15213,7 +17599,7 @@
     },
     {
       "source": "docs_verification_실동작_검증_기록",
-      "target": "docs_verification_docker_실행이_막힌_지점",
+      "target": "docs_verification_로컬_docker_복구와_운영_전환",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/verification.md",
@@ -15226,7 +17612,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/verification.md",
-      "source_location": "L35",
+      "source_location": "L45",
       "weight": 1.0
     },
     {
@@ -15235,7 +17621,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/verification.md",
-      "source_location": "L46",
+      "source_location": "L56",
       "weight": 1.0
     },
     {
@@ -16073,6 +18459,447 @@
       "confidence": "EXTRACTED",
       "source_file": "harness/archive/1.1.0/docs/harness.md",
       "source_location": "L63",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_director_md_agents_production_director",
+      "target": "harness_archive_1_2_0_claude_agents_production_director_md_agents_production_director_production_director",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-director.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_director_md_agents_production_director_production_director",
+      "target": "harness_archive_1_2_0_claude_agents_production_director_md_agents_production_director_core_responsibilities",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-director.md",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_director_md_agents_production_director_production_director",
+      "target": "harness_archive_1_2_0_claude_agents_production_director_md_agents_production_director_input_protocol",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-director.md",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_director_md_agents_production_director_production_director",
+      "target": "harness_archive_1_2_0_claude_agents_production_director_md_agents_production_director_output_protocol",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-director.md",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_director_md_agents_production_director_production_director",
+      "target": "harness_archive_1_2_0_claude_agents_production_director_md_agents_production_director_operational_principles",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-director.md",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_director_md_agents_production_director_production_director",
+      "target": "harness_archive_1_2_0_claude_agents_production_director_md_agents_production_director_error_handling",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-director.md",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_director_md_agents_production_director_production_director",
+      "target": "harness_archive_1_2_0_claude_agents_production_director_md_agents_production_director_team_communication",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-director.md",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_editor_md_agents_production_editor",
+      "target": "harness_archive_1_2_0_claude_agents_production_editor_md_agents_production_editor_production_editor",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-editor.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_editor_md_agents_production_editor_production_editor",
+      "target": "harness_archive_1_2_0_claude_agents_production_editor_md_agents_production_editor_core_responsibilities",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-editor.md",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_editor_md_agents_production_editor_production_editor",
+      "target": "harness_archive_1_2_0_claude_agents_production_editor_md_agents_production_editor_input_protocol",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-editor.md",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_editor_md_agents_production_editor_production_editor",
+      "target": "harness_archive_1_2_0_claude_agents_production_editor_md_agents_production_editor_output_protocol",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-editor.md",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_editor_md_agents_production_editor_production_editor",
+      "target": "harness_archive_1_2_0_claude_agents_production_editor_md_agents_production_editor_operational_principles",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-editor.md",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_editor_md_agents_production_editor_production_editor",
+      "target": "harness_archive_1_2_0_claude_agents_production_editor_md_agents_production_editor_error_handling",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-editor.md",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_editor_md_agents_production_editor_production_editor",
+      "target": "harness_archive_1_2_0_claude_agents_production_editor_md_agents_production_editor_team_communication",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-editor.md",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_researcher_md_agents_production_researcher",
+      "target": "harness_archive_1_2_0_claude_agents_production_researcher_md_agents_production_researcher_production_researcher",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-researcher.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_researcher_md_agents_production_researcher_production_researcher",
+      "target": "harness_archive_1_2_0_claude_agents_production_researcher_md_agents_production_researcher_core_responsibilities",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-researcher.md",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_researcher_md_agents_production_researcher_production_researcher",
+      "target": "harness_archive_1_2_0_claude_agents_production_researcher_md_agents_production_researcher_input_protocol",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-researcher.md",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_researcher_md_agents_production_researcher_production_researcher",
+      "target": "harness_archive_1_2_0_claude_agents_production_researcher_md_agents_production_researcher_output_protocol",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-researcher.md",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_researcher_md_agents_production_researcher_production_researcher",
+      "target": "harness_archive_1_2_0_claude_agents_production_researcher_md_agents_production_researcher_operational_principles",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-researcher.md",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_researcher_md_agents_production_researcher_production_researcher",
+      "target": "harness_archive_1_2_0_claude_agents_production_researcher_md_agents_production_researcher_error_handling",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-researcher.md",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_researcher_md_agents_production_researcher_production_researcher",
+      "target": "harness_archive_1_2_0_claude_agents_production_researcher_md_agents_production_researcher_team_communication",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-researcher.md",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_reviewer_md_agents_production_reviewer",
+      "target": "harness_archive_1_2_0_claude_agents_production_reviewer_md_agents_production_reviewer_production_reviewer",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-reviewer.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_reviewer_md_agents_production_reviewer_production_reviewer",
+      "target": "harness_archive_1_2_0_claude_agents_production_reviewer_md_agents_production_reviewer_core_responsibilities",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-reviewer.md",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_reviewer_md_agents_production_reviewer_production_reviewer",
+      "target": "harness_archive_1_2_0_claude_agents_production_reviewer_md_agents_production_reviewer_input_protocol",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-reviewer.md",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_reviewer_md_agents_production_reviewer_production_reviewer",
+      "target": "harness_archive_1_2_0_claude_agents_production_reviewer_md_agents_production_reviewer_output_protocol",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-reviewer.md",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_reviewer_md_agents_production_reviewer_production_reviewer",
+      "target": "harness_archive_1_2_0_claude_agents_production_reviewer_md_agents_production_reviewer_operational_principles",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-reviewer.md",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_reviewer_md_agents_production_reviewer_production_reviewer",
+      "target": "harness_archive_1_2_0_claude_agents_production_reviewer_md_agents_production_reviewer_error_handling",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-reviewer.md",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_reviewer_md_agents_production_reviewer_production_reviewer",
+      "target": "harness_archive_1_2_0_claude_agents_production_reviewer_md_agents_production_reviewer_team_communication",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-reviewer.md",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_supervisor_md_agents_production_supervisor",
+      "target": "harness_archive_1_2_0_claude_agents_production_supervisor_md_agents_production_supervisor_production_supervisor",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-supervisor.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_supervisor_md_agents_production_supervisor_production_supervisor",
+      "target": "harness_archive_1_2_0_claude_agents_production_supervisor_md_agents_production_supervisor_core_responsibilities",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-supervisor.md",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_supervisor_md_agents_production_supervisor_production_supervisor",
+      "target": "harness_archive_1_2_0_claude_agents_production_supervisor_md_agents_production_supervisor_input_protocol",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-supervisor.md",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_supervisor_md_agents_production_supervisor_production_supervisor",
+      "target": "harness_archive_1_2_0_claude_agents_production_supervisor_md_agents_production_supervisor_output_protocol",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-supervisor.md",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_supervisor_md_agents_production_supervisor_production_supervisor",
+      "target": "harness_archive_1_2_0_claude_agents_production_supervisor_md_agents_production_supervisor_operational_principles",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-supervisor.md",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_supervisor_md_agents_production_supervisor_production_supervisor",
+      "target": "harness_archive_1_2_0_claude_agents_production_supervisor_md_agents_production_supervisor_error_handling",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-supervisor.md",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_agents_production_supervisor_md_agents_production_supervisor_production_supervisor",
+      "target": "harness_archive_1_2_0_claude_agents_production_supervisor_md_agents_production_supervisor_team_communication",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/agents/production-supervisor.md",
+      "source_location": "L20",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill",
+      "target": "harness_archive_1_2_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_production_orchestrator",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/skills/production-orchestrator/SKILL.md",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_production_orchestrator",
+      "target": "harness_archive_1_2_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_when_to_use_this_skill",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/skills/production-orchestrator/SKILL.md",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_production_orchestrator",
+      "target": "harness_archive_1_2_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_instructions",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/skills/production-orchestrator/SKILL.md",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_production_orchestrator",
+      "target": "harness_archive_1_2_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_examples",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/skills/production-orchestrator/SKILL.md",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_production_orchestrator",
+      "target": "harness_archive_1_2_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_best_practices",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/.claude/skills/production-orchestrator/SKILL.md",
+      "source_location": "L29",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_docs_harness_versioning_md_docs_harness_versioning",
+      "target": "harness_archive_1_2_0_docs_harness_versioning_md_docs_harness_versioning_harness_promotion_and_rollback",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/docs/harness-versioning.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_docs_harness_md_docs_harness",
+      "target": "harness_archive_1_2_0_docs_harness_md_docs_harness_production_harness",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/docs/harness.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_docs_harness_md_docs_harness_production_harness",
+      "target": "harness_archive_1_2_0_docs_harness_md_docs_harness_roles_and_handoffs",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/docs/harness.md",
+      "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_docs_harness_md_docs_harness_production_harness",
+      "target": "harness_archive_1_2_0_docs_harness_md_docs_harness_runtime_boundary",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/docs/harness.md",
+      "source_location": "L31",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_docs_harness_md_docs_harness_production_harness",
+      "target": "harness_archive_1_2_0_docs_harness_md_docs_harness_executable_production_graph",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/docs/harness.md",
+      "source_location": "L35",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_docs_harness_md_docs_harness_production_harness",
+      "target": "harness_archive_1_2_0_docs_harness_md_docs_harness_saved_editing_and_native_narration",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/docs/harness.md",
+      "source_location": "L54",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_docs_harness_md_docs_harness_production_harness",
+      "target": "harness_archive_1_2_0_docs_harness_md_docs_harness_exact_candidate_review",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/docs/harness.md",
+      "source_location": "L62",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_docs_harness_md_docs_harness_production_harness",
+      "target": "harness_archive_1_2_0_docs_harness_md_docs_harness_durable_memory",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/docs/harness.md",
+      "source_location": "L72",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_archive_1_2_0_docs_harness_md_docs_harness_production_harness",
+      "target": "harness_archive_1_2_0_docs_harness_md_docs_harness_acceptance_scenarios",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/archive/1.2.0/docs/harness.md",
+      "source_location": "L81",
       "weight": 1.0
     },
     {
@@ -17363,6 +20190,456 @@
       "weight": 1.0
     },
     {
+      "source": "harness_versions_1_3_0_claude_agents_production_director_md_agents_production_director",
+      "target": "harness_versions_1_3_0_claude_agents_production_director_md_agents_production_director_production_director",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-director.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_director_md_agents_production_director_production_director",
+      "target": "harness_versions_1_3_0_claude_agents_production_director_md_agents_production_director_core_responsibilities",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-director.md",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_director_md_agents_production_director_production_director",
+      "target": "harness_versions_1_3_0_claude_agents_production_director_md_agents_production_director_input_protocol",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-director.md",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_director_md_agents_production_director_production_director",
+      "target": "harness_versions_1_3_0_claude_agents_production_director_md_agents_production_director_output_protocol",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-director.md",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_director_md_agents_production_director_production_director",
+      "target": "harness_versions_1_3_0_claude_agents_production_director_md_agents_production_director_operational_principles",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-director.md",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_director_md_agents_production_director_production_director",
+      "target": "harness_versions_1_3_0_claude_agents_production_director_md_agents_production_director_error_handling",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-director.md",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_director_md_agents_production_director_production_director",
+      "target": "harness_versions_1_3_0_claude_agents_production_director_md_agents_production_director_team_communication",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-director.md",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_editor_md_agents_production_editor",
+      "target": "harness_versions_1_3_0_claude_agents_production_editor_md_agents_production_editor_production_editor",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-editor.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_editor_md_agents_production_editor_production_editor",
+      "target": "harness_versions_1_3_0_claude_agents_production_editor_md_agents_production_editor_core_responsibilities",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-editor.md",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_editor_md_agents_production_editor_production_editor",
+      "target": "harness_versions_1_3_0_claude_agents_production_editor_md_agents_production_editor_input_protocol",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-editor.md",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_editor_md_agents_production_editor_production_editor",
+      "target": "harness_versions_1_3_0_claude_agents_production_editor_md_agents_production_editor_output_protocol",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-editor.md",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_editor_md_agents_production_editor_production_editor",
+      "target": "harness_versions_1_3_0_claude_agents_production_editor_md_agents_production_editor_operational_principles",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-editor.md",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_editor_md_agents_production_editor_production_editor",
+      "target": "harness_versions_1_3_0_claude_agents_production_editor_md_agents_production_editor_error_handling",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-editor.md",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_editor_md_agents_production_editor_production_editor",
+      "target": "harness_versions_1_3_0_claude_agents_production_editor_md_agents_production_editor_team_communication",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-editor.md",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_researcher_md_agents_production_researcher",
+      "target": "harness_versions_1_3_0_claude_agents_production_researcher_md_agents_production_researcher_production_researcher",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-researcher.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_researcher_md_agents_production_researcher_production_researcher",
+      "target": "harness_versions_1_3_0_claude_agents_production_researcher_md_agents_production_researcher_core_responsibilities",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-researcher.md",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_researcher_md_agents_production_researcher_production_researcher",
+      "target": "harness_versions_1_3_0_claude_agents_production_researcher_md_agents_production_researcher_input_protocol",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-researcher.md",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_researcher_md_agents_production_researcher_production_researcher",
+      "target": "harness_versions_1_3_0_claude_agents_production_researcher_md_agents_production_researcher_output_protocol",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-researcher.md",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_researcher_md_agents_production_researcher_production_researcher",
+      "target": "harness_versions_1_3_0_claude_agents_production_researcher_md_agents_production_researcher_operational_principles",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-researcher.md",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_researcher_md_agents_production_researcher_production_researcher",
+      "target": "harness_versions_1_3_0_claude_agents_production_researcher_md_agents_production_researcher_error_handling",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-researcher.md",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_researcher_md_agents_production_researcher_production_researcher",
+      "target": "harness_versions_1_3_0_claude_agents_production_researcher_md_agents_production_researcher_team_communication",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-researcher.md",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_reviewer_md_agents_production_reviewer",
+      "target": "harness_versions_1_3_0_claude_agents_production_reviewer_md_agents_production_reviewer_production_reviewer",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-reviewer.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_reviewer_md_agents_production_reviewer_production_reviewer",
+      "target": "harness_versions_1_3_0_claude_agents_production_reviewer_md_agents_production_reviewer_core_responsibilities",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-reviewer.md",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_reviewer_md_agents_production_reviewer_production_reviewer",
+      "target": "harness_versions_1_3_0_claude_agents_production_reviewer_md_agents_production_reviewer_input_protocol",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-reviewer.md",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_reviewer_md_agents_production_reviewer_production_reviewer",
+      "target": "harness_versions_1_3_0_claude_agents_production_reviewer_md_agents_production_reviewer_output_protocol",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-reviewer.md",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_reviewer_md_agents_production_reviewer_production_reviewer",
+      "target": "harness_versions_1_3_0_claude_agents_production_reviewer_md_agents_production_reviewer_operational_principles",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-reviewer.md",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_reviewer_md_agents_production_reviewer_production_reviewer",
+      "target": "harness_versions_1_3_0_claude_agents_production_reviewer_md_agents_production_reviewer_error_handling",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-reviewer.md",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_reviewer_md_agents_production_reviewer_production_reviewer",
+      "target": "harness_versions_1_3_0_claude_agents_production_reviewer_md_agents_production_reviewer_team_communication",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-reviewer.md",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_supervisor_md_agents_production_supervisor",
+      "target": "harness_versions_1_3_0_claude_agents_production_supervisor_md_agents_production_supervisor_production_supervisor",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-supervisor.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_supervisor_md_agents_production_supervisor_production_supervisor",
+      "target": "harness_versions_1_3_0_claude_agents_production_supervisor_md_agents_production_supervisor_core_responsibilities",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-supervisor.md",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_supervisor_md_agents_production_supervisor_production_supervisor",
+      "target": "harness_versions_1_3_0_claude_agents_production_supervisor_md_agents_production_supervisor_input_protocol",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-supervisor.md",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_supervisor_md_agents_production_supervisor_production_supervisor",
+      "target": "harness_versions_1_3_0_claude_agents_production_supervisor_md_agents_production_supervisor_output_protocol",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-supervisor.md",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_supervisor_md_agents_production_supervisor_production_supervisor",
+      "target": "harness_versions_1_3_0_claude_agents_production_supervisor_md_agents_production_supervisor_operational_principles",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-supervisor.md",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_supervisor_md_agents_production_supervisor_production_supervisor",
+      "target": "harness_versions_1_3_0_claude_agents_production_supervisor_md_agents_production_supervisor_error_handling",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-supervisor.md",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_agents_production_supervisor_md_agents_production_supervisor_production_supervisor",
+      "target": "harness_versions_1_3_0_claude_agents_production_supervisor_md_agents_production_supervisor_team_communication",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/agents/production-supervisor.md",
+      "source_location": "L20",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill",
+      "target": "harness_versions_1_3_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_production_orchestrator",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/skills/production-orchestrator/SKILL.md",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_production_orchestrator",
+      "target": "harness_versions_1_3_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_when_to_use_this_skill",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/skills/production-orchestrator/SKILL.md",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_production_orchestrator",
+      "target": "harness_versions_1_3_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_instructions",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/skills/production-orchestrator/SKILL.md",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_production_orchestrator",
+      "target": "harness_versions_1_3_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_examples",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/skills/production-orchestrator/SKILL.md",
+      "source_location": "L25",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_production_orchestrator",
+      "target": "harness_versions_1_3_0_claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_best_practices",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/.claude/skills/production-orchestrator/SKILL.md",
+      "source_location": "L30",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_docs_harness_versioning_md_docs_harness_versioning",
+      "target": "harness_versions_1_3_0_docs_harness_versioning_md_docs_harness_versioning_harness_promotion_and_rollback",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/docs/harness-versioning.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_docs_harness_md_docs_harness",
+      "target": "harness_versions_1_3_0_docs_harness_md_docs_harness_production_harness",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/docs/harness.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_docs_harness_md_docs_harness_production_harness",
+      "target": "harness_versions_1_3_0_docs_harness_md_docs_harness_roles_and_handoffs",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/docs/harness.md",
+      "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_docs_harness_md_docs_harness_production_harness",
+      "target": "harness_versions_1_3_0_docs_harness_md_docs_harness_runtime_boundary",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/docs/harness.md",
+      "source_location": "L31",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_docs_harness_md_docs_harness_production_harness",
+      "target": "harness_versions_1_3_0_docs_harness_md_docs_harness_executable_production_graph",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/docs/harness.md",
+      "source_location": "L35",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_docs_harness_md_docs_harness_production_harness",
+      "target": "harness_versions_1_3_0_docs_harness_md_docs_harness_saved_editing_and_native_narration",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/docs/harness.md",
+      "source_location": "L54",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_docs_harness_md_docs_harness_production_harness",
+      "target": "harness_versions_1_3_0_docs_harness_md_docs_harness_exact_candidate_review",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/docs/harness.md",
+      "source_location": "L64",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_docs_harness_md_docs_harness_production_harness",
+      "target": "harness_versions_1_3_0_docs_harness_md_docs_harness_container_migration_and_recovery",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/docs/harness.md",
+      "source_location": "L74",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_docs_harness_md_docs_harness_production_harness",
+      "target": "harness_versions_1_3_0_docs_harness_md_docs_harness_durable_memory",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/docs/harness.md",
+      "source_location": "L82",
+      "weight": 1.0
+    },
+    {
+      "source": "harness_versions_1_3_0_docs_harness_md_docs_harness_production_harness",
+      "target": "harness_versions_1_3_0_docs_harness_md_docs_harness_acceptance_scenarios",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "harness/versions/1.3.0/docs/harness.md",
+      "source_location": "L91",
+      "weight": 1.0
+    },
+    {
       "source": "llm_wiki_agents",
       "target": "llm_wiki_agents_frameforge_knowledge_contract",
       "relation": "contains",
@@ -17436,11 +20713,20 @@
     },
     {
       "source": "reports_runtime_verification_2026_10_18",
-      "target": "reports_runtime_verification_2026_10_18_runtime_verification",
+      "target": "reports_runtime_verification_2026_10_18_current_docker_deployment",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "llm-wiki/wiki/reports/runtime-verification-2026-10-18.md",
       "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "reports_runtime_verification_2026_10_18",
+      "target": "reports_runtime_verification_2026_10_18_historical_evidence_and_limits",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "llm-wiki/wiki/reports/runtime-verification-2026-10-18.md",
+      "source_location": "L23",
       "weight": 1.0
     },
     {
@@ -17459,7 +20745,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "scripts/agent-bridge.mjs",
-      "source_location": "L39",
+      "source_location": "L38",
       "weight": 1.0
     },
     {
@@ -17503,6 +20789,26 @@
       "weight": 1.0
     },
     {
+      "source": "tests_bridge_speech_test_fixture",
+      "target": "scripts_agent_bridge_createagentbridge",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/bridge-speech.test.mjs",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_import_snapshot_test_fixture",
+      "target": "scripts_snapshot_data_snapshotdata",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/import-snapshot.test.mjs",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
       "source": "tests_narration_test_fixture",
       "target": "server_store_starterscene",
       "relation": "calls",
@@ -17543,6 +20849,50 @@
       "weight": 1.0
     },
     {
+      "source": "server_app_createapp",
+      "target": "server_narration_createspeechprovider",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "server/app.mjs",
+      "source_location": "L194",
+      "weight": 1.0
+    },
+    {
+      "source": "server_narration_speechrequest",
+      "target": "server_validation_object",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "server/narration.mjs",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "server_narration_speechrequest",
+      "target": "server_validation_text",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "server/narration.mjs",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "server_narration_probespeechfile",
+      "target": "server_process_execute",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "server/narration.mjs",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
       "source": "server_narration_listspeechvoices",
       "target": "server_process_execute",
       "relation": "calls",
@@ -17550,7 +20900,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "server/narration.mjs",
-      "source_location": "L15",
+      "source_location": "L31",
       "weight": 1.0
     },
     {
@@ -17561,7 +20911,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "server/narration.mjs",
-      "source_location": "L26",
+      "source_location": "L43",
       "weight": 1.0
     },
     {
@@ -17572,7 +20922,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "server/narration.mjs",
-      "source_location": "L47",
+      "source_location": "L131",
       "weight": 1.0
     },
     {
@@ -17583,7 +20933,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "server/narration.mjs",
-      "source_location": "L49",
+      "source_location": "L133",
       "weight": 1.0
     },
     {
@@ -17594,7 +20944,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "server/narration.mjs",
-      "source_location": "L84",
+      "source_location": "L168",
       "weight": 1.0
     },
     {
@@ -17605,7 +20955,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "server/narration.mjs",
-      "source_location": "L102",
+      "source_location": "L186",
       "weight": 1.0
     },
     {
@@ -17738,6 +21088,613 @@
       "confidence_score": 1.0,
       "source_file": "tests/workflows.test.mjs",
       "source_location": "L27",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_agent_bridge",
+      "target": "server_process",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/agent-bridge.mjs",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_agent_bridge",
+      "target": "server_process_execute",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/agent-bridge.mjs",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_agent_bridge",
+      "target": "server_validation",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/agent-bridge.mjs",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_agent_bridge",
+      "target": "server_validation_scenes",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/agent-bridge.mjs",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_agent_bridge",
+      "target": "scripts_agent_bridge_root",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/agent-bridge.mjs",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_agent_bridge",
+      "target": "scripts_agent_bridge_verified",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/agent-bridge.mjs",
+      "source_location": "L28",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_agent_bridge",
+      "target": "scripts_agent_bridge_availability",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/agent-bridge.mjs",
+      "source_location": "L29",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_agent_bridge",
+      "target": "scripts_agent_bridge_parseresult",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/agent-bridge.mjs",
+      "source_location": "L33",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_agent_bridge",
+      "target": "scripts_agent_bridge_run",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/agent-bridge.mjs",
+      "source_location": "L41",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_agent_bridge_run",
+      "target": "scripts_agent_bridge_availability",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/agent-bridge.mjs",
+      "source_location": "L42",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_jev_review",
+      "target": "scripts_jev_review_proposal",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/jev-review.mjs",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_jev_review",
+      "target": "scripts_jev_review_review",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/jev-review.mjs",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_jev_review",
+      "target": "scripts_jev_review_receipt",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/jev-review.mjs",
+      "source_location": "L27",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_production_browser_smoke",
+      "target": "scripts_production_browser_smoke_checkpoint",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/production-browser-smoke.py",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_production_browser_smoke",
+      "target": "scripts_production_browser_smoke_api",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/production-browser-smoke.py",
+      "source_location": "L38",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_production_browser_smoke",
+      "target": "scripts_production_browser_smoke_wait_for_record",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/production-browser-smoke.py",
+      "source_location": "L43",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_production_browser_smoke",
+      "target": "scripts_production_browser_smoke_select_workflow",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/production-browser-smoke.py",
+      "source_location": "L54",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_production_browser_smoke",
+      "target": "scripts_production_browser_smoke_viewport_metrics",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/production-browser-smoke.py",
+      "source_location": "L61",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_production_browser_smoke_wait_for_record",
+      "target": "scripts_production_browser_smoke_api",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/production-browser-smoke.py",
+      "source_location": "L46",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_production_smoke",
+      "target": "scripts_production_smoke_pause",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/production-smoke.mjs",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_production_smoke",
+      "target": "scripts_production_smoke_api",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/production-smoke.mjs",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_production_smoke",
+      "target": "scripts_production_smoke_voice",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/production-smoke.mjs",
+      "source_location": "L20",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_production_smoke",
+      "target": "scripts_production_smoke_nodes",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/production-smoke.mjs",
+      "source_location": "L37",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_production_smoke",
+      "target": "scripts_production_smoke_bytes",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/production-smoke.mjs",
+      "source_location": "L49",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_production_smoke",
+      "target": "scripts_production_smoke_sha256",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/production-smoke.mjs",
+      "source_location": "L50",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_production_smoke",
+      "target": "scripts_production_smoke_file",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/production-smoke.mjs",
+      "source_location": "L53",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_production_smoke",
+      "target": "scripts_production_smoke_probe",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/production-smoke.mjs",
+      "source_location": "L56",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_production_smoke",
+      "target": "scripts_production_smoke_meanvolume",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/production-smoke.mjs",
+      "source_location": "L60",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_production_smoke",
+      "target": "scripts_production_smoke_persisted",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/production-smoke.mjs",
+      "source_location": "L65",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_production_smoke",
+      "target": "scripts_production_smoke_result",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/production-smoke.mjs",
+      "source_location": "L67",
+      "weight": 1.0
+    },
+    {
+      "source": "server_app",
+      "target": "server_narration_listspeechvoices",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "server/app.mjs",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "server_narration",
+      "target": "server_narration_listspeechvoices",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server/narration.mjs",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "server_narration",
+      "target": "server_narration_synthesizespeech",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server/narration.mjs",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "server_narration",
+      "target": "server_narration_narrationqueue",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "server/narration.mjs",
+      "source_location": "L34",
+      "weight": 1.0
+    },
+    {
+      "source": "server_narration_narrationqueue",
+      "target": "server_narration_narrationqueue_constructor",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "server/narration.mjs",
+      "source_location": "L35",
+      "weight": 1.0
+    },
+    {
+      "source": "server_narration_narrationqueue",
+      "target": "server_narration_narrationqueue_start",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "server/narration.mjs",
+      "source_location": "L46",
+      "weight": 1.0
+    },
+    {
+      "source": "server_narration_narrationqueue",
+      "target": "server_narration_narrationqueue_process",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "server/narration.mjs",
+      "source_location": "L72",
+      "weight": 1.0
+    },
+    {
+      "source": "server_narration_narrationqueue",
+      "target": "server_narration_narrationqueue_close",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "server/narration.mjs",
+      "source_location": "L119",
+      "weight": 1.0
+    },
+    {
+      "source": "server_narration_narrationqueue_constructor",
+      "target": "server_narration_stamp",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "server/narration.mjs",
+      "source_location": "L43",
+      "weight": 1.0
+    },
+    {
+      "source": "server_narration_narrationqueue_process",
+      "target": "server_narration_stamp",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "server/narration.mjs",
+      "source_location": "L96",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_agents_production_editor_md_agents_production_editor_production_editor",
+      "target": "claude_agents_production_editor_md_agents_production_editor_error_handling",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/agents/production-editor.md",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_agents_production_editor_md_agents_production_editor_production_editor",
+      "target": "claude_agents_production_editor_md_agents_production_editor_team_communication",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/agents/production-editor.md",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_production_orchestrator",
+      "target": "claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_examples",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/production-orchestrator/SKILL.md",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_production_orchestrator",
+      "target": "claude_skills_production_orchestrator_skill_md_production_orchestrator_skill_best_practices",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".claude/skills/production-orchestrator/SKILL.md",
+      "source_location": "L29",
+      "weight": 1.0
+    },
+    {
+      "source": "mex_router_session_bootstrap",
+      "target": "mex_router_routing_table",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".mex/ROUTER.md",
+      "source_location": "L46",
+      "weight": 1.0
+    },
+    {
+      "source": "mex_router_session_bootstrap",
+      "target": "mex_router_behavioural_contract",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".mex/ROUTER.md",
+      "source_location": "L59",
+      "weight": 1.0
+    },
+    {
+      "source": "mex_router_session_bootstrap",
+      "target": "mex_router_production_task_patterns",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".mex/ROUTER.md",
+      "source_location": "L73",
+      "weight": 1.0
+    },
+    {
+      "source": "context_setup_setup",
+      "target": "context_setup_native_narration_and_jev_availability",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".mex/context/setup.md",
+      "source_location": "L36",
+      "weight": 1.0
+    },
+    {
+      "source": "readme_frameforge_studio",
+      "target": "readme_하니스_최신_버전과_아카이브",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L91",
+      "weight": 1.0
+    },
+    {
+      "source": "readme_frameforge_studio",
+      "target": "readme_지속되는_지식",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L104",
+      "weight": 1.0
+    },
+    {
+      "source": "readme_frameforge_studio",
+      "target": "readme_검증과_현재_경계",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L123",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_harness_md_docs_harness_production_harness",
+      "target": "docs_harness_md_docs_harness_exact_candidate_review",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/harness.md",
+      "source_location": "L62",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_harness_md_docs_harness_production_harness",
+      "target": "docs_harness_md_docs_harness_durable_memory",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/harness.md",
+      "source_location": "L72",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_harness_md_docs_harness_production_harness",
+      "target": "docs_harness_md_docs_harness_acceptance_scenarios",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/harness.md",
+      "source_location": "L81",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_jev_jev_실제_검토",
+      "target": "docs_jev_실행_경계",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/jev.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_jev_jev_실제_검토",
+      "target": "docs_jev_재현",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/jev.md",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_verification_실동작_검증_기록",
+      "target": "docs_verification_현재_기능_경계",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/verification.md",
+      "source_location": "L35",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_verification_실동작_검증_기록",
+      "target": "docs_verification_재검증",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/verification.md",
+      "source_location": "L46",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_agent_bridge_parseresult",
+      "target": "server_validation_scenes",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/agent-bridge.mjs",
+      "source_location": "L39",
+      "weight": 1.0
+    },
+    {
+      "source": "server_narration_listspeechvoices",
+      "target": "server_process_execute",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "server/narration.mjs",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "server_narration_synthesizespeech",
+      "target": "server_process_execute",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "server/narration.mjs",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "server_narration_narrationqueue_start",
+      "target": "server_validation_object",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "server/narration.mjs",
+      "source_location": "L47",
+      "weight": 1.0
+    },
+    {
+      "source": "server_narration_narrationqueue_start",
+      "target": "server_validation_text",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "server/narration.mjs",
+      "source_location": "L49",
+      "weight": 1.0
+    },
+    {
+      "source": "server_narration_narrationqueue_process",
+      "target": "server_workflows_workflowengine_update",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "server/narration.mjs",
+      "source_location": "L84",
+      "weight": 1.0
+    },
+    {
+      "source": "server_narration_narrationqueue_process",
+      "target": "server_validation_scenes",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "server/narration.mjs",
+      "source_location": "L102",
       "weight": 1.0
     },
     {
@@ -20166,15 +24123,6 @@
     },
     {
       "source": "docs_verification_실동작_검증_기록",
-      "target": "docs_verification_docker_실행이_막힌_지점",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "docs/verification.md",
-      "source_location": "L24",
-      "weight": 1.0
-    },
-    {
-      "source": "docs_verification_실동작_검증_기록",
       "target": "docs_verification_현재_기능_경계",
       "relation": "contains",
       "confidence": "EXTRACTED",
@@ -21788,57 +25736,11 @@
     },
     {
       "source": "scripts_agent_bridge",
-      "target": "scripts_agent_bridge_verified",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/agent-bridge.mjs",
-      "source_location": "L27",
-      "weight": 1.0
-    },
-    {
-      "source": "scripts_agent_bridge",
-      "target": "scripts_agent_bridge_availability",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/agent-bridge.mjs",
-      "source_location": "L28",
-      "weight": 1.0
-    },
-    {
-      "source": "scripts_agent_bridge",
-      "target": "scripts_agent_bridge_parseresult",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/agent-bridge.mjs",
-      "source_location": "L32",
-      "weight": 1.0
-    },
-    {
-      "source": "scripts_agent_bridge",
-      "target": "scripts_agent_bridge_run",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/agent-bridge.mjs",
-      "source_location": "L40",
-      "weight": 1.0
-    },
-    {
-      "source": "scripts_agent_bridge",
       "target": "scripts_agent_bridge_hash",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "scripts/agent-bridge.mjs",
       "source_location": "L68",
-      "weight": 1.0
-    },
-    {
-      "source": "scripts_agent_bridge_run",
-      "target": "scripts_agent_bridge_availability",
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/agent-bridge.mjs",
-      "source_location": "L41",
       "weight": 1.0
     },
     {
@@ -22314,16 +26216,6 @@
       "confidence": "EXTRACTED",
       "source_file": ".mex/context/architecture.md",
       "source_location": "L34",
-      "weight": 1.0
-    },
-    {
-      "source": "scripts_agent_bridge_parseresult",
-      "target": "server_validation_scenes",
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "scripts/agent-bridge.mjs",
-      "source_location": "L38",
       "weight": 1.0
     },
     {

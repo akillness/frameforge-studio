@@ -1,0 +1,88 @@
+{
+  "observedAt": "2026-10-18T05:22:52.433Z",
+  "host": "codex",
+  "profile": "frameforge-codex",
+  "runtimeMode": "advisory",
+  "hostAuthorizationGranted": false,
+  "task": "Restore local Docker operation without resetting user data; preserve the working video editor and verify actual container rendering and restart persistence. User explicitly authorized Docker repair and Jev use.",
+  "proposal": {
+    "diagnosis": "Docker daemon absent; WSL status times out after 12 seconds; WSLService remains Stop Pending with unchanged PID and checkpoint 0. No vmmem or wslhost processes. Current shell has non-elevated Windows token.",
+    "repair": "Use normal Windows UAC consent to run a bounded script. Verify Microsoft signature and exact service executable, recheck unchanged Stop Pending PID and no active guests, terminate only that stuck service process, start WSLService. Never bypass UAC, reset Docker, unregister distributions, delete volumes, or reboot.",
+    "application": "Stage Docker on a separate loopback port and a new volume. Snapshot SQLite consistently, copy immutable media, compare integrity/IDs/hashes. Preserve Windows speech through authenticated bounded host bridge. Verify staging before switching the requested live service, retain rollback snapshot and old host data.",
+    "tests": "Service status, docker info, isolated Compose start, real authenticated Korean narration and MP4 rendering, exact review hash, container restart persistence, external agent bridge. Host service continues until staging succeeds."
+  },
+  "review": {
+    "verdict": "proposal_only",
+    "reason": "Below threshold or unfavorable in: evidence_supports (ans=yes, conf=0.51); unrelated_changes (ans=yes, conf=0.61); needs_clarification (ans=no, conf=0.54)",
+    "failingQuestions": [
+      "evidence_supports (ans=yes, conf=0.51)",
+      "unrelated_changes (ans=yes, conf=0.61)",
+      "needs_clarification (ans=no, conf=0.54)"
+    ],
+    "threshold": 0.8,
+    "mode": "jev",
+    "backend": {
+      "kind": "api",
+      "driver": "typesafe",
+      "model": "jev-1.13.0",
+      "configuredModel": "jev-latest",
+      "tier": "unvalidated",
+      "attestation": null
+    },
+    "attempted": [
+      "api"
+    ],
+    "receiptVersion": 2,
+    "receipt": "9c2f6fe581068cf323b30bbace9a992f027a52012bfd8f4816a9570422fa8262",
+    "review": {
+      "model": "jev-1.13.0",
+      "answers": {
+        "addresses_task": {
+          "probability": 0.83,
+          "answer": "yes",
+          "confidence": 0.83
+        },
+        "evidence_supports": {
+          "probability": 0.51,
+          "answer": "yes",
+          "confidence": 0.51
+        },
+        "unrelated_changes": {
+          "probability": 0.61,
+          "answer": "yes",
+          "confidence": 0.61
+        },
+        "needs_clarification": {
+          "probability": 0.46,
+          "answer": "no",
+          "confidence": 0.54
+        }
+      },
+      "usage": {
+        "input_tokens": 605,
+        "output_tokens": 80
+      },
+      "requests": 1,
+      "source": "api",
+      "backend": {
+        "kind": "api",
+        "driver": "typesafe",
+        "model": "jev-1.13.0",
+        "configuredModel": "jev-latest",
+        "tier": "unvalidated",
+        "attestation": null
+      },
+      "attempted": [
+        "api"
+      ],
+      "attemptDetails": [
+        {
+          "kind": "api",
+          "error": null
+        }
+      ],
+      "error": null,
+      "latencyMs": 582
+    }
+  }
+}

@@ -51,7 +51,7 @@ flowchart LR
 
 Node 22.13 이상, FFmpeg/ffprobe와 한국어 폰트가 필요합니다. npm 런타임 의존성은 없습니다. 개발 기본 주소는 `127.0.0.1:4310`입니다.
 
-내레이션 생성은 Windows SAPI의 설치된 목소리를 사용합니다. 현재 호스트의 Microsoft Heami Desktop 한국어 음성으로 실제 생성·비무음 MP4를 확인했습니다. Linux Docker에서는 이 음성 제공자가 비활성으로 표시되며, 업로드한 음성의 편집·렌더는 지원합니다.
+내레이션 생성은 Windows SAPI의 설치된 목소리를 사용합니다. Linux Docker도 인증된 호스트 브리지로 한국어 WAV를 받아 장면에 연결합니다. 실제 Docker → Windows 음성 → 1080×1920 MP4 제작과 브라우저 재생을 확인했습니다. 브리지가 없으면 제공자 실패를 명시하며, 업로드한 음성의 편집·렌더도 지원합니다.
 
 ```powershell
 node scripts/configure.mjs
@@ -71,32 +71,46 @@ powershell -NoProfile -File scripts/stop-local.ps1
 ## Docker와 Tailscale
 
 ```powershell
-node scripts/configure.mjs
-docker compose config --quiet
-docker compose up -d --build
-docker compose ps
-tailscale serve --bg --https=443 http://127.0.0.1:4310
+# 기존 운영 데이터가 이전된 이 PC에서
+& .\scripts\start-docker.ps1
+# 소스 변경 후 이미지 갱신
+& .\scripts\start-docker.ps1 -Build
+docker compose -p frameforge-studio ps
 ```
 
 컨테이너는 비루트 계정, 읽기 전용 루트 파일시스템, `/data` 영속 볼륨, 루프백 포트 바인딩을 사용합니다. FFmpeg와 Noto CJK 폰트를 이미지에 포함합니다. 호스트 실행과 컨테이너 실행은 같은 4310 포트를 사용하므로 전환 전에 기존 서버만 중지합니다. 호스트 `data/`와 Docker 볼륨은 별도 저장소이므로 기존 운영 데이터는 백업 후 명시적으로 옮겨야 합니다.
 
-컨테이너의 에이전트 호출 대상은 `host.docker.internal:4311`입니다. 호스트 브리지 기본 바인딩은 루프백입니다. Docker 환경에서 호스트 접근이 가능한지 확인하고 필요한 인터페이스와 방화벽만 설정해야 합니다. 브리지 토큰은 `.env`로 공급하며 인증 정보를 컨테이너에 복사하지 않습니다.
+컨테이너의 에이전트·음성 호출 대상은 `host.docker.internal:4311`입니다. 이 PC의 Docker에서 호스트 루프백 브리지 접근과 실제 Codex 응답을 확인했습니다. `HOST_AGENT_BRIDGE_URL`로 대상만 별도 지정할 수 있습니다. 브리지 토큰은 비공개 환경변수로 공급하며 CLI OAuth 자격증명은 호스트에 유지합니다. [초기 이전·재시작·복구 운영 절차](docs/docker-operations.md)를 제공합니다. 런처는 기존 볼륨과 비어 있지 않은 DB를 확인하여 빈 제작실로 잘못 시작하지 않습니다.
 
 **Docker 실동작 검증:** [GitHub CI 39095384742](https://github.com/akillness/frameforge-studio/actions/runs/39095384742)에서 소스 `c56cc4a`의 58개 테스트, 이미지 빌드, 비루트·읽기 전용 Compose 기동, 인증된 1080×1920 H.264/AAC 렌더링·다운로드와 저장된 편집본의 검토를 통과했습니다. 재시작 후 에피소드·이력·검토 결정·동일 MP4 해시 보존도 확인했습니다. [컨테이너 검증 결과](artifacts/container-smoke.json)를 저장했습니다.
 
-**현재 로컬 배포 제한:** 이 Windows의 WSLService가 `Stop Pending` 상태이고 서비스 제어가 `Access is denied`로 거부됩니다. 현재 운영 URL은 호스트 Node 서버에 연결됩니다. Linux CI의 Docker 성공과 별개로, 이 PC의 Docker 전환 및 컨테이너→호스트 에이전트 브리지 경로는 아직 검증하지 못했습니다. [운영 검증 기록](docs/verification.md)을 확인하세요.
+**현재 로컬 배포:** WSL 서비스를 복구한 뒤 Docker 29.5.2로 운영 URL을 전환했습니다. 기존 채널 4개·에피소드 3개·미디어 10개의 ID·버전·해시를 보존했습니다. 한국어 음성, 실제 Codex 대본, MP4 렌더, HTTPS 브라우저 재생·검토와 컨테이너 재시작 보존을 검증했습니다. [이전 근거](artifacts/docker-migration.json), [운영 Docker 근거](artifacts/docker-verification.json), [재시작 근거](artifacts/live-container-smoke.json), [전체 검증 기록](docs/verification.md)을 확인하세요.
+
+```mermaid
+flowchart LR
+  U[Tailscale HTTPS] --> D[Docker 웹 편집기 · FFmpeg]
+  D --> V[영속 볼륨 · SQLite / 미디어 / 이력]
+  D -->|인증된 요청| B[Windows 호스트 브리지]
+  B --> S[한국어 SAPI · WAV]
+  B --> A[Codex / JEO / JEOPI]
+  I[Aside 명령 수신기] --> D
+```
+
+![Docker 운영 서비스의 제작·영상 검토 화면](docs/assets/docker-live/review-desktop.png)
+
+[Docker HTTPS 브라우저 검증](artifacts/docker-live-production-browser-smoke.json): 음성·영상 재생, 검토 저장, 1440/390px 화면, 페이지 오류 0.
 
 HTTPS 프록시를 사용할 때 `.env`에 `PUBLIC_ORIGIN=https://서비스주소`를 지정합니다. Compose에도 전달되며 로그인 쿠키에 `Secure`가 적용되고 쓰기 요청의 Origin을 제한합니다.
 
 ## 하니스 최신 버전과 아카이브
 
-활성 버전은 `harness/manifest.json`이 가리키는 **1.2.0**입니다. 음성 생성·편집 보존·영상 검토 계약을 반영했고, 이전 **1.0.0·1.1.0** 번들은 `harness/archive/`에 원본 그대로 보존됩니다. 원본 `.claude/agents/`, `.claude/skills/` 및 `docs/harness.md`를 수정한 다음 새 버전을 승격합니다. 보존된 버전 파일은 직접 수정하지 않습니다.
+활성 버전은 `harness/manifest.json`이 가리키는 **1.3.0**입니다. Docker 음성 브리지와 데이터 이전 검증 계약을 반영했고, 이전 **1.0.0·1.1.0·1.2.0** 번들은 `harness/archive/`에 원본 그대로 보존됩니다. 원본 `.claude/agents/`, `.claude/skills/` 및 `docs/harness.md`를 수정한 다음 새 버전을 승격합니다. 보존된 버전 파일은 직접 수정하지 않습니다.
 
 ```powershell
 node scripts/version-harness.mjs verify
 # 다음 계약을 수정한 뒤 새 버전으로 승격
-node scripts/version-harness.mjs promote 1.3.0
-node scripts/version-harness.mjs rollback 1.2.0
+node scripts/version-harness.mjs promote 1.4.0
+node scripts/version-harness.mjs rollback 1.3.0
 ```
 
 SHA-256 검증, 독점 잠금, 원자적 활성 포인터 변경, 중복 버전 거부와 이전 번들 보존을 수행합니다. 외부의 과거 Hermes 제작물은 삭제하거나 저장소로 무단 복사하지 않았습니다. [버전 운영 규칙](docs/harness-versioning.md)을 참고하세요.
@@ -139,5 +153,7 @@ Naver의 전체 실시간 순위를 자동 수집한다고 주장하지 않습�
 장면 편집기의 미리보기는 레이아웃 확인용이며 MP4와 자막 크기가 완전히 일치하지 않습니다. 최종 자막·음성·길이는 완성 영상 검토 플레이어에서 확인합니다.
 
 ECC 2.2.3 활성 설치를 확인했고 실제 코드/검증 작업에 적용했습니다. Jev는 최신 실행기를 별도 캐시에 고정하고 `frameforge-codex` 프로필로 **실제 API 검토**를 실행했습니다. 응답 모델은 `jev-1.13.0`, 결과는 `proposal_only`입니다. 과제 부합성 0.93, 근거 지지 0.80이었으나 두 항목의 확신도가 기준 0.80에 못 미쳤습니다. `unvalidated` 참고 모드이며 자동 훅·권한 부여는 없습니다. [실제 응답과 판단 근거](artifacts/jev-live-review.json), [재현 방법](docs/jev.md)을 제공합니다. API 키는 저장소 밖 비공개 프로필에서만 읽습니다.
+
+Docker 변경에 대해서도 Jev 실제 API 검토를 추가 실행했습니다. 결과는 `proposal_only`이며, [현재 구현 검토 영수증](artifacts/jev-docker-review.json)에 근거와 한계를 보존했습니다. 자동 허가로 취급하지 않고 ECC 독립 리뷰와 실동작 검증을 별도로 완료했습니다.
 
 설계 참고: [ComfyUI 노드](https://docs.comfy.org/development/core-concepts/nodes), [Tailscale Serve](https://tailscale.com/docs/features/tailscale-serve), [Google Trends](https://support.google.com/trends/answer/3076011), [Naver DataLab](https://developers.naver.com/docs/serviceapi/datalab/search/search.md). README SVG는 이 프로젝트를 위해 직접 작성했습니다.

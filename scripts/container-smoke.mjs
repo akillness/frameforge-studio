@@ -70,7 +70,7 @@ async function probeVideo(bytes, outputUrl, mode) {
 }
 
 /** Independent authenticated deployment smoke. Tokens/cookies never enter its durable receipt. */
-export async function runContainerSmoke({ stage = 'render', baseUrl = process.env.STUDIO_URL || 'http://127.0.0.1:4310', loginToken = process.env.LOGIN_TOKEN, artifactPath = 'artifacts/container-smoke.json', probeMode = process.env.CONTAINER_SMOKE_PROBE || 'container' } = {}) {
+export async function runContainerSmoke({ stage = 'render', baseUrl = process.env.STUDIO_URL || 'http://127.0.0.1:4310', loginToken = process.env.LOGIN_TOKEN, artifactPath = process.env.CONTAINER_SMOKE_RECEIPT_PATH || 'artifacts/container-smoke.json', probeMode = process.env.CONTAINER_SMOKE_PROBE || 'container' } = {}) {
   assert.ok(['render', 'verify-persistence'].includes(stage), 'Stage must be render or verify-persistence');
   assert.ok(typeof loginToken === 'string' && loginToken.length >= 16, 'Set LOGIN_TOKEN in the execution environment');
   const parsed = new URL(baseUrl);

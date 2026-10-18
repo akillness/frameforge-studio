@@ -18,7 +18,9 @@ last_updated: 2026-10-18
 - Use portable Markdown knowledge atoms to preserve sources and production concepts across agent tools; the wiki remains distinct from runtime private data.
 - Keep a deterministic structural graph separate from semantic claims. The installed Graphify CLI has a smaller command surface than the current skill reference.
 - Treat provider availability, actual invocation and publishing as separate evidence states. A scaffold is not proof that those integrations run.
-- Use the host's installed Korean SAPI voice for the first verified narration path. Keep unavailable providers explicit on Linux; local voice synthesis is not a hosted generative-video integration.
+- Use the host's installed Korean SAPI voice for the first verified narration path. Use its authenticated host bridge from Linux containers and keep bridge/voice failures explicit; local voice synthesis is not a hosted generative-video integration.
 - Attach generated narration and review decisions only to their exact episode versions. Review additionally binds the render job, URL and SHA-256, so a later edit cannot inherit approval of an earlier output.
 - Restrict uploaded media demuxers and protocols at decode/probe time. A DASH playlist disguised as MP4 can otherwise reference a file outside uploads despite a safe top-level path; executable regression tests exercise the escape and all 11 allowed formats.
+- Use a distinct `HOST_AGENT_BRIDGE_URL` Compose override so host loopback configuration cannot redirect container traffic to itself.
+- Migrate consistent read-only SQLite snapshots into new empty volumes with hash/identity checks and explicit non-root ownership. Preserve original data and failed outputs rather than resetting storage.
 These are the current implementation rationale and boundaries, not historical claims about unrecorded decisions.

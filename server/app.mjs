@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Store, entity, starterScene } from './store.mjs';
 import { HttpError, object, text, optionalText, choice, url, scenes, formats, episodePatch } from './validation.mjs';
 import { WorkflowEngine } from './workflows.mjs';
-import { NarrationQueue, listSpeechVoices } from './narration.mjs';
+import { NarrationQueue, createSpeechProvider } from './narration.mjs';
 
 const PUBLIC_DIR = fileURLToPath(new URL('../public/', import.meta.url));
 const MAX_JSON = 1024 * 1024;
@@ -191,7 +191,8 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
   }
 
   const workflows = new WorkflowEngine({ store, fetchTrends: refreshTrends, runAgent: async (...args) => (await adapter()).runAgent(...args), render: (episode) => enqueueRender(episode, true), validateAssets });
-  const narration = new NarrationQueue({ store, ...speech });
+  const speechProvider = speech || createSpeechProvider();
+  const narration = new NarrationQueue({ store, ...speechProvider });
 
   async function upload(request, requestUrl) {
     const name = text(requestUrl.searchParams.get('name'), 'upload name', 200);
@@ -252,7 +253,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       return json(response, 200, { ...state, integrations: await integrationStatus(), graph: { nodes, edges } });
     }
     if (request.method === 'GET' && path === '/api/integrations') return json(response, 200, await integrationStatus());
-    if (request.method === 'GET' && path === '/api/speech/voices') return json(response, 200, await (speech?.listVoices || listSpeechVoices)());
+    if (request.method === 'GET' && path === '/api/speech/voices') return json(response, 200, await speechProvider.listVoices());
     if (request.method === 'GET' && path === '/api/knowledge') return json(response, 200, store.knowledge());
     if (request.method === 'GET' && path === '/api/commands') return json(response, 200, store.list('commands'));
     if (request.method === 'GET' && path === '/api/workflows') return json(response, 200, store.list('workflows'));

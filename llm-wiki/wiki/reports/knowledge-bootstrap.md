@@ -3,7 +3,7 @@ type: Report
 title: Production knowledge bootstrap
 description: File-based production roles and portable knowledge were authored with local MEX and Graphify CLI verification.
 tags: [verification, harness, memory]
-timestamp: 2026-10-18T02:30:52.477990+00:00
+timestamp: 2026-10-18T08:01:06.897385+00:00
 ---
 
 # Production knowledge bootstrap
@@ -16,6 +16,6 @@ Graphify 0.8.39 rejects `scope` and the newer update description flags. Its help
 
 Source: [[wiki/sources/product-brief]]. Architecture rationale: [[wiki/concepts/knowledge-layers]]. No shared skill catalog or global integration hooks were modified.
 
-The current harness is the verified 1.1.0 node-workflow contract, following the actual 1.0.0 linear contract preserved in `harness/archive/1.0.0/`. The current pointer and bundle hash are recorded in [harness/manifest.json](../../../harness/manifest.json). Immutable bundles were not rewritten during later memory updates.
+The initial node-workflow harness was 1.1.0 after the 1.0.0 linear contract. The current verified harness is 1.3.0 with authenticated container speech and safe migration/restart handoffs; 1.2.0 and all older versions remain archived without byte changes. The current pointer and bundle hash are recorded in [harness/manifest.json](../../../harness/manifest.json). Immutable bundles were not rewritten during later memory updates.
 
 Subsequent live agent and full-workflow evidence is filed separately in [[wiki/reports/runtime-verification-2026-10-18]]. The initial scaffold population failure above is historical setup evidence, not a claim that later Codex bridge invocation failed.

@@ -20,4 +20,4 @@ There are no npm runtime dependencies in package.json. Native node:crypto, node:
 ## What We Deliberately Do NOT Use
 There is no required frontend bundler or database server. No provider API key is embedded in the browser bundle.
 ## Version Constraints
-package.json requires Node >=22.13. Environment checks observed Node 22.17.0, FFmpeg 8.1.1, MEX 0.8.3 and Graphify 0.8.39. Recheck installed versions before using newer documentation flags.
+package.json requires Node >=22.13. Current host checks observed Node 22.23.3 and Docker engine 29.5.2; earlier tooling checks recorded FFmpeg 8.1.1, MEX 0.8.3 and Graphify 0.8.39. Recheck installed versions before using newer documentation flags.

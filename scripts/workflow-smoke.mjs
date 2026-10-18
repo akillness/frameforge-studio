@@ -22,7 +22,7 @@ for (let i = 0; i < 180; i++) {
 await mkdir('artifacts', { recursive: true });
 const output = run.nodeRuns.find(n => n.type === 'render')?.output;
 const result = { verifiedAt: new Date().toISOString(), workflowId: workflow.id, episodeId: episode.id, runId: run.id, status: run.status, nodes: run.nodeRuns.map(n => ({ type: n.type, status: n.status, error: n.error })), output };
-await writeFile('artifacts/workflow-smoke.json', JSON.stringify(result, null, 2));
+await writeFile(process.env.WORKFLOW_SMOKE_RECEIPT_PATH || 'artifacts/workflow-smoke.json', JSON.stringify(result, null, 2));
 if (run.status !== 'awaiting_review' || !output?.outputUrl) throw new Error(JSON.stringify(result));
 const rendered = await fetch(base + output.outputUrl, { headers: { cookie } });
 if (!rendered.ok || Number(rendered.headers.get('content-length')) < 1000) throw new Error('Workflow artifact missing');

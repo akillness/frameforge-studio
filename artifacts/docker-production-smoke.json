@@ -1,0 +1,21 @@
+{
+  "verifiedAt": "2026-10-18T07:54:43.251Z",
+  "base": "http://127.0.0.1:4320",
+  "provider": "windows-sapi",
+  "transport": "host-bridge",
+  "voice": "Microsoft Heami Desktop",
+  "episodeId": "7f283619-278c-4b8b-87da-7d3bad87eb2d",
+  "workflowId": "4945157c-12b9-4462-a6da-a664404719ae",
+  "runId": "3ca29f52-cdb6-40e0-9f31-394726fe3060",
+  "narrationJobId": "638ea841-6ca4-4ff6-8f30-645f80c1c2f1",
+  "narrationVersion": 3,
+  "renderVersion": 4,
+  "width": 1080,
+  "height": 1920,
+  "duration": 4.821333,
+  "meanVolumeDb": -24.1,
+  "sha256": "6021406548888eba043b9da7e239ffc3fe61398a56c5f6a7819ce64567f2494b",
+  "savedEditPreserved": true,
+  "reviewPersisted": true,
+  "reviewMeaning": "Automated test decision, not owner acceptance or publication"
+}

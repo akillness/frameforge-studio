@@ -21,3 +21,7 @@
 - 2026-10-18: CI39091649080 completed successfully on f384821; Linux Docker build/render/restart persistence passed. Local Windows WSL service privilege blocker and untested container-to-host agent bridge remain. Graphify exact duplicate edge records were measured and disclosed.
 
 - 2026-10-18: Fixed native Graphify duplicate accumulation with whole-record normalization before HTML export. Two sequential refreshes retained the same node/unique-edge counts and zero exact duplicates; metadata-distinct edges were preserved. See `.graphify/normalization-validation.json`.
+
+- 2026-10-18: Superseded historical Windows Docker blocker with healthy local engine 29.5.2 and production Linux container on the unchanged private Tailscale route. Recorded preserved 4 channels/3 episodes/10 media hashes, actual host-bridge SAPI/Codex paths, staged browser/restart checks, 77 tests/38 syntax files and harness 1.3.0. Kept previous CI source scope and raw captures intact; graph refresh waits for stable sources.
+
+- 2026-10-18: Final refresh: MEX 47 files, 1138 nodes/3526 edges, check100/100 with zero source changes; Graphify 1005 nodes/1961 whole-record-unique edges from 148 source files, zero duplicates and portable source paths. No semantic enrichment or provider calls were used. Wiki lint passed for project8 and canonical17 pages with zero missing/broken/orphan entries; OKF/roles/raw-source validation passed. Live HTTPS browser and restart/migration receipts reconciled.

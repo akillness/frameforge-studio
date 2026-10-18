@@ -1,0 +1,32 @@
+{
+  "verifiedAt": "2026-10-18T07:56:06.749Z",
+  "workflowId": "968ce496-57d9-48db-915c-8a2e43364fa9",
+  "episodeId": "3b7d72d5-5b02-44b8-9136-9b45e7f34330",
+  "runId": "6e3a89c7-58eb-4c06-90f4-e92a0265367c",
+  "status": "awaiting_review",
+  "nodes": [
+    {
+      "type": "script",
+      "status": "completed"
+    },
+    {
+      "type": "storyboard",
+      "status": "completed"
+    },
+    {
+      "type": "render",
+      "status": "completed"
+    },
+    {
+      "type": "review",
+      "status": "awaiting_review"
+    }
+  ],
+  "output": {
+    "filename": "30b825d6-0ffd-40e6-8a30-cd1fbb6a8cbc.mp4",
+    "outputUrl": "/api/exports/30b825d6-0ffd-40e6-8a30-cd1fbb6a8cbc.mp4",
+    "sha256": "41b9f7598f989cb69afd7f7eea9a4df1c5d45a633a739a4ac788527a90b9eee6",
+    "jobId": "d1a10f77-533d-4651-91be-c85633a4dbed",
+    "episodeVersion": 2
+  }
+}

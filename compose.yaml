@@ -4,12 +4,13 @@ services:
     image: frameforge-studio:local
     restart: unless-stopped
     ports:
-      - "127.0.0.1:4310:4310"
+      - "127.0.0.1:${STUDIO_PORT:-4310}:4310"
     environment:
       LOGIN_TOKEN: ${LOGIN_TOKEN:?Run node scripts/configure.mjs first}
       PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-}
-      AGENT_BRIDGE_URL: http://host.docker.internal:4311
+      AGENT_BRIDGE_URL: ${HOST_AGENT_BRIDGE_URL:-http://host.docker.internal:4311}
       AGENT_BRIDGE_TOKEN: ${AGENT_BRIDGE_TOKEN:-}
+      SPEECH_PROVIDER: host-bridge
       NAVER_CLIENT_ID: ${NAVER_CLIENT_ID:-}
       NAVER_CLIENT_SECRET: ${NAVER_CLIENT_SECRET:-}
     extra_hosts:

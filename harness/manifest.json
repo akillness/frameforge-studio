@@ -1,9 +1,9 @@
 {
   "schema": "frameforge-harness-current/v1",
-  "currentVersion": "1.2.0",
-  "bundlePath": "versions/1.2.0",
-  "bundleSha256": "99651030199d57b278ee0a441c76c984562500c9be4fc3542f883504c99a0f6b",
-  "previousVersion": "1.1.0",
+  "currentVersion": "1.3.0",
+  "bundlePath": "versions/1.3.0",
+  "bundleSha256": "e35a843fc3ba44bc24ce6368cb59f3c16c3df9e53b513e927df98a394c935186",
+  "previousVersion": "1.2.0",
   "action": "promote",
-  "updatedAt": "2026-10-18T03:46:13.433Z"
+  "updatedAt": "2026-10-18T07:58:10.160Z"
 }

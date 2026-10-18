@@ -16,15 +16,18 @@ const invoke = args => {
 };
 const configured = invoke(['status', '--operation', 'review']);
 if (!configured.active || !configured.policies?.review?.usable) throw new Error('Selected Jev review profile is unavailable');
-const production = JSON.parse(await readFile('artifacts/production-smoke.json', 'utf8'));
-const task = 'Implement a working video editor with local narration, preservation of authored scenes in a node workflow, and durable review of the exact exported video. Keep old harness releases archived.';
+const evidence = {};
+for (const name of ['docker-live-production-smoke', 'docker-live-production-browser-smoke', 'live-container-smoke', 'docker-migration', 'docker-workflow-smoke', 'docker-verification']) {
+  evidence[name] = JSON.parse(await readFile(`artifacts/${name}.json`, 'utf8'));
+}
+const task = 'Fix local Docker operation, build the missing container-to-Windows speech integration, independently review it and verify the real video editor before updating GitHub. Preserve existing channel/episode/media history and archived harness releases. The user explicitly authorized Docker deployment and Jev review.';
 const proposal = {
-  change: 'Windows SAPI narration queue with optimistic version protection; saved-scene workflow; exact version/job/SHA256-bound approval or revision request; harness 1.2.0 with prior versions preserved.',
-  evidence: { localTests: '55 passing API, workflow, narration, review and harness tests', production },
-  limits: ['Native narration requires Windows installed voices', 'Review smoke decisions are automated tests, not owner acceptance', 'YouTube publication is not implemented', 'Local Docker host is blocked by WSL service state; Linux CI is separately verified'],
+  change: 'Recovered stuck WSLService using normal administrator consent, without resetting distributions or volumes. Added authenticated bounded WAV speech bridge, consistent read-only SQLite snapshot and no-overwrite importer. Staged and migrated existing data to a non-root read-only Docker service on the existing Tailscale URL. Added guarded repeatable launcher and preserved harness 1.2.0 under archive when promoting 1.3.0.',
+  evidence,
+  limits: ['Speech and agent CLI providers still require the Windows host bridge', 'Automated review decisions are test evidence, not owner creative acceptance or publication', 'YouTube OAuth publication and paid actor/video generation are not implemented', 'Jev receives this bounded implementation/evidence summary, not the whole source or private account database'],
 };
 const review = invoke(['review', task, JSON.stringify(proposal)]);
-const receipt = { observedAt: new Date().toISOString(), host: 'codex', profile, runtimeMode: 'advisory', hookTrust: 'No automatic hook installed or trusted', upstreamCommit: process.env.JEV_RUNTIME_COMMIT || null, liveReviewExecuted: true, mockIsLiveEvidence: false, hostAuthorizationGranted: false, review };
-await writeFile('artifacts/jev-live-review.json', `${JSON.stringify(receipt, null, 2)}\n`);
+const receipt = { observedAt: new Date().toISOString(), host: 'codex', profile, runtimeMode: 'advisory', hookTrust: 'No automatic hook installed or trusted', upstreamCommit: process.env.JEV_RUNTIME_COMMIT || null, liveReviewExecuted: true, mockIsLiveEvidence: false, hostAuthorizationGranted: false, task, proposal, review };
+await writeFile('artifacts/jev-docker-review.json', `${JSON.stringify(receipt, null, 2)}\n`);
 console.log(JSON.stringify({ profile, verdict: review.verdict, backend: review.backend, receipt: review.receipt, error: review.review?.error || null }));
 if (review.verdict === 'unavailable') process.exitCode = 2;

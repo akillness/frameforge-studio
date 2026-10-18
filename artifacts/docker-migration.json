@@ -1,0 +1,29 @@
+{
+  "verifiedAt": "2026-10-18T07:59:51.825Z",
+  "base": "http://127.0.0.1:4310",
+  "originalEntityIdsPreserved": true,
+  "originalEpisodeVersionsPreserved": true,
+  "originalWorkflowVersionsPreserved": true,
+  "mediaHashesVerified": 10,
+  "sourceTableCounts": {
+    "entities": 133,
+    "history": 19,
+    "workflow_history": 9,
+    "workflow_reviews": 3,
+    "settings": 1
+  },
+  "sourceEntityCounts": {
+    "channels": 4,
+    "commands": 7,
+    "episodes": 3,
+    "events": 80,
+    "jobs": 5,
+    "narrationJobs": 5,
+    "references": 3,
+    "templates": 3,
+    "trends": 11,
+    "uploads": 5,
+    "workflowRuns": 4,
+    "workflows": 3
+  }
+}

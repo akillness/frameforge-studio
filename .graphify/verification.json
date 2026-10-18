@@ -1,5 +1,5 @@
 {
-  "observedAt": "2026-10-18T03:55:55.144509+00:00",
+  "observedAt": "2026-10-18T08:03:28.296737+00:00",
   "mode": "native deterministic code extraction; semantic enrichment not run",
   "commands": [
     {
@@ -18,7 +18,7 @@
         "--no-cluster"
       ],
       "exitCode": 0,
-      "output": "Re-extracting code files in . (no LLM needed)...\n  AST extraction: 150/150 files (100%) [8 workers]\n[graphify watch] Rebuilt (no clustering): 839 nodes, 2220 edges\n[graphify watch] graph.json updated in .graphify\nCode graph updated. For doc/paper/image changes run /graphify --update in your AI assistant.\nTip: set GEMINI_API_KEY or GOOGLE_API_KEY to use Gemini for semantic extraction.\n"
+      "output": "Re-extracting code files in . (no LLM needed)...\n  AST extraction: 187/187 files (100%) [8 workers]\n[graphify watch] Rebuilt (no clustering): 1005 nodes, 2947 edges\n[graphify watch] graph.json updated in .graphify\nCode graph updated. For doc/paper/image changes run /graphify --update in your AI assistant.\nTip: set GEMINI_API_KEY or GOOGLE_API_KEY to use Gemini for semantic extraction.\n"
     },
     {
       "command": [
@@ -34,18 +34,18 @@
         "FrameForge structural code graph"
       ],
       "exitCode": 0,
-      "output": "wrote .graphify\\graph.html (70.3 KB)\nopen with: xdg-open .graphify\\graph.html  (or file://<repo>\\.graphify\\graph.html)\n"
+      "output": "wrote .graphify\\graph.html (81.5 KB)\nopen with: xdg-open .graphify\\graph.html  (or file://<repo>\\.graphify\\graph.html)\n"
     }
   ],
   "edgeRecordAudit": {
-    "raw": 2220,
-    "exactUnique": 1687,
-    "exactDuplicatesRemoved": 533,
+    "raw": 2947,
+    "exactUnique": 1961,
+    "exactDuplicatesRemoved": 986,
     "remainingDuplicates": 0,
     "method": "stable JSON of the whole edge record; distinct metadata preserved"
   },
-  "nodes": 839,
-  "edges": 1687,
+  "nodes": 1005,
+  "edges": 1961,
   "sourceFiles": [
     ".agents/skills/mex-inbox/SKILL.md",
     ".agents/skills/mex-inbox/references/cli-workflows.md",
@@ -75,6 +75,7 @@
     "AGENTS.md",
     "README.md",
     "docs/contract.md",
+    "docs/docker-operations.md",
     "docs/harness-versioning.md",
     "docs/harness.md",
     "docs/jev.md",
@@ -96,6 +97,14 @@
     "harness/archive/1.1.0/.claude/skills/production-orchestrator/SKILL.md",
     "harness/archive/1.1.0/docs/harness-versioning.md",
     "harness/archive/1.1.0/docs/harness.md",
+    "harness/archive/1.2.0/.claude/agents/production-director.md",
+    "harness/archive/1.2.0/.claude/agents/production-editor.md",
+    "harness/archive/1.2.0/.claude/agents/production-researcher.md",
+    "harness/archive/1.2.0/.claude/agents/production-reviewer.md",
+    "harness/archive/1.2.0/.claude/agents/production-supervisor.md",
+    "harness/archive/1.2.0/.claude/skills/production-orchestrator/SKILL.md",
+    "harness/archive/1.2.0/docs/harness-versioning.md",
+    "harness/archive/1.2.0/docs/harness.md",
     "harness/archive/README.md",
     "harness/manifest.json",
     "harness/versions/1.0.0/.claude/agents/production-director.md",
@@ -122,6 +131,14 @@
     "harness/versions/1.2.0/.claude/skills/production-orchestrator/SKILL.md",
     "harness/versions/1.2.0/docs/harness-versioning.md",
     "harness/versions/1.2.0/docs/harness.md",
+    "harness/versions/1.3.0/.claude/agents/production-director.md",
+    "harness/versions/1.3.0/.claude/agents/production-editor.md",
+    "harness/versions/1.3.0/.claude/agents/production-researcher.md",
+    "harness/versions/1.3.0/.claude/agents/production-reviewer.md",
+    "harness/versions/1.3.0/.claude/agents/production-supervisor.md",
+    "harness/versions/1.3.0/.claude/skills/production-orchestrator/SKILL.md",
+    "harness/versions/1.3.0/docs/harness-versioning.md",
+    "harness/versions/1.3.0/docs/harness.md",
     "llm-wiki/AGENTS.md",
     "llm-wiki/index.md",
     "llm-wiki/log.md",
@@ -144,13 +161,17 @@
     "scripts/configure.mjs",
     "scripts/container-smoke.mjs",
     "scripts/import-research.mjs",
+    "scripts/import-snapshot.mjs",
     "scripts/jeo-adapter.mjs",
     "scripts/jev-review.mjs",
     "scripts/media-smoke.mjs",
     "scripts/production-browser-smoke.py",
     "scripts/production-smoke.mjs",
     "scripts/render-smoke.mjs",
+    "scripts/repair-docker-wsl.ps1",
+    "scripts/snapshot-data.mjs",
     "scripts/speech.ps1",
+    "scripts/start-docker.ps1",
     "scripts/start-local.ps1",
     "scripts/stop-local.ps1",
     "scripts/version-harness.mjs",
@@ -164,19 +185,29 @@
     "server/validation.mjs",
     "server/workflows.mjs",
     "tests/api.test.mjs",
+    "tests/bridge-speech.test.mjs",
     "tests/harness.test.mjs",
+    "tests/import-snapshot.test.mjs",
     "tests/integrations.test.mjs",
     "tests/narration.test.mjs",
     "tests/render-security.test.mjs",
     "tests/render.test.mjs",
     "tests/reviews.test.mjs",
+    "tests/snapshot-data.test.mjs",
     "tests/workflows.test.mjs"
   ],
   "portableSourcePaths": true,
-  "graphSha256": "303b326f5a1aa42a03d055f669f3d0bf7ee9031137a5afe05ca8802b9aa618e9",
+  "graphSha256": "fad595e2ef44794b1f06fc6f501f17607fe83e0b052ab1c838c558d82c7fd20d",
   "limitations": [
     "scope command and newer update flags unavailable in installed version",
     "No semantic descriptions, provider calls or model-evaluated relationship claims",
     "Native tree HTML loads D3 from its CDN for interactive rendering"
-  ]
+  ],
+  "portableCheck": {
+    "command": "graphify portable-check",
+    "exitCode": 1,
+    "reason": "Installed Graphify0.8.39 reports unknown command",
+    "fallback": "Refresh plus independent validation reject absolute/parent-traversing/private source paths; all current paths pass",
+    "fallbackPassed": true
+  }
 }

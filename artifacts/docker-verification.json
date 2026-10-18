@@ -1,0 +1,64 @@
+{
+  "verifiedAt": "2026-10-18T08:00:44.373356+00:00",
+  "engineVersion": "29.5.2",
+  "production": {
+    "image": "sha256:05c8e80a8e1bd836d9a564e62a68b4849de37bc4bbbb58cb5865557b235f8d23",
+    "status": "running",
+    "health": "healthy",
+    "user": "node",
+    "readonly": true,
+    "ports": {
+      "4310/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "4310"
+        }
+      ]
+    },
+    "capDrop": [
+      "ALL"
+    ]
+  },
+  "project": "frameforge-studio",
+  "volume": "frameforge-studio_studio-data",
+  "tests": {
+    "command": "node --test --experimental-test-coverage tests/*.test.mjs",
+    "passed": 77,
+    "failed": 0,
+    "skipped": 0,
+    "reviewer": "independent native subagent"
+  },
+  "syntax": {
+    "command": "npm run check",
+    "modules": 38,
+    "passed": true
+  },
+  "review": {
+    "materialFindingsResolved": [
+      "Launcher rejects missing and empty production database before startup"
+    ],
+    "independentReview": true
+  },
+  "launcher": {
+    "builtAndStarted": true,
+    "repeatedStartVerified": true,
+    "nativeStudioStopped": true,
+    "hostBridgeRetained": true,
+    "asideInboxRunning": true
+  },
+  "recovery": {
+    "startedAt": "2026-10-18T05:23:22.9470220Z",
+    "finishedAt": "2026-10-18T05:23:33.1540552Z",
+    "applied": true,
+    "status": "service-recovered",
+    "actions": [
+      "Stopped the unchanged, verified Stop Pending WSLService process"
+    ],
+    "preservesDistributions": true,
+    "resetsDockerData": false,
+    "restartsWindows": false
+  },
+  "observationLimit": "A later host restart interrupted the session; the recovery script did not reboot Windows. Engine and product were freshly verified after resuming.",
+  "data": "Original native data and separate staging/production snapshots retained privately; only a new empty production volume was initialized.",
+  "network": "Tailscale HTTPS Serve forwards loopback 4310; Funnel remains off."
+}

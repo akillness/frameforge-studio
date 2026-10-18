@@ -1,6 +1,9 @@
 """Real HTTPS UI smoke: narration -> saved edit workflow -> human review record.
 
-Requires installed Playwright/Chromium, local .env, and production-smoke receipt.
+Requires installed Playwright/Chromium, LOGIN_TOKEN (environment or .env), and a
+production-smoke receipt. STUDIO_URL selects the service. PRODUCTION_RECEIPT_PATH
+selects input; BROWSER_RECEIPT_PATH and BROWSER_SCREENSHOT_DIR select outputs.
+Relative artifact paths resolve from the repository root.
 Mutates only the receipt's test episode/workflow. Never publishes a channel video.
 """
 import json
@@ -12,13 +15,21 @@ from time import monotonic
 from playwright.sync_api import expect, sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
+ENV_FILE = ROOT / ".env"
 ENV = dict(
-    line.split("=", 1) for line in (ROOT / ".env").read_text(encoding="utf8").splitlines()
+    line.split("=", 1) for line in (ENV_FILE.read_text(encoding="utf8").splitlines() if ENV_FILE.exists() else [])
     if "=" in line and not line.lstrip().startswith("#")
 )
 BASE = os.environ.get("STUDIO_URL") or ENV.get("PUBLIC_ORIGIN") or "https://desktop-qrf3t5t.taila2003e.ts.net"
 BASE = BASE.rstrip("/")
-RECEIPT = json.loads((ROOT / "artifacts/production-smoke.json").read_text(encoding="utf8"))
+RECEIPT_PATH = ROOT / os.environ.get("PRODUCTION_RECEIPT_PATH", "artifacts/production-smoke.json")
+OUTPUT_PATH = ROOT / os.environ.get("BROWSER_RECEIPT_PATH", "artifacts/production-browser-smoke.json")
+SCREENSHOT_DIR = ROOT / os.environ.get("BROWSER_SCREENSHOT_DIR", "docs/assets")
+TOKEN = os.environ.get("LOGIN_TOKEN") or ENV.get("LOGIN_TOKEN")
+assert TOKEN, "LOGIN_TOKEN must be configured in the environment or .env"
+RECEIPT = json.loads(RECEIPT_PATH.read_text(encoding="utf8"))
+OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
 EPISODE_ID, WORKFLOW_ID = RECEIPT["episodeId"], RECEIPT["workflowId"]
 NOTES = "자동 브라우저 검증: 음성 생성·영상 재생·검토 기록의 영속성을 확인한 수정 요청입니다. 소유자의 승인이나 채널 게시가 아닙니다."
 
@@ -62,7 +73,7 @@ with sync_playwright() as playwright:
         return page.evaluate("({width:innerWidth,documentWidth:document.documentElement.scrollWidth})")
 
     page.goto(BASE, wait_until="networkidle")
-    page.locator('input[name="token"]').fill(ENV["LOGIN_TOKEN"])
+    page.locator('input[name="token"]').fill(TOKEN)
     page.locator('#login-form button[type="submit"], #login-form button:not([type])').click()
     expect(page.locator('[data-action="channel"]').first).to_be_visible()
     cookie = next(item for item in context.cookies() if item["name"] == "frameforge_session")
@@ -99,7 +110,7 @@ with sync_playwright() as playwright:
     audio.evaluate("a=>{a.pause();a.currentTime=0;}")
     page.locator("#toast").wait_for(state="hidden")
     page.evaluate("window.scrollTo(0,0)")
-    page.screenshot(path=str(ROOT / "docs/assets/narration-desktop.png"), full_page=True)
+    page.screenshot(path=str(SCREENSHOT_DIR / "narration-desktop.png"), full_page=True)
     checkpoint(f"Narration generated and played: {audio_duration:.3f}s")
 
     select_workflow()
@@ -142,13 +153,13 @@ with sync_playwright() as playwright:
     video.evaluate("v=>{v.currentTime=0.1;}")
     page.wait_for_timeout(300)
     page.evaluate("window.scrollTo(0,0)")
-    page.screenshot(path=str(ROOT / "docs/assets/review-desktop.png"), full_page=True)
+    page.screenshot(path=str(SCREENSHOT_DIR / "review-desktop.png"), full_page=True)
     desktop = viewport_metrics()
     assert desktop["documentWidth"] <= desktop["width"] + 1, desktop
     page.set_viewport_size({"width": 390, "height": 844})
     page.locator('[data-wf-action="fit"]').click()
     page.evaluate("window.scrollTo(0,0)")
-    page.screenshot(path=str(ROOT / "docs/assets/review-mobile.png"), full_page=True)
+    page.screenshot(path=str(SCREENSHOT_DIR / "review-mobile.png"), full_page=True)
     mobile = viewport_metrics()
     assert mobile["documentWidth"] <= mobile["width"] + 1, mobile
     assert not errors, errors
@@ -166,6 +177,6 @@ with sync_playwright() as playwright:
         "secureCookie": cookie["secure"], "desktopViewport": desktop,
         "mobileViewport": mobile, "pageErrors": errors,
     }
-    (ROOT / "artifacts/production-browser-smoke.json").write_text(json.dumps(result, indent=2), encoding="utf8")
+    OUTPUT_PATH.write_text(json.dumps(result, indent=2), encoding="utf8")
     print(json.dumps(result, indent=2), flush=True)
     browser.close()

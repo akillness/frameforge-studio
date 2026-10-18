@@ -1,0 +1,32 @@
+{
+  "verifiedAt": "2026-10-18T07:56:27.375466+00:00",
+  "base": "http://127.0.0.1:4320",
+  "episodeId": "7f283619-278c-4b8b-87da-7d3bad87eb2d",
+  "workflowId": "4945157c-12b9-4462-a6da-a664404719ae",
+  "runId": "de1be636-fcff-4f81-a319-e0878b8fcab3",
+  "narrationJobId": "df685278-a010-4b55-a492-b115971309f8",
+  "previousNarrationVersion": 3,
+  "narrationVersion": 5,
+  "renderVersion": 6,
+  "latestNarrationDisplayed": true,
+  "narrationButtonsRecover": true,
+  "audioDuration": 4.538776,
+  "audioPlayed": true,
+  "videoDuration": 4.821333,
+  "videoPlayed": true,
+  "existingScenesMode": true,
+  "reviewDecision": "changes_requested",
+  "reviewMeaning": "Automated browser verification, not owner acceptance or publication",
+  "reviewPersistedAfterReload": true,
+  "reviewSha256": "6021406548888eba043b9da7e239ffc3fe61398a56c5f6a7819ce64567f2494b",
+  "secureCookie": false,
+  "desktopViewport": {
+    "width": 1440,
+    "documentWidth": 1440
+  },
+  "mobileViewport": {
+    "width": 390,
+    "documentWidth": 390
+  },
+  "pageErrors": []
+}

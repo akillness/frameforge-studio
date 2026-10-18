@@ -1,5 +1,7 @@
 # Jev 실제 검토
 
+최신 Docker 구현 검토는 [별도 영수증](../artifacts/jev-docker-review.json)에 저장했습니다. 실제 `jev-1.13.0` API 응답은 `proposal_only`입니다. 판단 근거: `Below threshold or unfavorable in: evidence_supports (ans=yes, conf=0.78); unrelated_changes (ans=no, conf=0.67); needs_clarification (ans=no, conf=0.71)`. 77개 테스트, 데이터 이전, 실제 호스트 음성·MP4·HTTPS 브라우저·재시작 근거를 전달했으며, 전체 소스나 비공개 DB를 전송하지 않았습니다. 자동 권한 부여는 없고 결과를 통과시키기 위한 재시도도 하지 않았습니다. 아래 기존 제품 검토는 과거 기록으로 보존합니다.
+
 2026-10-18에 TypeSafe API를 호출해 제품 구현 요약과 실제 생산 smoke 근거를 검토했습니다. 모델 `jev-1.13.0`은 528ms에 응답했고, 899 입력·80 출력 토큰을 보고했습니다. [원본 응답 영수증](../artifacts/jev-live-review.json)은 키·쿠키를 포함하지 않습니다.
 
 결과 `proposal_only`는 과제 부합성 yes 0.93, 근거 지지 yes 0.80, 관련 없는 변경 no 0.76, 추가 확인 필요 no 0.67에 근거합니다. 뒤의 두 확신도가 기준 0.80 미만입니다. 이 결과는 실행 허가가 아니며 테스트를 대신하지 않습니다. 검토 내용은 생성된 영상과 구현 근거의 요약이고 전체 소스 감사가 아닙니다.
@@ -25,4 +27,4 @@ $env:JEV_RUNTIME_COMMIT='d9af9e3de37b0fd940d5cab1897c9b9a00fd8a35'
 node scripts/jev-review.mjs
 ```
 
-스크립트는 먼저 동일 프로필의 review 상태를 검사하고, 키 없이 제품 요약과 `artifacts/production-smoke.json`을 전송합니다. 실행하면 실제 API 호출이 발생하며 영수증을 갱신합니다. 이번 검토 이후 추가된 변경은 별도 테스트·코드 검토로 확인하며 이 영수증이 새 변경까지 검토했다고 주장하지 않습니다.
+스크립트는 먼저 동일 프로필의 review 상태를 검사하고, 비밀값이 없는 현재 Docker 구현 요약과 `artifacts/docker-*.json`, `artifacts/live-container-smoke.json`의 지정된 검증 근거를 전송합니다. 실행하면 실제 API 호출이 발생하며 `artifacts/jev-docker-review.json`을 갱신합니다. 이전 `jev-live-review.json`은 보존합니다. 이번 검토 이후 추가된 변경은 별도 테스트·코드 검토로 확인하며 이 영수증이 새 변경까지 검토했다고 주장하지 않습니다.
