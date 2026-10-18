@@ -22,7 +22,7 @@
 | ECC | 활성 native plugin `ecc@ecc` 2.2.3 확인, 설치 추가 없음 | `codex plugin list --json` |
 | Jev | 격리 프로필로 실제 API 호출, `jev-1.13.0`, `proposal_only`, 528ms, 자동 권한 부여 없음 | `artifacts/jev-live-review.json`, `docs/jev.md` |
 | Tailscale | 요청 계정으로 HTTPS Serve 활성화, 실제 브라우저 접근 | `tailscale serve status`; Funnel 비활성 |
-| Docker | Linux CI에서 이미지 빌드·비루트/읽기전용 Compose 기동·실제 1080×1920 H.264/AAC 렌더·인증 다운로드·저장 편집본 검토·재시작 후 에피소드/이력/작업/검토/MP4 SHA-256 보존 통과 | `artifacts/container-smoke.json`, [CI 39095384742](https://github.com/akillness/frameforge-studio/actions/runs/39095384742) |
+| Docker | Linux CI에서 이미지 빌드·비루트/읽기전용 Compose 기동·실제 1080×1920 H.264/AAC 렌더·인증 다운로드·저장 편집본 검토·재시작 후 에피소드/이력/작업/검토/MP4 SHA-256 보존 통과 | `artifacts/docker-ci-smoke.json`, [CI 39110221470](https://github.com/akillness/frameforge-studio/actions/runs/39110221470) |
 
 ## 로컬 Docker 복구와 운영 전환
 

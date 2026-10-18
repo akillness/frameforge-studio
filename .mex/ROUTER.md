@@ -79,3 +79,5 @@ For every task, follow this loop:
 | Episode version edits | [episode-edits](patterns/episode-edits.md) |
 | Provider availability or failures | [provider-evidence](patterns/provider-evidence.md) |
 | Wiki and graph updates | [knowledge-refresh](patterns/knowledge-refresh.md) |
+
+**Docker release CI:** code commit `0f59211601cba11c7885ed2d28a76581cc695bad` passed [run 39110221470](https://github.com/akillness/frameforge-studio/actions/runs/39110221470): 77 regressions, immutable harness verification, Linux Docker build/render/exact-review/restart persistence. Receipts: `artifacts/docker-ci-run.json` and `artifacts/docker-ci-smoke.json`. Later documentation-only commits do not replace this tested source identity.

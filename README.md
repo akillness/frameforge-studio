@@ -82,7 +82,7 @@ docker compose -p frameforge-studio ps
 
 컨테이너의 에이전트·음성 호출 대상은 `host.docker.internal:4311`입니다. 이 PC의 Docker에서 호스트 루프백 브리지 접근과 실제 Codex 응답을 확인했습니다. `HOST_AGENT_BRIDGE_URL`로 대상만 별도 지정할 수 있습니다. 브리지 토큰은 비공개 환경변수로 공급하며 CLI OAuth 자격증명은 호스트에 유지합니다. [초기 이전·재시작·복구 운영 절차](docs/docker-operations.md)를 제공합니다. 런처는 기존 볼륨과 비어 있지 않은 DB를 확인하여 빈 제작실로 잘못 시작하지 않습니다.
 
-**Docker 실동작 검증:** [GitHub CI 39095384742](https://github.com/akillness/frameforge-studio/actions/runs/39095384742)에서 소스 `c56cc4a`의 58개 테스트, 이미지 빌드, 비루트·읽기 전용 Compose 기동, 인증된 1080×1920 H.264/AAC 렌더링·다운로드와 저장된 편집본의 검토를 통과했습니다. 재시작 후 에피소드·이력·검토 결정·동일 MP4 해시 보존도 확인했습니다. [컨테이너 검증 결과](artifacts/container-smoke.json)를 저장했습니다.
+**Docker 실동작 검증:** [GitHub CI 39110221470](https://github.com/akillness/frameforge-studio/actions/runs/39110221470)에서 소스 `0f59211`의 77개 테스트, 이미지 빌드, 비루트·읽기 전용 Compose 기동, 인증된 1080×1920 H.264/AAC 렌더링·다운로드와 저장된 편집본의 검토를 통과했습니다. 재시작 후 에피소드·이력·검토 결정·동일 MP4 해시 보존도 확인했습니다. [컨테이너 검증 결과](artifacts/docker-ci-smoke.json)를 저장했습니다.
 
 **현재 로컬 배포:** WSL 서비스를 복구한 뒤 Docker 29.5.2로 운영 URL을 전환했습니다. 기존 채널 4개·에피소드 3개·미디어 10개의 ID·버전·해시를 보존했습니다. 한국어 음성, 실제 Codex 대본, MP4 렌더, HTTPS 브라우저 재생·검토와 컨테이너 재시작 보존을 검증했습니다. [이전 근거](artifacts/docker-migration.json), [운영 Docker 근거](artifacts/docker-verification.json), [재시작 근거](artifacts/live-container-smoke.json), [전체 검증 기록](docs/verification.md)을 확인하세요.
 
