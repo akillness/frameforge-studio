@@ -3,10 +3,24 @@ type: Report
 title: FrameForge runtime verification on 2026-10-18
 description: The host service completed a live production DAG and real agent requests while local Windows Docker remained privilege-blocked and Linux Docker CI passed.
 tags: [verification, runtime, workflow]
-timestamp: 2026-10-18T02:55:58.518066+00:00
+timestamp: 2026-10-18T03:43:14.647140+00:00
 ---
 
 # Runtime verification
+
+The final [production browser receipt](../../../artifacts/production-browser-smoke.json), observed at 2026-10-18T03:54:19Z, confirms narration version 9 and render version 10, actual audio/video playback (4.538776/4.821333 seconds), latest narration display and button recovery, saved-scenes execution, a changes_requested decision preserved after reload against the exact render hash, Secure cookie, zero page errors and no overflow at widths 1440 and 390. This test decision is not owner acceptance. Preview caption scale can differ from the encoded MP4; review the final MP4 for output appearance.
+
+Final memory refresh indexed 37 files in MEX (960 nodes, 3098 edges); mex check is 100/100 with zero source changes. Graphify has 839 nodes and 1687 whole-record-unique edges across 124 source files, with zero remaining exact duplicates. Current receipts are `.mex/verification.json` and `.graphify/verification.json`; the earlier two-run normalization check remains historical evidence in `.graphify/normalization-validation.json`, alongside its latest artifact validation.
+
+The latest [production smoke receipt](../../../artifacts/production-smoke.json), observed at 2026-10-18T03:41:07Z, records actual `windows-sapi` synthesis with `Microsoft Heami Desktop`. Narration attached at version 3; the final version-4 render is 1080x1920, 4.821333 seconds, with mean volume -24 dB. Saved edits remained intact and the test review persisted against SHA-256 `f175e54409ff450737c7784f502df762194d8a1fe814617ecc42962b377b21b3`. This is an automated test decision, not owner acceptance or publication. Windows native speech is not automatically available in Linux containers.
+
+The current [Jev status](../../../artifacts/jev-status.json) preserves the initial unavailable audit as history. After an explicitly supplied API credential and isolated setup, the [live review](../../../artifacts/jev-live-review.json) returned jev-1.13.0 in 528 ms with provider error null, using profile frameforge-codex and runtime pinned to d9af9e3de37b0fd940d5cab1897c9b9a00fd8a35. Verdict is proposal_only because unrelated_changes confidence .76 and needs_clarification confidence .67 are below .8. The backend tier remains unvalidated, with no attestation or automatic authority. No hook was installed and no live skill-routing result is claimed. Credential values and absolute credential paths are excluded from the artifacts.
+
+The current [harness manifest](../../../harness/manifest.json) is 1.2.0, with previous 1.1.0 preserved in the archive. It adds the native narration and exact-render review contract to the prior executable DAG.
+
+The latest [CI run 39095384742](https://github.com/akillness/frameforge-studio/actions/runs/39095384742) completed successfully for exact source commit [c56cc4a3e706b978a1f091a3079fb289a59fcb36](https://github.com/akillness/frameforge-studio/commit/c56cc4a3e706b978a1f091a3079fb289a59fcb36). It passed 58 tests, 33-file syntax checks and harness verification. The [container receipt](../../../artifacts/container-smoke.json) verifies a non-root/read-only Linux container's 1080x1920 H.264/AAC render (1.022 seconds), authenticated download, saved-scenes workflow review bound to output SHA-256 `c65039d3af633caee4ea5fe59e5f688c84d0739ded044be6fd7f7db04fe6c413`, and episode/history/job/export/review persistence after restart. This automated approved decision is not owner acceptance or publication. Native Windows speech is validated separately on the host. Local Windows WSL and the container-to-host agent bridge are still unverified; the live URL continues to serve Windows Node.
+
+Final source verification passed 58/58 tests with zero skips and syntax checks across 33 source files. The [media security regression](../../../tests/render-security.test.mjs) demonstrates that unguarded FFprobe follows a nested relative reference from DASH disguised as MP4, then verifies the production allowlists reject the disguised visual/audio inputs. It also verifies decoding of all 11 supported standalone formats and a real mixed media/narration render. This covers the exercised parser boundary, not arbitrary future decoder vulnerabilities.
 
 The [full workflow receipt](../../../artifacts/workflow-smoke.json) records an actual Google RSS → references → Codex → storyboard update → FFmpeg execution. Trend, research, script, storyboard and render completed; review ended at `awaiting_review`. The generated output belongs to episode version 2. This is a local rendered candidate awaiting review, not a published video.
 

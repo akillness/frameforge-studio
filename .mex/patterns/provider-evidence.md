@@ -21,6 +21,7 @@ Load context/architecture.md and inspect server/integrations.mjs plus scripts/ag
 3. Record timeout, missing authentication or invalid output as a failure.
 ## Gotchas
 Never turn an unavailable provider into a fake success. A deterministic built-in helper is not an LLM.
+The current Jev audit is `artifacts/jev-status.json`, with the earlier legacy failure retained as historical evidence. `artifacts/jev-live-review.json` proves one real API review through the pinned isolated runtime; proposal_only and unvalidated tier do not authorize actions or prove decision calibration. Native Windows speech uses `artifacts/production-smoke.json` as real invocation evidence; fixture queue tests alone do not establish voice availability.
 ## Verify
 Run the integration tests and a narrowly scoped real invocation where configured.
 ## Debug

@@ -22,13 +22,13 @@
 | ECC | 활성 native plugin `ecc@ecc` 2.2.3 확인, 설치 추가 없음 | `codex plugin list --json` |
 | Jev | 격리 프로필로 실제 API 호출, `jev-1.13.0`, `proposal_only`, 528ms, 자동 권한 부여 없음 | `artifacts/jev-live-review.json`, `docs/jev.md` |
 | Tailscale | 요청 계정으로 HTTPS Serve 활성화, 실제 브라우저 접근 | `tailscale serve status`; Funnel 비활성 |
-| Docker | Linux CI에서 이미지 빌드·비루트/읽기전용 Compose 기동·실제 1080×1920 H.264/AAC 렌더·인증 다운로드·재시작 후 에피소드/이력/작업/MP4 SHA-256 보존 통과 | `artifacts/container-smoke.json`, [CI 39091649080](https://github.com/akillness/frameforge-studio/actions/runs/39091649080) |
+| Docker | Linux CI에서 이미지 빌드·비루트/읽기전용 Compose 기동·실제 1080×1920 H.264/AAC 렌더·인증 다운로드·저장 편집본 검토·재시작 후 에피소드/이력/작업/검토/MP4 SHA-256 보존 통과 | `artifacts/container-smoke.json`, [CI 39095384742](https://github.com/akillness/frameforge-studio/actions/runs/39095384742) |
 
 ## Docker 실행이 막힌 지점
 
 Docker Desktop 4.76의 현재 로그는 `DockerDesktop/Wsl/CommandTimedOut`를 기록합니다. `wsl.exe -l -v --all`에서 배포판 열거가 종료되지 않았고 WSLService는 `Stop Pending` 상태였습니다. 실행 중인 Linux 작업은 관찰되지 않았습니다. Docker 종료 시도는 실패했고, 멈춘 WSLService만 중지하려는 시도는 `Access is denied`, 서비스 시작도 권한 오류로 거부되었습니다.
 
-배포판 삭제, Docker factory reset, 컴퓨터 재부팅은 수행하지 않았습니다. 이후 **Linux GitHub CI에서 이미지 빌드·컨테이너 기동·컨테이너 내부 렌더링과 재시작 영속성을 검증**했습니다. 검증된 소스 커밋은 `f384821e7c0d66719da52171721b00910c5b0d4e`이며 결과는 `artifacts/container-smoke.json`에 저장했습니다. 컨테이너에서 호스트의 인증된 에이전트 브리지를 호출하는 경로는 CI 범위에 포함되지 않습니다.
+배포판 삭제, Docker factory reset, 컴퓨터 재부팅은 수행하지 않았습니다. 이후 **Linux GitHub CI에서 이미지 빌드·컨테이너 기동·컨테이너 내부 렌더링·정확한 출력 검토와 재시작 영속성을 검증**했습니다. 최신 검증 소스는 `c56cc4a3e706b978a1f091a3079fb289a59fcb36`이며 결과는 `artifacts/container-smoke.json`에 저장했습니다. 이전 기본 렌더 CI 39091649080은 `f384821e7c0d66719da52171721b00910c5b0d4e`에 대한 과거 근거입니다. 컨테이너에서 호스트의 인증된 에이전트 브리지를 호출하는 경로는 CI 범위에 포함되지 않습니다.
 
 현재 URL은 숨김 창으로 지속 실행한 호스트 Node 프로세스에 연결됩니다. Windows 관리자 권한으로 WSL 서비스를 복구한 뒤 이 PC에서 `docker compose up -d --build`와 같은 실동작 검증을 다시 실행해야 합니다. 호스트 `data/`에서 Docker 볼륨으로 데이터 전환 시 별도 백업/복사가 필요합니다. HTTPS 운영의 `PUBLIC_ORIGIN`을 설정했고 브라우저에서 Secure·HttpOnly·SameSite=Strict 쿠키를 확인했습니다.
 

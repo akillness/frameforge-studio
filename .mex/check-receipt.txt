@@ -1,4 +1,4 @@
-Command: mex check
-Drift score: 100/100 - 0 errors, 0 warnings, 0 info
+Drift score: 100/100 — 0 errors, 0 warnings, 0 info
 14 files checked
-graph fresh - 0 source changes (0 added, 0 modified, 0 deleted)
+graph fresh · 0 source changes (0 added, 0 modified, 0 deleted)
+  GRAPH_INDEX_HEAD_CHANGED: Repository HEAD differs from the commit recorded by the last successful graph snapshot.

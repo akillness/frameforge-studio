@@ -1,5 +1,5 @@
 {
-  "observedAt": "2026-10-18T02:58:59.193178+00:00",
+  "observedAt": "2026-10-18T03:55:55.144509+00:00",
   "mode": "native deterministic code extraction; semantic enrichment not run",
   "commands": [
     {
@@ -18,7 +18,7 @@
         "--no-cluster"
       ],
       "exitCode": 0,
-      "output": "Re-extracting code files in . (no LLM needed)...\n  AST extraction: 119/119 files (100%) [8 workers]\n[graphify watch] Rebuilt (no clustering): 649 nodes, 1933 edges\n[graphify watch] graph.json updated in .graphify\nCode graph updated. For doc/paper/image changes run /graphify --update in your AI assistant.\nTip: set GEMINI_API_KEY or GOOGLE_API_KEY to use Gemini for semantic extraction.\n"
+      "output": "Re-extracting code files in . (no LLM needed)...\n  AST extraction: 150/150 files (100%) [8 workers]\n[graphify watch] Rebuilt (no clustering): 839 nodes, 2220 edges\n[graphify watch] graph.json updated in .graphify\nCode graph updated. For doc/paper/image changes run /graphify --update in your AI assistant.\nTip: set GEMINI_API_KEY or GOOGLE_API_KEY to use Gemini for semantic extraction.\n"
     },
     {
       "command": [
@@ -34,18 +34,18 @@
         "FrameForge structural code graph"
       ],
       "exitCode": 0,
-      "output": "wrote .graphify\\graph.html (57.9 KB)\nopen with: xdg-open .graphify\\graph.html  (or file://<repo>\\.graphify\\graph.html)\n"
+      "output": "wrote .graphify\\graph.html (70.3 KB)\nopen with: xdg-open .graphify\\graph.html  (or file://<repo>\\.graphify\\graph.html)\n"
     }
   ],
   "edgeRecordAudit": {
-    "raw": 1933,
-    "exactUnique": 1133,
-    "exactDuplicatesRemoved": 800,
+    "raw": 2220,
+    "exactUnique": 1687,
+    "exactDuplicatesRemoved": 533,
     "remainingDuplicates": 0,
     "method": "stable JSON of the whole edge record; distinct metadata preserved"
   },
-  "nodes": 649,
-  "edges": 1133,
+  "nodes": 839,
+  "edges": 1687,
   "sourceFiles": [
     ".agents/skills/mex-inbox/SKILL.md",
     ".agents/skills/mex-inbox/references/cli-workflows.md",
@@ -77,6 +77,7 @@
     "docs/contract.md",
     "docs/harness-versioning.md",
     "docs/harness.md",
+    "docs/jev.md",
     "docs/research-playbook.md",
     "docs/verification.md",
     "harness/archive/1.0.0/.claude/agents/production-director.md",
@@ -87,6 +88,14 @@
     "harness/archive/1.0.0/.claude/skills/production-orchestrator/SKILL.md",
     "harness/archive/1.0.0/docs/harness-versioning.md",
     "harness/archive/1.0.0/docs/harness.md",
+    "harness/archive/1.1.0/.claude/agents/production-director.md",
+    "harness/archive/1.1.0/.claude/agents/production-editor.md",
+    "harness/archive/1.1.0/.claude/agents/production-researcher.md",
+    "harness/archive/1.1.0/.claude/agents/production-reviewer.md",
+    "harness/archive/1.1.0/.claude/agents/production-supervisor.md",
+    "harness/archive/1.1.0/.claude/skills/production-orchestrator/SKILL.md",
+    "harness/archive/1.1.0/docs/harness-versioning.md",
+    "harness/archive/1.1.0/docs/harness.md",
     "harness/archive/README.md",
     "harness/manifest.json",
     "harness/versions/1.0.0/.claude/agents/production-director.md",
@@ -105,6 +114,14 @@
     "harness/versions/1.1.0/.claude/skills/production-orchestrator/SKILL.md",
     "harness/versions/1.1.0/docs/harness-versioning.md",
     "harness/versions/1.1.0/docs/harness.md",
+    "harness/versions/1.2.0/.claude/agents/production-director.md",
+    "harness/versions/1.2.0/.claude/agents/production-editor.md",
+    "harness/versions/1.2.0/.claude/agents/production-researcher.md",
+    "harness/versions/1.2.0/.claude/agents/production-reviewer.md",
+    "harness/versions/1.2.0/.claude/agents/production-supervisor.md",
+    "harness/versions/1.2.0/.claude/skills/production-orchestrator/SKILL.md",
+    "harness/versions/1.2.0/docs/harness-versioning.md",
+    "harness/versions/1.2.0/docs/harness.md",
     "llm-wiki/AGENTS.md",
     "llm-wiki/index.md",
     "llm-wiki/log.md",
@@ -128,14 +145,19 @@
     "scripts/container-smoke.mjs",
     "scripts/import-research.mjs",
     "scripts/jeo-adapter.mjs",
+    "scripts/jev-review.mjs",
     "scripts/media-smoke.mjs",
+    "scripts/production-browser-smoke.py",
+    "scripts/production-smoke.mjs",
     "scripts/render-smoke.mjs",
+    "scripts/speech.ps1",
     "scripts/start-local.ps1",
     "scripts/stop-local.ps1",
     "scripts/version-harness.mjs",
     "scripts/workflow-smoke.mjs",
     "server/app.mjs",
     "server/integrations.mjs",
+    "server/narration.mjs",
     "server/process.mjs",
     "server/render.mjs",
     "server/store.mjs",
@@ -144,11 +166,14 @@
     "tests/api.test.mjs",
     "tests/harness.test.mjs",
     "tests/integrations.test.mjs",
+    "tests/narration.test.mjs",
+    "tests/render-security.test.mjs",
     "tests/render.test.mjs",
+    "tests/reviews.test.mjs",
     "tests/workflows.test.mjs"
   ],
   "portableSourcePaths": true,
-  "graphSha256": "4385fdc3ef1043b0210a35d97c03c8a092790803af5d64908a58fbd32b485760",
+  "graphSha256": "303b326f5a1aa42a03d055f669f3d0bf7ee9031137a5afe05ca8802b9aa618e9",
   "limitations": [
     "scope command and newer update flags unavailable in installed version",
     "No semantic descriptions, provider calls or model-evaluated relationship claims",

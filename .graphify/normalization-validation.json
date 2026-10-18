@@ -43,5 +43,14 @@
   "duplicateRecordsRemaining": 0,
   "graphSha256": "4385fdc3ef1043b0210a35d97c03c8a092790803af5d64908a58fbd32b485760",
   "htmlSha256": "f07b757e65d78e2e8ab9c8a3ece2f9214ee19c54f86e08758978ffde46f67f4d",
-  "htmlExportAfterNormalization": true
+  "htmlExportAfterNormalization": true,
+  "scope": "Historical two-run normalization regression; latestRefresh validates the current source graph separately.",
+  "latestRefresh": {
+    "observedAt": "2026-10-18T03:55:55.144509+00:00",
+    "nodes": 839,
+    "uniqueEdges": 1687,
+    "remainingDuplicates": 0,
+    "graphSha256": "303b326f5a1aa42a03d055f669f3d0bf7ee9031137a5afe05ca8802b9aa618e9",
+    "htmlSha256": "d3954370d62c32fe3660608cb881a239134af422a364c49de864de83366c5a44"
+  }
 }

@@ -1,5 +1,5 @@
 {
-  "observedAt": "2026-10-18T02:54:33.912Z",
+  "observedAt": "2026-10-18T03:56:04.031Z",
   "mexVersion": "0.8.3",
   "setup": {
     "command": "mex setup --cli (Codex choice 6)",
@@ -11,18 +11,18 @@
   "graphRebuild": {
     "command": "mex graph rebuild --json",
     "state": "succeeded",
-    "filesIndexed": 29,
-    "nodesCreated": 692,
-    "edgesCreated": 2247,
+    "filesIndexed": 37,
+    "nodesCreated": 960,
+    "edgesCreated": 3098,
     "parseHealth": {
-      "total": 29,
-      "ok": 29,
+      "total": 37,
+      "ok": 37,
       "partial": 0,
       "failed": 0,
       "failedPaths": [],
       "failedPathsTruncated": false
     },
-    "observedAt": "2026-10-18T02:54:33.912Z",
+    "observedAt": "2026-10-18T03:56:04.031Z",
     "receipt": ".mex/rebuild-receipt.json"
   },
   "check": {
@@ -33,9 +33,14 @@
     "filesChecked": 14,
     "graphFreshAtCheck": true,
     "receipt": ".mex/check-receipt.txt",
-    "observedAt": "2026-10-18T03:00:53.181040+00:00",
+    "observedAt": "2026-10-18T03:58:41.191635+00:00",
     "sourceChanges": 0,
-    "note": "Checked after Graphify normalization code and regression test edits; no indexed source changes, so no rebuild required."
+    "note": "Post-push mex check reports fresh and zero indexed source changes; HEAD metadata differs from historical rebuild receipt and is explicitly preserved.",
+    "diagnostics": [
+      "GRAPH_INDEX_HEAD_CHANGED: source commit was pushed during validation; check still reports fresh with 0 source changes."
+    ],
+    "currentHead": "c56cc4a3e706b978a1f091a3079fb289a59fcb36",
+    "indexedHead": "720cb349bcbf8b6224189052859f37bd1b96dca0"
   },
   "knowledgeCheck": {
     "command": "python .mex/verify-knowledge.py",
@@ -58,11 +63,11 @@
   ],
   "sharingBoundary": "Authored context is in working tree; graph databases remain checkout-local and ignored.",
   "harnessVersioning": {
-    "observedAt": "2026-10-18T02:37:27.608439+00:00",
-    "currentVersion": "1.1.0",
-    "previousVersion": "1.0.0",
-    "archive": "harness/archive/1.0.0",
-    "bundleSha256": "fbaedf293623eb5af33b86bea4d901d1b1e151ddcdc7ffed420bea750d280a5d",
+    "observedAt": "2026-10-18T03:46:13.433Z",
+    "currentVersion": "1.2.0",
+    "previousVersion": "1.1.0",
+    "archive": "harness/archive/1.1.0",
+    "bundleSha256": "99651030199d57b278ee0a441c76c984562500c9be4fc3542f883504c99a0f6b",
     "verifyCommand": "node scripts/version-harness.mjs verify",
     "verifyExitCode": 0,
     "testsCommand": "node --test tests/harness.test.mjs",
@@ -98,12 +103,112 @@
     "notVerified": [
       "local Windows Docker execution",
       "container-to-host agent bridge connectivity"
-    ]
+    ],
+    "sourceScope": "Earlier named source commit; does not yet certify the new narration/review implementation."
   },
   "publication": {
     "repository": "https://github.com/akillness/frameforge-studio",
     "branch": "main",
-    "commit": "f384821e7c0d66719da52171721b00910c5b0d4e",
+    "commit": "c56cc4a3e706b978a1f091a3079fb289a59fcb36",
     "status": "pushed"
+  },
+  "productionEvidence": {
+    "receipt": "artifacts/production-smoke.json",
+    "verifiedAt": "2026-10-18T03:41:07.359Z",
+    "provider": "windows-sapi",
+    "voice": "Microsoft Heami Desktop",
+    "episodeId": "fa9f2815-f403-45cd-b912-ef24672b3e68",
+    "workflowId": "7ed742a5-99b6-40e8-a59b-e6626d475e1f",
+    "runId": "03b122a2-adb5-46b3-a316-52ef50a68ac5",
+    "narrationJobId": "9facbb45-4038-4db2-935a-24b6b1594280",
+    "narrationVersion": 3,
+    "renderVersion": 4,
+    "width": 1080,
+    "height": 1920,
+    "duration": 4.821333,
+    "meanVolumeDb": -24,
+    "sha256": "f175e54409ff450737c7784f502df762194d8a1fe814617ecc42962b377b21b3",
+    "savedEditPreserved": true,
+    "reviewPersisted": true,
+    "reviewMeaning": "Automated test decision, not owner acceptance or publication"
+  },
+  "jevEvidence": {
+    "receipt": "artifacts/jev-status.json",
+    "liveReceipt": "artifacts/jev-live-review.json",
+    "status": "live_advisory_review_completed",
+    "profile": "frameforge-codex",
+    "servedModel": "jev-1.13.0",
+    "latencyMs": 528,
+    "providerError": null,
+    "verdict": "proposal_only",
+    "tier": "unvalidated",
+    "hostAuthorizationGranted": false,
+    "historicalAvailabilityAuditPreserved": true
+  },
+  "latestImplementationCI": {
+    "status": "completed",
+    "runId": 39095384742,
+    "url": "https://github.com/akillness/frameforge-studio/actions/runs/39095384742",
+    "commit": "c56cc4a3e706b978a1f091a3079fb289a59fcb36",
+    "scope": "native narration, exact-output review and media-input security source",
+    "conclusion": "success",
+    "observedAt": "2026-10-18T04:00:14.846994+00:00",
+    "receipt": "artifacts/container-smoke.json",
+    "verified": [
+      "58 tests, zero skips",
+      "33-file syntax check",
+      "harness verification",
+      "non-root/read-only Linux Docker build and runtime",
+      "1080x1920 H264/AAC 1.022-second authenticated export",
+      "saved-scenes workflow review bound to SHA256",
+      "episode/history/job/export/review persistence after restart"
+    ],
+    "notVerified": [
+      "local Windows Docker execution",
+      "container-to-host agent bridge",
+      "Windows native SAPI inside Linux container"
+    ]
+  },
+  "refreshState": "Final code graphs refreshed and validated; no semantic enrichment claimed.",
+  "sourceVerification": {
+    "testsPassed": 58,
+    "testsFailed": 0,
+    "testsSkipped": 0,
+    "syntaxFiles": 33,
+    "mediaSecurityRegression": "tests/render-security.test.mjs",
+    "evidenceOwner": "Root local verification and exact-source CI39095384742 passed on c56cc4a3e706b978a1f091a3079fb289a59fcb36"
+  },
+  "productionBrowserEvidence": {
+    "receipt": "artifacts/production-browser-smoke.json",
+    "verifiedAt": "2026-10-18T03:54:19.819663+00:00",
+    "base": "https://desktop-qrf3t5t.taila2003e.ts.net",
+    "episodeId": "fa9f2815-f403-45cd-b912-ef24672b3e68",
+    "workflowId": "7ed742a5-99b6-40e8-a59b-e6626d475e1f",
+    "runId": "2aee7f0e-185d-4478-b94c-f4b80eaf340e",
+    "narrationJobId": "430365d3-5b38-4d75-a265-0349fe477496",
+    "previousNarrationVersion": 7,
+    "narrationVersion": 9,
+    "renderVersion": 10,
+    "latestNarrationDisplayed": true,
+    "narrationButtonsRecover": true,
+    "audioDuration": 4.538776,
+    "audioPlayed": true,
+    "videoDuration": 4.821333,
+    "videoPlayed": true,
+    "existingScenesMode": true,
+    "reviewDecision": "changes_requested",
+    "reviewMeaning": "Automated browser verification, not owner acceptance or publication",
+    "reviewPersistedAfterReload": true,
+    "reviewSha256": "f175e54409ff450737c7784f502df762194d8a1fe814617ecc42962b377b21b3",
+    "secureCookie": true,
+    "desktopViewport": {
+      "width": 1440,
+      "documentWidth": 1440
+    },
+    "mobileViewport": {
+      "width": 390,
+      "documentWidth": 390
+    },
+    "pageErrors": []
   }
 }

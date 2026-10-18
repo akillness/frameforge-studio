@@ -1,29 +1,29 @@
-﻿{
+{
   "state": "succeeded",
-  "startedAt": "2026-10-18T02:54:19.473Z",
-  "finishedAt": "2026-10-18T02:54:33.912Z",
-  "durationMs": 14439,
+  "startedAt": "2026-10-18T03:55:45.661Z",
+  "finishedAt": "2026-10-18T03:56:04.031Z",
+  "durationMs": 18370,
   "diagnostics": [],
   "status": {
     "status": "fresh",
     "inspected": true,
-    "observedAt": "2026-10-18T02:54:31.857Z",
+    "observedAt": "2026-10-18T03:56:03.344Z",
     "currentRepo": {
       "branch": "main",
-      "head": "f384821e7c0d66719da52171721b00910c5b0d4e",
+      "head": "720cb349bcbf8b6224189052859f37bd1b96dca0",
       "dirty": true,
-      "observedAt": "2026-10-18T02:54:31.857Z"
+      "observedAt": "2026-10-18T03:56:03.344Z"
     },
-    "lastSuccessfulIndexAt": "2026-10-18T02:54:30.266Z",
-    "indexedAt": "2026-10-18T02:54:30.266Z",
+    "lastSuccessfulIndexAt": "2026-10-18T03:56:01.746Z",
+    "indexedAt": "2026-10-18T03:56:01.746Z",
     "indexedBranch": "main",
-    "indexedHead": "f384821e7c0d66719da52171721b00910c5b0d4e",
+    "indexedHead": "720cb349bcbf8b6224189052859f37bd1b96dca0",
     "schemaVersion": 4,
     "extractorVersion": "typescript-5.9-v5+tree-sitter-v2",
     "grammarVersion": "e3024e9e581533232ee11d4ed0bf6ace91588959e0e609ebcf5d6e80b51b5f9c",
     "parseHealth": {
-      "total": 29,
-      "ok": 29,
+      "total": 37,
+      "ok": 37,
       "partial": 0,
       "failed": 0,
       "failedPaths": [],
@@ -42,7 +42,7 @@
     },
     "diagnostics": []
   },
-  "filesIndexed": 29,
-  "nodesCreated": 692,
-  "edgesCreated": 2247
+  "filesIndexed": 37,
+  "nodesCreated": 960,
+  "edgesCreated": 3098
 }

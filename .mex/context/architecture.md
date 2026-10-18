@@ -24,9 +24,11 @@ Source evidence and template edits remain associated with channel and episode hi
 - server/app.mjs: HTTP boundary and session handling.
 - server/store.mjs: persistence and history.
 - server/render.mjs: local video assembly.
+- Uploaded inputs use standalone-media demuxer allowlists and the local file protocol only for both FFprobe and FFmpeg. Extension checks alone cannot prevent nested playlist references.
 - server/integrations.mjs: trend and host bridge adapters.
 - public/: browser editor assets.
-- server/workflows.mjs: typed production DAG, workflow/version snapshots and per-node execution records; review ends at an awaiting-review checkpoint.
+- server/workflows.mjs: typed production DAG, workflow/version snapshots and per-node execution records; render candidates reach an awaiting-review checkpoint and explicit decisions persist against the exact version/job/output hash.
+- server/narration.mjs and scripts/speech.ps1: queued installed Windows voice synthesis; generated audio attaches through the Store only if the original episode version still matches. Partial/stale output is cleaned.
 ## External Dependencies
 - FFmpeg and ffprobe provide local encoding and probing.
 - Google Trends supplies a network RSS observation source.
@@ -40,3 +42,5 @@ Source evidence and template edits remain associated with channel and episode hi
 
 ## Runtime evidence
 The 2026-10-18 full workflow receipt in `artifacts/workflow-smoke.json` records completed trend, research, script, storyboard and render nodes, followed by review awaiting human inspection. The script node used the real Codex bridge; separate `artifacts/agent-jeo.json` and `artifacts/agent-jeopi.json` receipts record validated real responses from those adapters. This proves the exercised path, not all possible graph configurations or external publishing.
+
+`artifacts/production-smoke.json` additionally verifies native Korean speech, audible final MP4, saved-edit preservation and a persisted exact-output review. This test review proves decision storage/binding, not owner approval or creative quality. Windows SAPI availability is host-specific; Linux Docker does not provide this provider automatically.
