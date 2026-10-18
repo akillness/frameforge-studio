@@ -1,0 +1,32 @@
+{
+  "verifiedAt": "2026-10-18T03:54:19.819663+00:00",
+  "base": "https://desktop-qrf3t5t.taila2003e.ts.net",
+  "episodeId": "fa9f2815-f403-45cd-b912-ef24672b3e68",
+  "workflowId": "7ed742a5-99b6-40e8-a59b-e6626d475e1f",
+  "runId": "2aee7f0e-185d-4478-b94c-f4b80eaf340e",
+  "narrationJobId": "430365d3-5b38-4d75-a265-0349fe477496",
+  "previousNarrationVersion": 7,
+  "narrationVersion": 9,
+  "renderVersion": 10,
+  "latestNarrationDisplayed": true,
+  "narrationButtonsRecover": true,
+  "audioDuration": 4.538776,
+  "audioPlayed": true,
+  "videoDuration": 4.821333,
+  "videoPlayed": true,
+  "existingScenesMode": true,
+  "reviewDecision": "changes_requested",
+  "reviewMeaning": "Automated browser verification, not owner acceptance or publication",
+  "reviewPersistedAfterReload": true,
+  "reviewSha256": "f175e54409ff450737c7784f502df762194d8a1fe814617ecc42962b377b21b3",
+  "secureCookie": true,
+  "desktopViewport": {
+    "width": 1440,
+    "documentWidth": 1440
+  },
+  "mobileViewport": {
+    "width": 390,
+    "documentWidth": 390
+  },
+  "pageErrors": []
+}

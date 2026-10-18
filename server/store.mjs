@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, writeFileSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
-import { HttpError } from './validation.mjs';
+import { HttpError, scenes as validateScenes } from './validation.mjs';
 
 const now = () => new Date().toISOString();
 export const entity = (fields) => ({ id: randomUUID(), createdAt: now(), updatedAt: now(), ...fields });
@@ -18,6 +18,7 @@ export class Store {
       CREATE TABLE IF NOT EXISTS history (id INTEGER PRIMARY KEY AUTOINCREMENT, episode_id TEXT NOT NULL, version INTEGER NOT NULL, data TEXT NOT NULL, UNIQUE(episode_id,version));
       CREATE INDEX IF NOT EXISTS history_episode ON history(episode_id,version);
       CREATE TABLE IF NOT EXISTS workflow_history (id INTEGER PRIMARY KEY AUTOINCREMENT, workflow_id TEXT NOT NULL, version INTEGER NOT NULL, data TEXT NOT NULL, UNIQUE(workflow_id,version));
+      CREATE TABLE IF NOT EXISTS workflow_reviews (id TEXT PRIMARY KEY, run_id TEXT NOT NULL UNIQUE, data TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);`);
     if (!this.db.prepare('SELECT value FROM settings WHERE key = ?').get('seeded')) this.seed();
     for (const job of this.list('jobs')) if (['queued', 'running'].includes(job.status)) this.save('jobs', { ...job, status: 'failed', error: 'Server restarted before render completed', updatedAt: now() });
@@ -80,6 +81,37 @@ export class Store {
     return next;
   }
 
+  attachNarration(id, sceneList, expectedVersion, uploads) {
+    if (!Number.isInteger(expectedVersion) || expectedVersion < 1) throw new HttpError(400, 'Narration requires a positive expectedVersion');
+    const normalized = validateScenes(sceneList);
+    if (!Array.isArray(uploads) || !uploads.length || uploads.length > 60) throw new HttpError(400, 'Narration requires 1–60 generated uploads');
+    const ids = new Set();
+    for (const upload of uploads) {
+      if (!upload || typeof upload.id !== 'string' || !/^[a-f0-9-]{36}$/.test(upload.id) || ids.has(upload.id) || upload.filename !== `${upload.id}.wav` || upload.url !== `/api/uploads/${upload.filename}` || upload.type !== 'audio/wav') throw new HttpError(400, 'Invalid generated narration upload');
+      ids.add(upload.id);
+      if (!normalized.some((scene) => scene.audioUrl === upload.url)) throw new HttpError(400, 'Generated narration upload is not attached to a scene');
+    }
+    this.db.exec('BEGIN IMMEDIATE');
+    let next;
+    try {
+      const previous = this.get('episodes', id);
+      if (previous.version !== expectedVersion) throw new HttpError(409, `Episode changed: current version is ${previous.version}. Reload before attaching narration.`);
+      const existingUploads = this.list('uploads');
+      if (uploads.some((upload) => existingUploads.some((existing) => existing.id === upload.id || existing.filename === upload.filename))) throw new HttpError(409, 'Generated narration upload already exists');
+      const audioByUrl = new Map([...existingUploads, ...uploads].map((upload) => [upload.url, upload]));
+      for (const scene of normalized) if (scene.audioUrl && !audioByUrl.get(scene.audioUrl)?.type.startsWith('audio/')) throw new HttpError(400, 'Narration scene refers to unknown audio');
+      for (const upload of uploads) this.save('uploads', upload);
+      next = { ...previous, scenes: normalized, status: 'draft', version: previous.version + 1, updatedAt: now() };
+      this.save('episodes', next);
+      this.snapshot(next, 'narration');
+      this.record('episodes.narration', { entityId: id, version: next.version, uploadIds: uploads.map((upload) => upload.id) });
+      this.db.exec('COMMIT');
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+    try { this.exportKnowledge(); }
+    catch (error) { console.error('Narration committed; knowledge export refresh failed:', error.message); }
+    return next;
+  }
+
   snapshot(episode, reason) {
     const entry = { id: randomUUID(), episodeId: episode.id, version: episode.version, reason, createdAt: now(), snapshot: episode };
     this.db.prepare('INSERT INTO history(episode_id,version,data) VALUES (?,?,?)').run(episode.id, episode.version, JSON.stringify(entry));
@@ -107,6 +139,39 @@ export class Store {
     } catch (error) { this.db.exec('ROLLBACK'); throw error; }
     return next;
   }
+
+  reviewCandidate(workflowId, runId, expectedEpisodeVersion) {
+    const run = this.get('workflowRuns', runId);
+    if (run.workflowId !== workflowId) throw new HttpError(404, 'Workflow run not found');
+    if (run.status !== 'awaiting_review' || run.review) throw new HttpError(409, 'Only an unreviewed awaiting_review run can receive a decision');
+    const episode = this.get('episodes', run.episodeId);
+    if (expectedEpisodeVersion !== run.episodeVersion || episode.version !== run.episodeVersion) throw new HttpError(409, 'Episode changed since this render. Render the current version before review.');
+    const render = run.nodeRuns.find((node) => node.type === 'render');
+    const reviewNode = run.nodeRuns.find((node) => node.type === 'review');
+    if (render?.status !== 'completed' || !render.output?.jobId || !render.output?.outputUrl || reviewNode?.status !== 'awaiting_review') throw new HttpError(409, 'Run has no completed render candidate awaiting review');
+    const job = this.get('jobs', render.output.jobId);
+    if (job.status !== 'completed' || job.episodeId !== episode.id || job.episodeVersion !== run.episodeVersion || job.outputUrl !== render.output.outputUrl || (render.output.episodeVersion !== undefined && render.output.episodeVersion !== run.episodeVersion)) throw new HttpError(409, 'Render candidate does not match the episode version');
+    return { run, job, render };
+  }
+
+  commitWorkflowReview(workflowId, runId, { decision, notes, expectedEpisodeVersion, jobId, outputUrl, sha256 }) {
+    if (!['approved', 'changes_requested'].includes(decision) || typeof notes !== 'string' || notes.length > 10000 || !Number.isInteger(expectedEpisodeVersion) || expectedEpisodeVersion < 1 || !/^[a-f0-9]{64}$/.test(sha256)) throw new HttpError(400, 'Invalid review decision');
+    this.db.exec('BEGIN IMMEDIATE');
+    let next;
+    try {
+      const { run, job, render } = this.reviewCandidate(workflowId, runId, expectedEpisodeVersion);
+      if (job.id !== jobId || job.outputUrl !== outputUrl || (job.sha256 && job.sha256 !== sha256) || (render.output.sha256 && render.output.sha256 !== sha256)) throw new HttpError(409, 'Rendered artifact changed during review');
+      const review = { id: randomUUID(), decision, notes, reviewedAt: now(), workflowId, workflowVersion: run.workflowVersion, runId, episodeId: run.episodeId, episodeVersion: run.episodeVersion, jobId, outputUrl, sha256 };
+      this.db.prepare('INSERT INTO workflow_reviews(id,run_id,data) VALUES (?,?,?)').run(review.id, runId, JSON.stringify(review));
+      next = { ...run, status: decision, review, updatedAt: review.reviewedAt, nodeRuns: run.nodeRuns.map((node) => node.type === 'review' ? { ...node, status: decision, reviewedAt: review.reviewedAt, review, output: { ...node.output, review } } : node) };
+      this.save('workflowRuns', next);
+      this.record('workflow.reviewed', { entityId: workflowId, runId, review });
+      this.db.exec('COMMIT');
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+    return next;
+  }
+
+  workflowReviews(runId) { return this.db.prepare('SELECT data FROM workflow_reviews WHERE run_id=? ORDER BY rowid').all(runId).map((row) => JSON.parse(row.data)); }
 
   knowledge() {
     const nodes = [], edges = [], atoms = [];

@@ -12,11 +12,19 @@
 
 위 이미지는 운영 서비스에서 직접 캡처했습니다. [모바일 화면](docs/assets/workflow-mobile.png)과 [브라우저 검증 기록](artifacts/browser-smoke.json)도 제공합니다.
 
+![실제 한국어 음성을 붙인 편집 화면](docs/assets/narration-desktop.png)
+
+![완성 MP4 재생과 버전별 검토 기록](docs/assets/review-desktop.png)
+
+[음성·영상 검토의 모바일 화면](docs/assets/review-mobile.png) · [실제 재생·검토 저장 검증](artifacts/production-browser-smoke.json)
+
 ## 실제로 할 수 있는 작업
 
 - 채널을 등록하고 소재·에피소드·수정 버전·렌더링 결과를 연결합니다. 현재 운영 데이터에는 Aside에서 확인한 세 채널을 등록했습니다. 새 설치에는 명확히 표시된 예제 채널만 생성합니다.
 - 장면을 추가·복제·재정렬하고 화면 문구, 배경, 길이, 9:16·16:9·1:1 포맷과 레이아웃을 수정합니다. 이미지·영상을 업로드하고 영상 시작점, 장면별 음성·음악과 볼륨을 조절합니다.
 - 편집 결과를 재사용 템플릿으로 저장합니다. FFmpeg가 한국어 자막을 포함한 H.264/AAC MP4를 생성하며 인증된 다운로드와 작업 이력을 제공합니다.
+- Windows에 설치된 한국어 음성으로 장면별 내레이션을 생성하고 미리 듣습니다. 음성 길이에 맞춰 장면을 늘리고, 저장된 편집본과 음성을 그대로 워크플로우에서 렌더링합니다.
+- 완성 MP4를 웹에서 재생하고 승인 또는 수정 요청을 기록합니다. 결정은 에피소드 버전·렌더 작업·파일 SHA-256에 연결되며, 변경된 편집본은 다시 렌더해야 검토할 수 있습니다.
 - Google Trends KR RSS에서 실제 소재를 수집합니다. Naver DataLab과 공식 크리에이터 레퍼런스는 출처·조사일·관찰 메모와 함께 기록합니다. [조사 근거와 템플릿 제안](docs/research-playbook.md)을 제공합니다.
 - 웹 채팅에서 Codex·JEO·JEOPI가 작성한 스토리보드를 검증한 뒤 에피소드 버전으로 적용합니다. `Studio`는 규칙 기반 도우미이며 외부 LLM과 구분해 표시합니다.
 - Aside 지정 세션의 명령을 영속 명령함으로 가져옵니다. 웹 명령함 접수는 기록이며, 실행은 에이전트 채팅 또는 워크플로우에서 명시적으로 시작합니다.
@@ -29,7 +37,7 @@ flowchart LR
   R --> S[대본 · Codex/JEO/JEOPI]
   S --> B[스토리보드 · 버전 저장]
   B --> V[렌더 · FFmpeg MP4]
-  V --> Q[사람 검토 대기]
+  V --> Q[영상 재생 · 승인 / 수정 요청]
   B -. 기록 .-> E[채널 / 소재 / 에피소드]
   E --> K[OKF + LLM Wiki]
   K --> G[Graphify 지식 그래프]
@@ -37,11 +45,13 @@ flowchart LR
 
 노드를 이동하고 입·출력 포트를 연결하거나 연결 폼을 사용합니다. 확대·축소, 전체 보기, 자동 배치, 노드 설정, 저장·불러오기, 실행·취소와 노드별 실행 결과를 제공합니다. 저장 시 순환, 잘못된 포트, 끊어진 필수 경로를 거부합니다.
 
-현재 실행기는 `trend`, `research` 선택 노드와 `script → storyboard → render → review` 필수 노드로 구성됩니다. 각 종류는 한 번씩 사용하며 4–6개 노드를 지원합니다. 범용 ComfyUI 플러그인 런타임이나 무제한 모델 그래프가 아닙니다. `script`에서 에이전트와 연출 프롬프트를 선택합니다. 완료된 MP4는 `awaiting_review`로 멈추며 자동 공개되지 않습니다. 실행 시 워크플로우와 에피소드 스냅샷을 저장하고, 수정 충돌·실패·중단을 기록합니다.
+현재 실행기는 `trend`, `research` 선택 노드와 `script → storyboard → render → review` 필수 노드로 구성됩니다. 각 종류는 한 번씩 사용하며 4–6개 노드를 지원합니다. 범용 ComfyUI 플러그인 런타임이나 무제한 모델 그래프가 아닙니다. `script`에서 에이전트와 연출 프롬프트 또는 **저장된 편집본 사용**을 선택합니다. 완료된 MP4는 `awaiting_review`로 멈추고 웹 검토 후 `approved` 또는 `changes_requested`로 기록됩니다. 승인해도 자동 공개되지 않습니다. 실행 시 워크플로우와 에피소드 스냅샷을 저장하고, 수정 충돌·실패·중단을 기록합니다.
 
 ## 실행
 
 Node 22.13 이상, FFmpeg/ffprobe와 한국어 폰트가 필요합니다. npm 런타임 의존성은 없습니다. 개발 기본 주소는 `127.0.0.1:4310`입니다.
+
+내레이션 생성은 Windows SAPI의 설치된 목소리를 사용합니다. 현재 호스트의 Microsoft Heami Desktop 한국어 음성으로 실제 생성·비무음 MP4를 확인했습니다. Linux Docker에서는 이 음성 제공자가 비활성으로 표시되며, 업로드한 음성의 편집·렌더는 지원합니다.
 
 ```powershell
 node scripts/configure.mjs
@@ -80,12 +90,13 @@ HTTPS 프록시를 사용할 때 `.env`에 `PUBLIC_ORIGIN=https://서비스주�
 
 ## 하니스 최신 버전과 아카이브
 
-활성 버전은 `harness/manifest.json`이 가리키는 **1.1.0**입니다. 최초 선형 제작 계약 **1.0.0**을 실제 승격한 뒤 노드 제작 계약 1.1.0으로 전환했으며, 이전 번들은 `harness/archive/1.0.0/`에 보존됩니다. 원본 `.claude/agents/`, `.claude/skills/` 및 `docs/harness.md`를 수정한 다음 새 버전을 승격합니다. 보존된 버전 파일은 직접 수정하지 않습니다.
+활성 버전은 `harness/manifest.json`이 가리키는 **1.2.0**입니다. 음성 생성·편집 보존·영상 검토 계약을 반영했고, 이전 **1.0.0·1.1.0** 번들은 `harness/archive/`에 원본 그대로 보존됩니다. 원본 `.claude/agents/`, `.claude/skills/` 및 `docs/harness.md`를 수정한 다음 새 버전을 승격합니다. 보존된 버전 파일은 직접 수정하지 않습니다.
 
 ```powershell
 node scripts/version-harness.mjs verify
-node scripts/version-harness.mjs promote 1.2.0
-node scripts/version-harness.mjs rollback 1.1.0
+# 다음 계약을 수정한 뒤 새 버전으로 승격
+node scripts/version-harness.mjs promote 1.3.0
+node scripts/version-harness.mjs rollback 1.2.0
 ```
 
 SHA-256 검증, 독점 잠금, 원자적 활성 포인터 변경, 중복 버전 거부와 이전 번들 보존을 수행합니다. 외부의 과거 Hermes 제작물은 삭제하거나 저장소로 무단 복사하지 않았습니다. [버전 운영 규칙](docs/harness-versioning.md)을 참고하세요.
@@ -117,12 +128,16 @@ npm run check
 npm run test:render
 node scripts/media-smoke.mjs
 node --env-file=.env scripts/workflow-smoke.mjs
+node --env-file=.env scripts/production-smoke.mjs
+python scripts/production-browser-smoke.py
 ```
 
 자동 테스트는 인증·CSRF·경로 격리·업로드·버전 충돌·실행 실패·DAG·취소·재시작 복구·하니스 아카이브를 확인합니다. 실제 검증은 MP4 출력/다운로드, 영상 트리밍과 비무음 오디오, Google RSS, 각 에이전트 응답 및 브라우저 편집 흐름을 별도로 기록합니다. 테스트용 주입 렌더러와 실제 FFmpeg 결과를 구분합니다.
 
-Naver의 전체 실시간 순위를 자동 수집한다고 주장하지 않습니다. YouTube 채널 등록과 제작 관리를 지원하며 채널 생성·OAuth 게시 API는 포함하지 않습니다. 게시 전 YouTube Studio에서 검토합니다. 음성 원고는 TTS가 아니며 영상·음성은 업로드한 자산을 사용합니다. 에이전트 채팅은 스토리보드 작성이며 이미지/배우 영상 생성 서비스의 유료 호출은 연결하지 않았습니다.
+Naver의 전체 실시간 순위를 자동 수집한다고 주장하지 않습니다. YouTube 채널 등록과 제작 관리를 지원하며 채널 생성·OAuth 게시 API는 포함하지 않습니다. 게시 전 YouTube Studio에서 검토합니다. 음성은 Windows 로컬 TTS 또는 업로드 자산을 사용합니다. 에이전트 채팅은 스토리보드 작성이며 이미지/배우 영상 생성 서비스의 유료 호출은 연결하지 않았습니다.
 
-ECC 2.2.3 활성 설치를 확인했고 실제 코드/검증 작업에 적용했습니다. Jev 설치본은 API 키가 없어 **라이브 판단 비활성**이며 카탈로그를 지정한 오프라인 자체 테스트 8/8만 통과했습니다. 이를 자동 승인 또는 실서비스 검증으로 취급하지 않습니다.
+장면 편집기의 미리보기는 레이아웃 확인용이며 MP4와 자막 크기가 완전히 일치하지 않습니다. 최종 자막·음성·길이는 완성 영상 검토 플레이어에서 확인합니다.
+
+ECC 2.2.3 활성 설치를 확인했고 실제 코드/검증 작업에 적용했습니다. Jev는 최신 실행기를 별도 캐시에 고정하고 `frameforge-codex` 프로필로 **실제 API 검토**를 실행했습니다. 응답 모델은 `jev-1.13.0`, 결과는 `proposal_only`입니다. 과제 부합성 0.93, 근거 지지 0.80이었으나 두 항목의 확신도가 기준 0.80에 못 미쳤습니다. `unvalidated` 참고 모드이며 자동 훅·권한 부여는 없습니다. [실제 응답과 판단 근거](artifacts/jev-live-review.json), [재현 방법](docs/jev.md)을 제공합니다. API 키는 저장소 밖 비공개 프로필에서만 읽습니다.
 
 설계 참고: [ComfyUI 노드](https://docs.comfy.org/development/core-concepts/nodes), [Tailscale Serve](https://tailscale.com/docs/features/tailscale-serve), [Google Trends](https://support.google.com/trends/answer/3076011), [Naver DataLab](https://developers.naver.com/docs/serviceapi/datalab/search/search.md). README SVG는 이 프로젝트를 위해 직접 작성했습니다.

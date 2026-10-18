@@ -7,6 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Store, entity, starterScene } from './store.mjs';
 import { HttpError, object, text, optionalText, choice, url, scenes, formats, episodePatch } from './validation.mjs';
 import { WorkflowEngine } from './workflows.mjs';
+import { NarrationQueue, listSpeechVoices } from './narration.mjs';
 
 const PUBLIC_DIR = fileURLToPath(new URL('../public/', import.meta.url));
 const MAX_JSON = 1024 * 1024;
@@ -85,7 +86,7 @@ function safeError(error) {
 }
 
 /** Dependency overrides are for local tests; production imports actual adapters. */
-export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), loginToken = process.env.LOGIN_TOKEN || '', publicOrigin = process.env.PUBLIC_ORIGIN, integrations, renderer } = {}) {
+export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), loginToken = process.env.LOGIN_TOKEN || '', publicOrigin = process.env.PUBLIC_ORIGIN, integrations, renderer, speech } = {}) {
   if (loginToken && (typeof loginToken !== 'string' || loginToken.length < 16)) throw new Error('LOGIN_TOKEN must contain at least 16 characters');
   if (publicOrigin) {
     const parsed = new URL(publicOrigin);
@@ -190,6 +191,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
   }
 
   const workflows = new WorkflowEngine({ store, fetchTrends: refreshTrends, runAgent: async (...args) => (await adapter()).runAgent(...args), render: (episode) => enqueueRender(episode, true), validateAssets });
+  const narration = new NarrationQueue({ store, ...speech });
 
   async function upload(request, requestUrl) {
     const name = text(requestUrl.searchParams.get('name'), 'upload name', 200);
@@ -245,11 +247,12 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       return json(response, 200, { authenticated: false }, { 'Set-Cookie': 'frameforge_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0' });
     }
     if (request.method === 'GET' && path === '/api/state') {
-      const state = Object.fromEntries(['channels', 'episodes', 'templates', 'trends', 'references', 'jobs', 'events', 'workflows', 'workflowRuns'].map((kind) => [kind, store.list(kind)]));
+      const state = Object.fromEntries(['channels', 'episodes', 'templates', 'trends', 'references', 'jobs', 'events', 'workflows', 'workflowRuns', 'narrationJobs'].map((kind) => [kind, store.list(kind)]));
       const { nodes, edges } = store.knowledge();
       return json(response, 200, { ...state, integrations: await integrationStatus(), graph: { nodes, edges } });
     }
     if (request.method === 'GET' && path === '/api/integrations') return json(response, 200, await integrationStatus());
+    if (request.method === 'GET' && path === '/api/speech/voices') return json(response, 200, await (speech?.listVoices || listSpeechVoices)());
     if (request.method === 'GET' && path === '/api/knowledge') return json(response, 200, store.knowledge());
     if (request.method === 'GET' && path === '/api/commands') return json(response, 200, store.list('commands'));
     if (request.method === 'GET' && path === '/api/workflows') return json(response, 200, store.list('workflows'));
@@ -293,10 +296,13 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       }
       if (request.method === 'POST' && path === '/api/trends') return write('trends', { keyword: text(body.keyword, 'keyword', 300), source: text(body.source, 'source', 100), url: url(body.url), category: optionalText(body.category, 'category', 100), capturedAt: new Date().toISOString() });
       if (request.method === 'POST' && path === '/api/commands') return write('commands', { message: text(body.message, 'message', 20000), source: text(body.source, 'source', 100, 'studio'), sessionId: optionalText(body.sessionId, 'sessionId', 100), status: 'received' });
-      const episodeRoute = /^\/api\/episodes\/([^/]+)(?:\/(template|chat|render))?$/.exec(path);
+      const reviewRoute = /^\/api\/workflows\/([^/]+)\/runs\/([^/]+)\/review$/.exec(path);
+      if (request.method === 'POST' && reviewRoute) return json(response, 200, await workflows.review(reviewRoute[1], reviewRoute[2], body));
+      const episodeRoute = /^\/api\/episodes\/([^/]+)(?:\/(template|chat|render|narration))?$/.exec(path);
       if (episodeRoute) {
         const [, id, action] = episodeRoute;
         const episode = store.get('episodes', id);
+        if (request.method === 'POST' && action === 'narration') return json(response, 202, await narration.start(id, body));
         if (request.method === 'PUT' && !action) {
           const patch = episodePatch(body);
           if (patch.scenes) validateAssets(patch.scenes);
@@ -342,7 +348,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
   });
   server.requestTimeout = 120_000;
   server.headersTimeout = 15_000;
-  server.on('close', () => { closing = true; workflows.close(); store.close(); });
+  server.on('close', () => { closing = true; narration.close(); workflows.close(); store.close(); });
   return server;
 }
 

@@ -1,0 +1,70 @@
+import assert from 'node:assert/strict';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import path from 'node:path';
+import { execute } from '../server/process.mjs';
+
+const base = process.env.STUDIO_URL || 'http://127.0.0.1:4310';
+const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+const login = await fetch(base + '/api/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: process.env.LOGIN_TOKEN }) });
+assert.equal(login.status, 200);
+const cookie = login.headers.get('set-cookie').split(';')[0];
+const api = async (route, method = 'GET', body) => {
+  const response = await fetch(base + route, { method, headers: { cookie, 'content-type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}) });
+  const value = await response.json();
+  assert.ok(response.ok, `${method} ${route}: ${response.status} ${value.error || ''}`);
+  return value;
+};
+const voices = await api('/api/speech/voices');
+assert.ok(voices.available, 'Actual local speech provider required');
+const voice = voices.voices.find(item => item.language === 'ko-KR');
+assert.ok(voice, 'Installed Korean voice required');
+let state = await api('/api/state');
+const channel = state.channels.find(item => item.sample) || state.channels[0];
+let episode = await api('/api/episodes', 'POST', { channelId: channel.id, title: '실제 음성 제작 · 제품 검증', topic: '한국어 음성부터 영상 검토 기록까지', category: 'information' });
+episode = await api(`/api/episodes/${episode.id}`, 'PUT', { expectedVersion: episode.version, scenes: [{ ...episode.scenes[0], text: '대본이 목소리가 됩니다', narration: '대본을 목소리로 바꾸고, 영상으로 완성합니다.', duration: .5 }] });
+const job = await api(`/api/episodes/${episode.id}/narration`, 'POST', { expectedVersion: episode.version, voice: voice.id, rate: 0 });
+let narrated;
+for (let attempt = 0; attempt < 120; attempt++) {
+  state = await api('/api/state');
+  narrated = state.narrationJobs.find(item => item.id === job.id);
+  if (narrated.status === 'completed' || narrated.status === 'failed') break;
+  await pause(1000);
+}
+assert.equal(narrated.status, 'completed', narrated.error);
+episode = state.episodes.find(item => item.id === episode.id);
+assert.ok(episode.scenes[0].audioUrl && episode.scenes[0].duration > .5);
+const nodes = ['script', 'storyboard', 'render', 'review'].map((type, i) => ({ id: type, type, x: 50 + (i % 2) * 300, y: 70 + Math.floor(i / 2) * 240, config: type === 'script' ? { agent: 'existing', prompt: '' } : {} }));
+const workflow = await api('/api/workflows', 'POST', { name: '음성 제작본 · 최종 검토', nodes, edges: nodes.slice(1).map((node, i) => ({ id: `edge-${i}`, source: nodes[i].id, target: node.id })) });
+let run = await api(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: episode.id });
+for (let attempt = 0; attempt < 180; attempt++) {
+  run = (await api(`/api/workflows/${workflow.id}/runs`)).find(item => item.id === run.id);
+  if (['awaiting_review', 'failed'].includes(run.status)) break;
+  await pause(1000);
+}
+assert.equal(run.status, 'awaiting_review', run.error);
+const render = run.nodeRuns.find(item => item.type === 'render').output;
+const download = await fetch(base + render.outputUrl, { headers: { cookie } });
+assert.ok(download.ok);
+const bytes = Buffer.from(await download.arrayBuffer());
+const sha256 = createHash('sha256').update(bytes).digest('hex');
+assert.equal(render.sha256, sha256);
+await mkdir('data/production-smoke', { recursive: true });
+const file = path.resolve('data/production-smoke/narrated.mp4');
+await writeFile(file, bytes);
+const { stdout } = await execute('ffprobe', ['-v', 'error', '-show_streams', '-show_format', '-of', 'json', file]);
+const probe = JSON.parse(stdout);
+assert.equal(probe.streams.find(item => item.codec_type === 'video').width, 1080);
+assert.ok(probe.streams.some(item => item.codec_type === 'audio'));
+const volume = await execute('ffmpeg', ['-hide_banner', '-i', file, '-vn', '-af', 'volumedetect', '-f', 'null', '-']);
+const meanVolume = Number(volume.stderr.match(/mean_volume:\s*(-?[\d.]+) dB/)?.[1]);
+assert.ok(Number.isFinite(meanVolume) && meanVolume > -70, 'Actual audible narration must be present');
+const reviewed = await api(`/api/workflows/${workflow.id}/runs/${run.id}/review`, 'POST', { decision: 'approved', notes: '자동 실동작 테스트용 후보: 한국어 음성·영상 스트림·파일 해시 검증. 실제 채널 공개 승인이 아닙니다.', expectedEpisodeVersion: run.episodeVersion });
+assert.equal(reviewed.status, 'approved');
+assert.equal(reviewed.review.sha256, sha256);
+const persisted = (await api(`/api/workflows/${workflow.id}/runs`)).find(item => item.id === run.id);
+assert.equal(persisted.review.sha256, sha256);
+const result = { verifiedAt: new Date().toISOString(), provider: voices.provider, voice: voice.id, episodeId: episode.id, workflowId: workflow.id, runId: run.id, narrationJobId: job.id, narrationVersion: narrated.resultVersion, renderVersion: run.episodeVersion, width: 1080, height: 1920, duration: Number(probe.format.duration), meanVolumeDb: meanVolume, sha256, savedEditPreserved: true, reviewPersisted: true, reviewMeaning: 'Automated test decision, not owner acceptance or publication' };
+await mkdir('artifacts', { recursive: true });
+await writeFile('artifacts/production-smoke.json', JSON.stringify(result, null, 2));
+console.log(JSON.stringify(result, null, 2));

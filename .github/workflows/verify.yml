@@ -23,6 +23,14 @@ jobs:
           node-version: '22'
       - name: Check JavaScript syntax
         run: npm run check
+      - name: Ensure executable media security checks can run
+        run: |
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install --yes ffmpeg
+          fi
+          ffmpeg -version
+          ffprobe -version
       - name: Run API, workflow, security and harness regression tests
         run: npm test
       - name: Verify immutable harness bundle

@@ -1,0 +1,115 @@
+{
+  "observedAt": "2026-10-18T03:50:53.458Z",
+  "host": "codex",
+  "requestedProfile": "frameforge-codex",
+  "status": "live_advisory_review_completed",
+  "runtimeMode": "advisory",
+  "hookTrust": "No automatic hook installed or trusted",
+  "upstreamCommit": "d9af9e3de37b0fd940d5cab1897c9b9a00fd8a35",
+  "liveReviewExecuted": true,
+  "liveRoutingExecuted": false,
+  "mockIsLiveEvidence": false,
+  "hostAuthorizationGranted": false,
+  "credentialAvailability": {
+    "apiBackendConfigured": true,
+    "basis": "Successful authenticated API response; no credential value inspected for this status update"
+  },
+  "backend": {
+    "kind": "api",
+    "driver": "typesafe",
+    "model": "jev-1.13.0",
+    "configuredModel": "jev-latest",
+    "tier": "unvalidated",
+    "attestation": null
+  },
+  "latencyMs": 528,
+  "providerError": null,
+  "verdict": "proposal_only",
+  "reason": "Below threshold or unfavorable in: unrelated_changes (ans=no, conf=0.76); needs_clarification (ans=no, conf=0.67)",
+  "threshold": 0.8,
+  "receiptVersion": 2,
+  "receipt": "b84cc139c123802b310fd559fd351edfa350627a75fb79cab3fbb5a6e3268791",
+  "liveReceipt": "artifacts/jev-live-review.json",
+  "configurationBoundary": "Isolated frameforge-codex profile in a private cache home; legacy runtime and shared catalogs preserved; no automatic hooks",
+  "historicalAudits": [
+    {
+      "observedAt": "2026-10-18T03:39:56.328613+00:00",
+      "host": "codex",
+      "requestedProfile": "codex",
+      "status": "unavailable",
+      "reason": "Installed legacy runtime does not support profile-specific status or operation selection; no usable API credential or reachable local backend.",
+      "runtimeMode": "legacy advisory CLI; no per-profile runtime mode supported",
+      "hookTrust": "not verified; no Jev definition in Codex hooks.json",
+      "liveRouteReviewExecuted": false,
+      "mockIsLiveEvidence": false,
+      "commands": [
+        {
+          "command": "node <installed-jev>/jev-harness.mjs --profile codex status --operation review",
+          "exitCode": 1,
+          "output": "jev-harness: Usage: jev-harness.mjs <status|route-skills|prune-context|review|self-test> [--mock]"
+        },
+        {
+          "command": "node <installed-jev>/jev-harness.mjs status",
+          "exitCode": 2,
+          "output": "{\n  \"active\": false,\n  \"mode\": \"api\",\n  \"endpoint\": \"https://api.typesafe.ai/v1/systemone\",\n  \"keySource\": null,\n  \"hint\": \"Set JEV_API_KEY in env or ~/.agents/jev/.env, or run jev-setup.sh\"\n}"
+        }
+      ],
+      "credentialAvailability": {
+        "JEV_API_KEY": false,
+        "OPENAI_API_KEY": false,
+        "ANTHROPIC_API_KEY": false,
+        "GOOGLE_API_KEY": false,
+        "GEMINI_API_KEY": false
+      },
+      "installation": {
+        "codexProfileExists": false,
+        "profilePluginExists": false,
+        "legacySavedConfigExists": false,
+        "ollamaDefaultModelsExist": false,
+        "lmstudioDefaultModelsExist": false,
+        "jevDefaultModelsExist": false
+      },
+      "localBackends": [
+        {
+          "backend": "ollama",
+          "endpoint": "http://127.0.0.1:11434/api/tags",
+          "reachable": false,
+          "errorType": "URLError"
+        },
+        {
+          "backend": "lmstudio",
+          "endpoint": "http://127.0.0.1:1234/v1/models",
+          "reachable": false,
+          "errorType": "URLError"
+        },
+        {
+          "backend": "systemone-local",
+          "endpoint": "http://127.0.0.1:8763/healthz",
+          "reachable": false,
+          "errorType": "URLError"
+        },
+        {
+          "backend": "llamacpp",
+          "endpoint": "http://127.0.0.1:8080/v1/models",
+          "reachable": false,
+          "errorType": "URLError"
+        },
+        {
+          "backend": "compify",
+          "endpoint": "http://127.0.0.1:8081/api/overview",
+          "reachable": false,
+          "errorType": "URLError"
+        }
+      ],
+      "actionsNotPerformed": [
+        "profile switching",
+        "global configuration changes",
+        "hook installation",
+        "model download",
+        "hosted inference"
+      ],
+      "scope": "Read-only status and local endpoint discovery; credential values and absolute credential paths omitted."
+    }
+  ],
+  "scope": "Sanitized execution evidence; no secret or absolute credential path included."
+}

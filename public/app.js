@@ -25,11 +25,21 @@ let busy = false;
 let authenticated = false;
 let modalHandler;
 let commands = [];
+let speech = {available:false,voices:[],detail:'음성 엔진을 확인하고 있습니다.'};
+let speechLoaded = false;
+let speechVoice = '';
+let speechRate = 0;
+let previewAudio;
+let polling = false;
+const narrationBaselines = new Map();
+const completedNarrations = new Set();
+const pendingNarrations = new Map();
 const chatLogs = new Map();
 const workflowEditor = createWorkflowEditor({
   api,
   toast,
   getEpisodes: () => state.episodes,
+  hasEpisodeChanges: targetId => episode?.id === targetId && dirty,
   beforeRun: async () => { stopPlayback(); await save(true); },
   onRunUpdated: async () => {
     await refresh();
@@ -82,6 +92,82 @@ async function refresh() {
   authenticated = true;
   if (!channelId || !state.channels.some(channel => channel.id === channelId)) channelId = state.channels[0]?.id || null;
   if (!episode) episode = clone(state.episodes.find(item => item.channelId === channelId) || null);
+  if (!speechLoaded) await loadSpeechVoices();
+}
+
+async function loadSpeechVoices() {
+  try { speech = await api('/api/speech/voices'); }
+  catch (error) { speech = {available:false,voices:[],detail:error.message}; }
+  speechLoaded = true;
+  speech.voices ||= [];
+  if (!speech.voices.some(voice => voice.id === speechVoice)) speechVoice = (speech.voices.find(voice => /^ko(?:-|_)/i.test(voice.language)) || speech.voices[0])?.id || '';
+}
+
+function narrationJob() {
+  // /api/state returns newest first, matching Store.list's descending row order.
+  return (state.narrationJobs || []).find(job => job.episodeId === episode?.id);
+}
+function narrationStatusHtml() {
+  const job = narrationJob();
+  if (pendingNarrations.has(episode?.id)) return '<p class="unsaved">음성 생성 결과가 준비되었습니다. 현재 초안은 그대로 보존했습니다.</p><button class="small" data-action="load-narration-result">초안 파일 보관 후 생성 결과 불러오기</button>';
+  if (!job) return '<p class="hint">원고가 비어 있으면 화면 텍스트를 읽습니다. 생성된 음성 길이에 맞춰 장면 길이가 늘어날 수 있습니다.</p>';
+  const active = ['queued','running'].includes(job.status);
+  return `<div class="row"><span class="badge ${job.status === 'completed' ? 'lime' : ''}">${esc(active ? '음성 생성 중' : statusNames[job.status] || job.status)}</span>${active ? `<progress value="${Math.max(0,Math.min(100,Number(job.progress)||0))}" max="100" aria-label="음성 생성 진행률"></progress>` : ''}${job.resultVersion ? `<span class="hint">저장 버전 ${Number(job.resultVersion)}</span>` : ''}</div>${job.error ? `<p class="danger">${esc(job.error)}</p>` : ''}`;
+}
+function narrationHtml() {
+  const disabled = !speech.available || !speechVoice || ['queued','running'].includes(narrationJob()?.status);
+  return `<section class="panel narration-panel"><div class="panel-header"><h3>내레이션 음성 만들기</h3><span class="badge">${speech.available ? 'WINDOWS SAPI' : '연결 확인'}</span></div><div class="panel-body"><div class="two-cols"><label>목소리<select id="speech-voice" ${!speech.available ? 'disabled' : ''}>${speech.voices.length ? speech.voices.map(voice => `<option value="${esc(voice.id)}" ${voice.id === speechVoice ? 'selected' : ''}>${esc(voice.name)} · ${esc(voice.language)}</option>`).join('') : '<option>사용 가능한 목소리 없음</option>'}</select></label><label>말하기 속도 (−10 ~ 10)<input id="speech-rate" type="number" min="-10" max="10" step="1" value="${speechRate}" ${!speech.available ? 'disabled' : ''}></label></div><div class="narration-actions"><button data-action="narrate-scene" data-testid="narrate-scene" ${disabled ? 'disabled' : ''}>선택 장면 음성 만들기</button><button class="primary" data-action="narrate-all" data-testid="narrate-all" ${disabled ? 'disabled' : ''}>전체 장면 음성 만들기</button></div>${!speech.available ? `<p class="hint">${esc(speech.detail || '음성 엔진에 연결되지 않았습니다. 연결 후 사용할 수 있습니다.')}</p><button class="small quiet" data-action="refresh-speech">음성 연결 다시 확인</button>` : '<p class="hint">실제 음성 파일을 생성해 장면에 첨부합니다. 저장되지 않은 변경은 먼저 저장합니다.</p>'}<div id="narration-status" role="status" aria-live="polite">${narrationStatusHtml()}</div></div></section>`;
+}
+
+async function startNarration(allScenes) {
+  if (!speech.available || !speechVoice) throw new Error('사용 가능한 목소리를 먼저 연결하세요.');
+  const selectedId = currentScene()?.id;
+  stopPlayback();
+  await save(true);
+  const baseline = clone(episode);
+  const job = await post(`/api/episodes/${episode.id}/narration`,{expectedVersion:episode.version,voice:speechVoice,rate:speechRate,...(!allScenes ? {sceneIds:[selectedId]} : {})});
+  narrationBaselines.set(job.id,baseline);
+  state.narrationJobs ||= [];
+  state.narrationJobs.unshift(job);
+  render();
+  toast('음성 파일 생성을 시작했습니다. 진행 중에도 편집할 수 있습니다.');
+}
+
+function applyNarrationResult(job, latest) {
+  const savedEpisode = latest.episodes?.find(item => item.id === job.episodeId);
+  if (!savedEpisode) return;
+  state.episodes = latest.episodes;
+  if (episode?.id !== job.episodeId) return;
+  const baseline = narrationBaselines.get(job.id);
+  if (!dirty) episode = clone(savedEpisode);
+  else if (baseline && episode.version === baseline.version && savedEpisode.version === job.resultVersion) {
+    // Merge generated fields only. All user edits, order, and newly added scenes survive.
+    for (const scene of episode.scenes) {
+      const original = baseline.scenes.find(item => item.id === scene.id);
+      const generated = savedEpisode.scenes.find(item => item.id === scene.id);
+      if (!original || !generated) continue;
+      const sameScript = (scene.narration || scene.text) === (original.narration || original.text);
+      if (sameScript && scene.audioUrl === original.audioUrl) {
+        scene.audioUrl = generated.audioUrl;
+        scene.duration = Math.max(Number(scene.duration),Number(generated.duration));
+      }
+    }
+    episode.version = savedEpisode.version;
+    toast('생성된 음성을 반영했습니다. 생성 중 바꾼 원고와 편집은 보존했으며, 변경된 원고는 다시 음성을 생성하세요.');
+  } else {
+    pendingNarrations.set(episode.id,clone(savedEpisode));
+    toast('음성 생성 완료. 현재 편집은 보존했습니다. 음성 패널에서 서버 결과를 불러올 수 있습니다.');
+  }
+  sceneIndex = Math.min(sceneIndex,episode.scenes.length - 1);
+  // Do not replace focused fields or the whole editor during background polling.
+  if (view === 'studio') {
+    const inspector = $('.inspector .panel-body');
+    if (inspector && !inspector.contains(document.activeElement)) inspector.innerHTML = inspectorHtml(currentScene());
+    const status = $('#save-status');
+    if (status) status.textContent = dirty ? '저장되지 않은 변경 · 음성 결과 반영됨' : `버전 ${episode.version} · 저장됨`;
+    if ($('#scenes')) $('#scenes').innerHTML = sceneCards();
+    if ($('#total-duration')) $('#total-duration').textContent = `총 ${duration()}초`;
+  }
 }
 
 async function loadCommands() {
@@ -90,7 +176,7 @@ async function loadCommands() {
 }
 
 function audioInspectorHtml(scene) {
-  return `<div class="section-spacer"><div class="two-cols"><label>영상 시작점 (초)<input id="scene-trim-start" data-testid="scene-trim-start" type="number" data-scene="trimStart" min="0" max="36000" step="0.1" value="${Number(scene.trimStart) || 0}"></label><label>오디오 볼륨 (0–2)<input id="scene-audio-volume" data-testid="scene-audio-volume" type="number" data-scene="audioVolume" min="0" max="2" step="0.1" value="${scene.audioVolume ?? 1}"></label></div><p class="hint">영상 시작점부터 장면 길이만큼 사용합니다. 음성 원고는 제작 메모이며, 재생할 음성은 파일로 첨부하세요.</p><div class="row"><button class="small" data-action="upload-audio" data-testid="upload-audio">↑ 음성 / 음악</button>${scene.audioUrl ? '<button class="small quiet" data-action="remove-audio">오디오 제거</button>' : '<span class="hint">MP3 · WAV · OGG</span>'}</div>${scene.audioUrl ? `<audio id="scene-audio-preview" controls preload="metadata" src="${safeUrl(scene.audioUrl)}" aria-label="첨부한 장면 오디오 미리듣기" style="width:100%;height:32px;margin-top:12px"></audio>` : ''}</div>`;
+  return `<div class="section-spacer"><div class="two-cols"><label>영상 시작점 (초)<input id="scene-trim-start" data-testid="scene-trim-start" type="number" data-scene="trimStart" min="0" max="36000" step="0.1" value="${Number(scene.trimStart) || 0}"></label><label>오디오 볼륨 (0–2)<input id="scene-audio-volume" data-testid="scene-audio-volume" type="number" data-scene="audioVolume" min="0" max="2" step="0.1" value="${scene.audioVolume ?? 1}"></label></div><p class="hint">영상 시작점부터 장면 길이만큼 사용합니다. 음성은 아래에서 생성하거나 파일로 첨부할 수 있습니다.</p><div class="row"><button class="small" data-action="upload-audio" data-testid="upload-audio">↑ 음성 / 음악</button>${scene.audioUrl ? '<button class="small quiet" data-action="remove-audio">오디오 제거</button>' : '<span class="hint">MP3 · WAV · OGG</span>'}</div>${scene.audioUrl ? `<audio id="scene-audio-preview" controls preload="metadata" src="${safeUrl(scene.audioUrl)}" aria-label="첨부한 장면 오디오 미리듣기" style="width:100%;height:32px;margin-top:12px"></audio>` : ''}</div>`;
 }
 
 function commandsHtml() {
@@ -145,12 +231,12 @@ function studioView() {
   html += `<div class="editor-grid"><div><section class="panel"><div class="panel-header"><div class="row"><span class="eyebrow">PREVIEW</span><span class="badge">${esc(episode.format)}</span></div><span id="save-status" class="${dirty ? 'unsaved' : 'hint'}">${dirty ? '저장되지 않은 변경' : `버전 ${episode.version} · 저장됨`}</span></div><div class="preview-stage"><span class="stage-tag">LIVE CANVAS / ${esc(episode.category?.toUpperCase() || 'STUDIO')}</span><div id="preview" class="preview" data-format="${esc(episode.format)}" aria-label="현재 장면 미리보기"></div></div><div class="transport"><span class="time" id="play-time">${time(episode.scenes.slice(0,sceneIndex).reduce((sum,s) => sum + s.duration,0))} / ${time(duration())}</span><div class="row"><button class="icon-btn quiet" data-action="prev" aria-label="이전 장면">‹</button><button class="icon-btn primary" data-action="play" aria-label="${playing ? '미리보기 정지' : '미리보기 재생'}">${playing ? 'Ⅱ' : '▶'}</button><button class="icon-btn quiet" data-action="next" aria-label="다음 장면">›</button></div><span class="hint">${sceneIndex + 1} / ${episode.scenes.length} 장면</span></div></section>
     <section class="panel timeline"><div class="panel-header"><h3>장면 타임라인</h3><span class="hint" id="total-duration">총 ${duration()}초</span></div><div class="timeline-body"><div class="ruler"><span>00:00</span><span>STORY → SCENE → FRAME</span><span>${time(duration())}</span></div><div class="scenes" id="scenes">${sceneCards()}</div><div class="row between timeline-actions"><button class="small quiet" data-action="add-scene">＋ 장면 추가</button><div class="row"><button class="small quiet" data-action="save-template">템플릿으로 저장</button><button class="small quiet" data-action="view" data-view="templates">템플릿 불러오기 ↗</button></div></div></div></section>
     <section class="panel section-spacer"><div class="panel-header"><h3>내보내기 작업</h3><span class="hint">FFmpeg · MP4</span></div><div id="jobs">${jobsHtml()}</div></section></div>
-    <div class="right-column"><section class="panel inspector"><div class="panel-header"><h3>장면 편집</h3><span class="badge">SCENE ${String(sceneIndex + 1).padStart(2,'0')}</span></div><div class="panel-body">${scene ? inspectorHtml(scene) : '<p>장면을 추가해 주세요.</p>'}</div></section>${chatHtml()}</div></div><p class="footnote">변경 사항은 버전별로 기록됩니다. 영상 업로드 전 채널 연결과 콘텐츠 권리를 확인하세요.</p>`;
+    <div class="right-column"><section class="panel inspector"><div class="panel-header"><h3>장면 편집</h3><span class="badge">SCENE ${String(sceneIndex + 1).padStart(2,'0')}</span></div><div class="panel-body">${scene ? inspectorHtml(scene) : '<p>장면을 추가해 주세요.</p>'}</div></section>${narrationHtml()}${chatHtml()}</div></div><p class="footnote">변경 사항은 버전별로 기록됩니다. 영상 업로드 전 채널 연결과 콘텐츠 권리를 확인하세요.</p>`;
   return html;
 }
 
 function inspectorHtml(scene) {
-  return `<details><summary class="hint" style="cursor:pointer;margin-bottom:13px">에피소드 설정 · ${esc(episode.title)}</summary><label>에피소드 제목<input data-episode="title" value="${esc(episode.title)}" maxlength="200"></label><label>소재 / 주제<textarea data-episode="topic">${esc(episode.topic)}</textarea></label><div class="two-cols"><label>화면 비율<select data-episode="format">${['9:16','16:9','1:1'].map(format => `<option ${episode.format === format ? 'selected' : ''}>${format}</option>`).join('')}</select></label><label>제작 상태<select data-episode="status">${['draft','review','ready'].map(status => `<option value="${status}" ${episode.status === status ? 'selected' : ''}>${statusNames[status]}</option>`).join('')}</select></label></div><label>제작 메모<textarea data-episode="notes">${esc(episode.notes)}</textarea></label></details><label>장면 이름<input data-scene="title" value="${esc(scene.title)}" maxlength="120"></label><label>화면 텍스트<textarea data-scene="text" rows="3" placeholder="이 장면에 보여줄 문장을 입력하세요">${esc(scene.text)}</textarea></label><div class="two-cols"><label>길이 (초)<input type="number" data-scene="duration" min="0.5" max="120" step="0.5" value="${scene.duration}"></label><label>배경 색상<input type="color" class="color-input" data-scene="background" value="${safeColor(scene.background)}"></label></div><label>텍스트 레이아웃<select data-scene="layout"><option value="center" ${scene.layout === 'center' ? 'selected' : ''}>중앙 정렬</option><option value="lower-third" ${scene.layout === 'lower-third' ? 'selected' : ''}>하단 자막</option><option value="split" ${scene.layout === 'split' ? 'selected' : ''}>상하 분할</option></select></label><label>내레이션 원고<textarea data-scene="narration" rows="2" placeholder="장면별 음성 제작용 원고">${esc(scene.narration)}</textarea></label><p class="hint">내레이션은 원고로 보관됩니다. 현재 MP4 내보내기는 화면 텍스트와 영상 소스를 렌더링합니다.</p><div class="row"><button class="small" data-action="upload">↑ 이미지 / 영상</button>${scene.assetUrl ? '<button class="small quiet" data-action="remove-media">소스 제거</button>' : '<span class="hint">로컬 파일</span>'}</div>${audioInspectorHtml(scene)}<div class="row between" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><div class="row"><button class="icon-btn quiet" data-action="move-left" aria-label="장면 앞으로 이동">←</button><button class="icon-btn quiet" data-action="move-right" aria-label="장면 뒤로 이동">→</button><button class="small quiet" data-action="duplicate-scene">복제</button></div><button class="small quiet danger" data-action="delete-scene">삭제</button></div>`;
+  return `<details><summary class="hint" style="cursor:pointer;margin-bottom:13px">에피소드 설정 · ${esc(episode.title)}</summary><label>에피소드 제목<input data-episode="title" value="${esc(episode.title)}" maxlength="200"></label><label>소재 / 주제<textarea data-episode="topic">${esc(episode.topic)}</textarea></label><div class="two-cols"><label>화면 비율<select data-episode="format">${['9:16','16:9','1:1'].map(format => `<option ${episode.format === format ? 'selected' : ''}>${format}</option>`).join('')}</select></label><label>제작 상태<select data-episode="status">${['draft','review','ready'].map(status => `<option value="${status}" ${episode.status === status ? 'selected' : ''}>${statusNames[status]}</option>`).join('')}</select></label></div><label>제작 메모<textarea data-episode="notes">${esc(episode.notes)}</textarea></label></details><label>장면 이름<input data-scene="title" value="${esc(scene.title)}" maxlength="120"></label><label>화면 텍스트<textarea data-scene="text" rows="3" placeholder="이 장면에 보여줄 문장을 입력하세요">${esc(scene.text)}</textarea></label><div class="two-cols"><label>길이 (초)<input type="number" data-scene="duration" min="0.5" max="120" step="0.5" value="${scene.duration}"></label><label>배경 색상<input type="color" class="color-input" data-scene="background" value="${safeColor(scene.background)}"></label></div><label>텍스트 레이아웃<select data-scene="layout"><option value="center" ${scene.layout === 'center' ? 'selected' : ''}>중앙 정렬</option><option value="lower-third" ${scene.layout === 'lower-third' ? 'selected' : ''}>하단 자막</option><option value="split" ${scene.layout === 'split' ? 'selected' : ''}>상하 분할</option></select></label><label>내레이션 원고<textarea data-scene="narration" rows="2" placeholder="장면별 음성 제작용 원고">${esc(scene.narration)}</textarea></label><p class="hint">원고를 입력한 다음 아래 내레이션 패널에서 실제 음성을 생성하세요. 생성하거나 첨부한 오디오가 MP4에 반영됩니다.</p><div class="row"><button class="small" data-action="upload">↑ 이미지 / 영상</button>${scene.assetUrl ? '<button class="small quiet" data-action="remove-media">소스 제거</button>' : '<span class="hint">로컬 파일</span>'}</div>${audioInspectorHtml(scene)}<div class="row between" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><div class="row"><button class="icon-btn quiet" data-action="move-left" aria-label="장면 앞으로 이동">←</button><button class="icon-btn quiet" data-action="move-right" aria-label="장면 뒤로 이동">→</button><button class="small quiet" data-action="duplicate-scene">복제</button></div><button class="small quiet danger" data-action="delete-scene">삭제</button></div>`;
 }
 
 function updatePreview() {
@@ -231,9 +317,16 @@ async function save(quiet = false) {
     if (!quiet) toast('새 버전으로 저장했습니다.');
   } finally { savePending = false; }
 }
-function stopPlayback() { playing = false; clearTimeout(playTimer); }
+function stopPlayback() { playing = false; clearTimeout(playTimer); if (previewAudio) { previewAudio.pause(); previewAudio=null; } }
 function playNext() {
   if (!playing) return;
+  if (previewAudio) previewAudio.pause();
+  const scene=currentScene();
+  if (scene?.audioUrl) {
+    previewAudio=new Audio(scene.audioUrl);
+    previewAudio.volume=Math.min(1,Math.max(0,Number(scene.audioVolume ?? 1)));
+    previewAudio.play().catch(()=>toast('오디오 재생을 시작할 수 없습니다. 장면 오디오 컨트롤을 사용하세요.',true));
+  }
   playTimer = setTimeout(() => {
     if (sceneIndex >= episode.scenes.length - 1) { stopPlayback(); render(); return; }
     sceneIndex += 1;
@@ -279,6 +372,15 @@ async function loadHistory() {
 
 async function handleAction(button) {
   const action = button.dataset.action;
+  if (action === 'narrate-scene' || action === 'narrate-all') { await startNarration(action === 'narrate-all'); return; }
+  if (action === 'refresh-speech') { await loadSpeechVoices(); render(); return; }
+  if (action === 'load-narration-result') {
+    const result = pendingNarrations.get(episode?.id);
+    if (!result) return;
+    const url = URL.createObjectURL(new Blob([JSON.stringify(episode,null,2)],{type:'application/json'}));
+    const link = document.createElement('a'); link.href=url; link.download=`frameforge-draft-${episode.id}.json`; link.click(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+    episode=clone(result); dirty=false; pendingNarrations.delete(episode.id); sceneIndex=Math.min(sceneIndex,episode.scenes.length-1); render(); toast('현재 초안을 JSON 파일로 보관하고 생성 결과를 불러왔습니다.'); return;
+  }
   if (action === 'reload') { location.reload(); }
   else if (action === 'view') { stopPlayback(); await save(true); view = button.dataset.view; if (view === 'history') await loadHistory(); if (view === 'settings') await loadCommands(); if (view === 'workflow') await workflowEditor.load(); render(); }
   else if (action === 'new-channel') newChannel();
@@ -321,6 +423,8 @@ document.addEventListener('click', async event => {
 
 document.addEventListener('input', event => {
   const target = event.target;
+  if (target.id === 'speech-voice') { speechVoice=target.value; return; }
+  if (target.id === 'speech-rate') { if (target.checkValidity() && target.value !== '') speechRate=Number(target.value); return; }
   if (target.dataset.scene && currentScene()) {
     if (['duration','trimStart','audioVolume'].includes(target.dataset.scene)) { if (!target.checkValidity() || target.value === '') return; currentScene()[target.dataset.scene] = Number(target.value); }
     else currentScene()[target.dataset.scene] = target.value;
@@ -414,12 +518,21 @@ window.addEventListener('beforeunload', event => { if (dirty || workflowEditor.h
 document.addEventListener('keydown', async event => { if ((event.ctrlKey || event.metaKey) && event.key === 's') { event.preventDefault(); try { if (view === 'workflow') await workflowEditor.save(); else await save(); render(); } catch (error) { toast(error.message,true); } } });
 
 setInterval(async () => {
-  if (!authenticated || !state.jobs.some(job => ['running','queued'].includes(job.status))) return;
+  if (!authenticated || polling || !(state.jobs.some(job => ['running','queued'].includes(job.status)) || (state.narrationJobs || []).some(job => ['running','queued'].includes(job.status)))) return;
+  polling=true;
   try {
+    const activeNarrations = new Set((state.narrationJobs || []).filter(job => ['queued','running'].includes(job.status)).map(job => job.id));
     const latest = await api('/api/state');
     state.jobs = latest.jobs || [];
+    state.narrationJobs = latest.narrationJobs || [];
+    for (const job of state.narrationJobs) {
+      if (activeNarrations.has(job.id) && job.status === 'completed' && !completedNarrations.has(job.id)) { completedNarrations.add(job.id); applyNarrationResult(job,latest); }
+    }
     if ($('#jobs')) $('#jobs').innerHTML = jobsHtml();
+    if ($('#narration-status')) $('#narration-status').innerHTML = narrationStatusHtml();
+    for (const button of document.querySelectorAll('[data-action="narrate-scene"],[data-action="narrate-all"]')) button.disabled = !speech.available || !speechVoice || ['queued','running'].includes(narrationJob()?.status);
   } catch { /* Foreground actions report errors; job polling preserves the current draft. */ }
+  finally { polling=false; }
 },2500);
 
 try { await refresh(); render(); }

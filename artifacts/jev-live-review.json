@@ -1,0 +1,84 @@
+{
+  "observedAt": "2026-10-18T03:50:53.458Z",
+  "host": "codex",
+  "profile": "frameforge-codex",
+  "runtimeMode": "advisory",
+  "hookTrust": "No automatic hook installed or trusted",
+  "upstreamCommit": "d9af9e3de37b0fd940d5cab1897c9b9a00fd8a35",
+  "liveReviewExecuted": true,
+  "mockIsLiveEvidence": false,
+  "hostAuthorizationGranted": false,
+  "review": {
+    "verdict": "proposal_only",
+    "reason": "Below threshold or unfavorable in: unrelated_changes (ans=no, conf=0.76); needs_clarification (ans=no, conf=0.67)",
+    "failingQuestions": [
+      "unrelated_changes (ans=no, conf=0.76)",
+      "needs_clarification (ans=no, conf=0.67)"
+    ],
+    "threshold": 0.8,
+    "mode": "jev",
+    "backend": {
+      "kind": "api",
+      "driver": "typesafe",
+      "model": "jev-1.13.0",
+      "configuredModel": "jev-latest",
+      "tier": "unvalidated",
+      "attestation": null
+    },
+    "attempted": [
+      "api"
+    ],
+    "receiptVersion": 2,
+    "receipt": "b84cc139c123802b310fd559fd351edfa350627a75fb79cab3fbb5a6e3268791",
+    "review": {
+      "model": "jev-1.13.0",
+      "answers": {
+        "addresses_task": {
+          "probability": 0.93,
+          "answer": "yes",
+          "confidence": 0.93
+        },
+        "evidence_supports": {
+          "probability": 0.8,
+          "answer": "yes",
+          "confidence": 0.8
+        },
+        "unrelated_changes": {
+          "probability": 0.24,
+          "answer": "no",
+          "confidence": 0.76
+        },
+        "needs_clarification": {
+          "probability": 0.33,
+          "answer": "no",
+          "confidence": 0.6699999999999999
+        }
+      },
+      "usage": {
+        "input_tokens": 899,
+        "output_tokens": 80
+      },
+      "requests": 1,
+      "source": "api",
+      "backend": {
+        "kind": "api",
+        "driver": "typesafe",
+        "model": "jev-1.13.0",
+        "configuredModel": "jev-latest",
+        "tier": "unvalidated",
+        "attestation": null
+      },
+      "attempted": [
+        "api"
+      ],
+      "attemptDetails": [
+        {
+          "kind": "api",
+          "error": null
+        }
+      ],
+      "error": null,
+      "latencyMs": 528
+    }
+  }
+}

@@ -1,9 +1,25 @@
 import { mkdir, writeFile, realpath, rm, copyFile } from 'node:fs/promises';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { createReadStream } from 'node:fs';
+import { randomUUID, createHash } from 'node:crypto';
 import { execute } from './process.mjs';
 
 export const dimensions = { '9:16': [1080, 1920], '16:9': [1920, 1080], '1:1': [1080, 1080] };
+const MEDIA_FORMATS = {
+  '.mp4': 'mov', '.mov': 'mov', '.webm': 'matroska,webm',
+  '.png': 'png_pipe', '.jpg': 'jpeg_pipe', '.jpeg': 'jpeg_pipe',
+  '.webp': 'webp_pipe', '.gif': 'gif',
+  '.mp3': 'mp3', '.wav': 'wav', '.ogg': 'ogg',
+};
+
+// A contained filename can still disguise a playlist referencing files outside uploads.
+// Apply to every untrusted input, including the audio probe; never permit playlist demuxers.
+export function localMediaInputOptions(filename) {
+  const formats = MEDIA_FORMATS[path.extname(filename).toLowerCase()];
+  if (!formats) throw new Error('Unsupported uploaded media format');
+  return ['-protocol_whitelist', 'file', '-format_whitelist', formats];
+}
+
 function subtitleText(text, width) {
   const cleaned = String(text || '').replace(/[{}\\]/g, '').replace(/\r/g, '');
   return cleaned.split('\n').flatMap(line => {
@@ -39,9 +55,10 @@ export async function renderEpisode(episode, { dataDir, onProgress = () => {} })
         const uploadRoot = await realpath(path.join(root, 'uploads'));
         const source = await realpath(path.join(uploadRoot, match[1]));
         if (path.dirname(source) !== uploadRoot) throw new Error('Media path escapes uploads');
-        input = scene.kind === 'image' ? ['-loop', '1', '-i', source] : ['-ss', String(trimStart), '-i', source];
+        const mediaOptions = localMediaInputOptions(source);
+        input = scene.kind === 'image' ? [...mediaOptions, '-stream_loop', '-1', '-i', source] : [...mediaOptions, '-ss', String(trimStart), '-i', source];
         if (scene.kind === 'video') {
-          const probe = await execute(process.env.FFPROBE_PATH || 'ffprobe', ['-v', 'error', '-select_streams', 'a:0', '-show_entries', 'stream=codec_type', '-of', 'csv=p=0', source], { timeout: 15000 });
+          const probe = await execute(process.env.FFPROBE_PATH || 'ffprobe', ['-v', 'error', ...mediaOptions, '-select_streams', 'a:0', '-show_entries', 'stream=codec_type', '-of', 'csv=p=0', source], { timeout: 15000 });
           mediaAudio = probe.stdout.trim() === 'audio';
         }
       }
@@ -57,7 +74,7 @@ export async function renderEpisode(episode, { dataDir, onProgress = () => {} })
         const uploadRoot = await realpath(path.join(root, 'uploads'));
         const source = await realpath(path.join(uploadRoot, match[1]));
         if (path.dirname(source) !== uploadRoot) throw new Error('Audio path escapes uploads');
-        audioInput = ['-i', source]; audioMap = '1:a:0';
+        audioInput = [...localMediaInputOptions(source), '-i', source]; audioMap = '1:a:0';
       }
       const args = ['-hide_banner', '-loglevel', 'error', '-y', ...input, ...audioInput, '-map', '0:v:0', '-map', audioMap, '-vf', filter, '-af', `volume=${audioVolume},apad`, '-t', String(duration), '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '22', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-ar', '48000', '-ac', '2', '-threads', '2', `segment-${i}.mp4`];
       await execute(ffmpeg, args, { cwd: temp, timeout: 300000 });
@@ -67,7 +84,9 @@ export async function renderEpisode(episode, { dataDir, onProgress = () => {} })
     await execute(ffmpeg, ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'concat', '-safe', '1', '-i', 'concat.txt', '-c', 'copy', '-movflags', '+faststart', 'final.mp4'], { cwd: temp });
     await copyFile(path.join(temp, 'final.mp4'), path.join(root, 'exports', name));
     onProgress(100);
-    return { filename: name, outputUrl: `/api/exports/${name}` };
+    const digest = createHash('sha256');
+    for await (const chunk of createReadStream(path.join(root, 'exports', name))) digest.update(chunk);
+    return { filename: name, outputUrl: `/api/exports/${name}`, sha256: digest.digest('hex') };
   } finally {
     const actualParent = await realpath(path.join(root, 'render-work'));
     const actualTemp = await realpath(temp);

@@ -9,6 +9,8 @@ const TYPES = {
 };
 const TYPE_ORDER = Object.keys(TYPES);
 const STATUS = {queued:'대기',pending:'대기',running:'실행 중',completed:'완료',succeeded:'완료',failed:'실패',cancelled:'취소됨',cancelling:'취소 요청됨',skipped:'건너뜀',awaiting_review:'사람의 검토 대기'};
+STATUS.approved='승인됨';
+STATUS.changes_requested='수정 요청';
 const LIVE = new Set(['queued','pending','running','cancelling']);
 const WIDTH = 210;
 const HEIGHT = 140;
@@ -63,7 +65,7 @@ export function workflowErrors(workflow) {
   return [...new Set(errors)];
 }
 
-export function createWorkflowEditor({api,toast,getEpisodes,beforeRun,onRunUpdated}) {
+export function createWorkflowEditor({api,toast,getEpisodes,hasEpisodeChanges,beforeRun,onRunUpdated}) {
   let workflows = [];
   let workflow = null;
   let saved = null;
@@ -82,6 +84,8 @@ export function createWorkflowEditor({api,toast,getEpisodes,beforeRun,onRunUpdat
   let pan = {x:0,y:0};
   let needsFit = true;
   let timer = null;
+  const reviewNotes = new Map();
+  let reviewSignature = '';
   const $ = selector => host?.querySelector(selector);
   const post = (path,data={}) => api(path,{method:'POST',body:JSON.stringify(data)});
   const activeRun = () => runs.find(run=>run.id===selectedRunId) || runs[0];
@@ -152,7 +156,7 @@ export function createWorkflowEditor({api,toast,getEpisodes,beforeRun,onRunUpdat
     if (!episodes.some(item=>item.id===episodeId)) episodeId=episodes[0]?.id || null;
     return `<div class="page-heading"><div><h1>제작을 연결하고, 실행하세요</h1><p>소재 조사부터 영상 렌더와 검토까지, 노드로 만드는 제작 워크플로우.</p></div><div class="row"><button data-wf-action="new">＋ 새 워크플로우</button><button data-wf-action="save" ${!workflow?'disabled':''}>워크플로우 저장</button><button class="primary" data-wf-action="run" ${!workflow || !episodeId || running()?'disabled':''}>▶ 워크플로우 실행</button></div></div>
     <section class="panel wf-toolbar"><label>저장된 워크플로우<select id="wf-select" aria-label="워크플로우 선택"><option value="">${workflow&&!workflow.id?'저장되지 않은 새 워크플로우':'선택하세요'}</option>${workflows.map(item=>`<option value="${escapeHtml(item.id)}" ${item.id===workflow?.id?'selected':''}>${escapeHtml(item.name)}</option>`).join('')}</select></label><label>실행 대상 에피소드<select id="wf-episode" aria-label="워크플로우 실행 에피소드"><option value="">에피소드를 선택하세요</option>${episodes.map(item=>`<option value="${escapeHtml(item.id)}" ${item.id===episodeId?'selected':''}>${escapeHtml(item.title)}</option>`).join('')}</select></label><div class="wf-save-state"><span id="wf-save-status" class="hint"></span><div class="row"><button class="small quiet" data-wf-action="reload">새로고침</button><button class="small quiet" data-wf-action="discard">변경 되돌리기</button></div></div></section>
-    ${!workflow ? '<div class="panel empty"><div class="empty-mark">⌘</div><h2>실행 가능한 제작 흐름을 만드세요</h2><p>새 워크플로우에서 노드를 연결하고<br>에피소드를 선택해 실제 작업을 실행하세요.</p></div>' : `<div class="wf-layout"><section class="panel wf-graph-panel"><div class="panel-header"><div class="row"><span class="eyebrow">WORKFLOW CANVAS</span><span class="badge">${workflow.nodes.length} NODES</span></div><div class="row"><select id="wf-add-type" aria-label="추가할 노드 종류">${TYPE_ORDER.map(type=>`<option value="${type}" ${workflow.nodes.some(node=>node.type===type)?'disabled':''}>${TYPES[type].name}</option>`).join('')}</select><button class="small" data-wf-action="add-node">＋ 노드</button></div></div><div id="workflow-canvas" class="wf-canvas" tabindex="0" aria-label="워크플로우 캔버스. 노드 제목을 드래그해 이동하고 출력과 입력을 순서대로 선택해 연결하세요."><div id="wf-world" class="wf-world"><svg id="wf-edges" class="wf-edges" aria-hidden="true"></svg><div id="wf-nodes">${nodesHtml()}</div></div><div class="wf-canvas-hint" id="wf-connect-hint">빈 공간 드래그 · 휠 확대/축소 · 출력 → 입력 연결</div><div class="wf-zoom"><button class="icon-btn" data-wf-action="zoom-out" aria-label="축소">−</button><span id="wf-zoom-value">100%</span><button class="icon-btn" data-wf-action="zoom-in" aria-label="확대">+</button><button class="small" data-wf-action="fit">전체 보기</button><button class="small" data-wf-action="layout">자동 배치</button></div></div><div id="wf-validation" class="wf-validation" role="status"></div></section><aside class="wf-side"><section class="panel"><div class="panel-header"><h3>워크플로우 설정</h3><span class="badge">DAG</span></div><div class="panel-body"><label>이름<input id="wf-name" value="${escapeHtml(workflow.name)}" maxlength="160"></label><p class="hint">대본 → 스토리보드 → 렌더 → 사람의 검토가 필수입니다. 트렌드와 리서치는 선택 단계입니다.</p></div></section><section class="panel"><div class="panel-header"><h3>노드 설정</h3><span class="badge" id="wf-node-type"></span></div><div class="panel-body" id="wf-inspector">${inspectorHtml()}</div></section><section class="panel"><div class="panel-header"><h3>노드 연결</h3></div><form id="wf-connect-form" class="panel-body"><label>출력 노드<select name="source" aria-label="연결 출발 노드">${options(selected)}</select></label><label>입력 노드<select name="target" aria-label="연결 도착 노드">${options(null)}</select></label><button class="small" type="submit">연결 추가 →</button><div class="wf-connection-list">${connectionsHtml()}</div></form></section></aside></div><section class="panel section-spacer"><div class="panel-header"><h2>실행 기록</h2><button class="small" data-wf-action="refresh-runs">↻ 실행 상태 확인</button></div><div id="wf-runs">${runsHtml()}</div></section>`}`;
+    ${!workflow ? '<div class="panel empty"><div class="empty-mark">⌘</div><h2>실행 가능한 제작 흐름을 만드세요</h2><p>새 워크플로우에서 노드를 연결하고<br>에피소드를 선택해 실제 작업을 실행하세요.</p></div>' : `<div class="wf-layout"><section class="panel wf-graph-panel"><div class="panel-header"><div class="row"><span class="eyebrow">WORKFLOW CANVAS</span><span class="badge">${workflow.nodes.length} NODES</span></div><div class="row"><select id="wf-add-type" aria-label="추가할 노드 종류">${TYPE_ORDER.map(type=>`<option value="${type}" ${workflow.nodes.some(node=>node.type===type)?'disabled':''}>${TYPES[type].name}</option>`).join('')}</select><button class="small" data-wf-action="add-node">＋ 노드</button></div></div><div id="workflow-canvas" class="wf-canvas" tabindex="0" aria-label="워크플로우 캔버스. 노드 제목을 드래그해 이동하고 출력과 입력을 순서대로 선택해 연결하세요."><div id="wf-world" class="wf-world"><svg id="wf-edges" class="wf-edges" aria-hidden="true"></svg><div id="wf-nodes">${nodesHtml()}</div></div><div class="wf-canvas-hint" id="wf-connect-hint">빈 공간 드래그 · 휠 확대/축소 · 출력 → 입력 연결</div><div class="wf-zoom"><button class="icon-btn" data-wf-action="zoom-out" aria-label="축소">−</button><span id="wf-zoom-value">100%</span><button class="icon-btn" data-wf-action="zoom-in" aria-label="확대">+</button><button class="small" data-wf-action="fit">전체 보기</button><button class="small" data-wf-action="layout">자동 배치</button></div></div><div id="wf-validation" class="wf-validation" role="status"></div></section><aside class="wf-side"><section class="panel"><div class="panel-header"><h3>워크플로우 설정</h3><span class="badge">DAG</span></div><div class="panel-body"><label>이름<input id="wf-name" value="${escapeHtml(workflow.name)}" maxlength="160"></label><p class="hint">대본 → 스토리보드 → 렌더 → 사람의 검토가 필수입니다. 트렌드와 리서치는 선택 단계입니다.</p></div></section><section class="panel"><div class="panel-header"><h3>노드 설정</h3><span class="badge" id="wf-node-type"></span></div><div class="panel-body" id="wf-inspector">${inspectorHtml()}</div></section><section class="panel"><div class="panel-header"><h3>노드 연결</h3></div><form id="wf-connect-form" class="panel-body"><label>출력 노드<select name="source" aria-label="연결 출발 노드">${options(selected)}</select></label><label>입력 노드<select name="target" aria-label="연결 도착 노드">${options(null)}</select></label><button class="small" type="submit">연결 추가 →</button><div class="wf-connection-list">${connectionsHtml()}</div></form></section></aside></div><section class="panel section-spacer"><div class="panel-header"><h2>실행 기록</h2><button class="small" data-wf-action="refresh-runs">↻ 실행 상태 확인</button></div><div id="wf-runs">${runsHtml()}</div></section><div id="wf-review">${reviewHtml()}</div>`}`;
   }
 
   function nodesHtml() {
@@ -166,7 +170,7 @@ export function createWorkflowEditor({api,toast,getEpisodes,beforeRun,onRunUpdat
   function inspectorHtml() {
     const node=selectedNode();
     if (!node) return '<p class="hint">캔버스에서 노드를 선택하세요.</p>';
-    return `<h3>${TYPES[node.type]?.name || escapeHtml(node.type)}</h3>${node.type==='script'?`<label>실행 에이전트<select id="wf-agent" data-wf-config="agent">${['studio','codex','jeo','jeopi','hermes'].map(agent=>`<option value="${agent}" ${(node.config?.agent || 'studio')===agent?'selected':''}>${agent==='studio'?'Studio · 규칙 기반':agent.toUpperCase()+' · 외부 연결'}</option>`).join('')}</select></label><label>제작 지시문<textarea id="wf-prompt" data-wf-config="prompt" maxlength="4000" rows="5" placeholder="대상 시청자, 톤, 장면 구성 지시">${escapeHtml(node.config?.prompt || '')}</textarea></label><p class="hint">Studio는 규칙 기반입니다. 외부 에이전트는 실제 호스트 연결이 필요하며, 연결 실패는 실행 기록에 남습니다.</p>`:`<p class="hint">${escapeHtml(TYPES[node.type]?.summary)}${node.type==='review'?' · 결과는 검토 대기 상태로 종료됩니다.':''}</p>`}<div class="two-cols"><label>X 위치<input type="number" id="wf-node-x" data-wf-coordinate="x" step="10" min="0" max="10000" value="${Math.round(node.x)}"></label><label>Y 위치<input type="number" id="wf-node-y" data-wf-coordinate="y" step="10" min="0" max="10000" value="${Math.round(node.y)}"></label></div><button class="small danger" data-wf-action="delete-node">노드 삭제</button><p class="hint" style="margin-top:10px">삭제한 필수 단계는 다시 추가한 뒤 연결해야 저장할 수 있습니다.</p>`;
+    return `<h3>${TYPES[node.type]?.name || escapeHtml(node.type)}</h3>${node.type==='script'?`<label>실행 에이전트<select id="wf-agent" data-wf-config="agent">${['existing','studio','codex','jeo','jeopi','hermes'].map(agent=>`<option value="${agent}" ${(node.config?.agent || 'studio')===agent?'selected':''}>${agent==='existing'?'저장된 편집본 사용':agent==='studio'?'Studio · 규칙 기반':agent.toUpperCase()+' · 외부 연결'}</option>`).join('')}</select></label><label>제작 지시문<textarea id="wf-prompt" data-wf-config="prompt" maxlength="4000" rows="5" placeholder="대상 시청자, 톤, 장면 구성 지시">${escapeHtml(node.config?.prompt || '')}</textarea></label><p class="hint">저장된 편집본 사용는 기존 장면과 생성된 음성을 유지해 렌더링합니다. 이 모드에서 지시문은 사용되지 않습니다. Studio는 규칙 기반입니다. 외부 에이전트는 실제 호스트 연결이 필요하며, 연결 실패는 실행 기록에 남습니다.</p>`:`<p class="hint">${escapeHtml(TYPES[node.type]?.summary)}${node.type==='review'?' · 결과는 검토 대기 상태로 종료됩니다.':''}</p>`}<div class="two-cols"><label>X 위치<input type="number" id="wf-node-x" data-wf-coordinate="x" step="10" min="0" max="10000" value="${Math.round(node.x)}"></label><label>Y 위치<input type="number" id="wf-node-y" data-wf-coordinate="y" step="10" min="0" max="10000" value="${Math.round(node.y)}"></label></div><button class="small danger" data-wf-action="delete-node">노드 삭제</button><p class="hint" style="margin-top:10px">삭제한 필수 단계는 다시 추가한 뒤 연결해야 저장할 수 있습니다.</p>`;
   }
 
   function connectionsHtml() {
@@ -184,9 +188,61 @@ export function createWorkflowEditor({api,toast,getEpisodes,beforeRun,onRunUpdat
     return [...new Set(urls)].map(url=>`<a href="${escapeHtml(url)}" download>완성 MP4 다운로드 ↓</a>`).join('');
   }
 
+  function renderedOutput(run) {
+    const output=run?.nodeRuns?.find(node=>node.type==='render')?.output;
+    const url=output?.outputUrl || output?.job?.outputUrl;
+    return typeof url==='string' && /^\/api\/exports\/[a-zA-Z0-9_-]+\.mp4$/.test(url) ? {url,output} : null;
+  }
+
+  function reviewKey() {
+    const run=activeRun();
+    const current=getEpisodes().find(item=>item.id===run?.episodeId);
+    return JSON.stringify([run?.id,run?.status,run?.review,current?.version,hasEpisodeChanges?.(run?.episodeId),pending]);
+  }
+
+  function reviewHtml() {
+    const run=activeRun();
+    const media=renderedOutput(run);
+    if (!run || !media) return '';
+    const current=getEpisodes().find(item=>item.id===run.episodeId);
+    const version=run.episodeVersion ?? media.output.episodeVersion;
+    const stale=!current || current.version!==version;
+    const unsaved=hasEpisodeChanges?.(run.episodeId);
+    const canReview=run.status==='awaiting_review' && !stale && !unsaved && !pending;
+    const decision=run.review;
+    return `<section class="panel section-spacer wf-review-panel" data-testid="render-review"><div class="panel-header"><div><span class="eyebrow">FINAL CUT · HUMAN REVIEW</span><h2>완성 영상 검토</h2></div><span class="badge ${run.status==='approved'?'lime':''}">${escapeHtml(STATUS[run.status] || run.status)}</span></div><div class="wf-review-grid"><div class="wf-review-screen"><video controls playsinline preload="metadata" src="${escapeHtml(media.url)}" aria-label="검토할 렌더 영상" data-testid="review-video"></video><a href="${escapeHtml(media.url)}" download>검토 영상 MP4 다운로드 ↓</a></div><div class="wf-review-details"><h3>${escapeHtml(current?.title || run.episodeId)}</h3><dl class="wf-review-facts"><div><dt>렌더 에피소드 버전</dt><dd>v${escapeHtml(version)}</dd></div><div><dt>현재 저장 버전</dt><dd>${current ? `v${Number(current.version)}` : '확인할 수 없음'}</dd></div><div><dt>워크플로우 버전</dt><dd>v${Number(run.workflowVersion)}</dd></div></dl>${stale ? '<p class="wf-review-warning" role="status">렌더 이후 에피소드가 변경되었습니다. 현재 편집본으로 워크플로우를 다시 실행한 뒤 검토하세요.</p>' : ''}${unsaved ? '<p class="wf-review-warning">이 에피소드에 저장하지 않은 편집이 있습니다. 먼저 편집을 저장하고 새 렌더를 검토하세요.</p>' : ''}${decision ? `<div class="wf-review-decision"><span class="eyebrow">RECORDED DECISION</span><h3>${escapeHtml(STATUS[decision.decision] || decision.decision)} · v${Number(decision.episodeVersion)}</h3><p>${escapeHtml(decision.notes || '검토 메모 없음')}</p><span class="hint">${stamp(decision.reviewedAt)}</span><details><summary>검토 파일 식별 정보</summary><p>작업 ${escapeHtml(decision.jobId)}</p><code>SHA-256 ${escapeHtml(decision.sha256)}</code></details></div>` : `<label for="wf-review-notes">검토 메모<textarea id="wf-review-notes" data-review-notes="${escapeHtml(run.id)}" maxlength="4000" rows="4" placeholder="자막, 음성, 장면 길이와 수정할 점을 기록하세요." ${run.status!=='awaiting_review'?'disabled':''}>${escapeHtml(reviewNotes.get(run.id) || '')}</textarea></label><div class="wf-review-actions"><button class="primary" data-wf-action="review-approve" data-testid="review-approve" ${!canReview?'disabled':''}>이 영상 승인</button><button data-wf-action="review-changes" data-testid="review-changes" ${!canReview?'disabled':''}>수정 요청</button></div>`}<p class="hint">승인 기록은 위 렌더 파일과 에피소드 버전에 연결됩니다. 승인해도 채널에 게시되지 않습니다.</p></div></div></section>`;
+  }
+
+  function refreshReview() {
+    const target=$('#wf-review');
+    const key=reviewKey();
+    if (target && reviewSignature!==key) {
+      target.innerHTML=reviewHtml();
+      reviewSignature=key;
+    }
+  }
+
+  async function recordReview(decision) {
+    const run=activeRun();
+    if (!run || run.status!=='awaiting_review') throw new Error('검토 대기 중인 실행 결과만 검토할 수 있습니다.');
+    await onRunUpdated?.();
+    const current=getEpisodes().find(item=>item.id===run.episodeId);
+    if (!current || current.version!==run.episodeVersion || hasEpisodeChanges?.(run.episodeId)) throw new Error('에피소드가 변경되었습니다. 편집을 저장하고 현재 버전으로 다시 렌더링하세요.');
+    try {
+      const result=await post(`/api/workflows/${workflow.id}/runs/${run.id}/review`,{decision,notes:reviewNotes.get(run.id) || '',expectedEpisodeVersion:run.episodeVersion});
+      runs=runs.map(item=>item.id===result.id?result:item);
+      reviewNotes.delete(run.id);
+      toast(decision==='approved'?'영상 승인을 기록했습니다. 채널에는 게시되지 않습니다.':'수정 요청을 기록했습니다. 스튜디오에서 편집한 뒤 다시 실행하세요.');
+    } catch (error) {
+      if (error.status===409) { await loadRuns(); await onRunUpdated?.(); throw new Error('검토 대상이 변경되어 기록하지 않았습니다. 최신 에피소드와 실행 결과를 확인하세요.'); }
+      throw error;
+    }
+  }
+
   function paint() {
     if (!host?.isConnected) return;
     host.innerHTML=shell();
+    reviewSignature=reviewKey();
     updateSummary();
     if (workflow) { if (needsFit) { fit(); needsFit=false; } else transform(); drawEdges(); }
   }
@@ -210,6 +266,7 @@ export function createWorkflowEditor({api,toast,getEpisodes,beforeRun,onRunUpdat
       element.className=`wf-node-status ${record?.status || 'idle'}`;
     });
     if ($('#wf-runs')) $('#wf-runs').innerHTML=runsHtml();
+    refreshReview();
     const runButton=$('[data-wf-action="run"]');
     if (runButton) runButton.disabled=pending || running() || !episodeId;
   }
@@ -304,6 +361,7 @@ export function createWorkflowEditor({api,toast,getEpisodes,beforeRun,onRunUpdat
       else if (name==='run') { if (!episodeId) throw new Error('실행할 에피소드를 선택하세요.'); await beforeRun?.(episodeId); await save(); const result=await post(`/api/workflows/${workflow.id}/run`,{episodeId}); runs.unshift(result); selectedRunId=result.id; paint(); schedulePoll(); toast('실제 제작 워크플로우를 시작했습니다. 노드별 진행 상태를 확인하세요.'); }
       else if (name==='refresh-runs') { await loadRuns(); updateExecution(); }
       else if (name==='cancel-run') { await post(`/api/workflows/${workflow.id}/runs/${button.dataset.id}/cancel`); await loadRuns(); updateExecution(); toast('실행 취소를 요청했습니다.'); }
+      else if (name==='review-approve' || name==='review-changes') { await recordReview(name==='review-approve'?'approved':'changes_requested'); }
     } finally { pending=false; button.disabled=false; updateExecution(); }
   }
 
@@ -315,6 +373,7 @@ export function createWorkflowEditor({api,toast,getEpisodes,beforeRun,onRunUpdat
     host.addEventListener('submit',event=>{if(event.target.id==='wf-connect-form'){event.preventDefault();const data=new FormData(event.target);try{connect(data.get('source'),data.get('target'));}catch(error){toast(error.message,true);}}});
     host.addEventListener('input',event=>{
       const target=event.target;
+      if (target.dataset.reviewNotes) { reviewNotes.set(target.dataset.reviewNotes,target.value); return; }
       if (target.id==='wf-name') {workflow.name=target.value;changed();}
       else if (target.dataset.wfConfig && selectedNode()) {selectedNode().config ||= {};selectedNode().config[target.dataset.wfConfig]=target.value;changed();const content=host.querySelector(`[data-node-id="${selected}"] .wf-node-content p`);if(content)content.textContent=`${selectedNode().config.agent || 'studio'} · ${selectedNode().config.prompt?'사용자 지시문':'에피소드 소재 사용'}`;}
       else if (target.dataset.wfCoordinate && selectedNode() && target.checkValidity() && target.value!=='') {selectedNode()[target.dataset.wfCoordinate]=Number(target.value);updateNodePosition(selectedNode());changed();}
