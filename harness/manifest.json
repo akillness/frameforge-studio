@@ -1,0 +1,9 @@
+{
+  "schema": "frameforge-harness-current/v1",
+  "currentVersion": "1.1.0",
+  "bundlePath": "versions/1.1.0",
+  "bundleSha256": "fbaedf293623eb5af33b86bea4d901d1b1e151ddcdc7ffed420bea750d280a5d",
+  "previousVersion": "1.0.0",
+  "action": "promote",
+  "updatedAt": "2026-10-18T02:36:54.992Z"
+}

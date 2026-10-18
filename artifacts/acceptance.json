@@ -1,0 +1,75 @@
+{
+  "verifiedAt": "2026-10-18T02:30:28.448Z",
+  "base": "http://127.0.0.1:4310",
+  "episodeId": "32bda0fb-769c-43d6-99b0-fe77be8c0dc1",
+  "jobId": "c7f03169-0df0-45bc-8525-0fef22d2635a",
+  "renderStatus": "completed",
+  "width": 1080,
+  "height": 1920,
+  "duration": "2.021333",
+  "downloadBytes": 23361,
+  "historySnapshots": 3,
+  "trends": 10,
+  "trendSources": [
+    {
+      "name": "Google Trends KR",
+      "status": "ok",
+      "count": 10,
+      "url": "https://trends.google.com/trending?geo=KR",
+      "capturedAt": "2026-10-18T02:30:28.181Z"
+    },
+    {
+      "name": "Naver DataLab",
+      "status": "manual",
+      "url": "https://datalab.naver.com/",
+      "detail": "관심 키워드 비교와 수동 조사 기록을 사용합니다. 자동 실시간 순위로 표시하지 않습니다."
+    }
+  ],
+  "integrations": {
+    "studio": {
+      "available": true,
+      "status": "available",
+      "detail": "규칙 기반 스토리보드 도우미 · LLM 아님"
+    },
+    "codex": {
+      "available": true,
+      "status": "verified",
+      "detail": "실제 응답·스토리보드 적용 검증됨"
+    },
+    "jeo": {
+      "available": true,
+      "status": "installed",
+      "detail": "CLI 발견 · 인증/모델은 실행 시 검증"
+    },
+    "jeopi": {
+      "available": true,
+      "status": "installed",
+      "detail": "CLI 발견 · 인증/모델은 실행 시 검증"
+    },
+    "hermes": {
+      "available": false,
+      "status": "unavailable",
+      "detail": "기존 하니스는 참고 자료로 보존. 안전한 텍스트 전용 어댑터 미설정"
+    },
+    "google": {
+      "available": true,
+      "status": "configured",
+      "detail": "Google Trends KR RSS · 새로고침 시 실제 응답 확인"
+    },
+    "naver": {
+      "available": false,
+      "status": "manual",
+      "detail": "DataLab/검색 출처를 조사 후 URL과 키워드 기록. DataLab은 실시간 인기 순위 API가 아닙니다."
+    },
+    "aside": {
+      "available": true,
+      "status": "external",
+      "detail": "Aside 세션 9XBgVHBJYEGclLhz · ops/aside-inbox.jsonl 명령 수신"
+    },
+    "youtube": {
+      "available": false,
+      "status": "manual",
+      "detail": "채널 ID 연결 및 제작 관리. 게시 작업은 YouTube Studio에서 검수 후 실행"
+    }
+  }
+}

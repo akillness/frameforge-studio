@@ -1,0 +1,48 @@
+﻿{
+  "state": "succeeded",
+  "startedAt": "2026-10-18T02:50:51.245Z",
+  "finishedAt": "2026-10-18T02:51:03.530Z",
+  "durationMs": 12285,
+  "diagnostics": [],
+  "status": {
+    "status": "fresh",
+    "inspected": true,
+    "observedAt": "2026-10-18T02:51:02.770Z",
+    "currentRepo": {
+      "branch": "main",
+      "head": null,
+      "dirty": true,
+      "observedAt": "2026-10-18T02:51:02.770Z"
+    },
+    "lastSuccessfulIndexAt": "2026-10-18T02:51:01.150Z",
+    "indexedAt": "2026-10-18T02:51:01.150Z",
+    "indexedBranch": "main",
+    "indexedHead": null,
+    "schemaVersion": 4,
+    "extractorVersion": "typescript-5.9-v5+tree-sitter-v2",
+    "grammarVersion": "e3024e9e581533232ee11d4ed0bf6ace91588959e0e609ebcf5d6e80b51b5f9c",
+    "parseHealth": {
+      "total": 29,
+      "ok": 29,
+      "partial": 0,
+      "failed": 0,
+      "failedPaths": [],
+      "failedPathsTruncated": false
+    },
+    "changes": {
+      "total": 0,
+      "added": [],
+      "modified": [],
+      "deleted": [],
+      "truncated": false,
+      "branchChanged": false,
+      "manifestChanged": false,
+      "configChanged": false,
+      "grammarChanged": false
+    },
+    "diagnostics": []
+  },
+  "filesIndexed": 29,
+  "nodesCreated": 691,
+  "edgesCreated": 2246
+}

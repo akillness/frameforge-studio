@@ -1,0 +1,7 @@
+{
+  "observedDate": "2026-10-18",
+  "ecc": {"plugin": "ecc@ecc", "version": "2.2.3", "installed": true, "enabled": true, "newInstallation": false},
+  "jev": {"installedInterface": "legacy unprofiled harness", "live": false, "reason": "No configured API key", "offlineSelfTest": "8/8", "catalogOverride": "JEV_CATALOG_PATH"},
+  "docker": {"composeConfiguration": "passed", "build": "blocked", "containerRun": "blocked", "reason": "WSLService Stop Pending; service control Access denied"},
+  "deployment": {"runtime": "Windows host Node", "privateTailscaleServe": true, "funnel": false}
+}

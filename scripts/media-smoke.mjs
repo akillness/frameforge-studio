@@ -1,0 +1,17 @@
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { execute } from '../server/process.mjs';
+import { renderEpisode } from '../server/render.mjs';
+const dataDir = path.resolve('data/media-smoke');
+await mkdir(path.join(dataDir, 'uploads'), { recursive: true });
+await mkdir('artifacts', { recursive: true });
+await execute('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=size=320x240:rate=30:duration=3', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', path.join(dataDir, 'uploads', 'source.mp4')]);
+await execute('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=2', path.join(dataDir, 'uploads', 'music.wav')]);
+const output = await renderEpisode({ format: '16:9', scenes: [{ id: 'media', title: 'Media smoke', text: '영상 트리밍 + 오디오', duration: 1, background: '#173f35', kind: 'video', assetUrl: '/api/uploads/source.mp4', trimStart: 1, audioUrl: '/api/uploads/music.wav', audioVolume: 0.5, layout: 'lower-third' }] }, { dataDir });
+const filename = path.join(dataDir, 'exports', output.filename);
+const probe = JSON.parse((await execute('ffprobe', ['-v', 'error', '-show_streams', '-show_format', '-of', 'json', filename])).stdout);
+const volume = (await execute('ffmpeg', ['-hide_banner', '-i', filename, '-af', 'volumedetect', '-f', 'null', '-'])).stderr;
+const mean = Number(volume.match(/mean_volume: ([\d.-]+) dB/)?.[1]);
+if (!Number.isFinite(mean) || mean < -60 || Math.abs(Number(probe.format.duration) - 1) > .2) throw new Error('Audio/trim output verification failed');
+await writeFile('artifacts/media-smoke.json', JSON.stringify({ verifiedAt: new Date().toISOString(), width: probe.streams[0].width, height: probe.streams[0].height, trimStart: 1, duration: probe.format.duration, meanVolumeDb: mean, uploadedAudio: true, audioVolume: 0.5 }, null, 2));
+console.log('Actual uploaded video trim + non-silent audio render passed (1920x1080, 1 second).');

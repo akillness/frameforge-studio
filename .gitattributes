@@ -1,0 +1,6 @@
+* text=auto
+harness/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+llm-wiki/raw/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+*.png binary
+*.svg text eol=lf
+*.sh text eol=lf

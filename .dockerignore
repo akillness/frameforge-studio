@@ -1,0 +1,9 @@
+.git
+.env*
+data
+ops
+node_modules
+.mex
+.graphify
+.omx
+artifacts

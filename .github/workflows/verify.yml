@@ -1,0 +1,77 @@
+name: Verify studio and Docker
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node-and-harness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript syntax
+        run: npm run check
+      - name: Run API, workflow, security and harness regression tests
+        run: npm test
+      - name: Verify immutable harness bundle
+        run: node scripts/version-harness.mjs verify
+
+  docker-render-and-persistence:
+    needs: node-and-harness
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      COMPOSE_PROJECT_NAME: frameforge-ci
+      STUDIO_URL: http://127.0.0.1:4310
+      CONTAINER_SMOKE_PROBE: container
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Generate ephemeral CI login token
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { randomBytes } from 'node:crypto';
+          import { appendFileSync } from 'node:fs';
+          const token = randomBytes(32).toString('hex');
+          console.log(`::add-mask::${token}`);
+          appendFileSync(process.env.GITHUB_ENV, `LOGIN_TOKEN=${token}\n`);
+          NODE
+      - name: Build and start the read-only non-root Compose service
+        run: docker compose up --build --detach --wait --wait-timeout 120
+      - name: Render and download a real authenticated H.264 MP4
+        run: node scripts/container-smoke.mjs render
+      - name: Restart the service while retaining its data volume
+        run: |
+          docker compose restart studio
+          docker compose up --detach --wait --wait-timeout 120
+      - name: Verify episode, history, job and exact MP4 persistence
+        run: node scripts/container-smoke.mjs verify-persistence
+      - name: Upload bounded verification receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: container-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/container-smoke.json
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Show service logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail 100 studio
+      - name: Remove the isolated CI service and volume
+        if: always()
+        run: docker compose down --volumes --remove-orphans

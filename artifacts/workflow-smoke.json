@@ -1,0 +1,39 @@
+{
+  "verifiedAt": "2026-10-18T02:38:46.244Z",
+  "workflowId": "56e5fccd-48a0-4ac9-be8e-4e8dd16e9f5d",
+  "episodeId": "7a367236-5c6b-4685-abd1-e6c47b36625b",
+  "runId": "1361502c-9450-4399-9fbb-adda3a38d96c",
+  "status": "awaiting_review",
+  "nodes": [
+    {
+      "type": "trend",
+      "status": "completed"
+    },
+    {
+      "type": "research",
+      "status": "completed"
+    },
+    {
+      "type": "script",
+      "status": "completed"
+    },
+    {
+      "type": "storyboard",
+      "status": "completed"
+    },
+    {
+      "type": "render",
+      "status": "completed"
+    },
+    {
+      "type": "review",
+      "status": "awaiting_review"
+    }
+  ],
+  "output": {
+    "filename": "bed7d03e-05a7-446b-bb29-6fb32f3db0ad.mp4",
+    "outputUrl": "/api/exports/bed7d03e-05a7-446b-bb29-6fb32f3db0ad.mp4",
+    "jobId": "aff084c8-54fc-43ac-bfe7-54ed246abc13",
+    "episodeVersion": 2
+  }
+}

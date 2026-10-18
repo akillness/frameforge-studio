@@ -1,0 +1,10 @@
+{
+  "schema": "immutable-source-captures/v1",
+  "files": [
+    {
+      "path": "sources/2026-10-18-product-brief-excerpt.md",
+      "sha256": "ab31682495c53670e09a68c276a3dec03427f2c15a361f149bc49a7aba7d9707",
+      "capture": "public excerpt; account/session identifiers omitted"
+    }
+  ]
+}

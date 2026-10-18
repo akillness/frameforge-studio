@@ -1,0 +1,16 @@
+{
+  "verifiedAt": "2026-10-18T02:52:01.317475+00:00",
+  "base": "https://desktop-qrf3t5t.taila2003e.ts.net",
+  "login": true,
+  "secureCookie": true,
+  "sceneEditPersisted": true,
+  "workflowEdgeDisconnectReconnect": true,
+  "nodeDragAndSave": true,
+  "mobileViewport": {
+    "width": 390,
+    "documentWidth": 390
+  },
+  "asideCommandReceived": true,
+  "webCommandSubmitted": true,
+  "pageErrors": []
+}

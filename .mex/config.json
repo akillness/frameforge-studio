@@ -1,0 +1,10 @@
+{
+  "setupMode": "code-repo",
+  "aiTools": [
+    "codex"
+  ],
+  "scaffold_id": "e1e99ec8-65a2-4274-8ea9-9338f6aefe0d",
+  "scaffold_name": "frameforge-studio",
+  "origin": null,
+  "upstream": null
+}

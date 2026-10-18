@@ -1,0 +1,85 @@
+{
+  "observedAt": "2026-10-18T02:51:03.530Z",
+  "mexVersion": "0.8.3",
+  "setup": {
+    "command": "mex setup --cli (Codex choice 6)",
+    "scaffoldCreated": true,
+    "automaticPopulation": "failed: stdin is not a terminal",
+    "population": "project-specific context authored by working agent",
+    "automaticGround": "not executed by provider; real CLI symbol fingerprints used directly"
+  },
+  "graphRebuild": {
+    "command": "mex graph rebuild --json",
+    "state": "succeeded",
+    "filesIndexed": 29,
+    "nodesCreated": 691,
+    "edgesCreated": 2246,
+    "parseHealth": {
+      "total": 29,
+      "ok": 29,
+      "partial": 0,
+      "failed": 0,
+      "failedPaths": [],
+      "failedPathsTruncated": false
+    },
+    "observedAt": "2026-10-18T02:51:03.530Z",
+    "receipt": ".mex/rebuild-receipt.json"
+  },
+  "check": {
+    "command": "mex check",
+    "driftScore": 100,
+    "errors": 0,
+    "warnings": 0,
+    "filesChecked": 14,
+    "graphFreshAtCheck": true,
+    "receipt": ".mex/check-receipt.txt"
+  },
+  "knowledgeCheck": {
+    "command": "python .mex/verify-knowledge.py",
+    "exitCode": 0,
+    "wikiPages": 8,
+    "okfAtoms": 6,
+    "agentContracts": 5,
+    "immutableSources": 1,
+    "errors": []
+  },
+  "harnessUpstreamValidator": {
+    "exitCode": 1,
+    "reason": "upstream bash set -e exits on first ((AGENT_COUNT++)) returning zero; no files modified",
+    "fallback": "python .mex/verify-knowledge.py performs field, section, count and linkage checks"
+  },
+  "notTested": [
+    "Model trigger accuracy across providers",
+    "Comparative production quality benchmark",
+    "Persistent automatic team runtime activation"
+  ],
+  "sharingBoundary": "Authored context is in working tree; graph databases remain checkout-local and ignored.",
+  "harnessVersioning": {
+    "observedAt": "2026-10-18T02:37:27.608439+00:00",
+    "currentVersion": "1.1.0",
+    "previousVersion": "1.0.0",
+    "archive": "harness/archive/1.0.0",
+    "bundleSha256": "fbaedf293623eb5af33b86bea4d901d1b1e151ddcdc7ffed420bea750d280a5d",
+    "verifyCommand": "node scripts/version-harness.mjs verify",
+    "verifyExitCode": 0,
+    "testsCommand": "node --test tests/harness.test.mjs",
+    "passed": 5,
+    "failed": 0
+  },
+  "runtimeEvidence": {
+    "verifiedAt": "2026-10-18T02:38:46.244Z",
+    "workflowReceipt": "artifacts/workflow-smoke.json",
+    "fullDagStatus": "awaiting_review",
+    "liveAgentReceipts": [
+      "artifacts/agent-codex.json",
+      "artifacts/agent-jeo.json",
+      "artifacts/agent-jeopi.json"
+    ],
+    "deployment": "host Node via private Tailscale HTTPS; Docker container execution remains unverified"
+  },
+  "ci": {
+    "workflow": ".github/workflows/verify.yml",
+    "status": "configured; not run at this receipt timestamp",
+    "scope": "Node checks, immutable harness validation, Docker render and restart persistence"
+  }
+}

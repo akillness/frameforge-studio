@@ -1,0 +1,43 @@
+{
+  "verifiedAt": "2026-10-18T02:35:47.461Z",
+  "status": 200,
+  "message": "출처 확인의 중요성과 확인 습관을 전하는 15초 정보 영상입니다. 5초씩 총 3장면으로 구성합니다.",
+  "scenes": [
+    {
+      "id": "scene-1",
+      "title": "공유 전 잠깐",
+      "text": "그럴듯한 정보,\n출처도 확인했나요?",
+      "duration": 5,
+      "background": "#20342d",
+      "kind": "title",
+      "layout": "center",
+      "trimStart": 0,
+      "audioVolume": 1,
+      "narration": ""
+    },
+    {
+      "id": "scene-2",
+      "title": "원문부터 확인",
+      "text": "누가, 언제 공개했나요?\n원문이 뒷받침하는 내용인가요?",
+      "duration": 5,
+      "background": "#20342d",
+      "kind": "title",
+      "layout": "center",
+      "trimStart": 0,
+      "audioVolume": 1,
+      "narration": ""
+    },
+    {
+      "id": "scene-3",
+      "title": "확인하고 전달하기",
+      "text": "출처가 불분명하다면 공유는 잠깐!\n확인된 내용만 전달해요.",
+      "duration": 5,
+      "background": "#20342d",
+      "kind": "title",
+      "layout": "center",
+      "trimStart": 0,
+      "audioVolume": 1,
+      "narration": ""
+    }
+  ]
+}
