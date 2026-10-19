@@ -14,6 +14,105 @@ const bounded = (value, min, max, fallback) => typeof value === 'number' && Numb
 const profileName = value => typeof value === 'string' ? value.trim() : '';
 const nameKey = value => value.normalize('NFKC').toLocaleLowerCase();
 
+// Operational views are presentation preferences, separate from editor layout and API state.
+export const OPS_STORAGE_KEY = 'frameforge.ops.v1';
+export const OPS_COLUMNS = Object.freeze({channel:'채널',status:'상태',version:'버전',updatedAt:'수정 시각'});
+export function normalizeOpsView(value) {
+  const input = record(value) ? value : {};
+  return {
+    query:typeof input.query === 'string' ? input.query.slice(0,200) : '',
+    channel:typeof input.channel === 'string' ? input.channel.slice(0,100) : '',
+    status:typeof input.status === 'string' ? input.status.slice(0,60) : '',
+    sort:['updatedAt','title','version','status'].includes(input.sort) ? input.sort : 'updatedAt',
+    direction:input.direction === 'asc' ? 'asc' : 'desc',
+    columns:Array.isArray(input.columns) ? Object.keys(OPS_COLUMNS).filter(key => input.columns.includes(key)) : Object.keys(OPS_COLUMNS),
+  };
+}
+
+export function createOpsStore(options = {}) {
+  let storage, error = null, current = normalizeOpsView(), saved = [];
+  try {
+    storage = Object.hasOwn(options,'storage') ? options.storage : globalThis.localStorage;
+    if (!storage) throw new Error('Unavailable storage');
+    const raw = storage.getItem(OPS_STORAGE_KEY);
+    if (raw !== null) {
+      if (typeof raw !== 'string' || raw.length > 32768) throw new Error('Invalid storage');
+      const data = JSON.parse(raw);
+      if (!record(data) || data.version !== 1 || !record(data.current) || !Array.isArray(data.saved) || data.saved.length > 12) throw new Error('Invalid preferences');
+      current = normalizeOpsView(data.current);
+      const names = new Set();
+      saved = data.saved.map(item => {
+        if (!record(item) || typeof item.name !== 'string' || !item.name.trim() || item.name.length > 40 || !record(item.view) || names.has(nameKey(item.name.trim()))) throw new Error('Invalid saved view');
+        names.add(nameKey(item.name.trim()));
+        return {name:item.name.trim(),view:normalizeOpsView(item.view)};
+      });
+    }
+  } catch { current=normalizeOpsView(); saved=[]; error='저장된 보기를 읽을 수 없어 기본 보기를 사용합니다. 설정은 이 브라우저에만 적용됩니다.'; }
+  const getState = () => copy({current,saved,error});
+  function persist() {
+    try { storage.setItem(OPS_STORAGE_KEY,JSON.stringify({version:1,current,saved})); error=null; }
+    catch { error='보기를 저장할 수 없습니다. 현재 탭에서만 적용됩니다.'; }
+    return getState();
+  }
+  return {
+    getState,
+    update(patch) { current=normalizeOpsView({...current,...patch}); return persist(); },
+    save(name) {
+      const clean=typeof name === 'string' ? name.trim() : '';
+      if (!clean || clean.length>40) throw new Error('보기 이름을 1–40자로 입력하세요.');
+      const existing=saved.find(item=>nameKey(item.name)===nameKey(clean));
+      if (!existing && saved.length>=12) throw new Error('저장한 보기는 최대 12개입니다. 먼저 보기를 삭제하세요.');
+      if (existing) { existing.name=clean; existing.view=copy(current); }
+      else saved.push({name:clean,view:copy(current)});
+      return persist();
+    },
+    select(name) { const item=saved.find(item=>item.name===name); if (item) current=copy(item.view); return persist(); },
+    remove(name) { saved=saved.filter(item=>item.name!==name); return persist(); },
+    reset() { current=normalizeOpsView(); saved=[]; return persist(); },
+  };
+}
+
+const list = value => Array.isArray(value) ? value : [];
+export function opsQueue(data, preferences = {}) {
+  if (!Array.isArray(data?.episodes)) return null;
+  const prefs=normalizeOpsView(preferences), channels=new Map(list(data.channels).map(item=>[item.id,item.name]));
+  const query=prefs.query.normalize('NFKC').toLocaleLowerCase();
+  return data.episodes.filter(item => (!prefs.channel || item.channelId===prefs.channel) && (!prefs.status || item.status===prefs.status))
+    .map(item=>({...item,channelName:channels.get(item.channelId) || item.channelId || '확인 불가'}))
+    .filter(item=>!query || [item.title,item.id,item.channelName].some(value=>String(value ?? '').normalize('NFKC').toLocaleLowerCase().includes(query)))
+    .sort((a,b)=>{
+      const key=prefs.sort;
+      const result=key==='updatedAt' ? (Date.parse(a[key])||0)-(Date.parse(b[key])||0) : key==='version' ? (Number(a[key])||0)-(Number(b[key])||0) : String(a[key]??'').localeCompare(String(b[key]??''),'ko');
+      return (prefs.direction==='asc' ? result : -result) || String(a.id).localeCompare(String(b.id));
+    });
+}
+
+export function localMediaUrl(value) {
+  return typeof value==='string' && /^\/api\/(?:uploads|exports)\/[a-zA-Z0-9_-]+\.[a-zA-Z0-9]+$/.test(value) ? value : null;
+}
+
+export function opsDeliverables(data) {
+  const outputs=new Map();
+  const episodes=new Map(list(data?.episodes).map(item=>[item.id,item]));
+  function add(value) {
+    const url=localMediaUrl(value.url);
+    if (!url) return;
+    const previous=outputs.get(url);
+    // Prefer job provenance to current attachment metadata for the same artifact.
+    outputs.set(url,{...previous,...value,url});
+  }
+  for (const episode of episodes.values()) for (const scene of list(episode.scenes)) {
+    for (const [key,label] of [['assetUrl','장면 미디어'],['audioUrl','장면 오디오']]) if (scene[key]) add({url:scene[key],episodeId:episode.id,title:episode.title,source:label,sceneId:scene.id,sceneTitle:scene.title,attachedVersion:episode.version,format:episode.format,updatedAt:episode.updatedAt});
+  }
+  for (const job of list(data?.generationJobs)) for (const output of list(job.outputs)) add({url:output.url,episodeId:job.episodeId,title:episodes.get(job.episodeId)?.title,source:'생성 결과',jobId:job.id,episodeVersion:job.episodeVersion,type:output.type,sha256:output.sha256,width:output.width,height:output.height,updatedAt:job.completedAt || job.updatedAt});
+  for (const job of list(data?.jobs)) if (job.status==='completed') add({url:job.outputUrl,episodeId:job.episodeId,title:episodes.get(job.episodeId)?.title,source:'렌더 결과',jobId:job.id,episodeVersion:job.episodeVersion,sha256:job.sha256,updatedAt:job.updatedAt});
+  return [...outputs.values()].sort((a,b)=>(Date.parse(b.updatedAt)||0)-(Date.parse(a.updatedAt)||0) || a.url.localeCompare(b.url));
+}
+
+export function opsJobGroups(data) {
+  return [['jobs','렌더'],['generationJobs','생성'],['narrationJobs','내레이션'],['workflowRuns','워크플로우']].map(([key,label])=>({key,label,available:Array.isArray(data?.[key]),jobs:list(data?.[key])}));
+}
+
 export function normalizeLayout(value = {}) {
   const input = record(value) ? value : {};
   const preset = WORKSPACE_PRESETS.find(item => item.id === input.presetId) || WORKSPACE_PRESETS[0];

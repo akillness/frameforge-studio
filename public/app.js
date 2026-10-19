@@ -1,6 +1,6 @@
 import { createWorkflowEditor } from './workflow.js';
 import {episodeChanges,changesHtml,historyReason} from './history.js';
-import { createWorkspaceLayout } from './workspace.js';
+import { createWorkspaceLayout, createOperationalWorkspace } from './workspace.js';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -10,9 +10,9 @@ const date = value => value ? new Date(value).toLocaleString('ko-KR', {month:'sh
 const categories = ['information','drama','reenactment'];
 const categoryNames = {information:'정보 전달',drama:'드라마',reenactment:'재연'};
 const statusNames = {draft:'제작 중',review:'검토 대기',ready:'제작 완료',queued:'대기 중',running:'렌더링 중',completed:'완료',failed:'실패'};
-const views = [['studio','▣','스튜디오'],['workflow','⤳','워크플로우 빌더'],['trends','↗','트렌드 & 리서치'],['templates','▦','템플릿'],['history','◷','제작 히스토리'],['knowledge','⌘','지식 그래프'],['settings','⚙','연결 & 설정']];
+const views = [['overview','☷','운영 개요'],['studio','▣','스튜디오'],['workflow','⤳','워크플로우 빌더'],['trends','↗','트렌드 & 리서치'],['templates','▦','템플릿'],['history','◷','제작 히스토리'],['knowledge','⌘','지식 그래프'],['settings','⚙','연결 & 설정']];
 let state = {channels:[],episodes:[],templates:[],trends:[],trendKeywords:[],popularTrendKeywords:[],trendCollectionRuns:[],trendCollector:null,references:[],jobs:[],events:[],integrations:{},graph:{nodes:[],edges:[]}};
-let view = 'studio';
+let view = 'overview';
 let channelId = null;
 let episode = null;
 let sceneIndex = 0;
@@ -54,6 +54,7 @@ const workflowEditor = createWorkflowEditor({
   },
 });
 const workspaceLayout = createWorkspaceLayout({toast});
+const operations = createOperationalWorkspace({getData:()=>state, api, refresh, toast});
 
 function toast(message, error = false) {
   const node = $('#toast');
@@ -118,6 +119,7 @@ async function loadTrendBrowser(params = {}) {
 
 async function refresh() {
   state = {...state, ...await api('/api/state')};
+  operations.noteSuccess();
   authenticated = true;
   if (!channelId || !state.channels.some(channel => channel.id === channelId)) channelId = state.channels[0]?.id || null;
   if (!episode) episode = clone(state.episodes.find(item => item.channelId === channelId) || null);
@@ -231,15 +233,16 @@ function render() {
   workspaceLayout.beforeRender();
   const channel = activeChannel();
   $('#app').innerHTML = `<div class="shell"><aside class="sidebar" aria-label="워크스페이스 탐색">
-    <div class="brand"><span class="brandmark" aria-hidden="true">F</span><div class="brand-copy">FrameForge</div></div>
+    <div class="brand"><span class="brandmark" aria-hidden="true">F</span><div class="brand-copy">FrameForge<small>STUDIO</small></div></div>
     <nav class="nav" aria-label="주요 메뉴">${views.map(([key,icon,label]) => `<button data-action="view" data-view="${key}" class="${view === key ? 'active' : ''}" ${view === key ? 'aria-current="page"' : ''} title="${label}"><span class="nav-icon" aria-hidden="true">${icon}</span><span class="nav-label">${label}</span></button>`).join('')}</nav>
     <section><div class="sidebar-label">채널 <button class="icon-btn quiet" data-action="new-channel" aria-label="채널 추가">+</button></div>${state.channels.map((item,index) => `<button class="channel ${item.id === channelId ? 'active' : ''}" data-action="channel" data-id="${esc(item.id)}" title="${esc(item.name)}"><span class="channel-avatar">${String(index + 1).padStart(2,'0')}</span><span class="channel-copy"><span class="channel-name">${esc(item.name)}</span><small>${esc(categoryNames[item.category] || item.category || item.platform)}</small></span></button>`).join('')}<button class="channel quiet" data-action="new-channel" title="새 채널 추가"><span class="channel-avatar">+</span><span class="channel-copy muted">채널 추가</span></button></section>
-    <div class="sidebar-bottom"><div class="row"><span class="account">B</span><div class="account-copy"><strong style="font-size:11px">나의 워크스페이스</strong></div></div></div>
-  </aside><div class="workspace"><header class="topbar"><div class="breadcrumb">워크스페이스 <span aria-hidden="true"> / </span><strong>${esc(channel?.name || '새로운 시작')}</strong></div><div class="row"><span class="badge"><span class="dot"></span> <span class="connection-label">로컬 스튜디오 연결됨</span></span><button class="small quiet" data-action="view" data-view="settings">연결 관리 ↗</button></div></header>
-    <main class="main" id="main">${workspaceLayout.html(renderView(), view)}</main></div></div>`;
+    <div class="sidebar-bottom"><p class="eyebrow">LOCAL WORKSPACE</p><div class="account-copy">나의 제작 기록<br><small>로컬 결과물 · 버전 이력</small></div></div>
+  </aside><div class="workspace"><header class="topbar"><div class="breadcrumb">워크스페이스 <span aria-hidden="true"> / </span><strong>${esc(channel?.name || '채널 없음')}</strong></div><div class="row"><span class="badge"><span class="connection-label">${authenticated?'인증된 API 자료':'API 확인 필요'}</span></span><button class="small quiet" data-action="view" data-view="settings">연결 관리 ↗</button></div></header>
+    <main class="main" id="main" tabindex="-1">${view==='overview'?operations.html():workspaceLayout.html(renderView(), view)}</main></div></div>`;
   if (view === 'studio') updatePreview();
   if (view === 'workflow') workflowEditor.mount();
   workspaceLayout.mount();
+  if (view === 'overview') operations.mount();
   updateSaveStatus();
 }
 
@@ -444,6 +447,17 @@ async function loadHistory() {
 
 async function handleAction(button) {
   const action = button.dataset.action;
+  if (action === 'ops-open' || action === 'ops-history') {
+    const target=state.episodes.find(item=>item.id===button.dataset.id);
+    if (!target) throw new Error('에피소드가 현재 자료에 없습니다. 자료를 새로고침하세요.');
+    stopPlayback();
+    if (workflowEditor.hasChanges()) await workflowEditor.save();
+    await save(true);
+    channelId=target.channelId; episode=clone(target); sceneIndex=0;
+    view=action==='ops-history'?'history':'studio';
+    if (view==='history') await loadHistory();
+    render(); $('#main')?.focus(); return;
+  }
   if (action === 'narrate-scene' || action === 'narrate-all') { await startNarration(action === 'narrate-all'); return; }
   if (action === 'refresh-speech') { await loadSpeechVoices(); render(); return; }
   if (action === 'load-narration-result') {
@@ -633,3 +647,5 @@ setInterval(async () => {
 
 try { await refresh(); render(); }
 catch (error) { if (error.status !== 401) { $('#app').innerHTML = `<main class="panel login"><h1>스튜디오에 연결할 수 없습니다</h1><p>${esc(error.message)}</p><button data-action="reload">다시 연결</button></main>`; } }
+
+setInterval(() => { if (authenticated && view==='overview' && !busy) operations.reload(true); },30000);

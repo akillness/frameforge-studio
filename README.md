@@ -1,6 +1,6 @@
 # FrameForge Studio
 
-최종 갱신: 2026-10-18.
+최종 갱신: 2026-10-19.
 
 채널의 소재 조사부터 연출, 장면 편집, MP4 출력과 검토까지 연결하는 개인 영상 제작 허브입니다. 드라마·재연·정보 전달용 템플릿을 수정하고, **ComfyUI에서 참고한 노드 연결 방식**으로 제작 순서를 구성합니다. 실행 워크플로우와 장기 지식 그래프는 서로 다른 화면과 데이터로 관리합니다.
 
@@ -12,7 +12,9 @@
 
 ![흰색 워크플로우와 기존 노드 검사기 — 로컬 QA 레코드](docs/assets/white-studio/workflow-1440.png)
 
-최신 흰색 UI는 Studio·Workflow·Trends·Templates·History·Knowledge·Settings 7개 화면에 적용했습니다. [390px 장면 편집 화면](docs/assets/white-studio/studio-390.png)과 [101개 로컬 브라우저 검사](artifacts/white-studio-browser-smoke.json)는 별도 테스트 레코드이며, 제공자 모델 목록·견적·복구·적용에는 명시적 fixture를 사용했습니다. 실제 Higgsfield 연결·생성 성공을 뜻하지 않습니다.
+기존 흰색 UI는 Studio·Workflow·Trends·Templates·History·Knowledge·Settings 7개 화면에 적용했습니다. [390px 장면 편집 화면](docs/assets/white-studio/studio-390.png)과 [101개 로컬 브라우저 검사](artifacts/white-studio-browser-smoke.json)는 별도 테스트 레코드이며, 제공자 모델 목록·견적·복구·적용에는 명시적 fixture를 사용했습니다. 실제 Higgsfield 연결·생성 성공을 뜻하지 않습니다.
+
+2026-10-19에는 **운영 개요**를 여덟 번째 화면으로 추가했습니다. 실제 `/api/state`와 기존 이력 API에서 작업 큐·결과물 참조·변경 이력·운영 상태를 구성하며, 필터·정렬·표시 항목과 저장 뷰는 브라우저 로컬 설정입니다. 담당자·기한·가짜 건강 지표는 추가하지 않았습니다. [1440px 운영 개요 캡처](artifacts/ops-workspace/overview-1440.png)와 [검증 영수증](artifacts/ops-workspace/verification.json)을 확인하세요. 이 QA 캡처는 격리된 한국어 테스트 자료이며 운영 데이터 화면이 아닙니다. 이전 Jev 응답 영수증은 이 diff의 독립 리뷰가 아니며, 이번 diff 리뷰는 Jev 프로필 부재로 실행하지 않았습니다.
 개인 작업 창은 브라우저 안의 작업 영역 크기와 도구 표시를 조절합니다. `자동 맞춤`은 가용 폭·높이에 맞춘 도킹형 기본값이고, `컴팩트`는 1024×768 오버레이, `표준`은 1280×800 도킹형, `와이드`는 1600×900 도킹형, `집중`은 1280×800 오버레이입니다. 숫자 입력은 사용자 지정 폭 320–2560px·높이 320–1800px·검사기 폭 240–480px 범위로 정규화하며, 모서리 핸들의 포인터 드래그와 방향키(Shift는 큰 간격)로도 크기를 바꿀 수 있습니다.
 검사기·내레이션·제작 어시스턴트는 기존 DOM 패널을 이동하는 native dialog 오버레이로 열고 닫습니다. 브라우저 로컬 named profile에 작업 창 레이아웃을 저장·복원하며 서버 레이아웃 쓰기는 하지 않습니다. 어시스턴트의 제출 전 초안은 에피소드 범위의 일시 상태이고, 검사기 편집은 선택한 장면 범위의 상태입니다. [작업 창 스크린샷](docs/assets/workspace/final-workspace.png)과 [인증 브라우저 영수증](artifacts/workspace-browser-smoke.json)을 함께 확인하세요.
 
@@ -169,7 +171,7 @@ python .mex/verify-knowledge.py
 
 ## 검증과 현재 경계
 
-흰색 UI와 개인 작업 창의 최종 검증은 `npm run check` **55개 모듈 통과**, Linux Docker의 전체 `npm test` **213개 통과·실패 0·skip 0**, 실제 호스트 FFmpeg 1080×1920 H.264/AAC 출력, 그리고 로컬 4329 포트의 인증 브라우저 영수증입니다. 흰색 제작실은 [101/101개 검사](artifacts/white-studio-browser-smoke.json), 개인 작업 창은 [157/157개 검사](artifacts/workspace-browser-smoke.json)를 통과했으며 두 영수증 모두 페이지 오류 0입니다. 최종 이미지 SHA-256은 `d4424d7f59c495f97d72ea2e85fb643fe64e9f35b69ff374da90617ca9ce6023`입니다. 이 증거는 유료 생성·공개 운영 배포·Developer REST 인증 재검증을 뜻하지 않으며, 이전 Windows/Tailscale와 실제 유료 Higgsfield 근거는 아래 역사 섹션에 따로 보존합니다. [검증 기록](docs/verification.md)과 [최종 검증 영수증](artifacts/white-studio-verification.json)을 참조하세요.
+운영 개요 변경의 최신 로컬 검증은 `npm run check` **61개 모듈**, `npm test` **254/254 통과·실패 0·skip 0**, 격리 브라우저 검사 **94개**, 시각 검토 **94/100 PASS**입니다. 정확한 범위와 한계는 [운영 작업공간 검증](docs/verification.md)과 [검증 영수증](artifacts/ops-workspace/verification.json)에 있습니다. 이전 흰색 UI/작업 창의 Linux Docker 검증은 55개 모듈·213개 테스트·이미지 `d4424d7f59c495f97d72ea2e85fb643fe64e9f35b69ff374da90617ca9ce6023`에 대한 역사적 기준선이며, 이 새 이미지의 빌드·운영 반영 증거와 구분합니다.
 
 최종 Linux Docker 전체 테스트의 213/213 결과는 위 영수증에 기록되어 있습니다. 아래 명령은 기능별 재검증 레시피이며, 각 명령을 다시 실행할 때 해당 범위의 영수증도 함께 갱신해야 합니다.
 
@@ -189,7 +191,7 @@ Naver의 전체 실시간 순위를 자동 수집한다고 주장하지 않습�
 
 장면 편집기의 미리보기는 레이아웃 확인용이며 MP4와 자막 크기가 완전히 일치하지 않습니다. 최종 자막·음성·길이는 완성 영상 검토 플레이어에서 확인합니다.
 
-ECC 2.2.3 활성 설치를 확인했고 실제 코드/검증 작업에 적용했습니다. Jev는 최신 실행기를 별도 캐시에 고정하고 `frameforge-codex` 프로필로 **실제 API 검토**를 실행했습니다. 응답 모델은 `jev-1.13.0`, 결과는 `proposal_only`입니다. 과제 부합성 0.93, 근거 지지 0.80이었으나 두 항목의 확신도가 기준 0.80에 못 미쳤습니다. `unvalidated` 참고 모드이며 자동 훅·권한 부여는 없습니다. [실제 응답과 판단 근거](artifacts/jev-live-review.json), [재현 방법](docs/jev.md)을 제공합니다. API 키는 저장소 밖 비공개 프로필에서만 읽습니다.
+ECC 2.2.3 활성 설치를 확인했고 실제 코드/검증 작업에 적용했습니다. Jev는 최신 실행기를 별도 캐시에 고정하고 `frameforge-codex` 프로필로 **이전 작업의 실제 API 검토**를 실행했습니다. 응답 모델은 `jev-1.13.0`, 결과는 `proposal_only`입니다. 과제 부합성 0.93, 근거 지지 0.80이었으나 두 항목의 확신도가 기준 0.80에 못 미쳤습니다. `unvalidated` 참고 모드이며 자동 훅·권한 부여는 없습니다. 이 기록은 이번 운영 개요 diff의 리뷰가 아닙니다. 이번에는 private profile/credential이 없어 새 diff 리뷰를 실행하지 않았습니다. [이전 응답](artifacts/jev-live-review.json), [재현 방법](docs/jev.md)을 제공합니다. API 키는 저장소 밖 비공개 프로필에서만 읽습니다.
 
 Docker 변경에 대해서도 Jev 실제 API 검토를 추가 실행했습니다. 결과는 `proposal_only`이며, [현재 구현 검토 영수증](artifacts/jev-docker-review.json)에 근거와 한계를 보존했습니다. 자동 허가로 취급하지 않고 ECC 독립 리뷰와 실동작 검증을 별도로 완료했습니다.
 

@@ -1,0 +1,478 @@
+{
+  "scope": "Isolated loopback app; Korean API-created test fixtures only; no production/provider/render/upload evidence",
+  "startedAt": "2026-10-19T03:29:54.109Z",
+  "checks": [
+    "authentication gate shown before records",
+    "successful isolated login opens overview",
+    "honest empty queue and deliverables",
+    "automatic collector disabled in disposable store",
+    "queue contains all and only isolated episode records",
+    "Korean text filtering",
+    "typing preserves focus",
+    "real status filtering",
+    "config keyboard focus contained 1",
+    "config keyboard focus contained 2",
+    "config keyboard focus contained 3",
+    "config keyboard focus contained 4",
+    "config keyboard focus contained 5",
+    "config keyboard focus contained 6",
+    "config keyboard focus contained 7",
+    "config keyboard focus contained 8",
+    "config keyboard focus contained 9",
+    "config keyboard focus contained 10",
+    "config keyboard focus contained 11",
+    "config keyboard focus contained 12",
+    "config keyboard focus contained 13",
+    "config keyboard focus contained 14",
+    "config keyboard focus contained 15",
+    "config keyboard focus contained 16",
+    "config keyboard focus contained 17",
+    "config keyboard focus contained 18",
+    "Escape closes dialog and restores opener focus",
+    "keyboard-accessible sorting updates aria-sort",
+    "saved view restores local filter",
+    "column configuration applies without changing records",
+    "local preferences survive reload",
+    "saved preference envelope is browser-local",
+    "independent context has no saved view",
+    "overview configuration and navigation perform zero production mutations",
+    "operations distinguishes disabled availability",
+    "queue-only filters hidden on operations pane",
+    "no fabricated deliverables",
+    "queue-only filters hidden on deliverables pane",
+    "history derives actual events and offers version route",
+    "queue-only filters hidden on history pane",
+    "workflow provenance reads actual immutable version history",
+    "editor marks unsaved changes",
+    "navigation saves the dirty fixture as a new version",
+    "history retains exact versions and restore guard",
+    "workflow navigation is available without execution",
+    "existing workspace settings dialog opens",
+    "existing trends view renders",
+    "existing templates view renders",
+    "existing knowledge view renders",
+    "existing settings view renders",
+    "existing studio view renders",
+    "existing overview view renders",
+    "failed refresh explicitly retains stale records",
+    "slow refresh preserves newly focused input and text",
+    "slow refresh preserves newly opened dialog and unapplied fields",
+    "polling preserves focused filter and explicitly marks stale data",
+    "background polling resumes without writes",
+    "background refresh retains focused action",
+    "background refresh preserves focused queue action through request start and completion",
+    "invalid browser storage fallback is visible",
+    "preference reset clears the recovery warning immediately",
+    "measured contract text and essential control contrasts",
+    "overview 1440px document has no overflow",
+    "dialog 1440px fits viewport",
+    "studio 1440px document has no overflow",
+    "workflow 1440px document has no overflow",
+    "history 1440px document has no overflow",
+    "trends 1440px document has no overflow",
+    "templates 1440px document has no overflow",
+    "knowledge 1440px document has no overflow",
+    "settings 1440px document has no overflow",
+    "overview 768px document has no overflow",
+    "dialog 768px fits viewport",
+    "studio 768px document has no overflow",
+    "workflow 768px document has no overflow",
+    "history 768px document has no overflow",
+    "trends 768px document has no overflow",
+    "templates 768px document has no overflow",
+    "knowledge 768px document has no overflow",
+    "settings 768px document has no overflow",
+    "overview 375px document has no overflow",
+    "dialog 375px fits viewport",
+    "studio 375px document has no overflow",
+    "workflow 375px document has no overflow",
+    "history 375px document has no overflow",
+    "trends 375px document has no overflow",
+    "templates 375px document has no overflow",
+    "knowledge 375px document has no overflow",
+    "settings 375px document has no overflow",
+    "overview 200 percent equivalent viewport reflows without document overflow",
+    "overview 320px reflow has no document overflow",
+    "no browser page errors",
+    "no external HTTP requests or provider execution",
+    "browser writes limited to login and one owned dirty save"
+  ],
+  "pageErrors": [],
+  "externalRequests": [],
+  "browserWrites": [
+    {
+      "phase": "login",
+      "method": "POST",
+      "path": "/api/login"
+    },
+    {
+      "phase": "editor-save",
+      "method": "PUT",
+      "path": "/api/episodes/669fd2dd-7aa9-4239-80e6-c541e504488f"
+    }
+  ],
+  "screenshots": [
+    "artifacts/ops-workspace/empty-1440.png",
+    "artifacts/ops-workspace/overview-1440.png",
+    "artifacts/ops-workspace/deliverables-1440.png",
+    "artifacts/ops-workspace/history-1440.png",
+    "artifacts/ops-workspace/operations-1440.png",
+    "artifacts/ops-workspace/studio-1440.png",
+    "artifacts/ops-workspace/workflow-1440.png",
+    "artifacts/ops-workspace/overview-768.png",
+    "artifacts/ops-workspace/studio-768.png",
+    "artifacts/ops-workspace/workflow-768.png",
+    "artifacts/ops-workspace/overview-375.png",
+    "artifacts/ops-workspace/config-375.png",
+    "artifacts/ops-workspace/studio-375.png",
+    "artifacts/ops-workspace/workflow-375.png"
+  ],
+  "geometry": [
+    {
+      "width": 1440,
+      "view": "overview",
+      "client": 1440,
+      "scroll": 1440,
+      "overflow": false,
+      "visibleOverflow": []
+    },
+    {
+      "width": 1440,
+      "view": "studio",
+      "client": 1440,
+      "scroll": 1440,
+      "overflow": false
+    },
+    {
+      "width": 1440,
+      "view": "workflow",
+      "client": 1440,
+      "scroll": 1440,
+      "overflow": false
+    },
+    {
+      "width": 1440,
+      "view": "history",
+      "client": 1440,
+      "scroll": 1440,
+      "overflow": false
+    },
+    {
+      "width": 1440,
+      "view": "trends",
+      "client": 1440,
+      "scroll": 1440,
+      "overflow": false
+    },
+    {
+      "width": 1440,
+      "view": "templates",
+      "client": 1440,
+      "scroll": 1440,
+      "overflow": false
+    },
+    {
+      "width": 1440,
+      "view": "knowledge",
+      "client": 1440,
+      "scroll": 1440,
+      "overflow": false
+    },
+    {
+      "width": 1440,
+      "view": "settings",
+      "client": 1440,
+      "scroll": 1440,
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "view": "overview",
+      "client": 768,
+      "scroll": 768,
+      "overflow": false,
+      "visibleOverflow": [
+        {
+          "tag": "TABLE",
+          "id": "",
+          "class": "ops-table"
+        },
+        {
+          "tag": "THEAD",
+          "id": "",
+          "class": ""
+        },
+        {
+          "tag": "TR",
+          "id": "",
+          "class": ""
+        },
+        {
+          "tag": "TH",
+          "id": "",
+          "class": ""
+        },
+        {
+          "tag": "TH",
+          "id": "",
+          "class": ""
+        },
+        {
+          "tag": "TBODY",
+          "id": "",
+          "class": ""
+        },
+        {
+          "tag": "TR",
+          "id": "",
+          "class": ""
+        },
+        {
+          "tag": "TD",
+          "id": "",
+          "class": ""
+        },
+        {
+          "tag": "TD",
+          "id": "",
+          "class": ""
+        },
+        {
+          "tag": "BUTTON",
+          "id": "",
+          "class": "small"
+        }
+      ]
+    },
+    {
+      "width": 768,
+      "view": "studio",
+      "client": 768,
+      "scroll": 768,
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "view": "workflow",
+      "client": 768,
+      "scroll": 768,
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "view": "history",
+      "client": 768,
+      "scroll": 768,
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "view": "trends",
+      "client": 768,
+      "scroll": 768,
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "view": "templates",
+      "client": 768,
+      "scroll": 768,
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "view": "knowledge",
+      "client": 768,
+      "scroll": 768,
+      "overflow": false
+    },
+    {
+      "width": 768,
+      "view": "settings",
+      "client": 768,
+      "scroll": 768,
+      "overflow": false
+    },
+    {
+      "width": 375,
+      "view": "overview",
+      "client": 375,
+      "scroll": 375,
+      "overflow": false,
+      "visibleOverflow": []
+    },
+    {
+      "width": 375,
+      "view": "studio",
+      "client": 375,
+      "scroll": 375,
+      "overflow": false
+    },
+    {
+      "width": 375,
+      "view": "workflow",
+      "client": 375,
+      "scroll": 375,
+      "overflow": false
+    },
+    {
+      "width": 375,
+      "view": "history",
+      "client": 375,
+      "scroll": 375,
+      "overflow": false
+    },
+    {
+      "width": 375,
+      "view": "trends",
+      "client": 375,
+      "scroll": 375,
+      "overflow": false
+    },
+    {
+      "width": 375,
+      "view": "templates",
+      "client": 375,
+      "scroll": 375,
+      "overflow": false
+    },
+    {
+      "width": 375,
+      "view": "knowledge",
+      "client": 375,
+      "scroll": 375,
+      "overflow": false
+    },
+    {
+      "width": 375,
+      "view": "settings",
+      "client": 375,
+      "scroll": 375,
+      "overflow": false
+    },
+    {
+      "width": 720,
+      "view": "overview",
+      "zoom": "200% equivalent CSS viewport",
+      "client": 720,
+      "scroll": 720,
+      "overflow": false
+    },
+    {
+      "width": 320,
+      "view": "overview",
+      "client": 320,
+      "scroll": 320,
+      "overflow": false
+    }
+  ],
+  "providerCalls": [],
+  "fixtureRequests": [
+    {
+      "method": "POST",
+      "path": "/api/channels",
+      "status": 201
+    },
+    {
+      "method": "POST",
+      "path": "/api/episodes",
+      "status": 201
+    },
+    {
+      "method": "PUT",
+      "path": "/api/episodes/c6f6852f-ec1a-4cc8-9e4b-3a8f4b4ff3dd",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/episodes",
+      "status": 201
+    },
+    {
+      "method": "POST",
+      "path": "/api/episodes",
+      "status": 201
+    },
+    {
+      "method": "PUT",
+      "path": "/api/episodes/98143d0c-580d-4dae-bf4e-056ef9d2ee8f",
+      "status": 200
+    }
+  ],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+  ],
+  "base": "http://127.0.0.1:63715",
+  "dataBoundary": "OS temporary directory; removed after test",
+  "contrast": [
+    {
+      "foreground": "--ink",
+      "background": "--surface",
+      "minimum": 4.5,
+      "ratio": 13.996921835709399
+    },
+    {
+      "foreground": "--text-secondary",
+      "background": "--canvas",
+      "minimum": 4.5,
+      "ratio": 7.477246789640042
+    },
+    {
+      "foreground": "--muted",
+      "background": "--surface-side",
+      "minimum": 4.5,
+      "ratio": 4.822764117283038
+    },
+    {
+      "foreground": "--muted",
+      "background": "--surface-subtle",
+      "minimum": 4.5,
+      "ratio": 5.008972720607431
+    },
+    {
+      "foreground": "--accent",
+      "background": "--accent-soft",
+      "minimum": 4.5,
+      "ratio": 5.836473938316054
+    },
+    {
+      "foreground": "--surface",
+      "background": "--accent",
+      "minimum": 4.5,
+      "ratio": 6.709985637908265
+    },
+    {
+      "foreground": "--success",
+      "background": "--success-soft",
+      "minimum": 4.5,
+      "ratio": 5.886324932013081
+    },
+    {
+      "foreground": "--warning",
+      "background": "--warning-soft",
+      "minimum": 4.5,
+      "ratio": 5.207925172528828
+    },
+    {
+      "foreground": "--danger",
+      "background": "--danger-soft",
+      "minimum": 4.5,
+      "ratio": 5.370608304178265
+    },
+    {
+      "foreground": "--line-strong",
+      "background": "--surface",
+      "minimum": 3,
+      "ratio": 3.4608674345018655
+    },
+    {
+      "foreground": "--focus",
+      "background": "--surface",
+      "minimum": 3,
+      "ratio": 9.083347153914218
+    }
+  ],
+  "result": "PASS",
+  "finishedAt": "2026-10-19T03:30:22.235Z"
+}

@@ -1,6 +1,22 @@
 # 실동작 검증 기록
 
-최종 갱신: 2026-10-18. 최신 macOS 로컬 검증, 최종 Linux Docker 전체 테스트와 이전 Windows/Tailscale 운영 근거를 아래에서 구분합니다. fixture를 라이브 제공자 성공으로 취급하지 않습니다.
+최종 갱신: 2026-10-19. 이전 macOS 로컬 검증, 현재 Windows 로컬 운영작업공간 검증, 과거 Linux Docker 전체 테스트와 이전 Windows/Tailscale 운영 근거를 구분합니다. fixture를 라이브 제공자 성공으로 취급하지 않습니다.
+
+## 운영 작업공간 — 2026-10-19
+
+`public/`의 UI 전용 변경으로 운영 개요 화면, 구성 가능한 작업 큐, 브라우저 로컬 저장 뷰, API 참조 기반 결과물·이력·운영 패널을 추가했습니다. 서버/API, SQLite 모델, 자격 증명, 의존성, immutable harness는 변경하지 않았습니다.
+
+| 범위 | 확인 결과 | 근거 |
+| --- | --- | --- |
+| 구문 검사 | 61개 모듈 통과, exit 0 | `npm run check`, `artifacts/ops-workspace/check.log` |
+| 전체 테스트 | 254 통과, 실패 0, skip 0 | `npm test`, `artifacts/ops-workspace/test.log` |
+| 격리 브라우저 검사 | 94개 검사, 페이지 오류·외부 요청·제공자 호출 0, 임시 DB 삭제 | `node scripts/ops-workspace-browser-smoke.mjs`, `artifacts/ops-workspace/browser-smoke.json` |
+| 반응형 | 8개 화면, 1440/768/375px와 명시된 추가 viewport에서 문서 가로 넘침 0; tablet 표는 자체 영역에서 스크롤 | `artifacts/ops-workspace/browser-smoke.json` |
+| 시각 검토 | 94/100 PASS, 차이 목록 없음 | `artifacts/ops-workspace/visual-verdict.json` 및 최종 캡처 |
+| 무결성 | 소스·캡처 SHA-256 24/24 일치; harness 1.4.0 검증·불변; `git diff --check` 통과 | `artifacts/ops-workspace/verification.json`, `node scripts/version-harness.mjs verify` |
+| Jev 독립 diff 리뷰 | 실행하지 않음: `frameforge-codex` private profile/credential이 로컬에 없고 status exit 2. 과거 Jev 영수증은 이번 diff 리뷰가 아님 | `artifacts/jev-live-review.json`은 이전 변경의 역사 자료 |
+
+브라우저 smoke는 loopback 임시 DB와 명시적으로 분리된 한국어 fixture만 썼습니다. 한 번의 테스트 편집 저장은 해당 임시 DB에만 적용됐으며 production data, port 4310, provider, render, upload, publication은 건드리지 않았습니다. 결과물 뷰는 기존 API가 반환하는 media references만 표시하며 전체 uploads inventory는 아닙니다. 200% zoom 검증은 동등 viewport reflow였고, native browser zoom 및 full screen-reader certification은 수행하지 않았습니다. 이 기록은 로컬 검증을 설명하며 production deployment 증거는 별도로 추가합니다.
 
 ## 몰입형 워크플로우와 트렌드 보존
 

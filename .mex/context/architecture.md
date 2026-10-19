@@ -9,7 +9,7 @@ edges:
   - target: context/decisions.md
     condition: when related context is needed
 grounds_to: []
-last_updated: 2026-10-18
+last_updated: 2026-10-19
 ---
 
 # Architecture
@@ -26,8 +26,9 @@ Source evidence and template edits remain associated with channel and episode hi
 - server/render.mjs: local video assembly.
 - Uploaded inputs use standalone-media demuxer allowlists and the local file protocol only for both FFprobe and FFmpeg. Extension checks alone cannot prevent nested playlist references.
 - server/integrations.mjs: trend and host bridge adapters.
-- public/: shared white editor shell across seven views. The Studio CTA calls `workflowEditor.openGeneration()` and reuses the existing workflow inspector; a new safe five-node draft uses the existing script, not a replacement storyboard provider. Opening performs no save/run/spend. Stable scene ID resolves against the live editor state after reorder; a deleted target blocks before quote or run.
+- public/: shared white editor shell across seven views plus the operational overview. The Studio CTA calls `workflowEditor.openGeneration()` and reuses the existing workflow inspector; a new safe five-node draft uses the existing script, not a replacement storyboard provider. Opening performs no save/run/spend. Stable scene ID resolves against the live editor state after reorder; a deleted target blocks before quote or run.
 - public/workspace.js, public/workspace-state.js, public/workspace.css: browser-local personal workspace sizing and tool presentation. Presets are auto/docked, compact 1024×768/overlay, standard 1280×800/docked, wide 1600×900/docked and focus 1280×800/overlay. Numeric width/height/inspector controls are bounded; pointer and keyboard resizing update the custom layout. Native dialog overlays move existing inspector, narration and assistant DOM panels. Named profiles persist only in browser storage; layout changes never write the server. Assistant unsent drafts are episode-scoped transient state, while inspector edits are scene-scoped.
+- public/workspace.js, public/workspace-state.js, public/workspace.css also provide the operational overview: queue filters/sort/columns and named views are local-only; deliverables, history and operations panels derive from existing API records. The page adds no server schema, task entity or production write.
 - server/workflows.mjs: typed production DAG, immutable workflow/version snapshots and per-node execution records; optional `expectedWorkflowVersion`/`expectedEpisodeVersion` guards reject stale 409 before run creation. Confirmed generate workflows import, atomically apply with episode-version checking, then render; the review checkpoint still awaits explicit human inspection.
 - public/history.js and public/app.js: stable scene/node/edge comparisons, history selection, draft undo/redo and dirty-state guards. Restore validates an owned historical snapshot and appends a new current version rather than rewriting history.
 - server/generations.mjs and Store.completeGeneration/applyGeneration: persistent idempotent generation intent, known-ID polling/recovery, bounded media import with probe/hash/provenance, and atomic episode apply. Queue completion/import is separate from apply; full workflows invoke apply before rendering, while retained/recovered outputs require the explicit Apply action. Stale apply preserves the paid output.

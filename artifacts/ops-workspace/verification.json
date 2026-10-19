@@ -1,0 +1,181 @@
+{
+  "result": "PASS",
+  "verifiedAt": "2026-10-19T03:32:18.462Z",
+  "changedPaths": [
+    "DESIGN.md",
+    "public/index.html",
+    "public/styles.css",
+    "public/app.js",
+    "public/workspace.css",
+    "public/workspace.js",
+    "public/workspace-state.js",
+    "public/workflow.css",
+    "tests/ops-workspace.test.mjs",
+    "scripts/ops-workspace-browser-smoke.mjs"
+  ],
+  "artifactDirectory": "artifacts/ops-workspace/",
+  "sourceSha256": {
+    "DESIGN.md": "e469f13081a3dbc2260ab876685fd6e0f07102efabec29181a142445b4ae38bf",
+    "public/index.html": "e301043995666a477105d624dd1bf46f88616026ca93efbdf94660067f248840",
+    "public/styles.css": "029afa41a24224d0f67e31323157a87d3d3dc5ad1fa19548ed083bc6916ba5bb",
+    "public/app.js": "8b810c181f43c0a6ea44072262009e35a095a517787a2323927c6a7e4c1099f8",
+    "public/workspace.css": "2948ae8db84fd9a8f02b05101e35c502c247df04057941980b1791e0104e3941",
+    "public/workspace.js": "d6e28b496af8bfad6c47e160fbc58d0dab0eba4ce2c66d9299615c99933569c4",
+    "public/workspace-state.js": "22f68d61849891d055870252e849f3b7bb14eb073a5e7a348a61529d63ddb29e",
+    "public/workflow.css": "05a777d582af910cbc319f5b627589fed035042f19db9f065774713bd63f2cb2",
+    "tests/ops-workspace.test.mjs": "4d32f6c3d0c82f4ca332d46ad91f5d0b46d299bbbf2eceb09490601f159f6a0f",
+    "scripts/ops-workspace-browser-smoke.mjs": "ab98e76f0300aae4f36c3a2c246e248c77dc15e0da555abf01777d3b83e226d5"
+  },
+  "validation": {
+    "check": {
+      "command": "npm run check",
+      "output": "Syntax check passed for 61 modules.",
+      "modules": 61,
+      "exitCode": 0,
+      "log": "artifacts/ops-workspace/check.log"
+    },
+    "test": {
+      "command": "npm test",
+      "tests": 254,
+      "pass": 254,
+      "fail": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "log": "artifacts/ops-workspace/test.log"
+    },
+    "browser": {
+      "command": "node scripts/ops-workspace-browser-smoke.mjs",
+      "checks": 94,
+      "exitCode": 0,
+      "receipt": "artifacts/ops-workspace/browser-smoke.json",
+      "pageErrors": [],
+      "externalRequests": [],
+      "providerCalls": [],
+      "consoleErrorsExpected": [
+        "401 before test login",
+        "503 intentional failed-state test"
+      ],
+      "temporaryDatabaseRemoved": true
+    },
+    "harness": {
+      "version": "1.4.0",
+      "verified": true,
+      "unchanged": true
+    },
+    "diffCheck": {
+      "command": "git diff --check",
+      "exitCode": 0
+    }
+  },
+  "screenshots": [
+    {
+      "path": "artifacts/ops-workspace/empty-1440.png",
+      "sha256": "091c4c72bc2aa132c74045bcaae89978173896f34fff9bd645dd8d10837bec6f"
+    },
+    {
+      "path": "artifacts/ops-workspace/overview-1440.png",
+      "sha256": "7cf84173deea3a37fe6393724e83ff6c4d4fc34306379ff336c8ce685410839e"
+    },
+    {
+      "path": "artifacts/ops-workspace/deliverables-1440.png",
+      "sha256": "a4c1ff9af2cf246a6f7c4d6df5e5e31f67424d8ab8bb9a3a566dee6e127f16f7"
+    },
+    {
+      "path": "artifacts/ops-workspace/history-1440.png",
+      "sha256": "1ed2384e2817ecabe14e83347ae3b1511ac993ddc32345b95a79a2307c513dee"
+    },
+    {
+      "path": "artifacts/ops-workspace/operations-1440.png",
+      "sha256": "a240142f42761245167cb66836054eba8cf5a875d97c809baf8993769c4c8512"
+    },
+    {
+      "path": "artifacts/ops-workspace/studio-1440.png",
+      "sha256": "ca882f7639466dae099b9a7f907aaead3f950b5738639a70ada716a76ee3e09f"
+    },
+    {
+      "path": "artifacts/ops-workspace/workflow-1440.png",
+      "sha256": "88ff9515cc71ee5e2fd09ec9288ce9f44b87742c6ca47363443053c4c3206937"
+    },
+    {
+      "path": "artifacts/ops-workspace/overview-768.png",
+      "sha256": "5c8c47ffe71d3f2fe62e6f6fbb660c940ab476847ab75489f582d9c6af6c953d"
+    },
+    {
+      "path": "artifacts/ops-workspace/studio-768.png",
+      "sha256": "052c9210928b1c4e7128db654d589cfb04b9596a4328d4169afa4b37d1e4363e"
+    },
+    {
+      "path": "artifacts/ops-workspace/workflow-768.png",
+      "sha256": "8bfb5b91a76a2a80189ca6c4f98aba2688847a93a8c8d1be08cbda56696becc6"
+    },
+    {
+      "path": "artifacts/ops-workspace/overview-375.png",
+      "sha256": "9480b8226ea66c5d64e10ec2d94b9de2faaf5982395c0d169953f74bf08f206e"
+    },
+    {
+      "path": "artifacts/ops-workspace/config-375.png",
+      "sha256": "79a6b91e02ce43346f3320dd0f7e970a98b2b32650a2140fb3c159dd99b05f93"
+    },
+    {
+      "path": "artifacts/ops-workspace/studio-375.png",
+      "sha256": "78fe9ff3f7473360da93cfdeb8cc2d7f496d328e6d2de3ebc86f466f919defce"
+    },
+    {
+      "path": "artifacts/ops-workspace/workflow-375.png",
+      "sha256": "66a7b476d277314a6a2cbbddf324b1caeb6a4033943d71478451b3bb84b6a49c"
+    }
+  ],
+  "visual": {
+    "inspectedAfterFinalUiChanges": true,
+    "verdict": "artifacts/ops-workspace/visual-verdict.json",
+    "widths": [
+      1440,
+      768,
+      375
+    ],
+    "allEightViewsDocumentOverflow": false,
+    "tabletTableScroll": "Contained within labelled keyboard-focusable region"
+  },
+  "regressionChecklist": [
+    "real API record mapping and exact media provenance",
+    "Korean filtering and stable sorting",
+    "browser-local view persistence, invalid storage recovery and independent-context isolation",
+    "authentication and editor/workflow navigation",
+    "dirty editor versioned autosave and history restore guard",
+    "existing seven views and operational overview",
+    "dialog keyboard containment, Escape and focus restoration",
+    "focused queue actions preserved at polling start/completion",
+    "slow refresh preserves focused input and unapplied modal fields",
+    "loading/empty/unavailable/error/stale states",
+    "contract text/status/control contrast pairs",
+    "CJK document reflow across all views at 1440/768/375 plus overview 320 and 200% equivalent viewport"
+  ],
+  "finalReview": {
+    "blockingFindings": [],
+    "resolved": [
+      "hidden queue filters on alternate panes",
+      "placeholder/sidebar contrast",
+      "dialog Tab focus cycle",
+      "polling race at start and completion",
+      "current-reference version wording"
+    ],
+    "scope": "No fabricated product records/health, auth/version/idempotency regressions, secrets, unrelated paths or generated graphs found"
+  },
+  "boundaries": {
+    "productionDataReadOrWritten": false,
+    "port4310ConnectedOrStopped": false,
+    "serverFilesChanged": false,
+    "dependenciesOrPackagesChanged": false,
+    "providerAuthModelHookConfigChanged": false,
+    "additionalCodexExec": false,
+    "committed": false,
+    "deployed": false
+  },
+  "limitations": [
+    "Deliverables enumerate only media references already returned by episode/job APIs, not a complete uploads inventory.",
+    "Browser smoke uses explicitly identified Korean test fixtures in an isolated API database; deliverables are honestly empty there. Populated deliverable mapping/hash/version behavior is covered by focused tests.",
+    "Providers, automatic collection, narration, generation, uploads, rendering and publication were not executed by the browser smoke. Existing regression suite was run.",
+    "200% zoom evidence is a CSS viewport-equivalent reflow test, not native browser chrome zoom. No full screen-reader/WCAG certification or numeric performance baseline is claimed.",
+    "No server task/owner/deadline/shared preference/backup/storage model exists; no such fields or signals were added."
+  ]
+}
