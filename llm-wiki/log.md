@@ -1,6 +1,8 @@
 # Knowledge maintenance log
 
-Last updated: 2026-10-18.
+Last updated: 2026-10-19.
+
+- 2026-10-19: Pushed operational workspace commit `0af4b0698abcffb9f719401605fa2a6cdf1fa2ee` to `main`. Exact-source CI run 39201562842 passed Node/harness checks and isolated Linux Docker build, authenticated render/download and restart-persistence verification; preserved its receipt in `artifacts/ops-workspace-ci-smoke.json`. The local Windows update remains blocked because Docker Desktop is stopped and the guarded launcher cannot access the existing production volume; no replacement volume, SQLite write, or service deployment was performed. Continue only after Docker Desktop is available, without WSL recovery or elevation unless separately authorized.
 
 - 2026-10-18: Finalized [[wiki/reports/usability-higgsfield-2026-10-18]], README and MEX context for the seven-view white UI plus personal workspace. Workspace presets are auto/docked, compact 1024×768 overlay, standard 1280×800 docked, wide 1600×900 docked and focus 1280×800 overlay; bounded numeric, pointer and keyboard resize, native inspector/narration/assistant overlays and browser-local named profiles were verified with no layout API writes. Assistant drafts remain episode-scoped transient state while inspector edits remain scene-scoped. Final evidence: `npm run check` 55 modules, Linux Docker `npm test` 213 passed/0 failed/0 skipped, authenticated loopback 4329 white-studio 101 checks plus workspace 157 checks with zero page errors, final image `sha256:d4424d7f59c495f97d72ea2e85fb643fe64e9f35b69ff374da90617ca9ce6023`, 15/15 source hashes matched, and render/restart persistence passed. No paid generation or public deployment occurred; historical provider and Windows/Tailscale evidence remains separate.
 

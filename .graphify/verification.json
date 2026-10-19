@@ -1,5 +1,5 @@
 {
-  "observedAt": "2026-10-18T10:14:37.556485+00:00",
+  "observedAt": "2026-10-19T05:10:22.408131+00:00",
   "mode": "native deterministic code extraction; semantic enrichment not run",
   "commands": [
     {
@@ -18,7 +18,7 @@
         "--no-cluster"
       ],
       "exitCode": 0,
-      "output": "Re-extracting code files in . (no LLM needed)...\n  AST extraction: 234/234 files (100%) [8 workers]\n[graphify watch] Rebuilt (no clustering): 1274 nodes, 4342 edges\n[graphify watch] graph.json updated in .graphify\nCode graph updated. For doc/paper/image changes run /graphify --update in your AI assistant.\nTip: set GEMINI_API_KEY or GOOGLE_API_KEY to use Gemini for semantic extraction.\n"
+      "output": "Re-extracting code files in . (no LLM needed)...\n  AST extraction: 100/106 uncached files (94%) [8 workers]\n  AST extraction: 275/275 files (100%) [8 workers]\n[graphify watch] Rebuilt (no clustering): 1463 nodes, 4881 edges\n[graphify watch] graph.json updated in .graphify\nCode graph updated. For doc/paper/image changes run /graphify --update in your AI assistant.\nTip: set GEMINI_API_KEY or GOOGLE_API_KEY to use Gemini for semantic extraction.\n"
     },
     {
       "command": [
@@ -34,18 +34,18 @@
         "FrameForge structural code graph"
       ],
       "exitCode": 0,
-      "output": "wrote .graphify\\graph.html (99.3 KB)\nopen with: xdg-open .graphify\\graph.html  (or file://<repo>\\.graphify\\graph.html)\n"
+      "output": "wrote .graphify\\graph.html (110.4 KB)\nopen with: xdg-open .graphify\\graph.html  (or file://<repo>\\.graphify\\graph.html)\n"
     }
   ],
   "edgeRecordAudit": {
-    "raw": 4342,
-    "exactUnique": 2858,
-    "exactDuplicatesRemoved": 1484,
+    "raw": 4881,
+    "exactUnique": 3631,
+    "exactDuplicatesRemoved": 1250,
     "remainingDuplicates": 0,
     "method": "stable JSON of the whole edge record; distinct metadata preserved"
   },
-  "nodes": 1274,
-  "edges": 2858,
+  "nodes": 1463,
+  "edges": 3631,
   "sourceFiles": [
     ".agents/skills/mex-inbox/SKILL.md",
     ".agents/skills/mex-inbox/references/cli-workflows.md",
@@ -75,6 +75,7 @@
     ".mex/patterns/provider-evidence.md",
     ".mex/verify-knowledge.py",
     "AGENTS.md",
+    "DESIGN.md",
     "README.md",
     "docs/contract.md",
     "docs/docker-operations.md",
@@ -167,6 +168,7 @@
     "llm-wiki/wiki/concepts/production-history.md",
     "llm-wiki/wiki/entities/frameforge-studio.md",
     "llm-wiki/wiki/reports/knowledge-bootstrap.md",
+    "llm-wiki/wiki/reports/ops-workspace-2026-10-19.md",
     "llm-wiki/wiki/reports/runtime-verification-2026-10-18.md",
     "llm-wiki/wiki/reports/usability-higgsfield-2026-10-18.md",
     "llm-wiki/wiki/sources/product-brief.md",
@@ -174,6 +176,8 @@
     "public/app.js",
     "public/history.js",
     "public/workflow.js",
+    "public/workspace-state.js",
+    "public/workspace.js",
     "scripts/acceptance.mjs",
     "scripts/agent-bridge.mjs",
     "scripts/agent-smoke.mjs",
@@ -189,6 +193,7 @@
     "scripts/jeo-adapter.mjs",
     "scripts/jev-review.mjs",
     "scripts/media-smoke.mjs",
+    "scripts/ops-workspace-browser-smoke.mjs",
     "scripts/production-browser-smoke.py",
     "scripts/production-smoke.mjs",
     "scripts/render-smoke.mjs",
@@ -198,9 +203,13 @@
     "scripts/start-docker.ps1",
     "scripts/start-local.ps1",
     "scripts/stop-local.ps1",
+    "scripts/trends-browser-smoke.py",
     "scripts/usability-browser-smoke.py",
     "scripts/version-harness.mjs",
+    "scripts/white-studio-browser-smoke.py",
+    "scripts/workflow-browser-smoke.py",
     "scripts/workflow-smoke.mjs",
+    "scripts/workspace-browser-smoke.py",
     "server/app.mjs",
     "server/generation-provider.mjs",
     "server/generations.mjs",
@@ -211,6 +220,7 @@
     "server/process.mjs",
     "server/render.mjs",
     "server/store.mjs",
+    "server/trend-collector.mjs",
     "server/validation.mjs",
     "server/workflows.mjs",
     "tests/api.test.mjs",
@@ -225,14 +235,21 @@
     "tests/import-snapshot.test.mjs",
     "tests/integrations.test.mjs",
     "tests/narration.test.mjs",
+    "tests/ops-workspace.test.mjs",
     "tests/render-security.test.mjs",
     "tests/render.test.mjs",
     "tests/reviews.test.mjs",
     "tests/snapshot-data.test.mjs",
-    "tests/workflows.test.mjs"
+    "tests/store-knowledge.test.mjs",
+    "tests/trend-collector.test.mjs",
+    "tests/trends-api.test.mjs",
+    "tests/white-studio-versions.test.mjs",
+    "tests/white-studio.test.mjs",
+    "tests/workflows.test.mjs",
+    "tests/workspace-layout.test.mjs"
   ],
   "portableSourcePaths": true,
-  "graphSha256": "39593fa462c75e6c592c2cb4c4dd768b89e331aeb8bcc58aefcaf8ba92246637",
+  "graphSha256": "e5aac60b37a4c25b71308edadbfe58ef76136bead29fd3c589fe224cc19e4ad6",
   "limitations": [
     "scope command and newer update flags unavailable in installed version",
     "No semantic descriptions, provider calls or model-evaluated relationship claims",

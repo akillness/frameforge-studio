@@ -105,9 +105,9 @@
   "publication": {
     "repository": "https://github.com/akillness/frameforge-studio",
     "branch": "main",
-    "commit": "c56cc4a3e706b978a1f091a3079fb289a59fcb36",
+    "commit": "0af4b0698abcffb9f719401605fa2a6cdf1fa2ee",
     "status": "pushed",
-    "scope": "Last previously pushed source; new Docker migration changes are still working-tree changes until leader publication"
+    "scope": "Operational workspace source pushed to origin/main; exact commit verified by ls-remote"
   },
   "productionEvidence": {
     "receipt": "artifacts/docker-live-production-smoke.json",
@@ -167,7 +167,7 @@
     ],
     "sourceScope": "Historical c56cc4a narration/review/media-security source, preceding current Docker migration changes"
   },
-  "refreshState": "Final stable code graph refreshed and validated; deterministic structural extraction only; no semantic enrichment",
+  "refreshState": "2026-10-19 source refresh completed: MEX 85 indexed files, 2624 nodes/7659 edges and check 100/100; Graphify 1463 nodes/3631 whole-record-unique edges from 200 source paths; deterministic structural extraction only, no semantic enrichment",
   "sourceVerification": {
     "testsPassed": 77,
     "testsFailed": 0,
@@ -335,17 +335,66 @@
   },
   "wikiLint": {
     "project": {
-      "pages": 9,
+      "pages": 10,
+      "okfAtoms": 8,
       "missingPaths": 0,
       "brokenLinks": 0,
-      "orphans": 0
+      "orphans": 0,
+      "command": "python .mex/verify-knowledge.py",
+      "observedDate": "2026-10-19"
     },
     "canonical": {
       "pages": 17,
       "missingPaths": 0,
       "brokenLinks": 0,
-      "orphans": 0
+      "orphans": 0,
+      "scope": "Historical canonical lint from 2026-10-18; not rerun in this refresh"
     }
+  },
+  "currentOperationalWorkspace": {
+    "sourceCommit": "0af4b0698abcffb9f719401605fa2a6cdf1fa2ee",
+    "branch": "main",
+    "pushVerified": true,
+    "localVerification": {
+      "syntaxModules": 61,
+      "testsPassed": 254,
+      "testsFailed": 0,
+      "browserChecks": 94,
+      "visualScore": "94/100",
+      "sourceAndScreenshotHashes": "24/24",
+      "harnessVersion": "1.4.0"
+    },
+    "ci": {
+      "workflow": ".github/workflows/verify.yml",
+      "runId": 39201562842,
+      "url": "https://github.com/akillness/frameforge-studio/actions/runs/39201562842",
+      "status": "completed",
+      "conclusion": "success",
+      "completedAt": "2026-10-19T04:53:16Z",
+      "verified": [
+        "node-and-harness regression checks",
+        "isolated non-root/read-only Linux Compose Docker build and startup",
+        "authenticated 1080x1920 H.264/AAC render and download",
+        "episode/history/job/exact-output-hash persistence after restart"
+      ],
+      "receipt": "artifacts/ops-workspace-ci-smoke.json",
+      "productionDeployment": false
+    },
+    "localDeploymentAttempt": {
+      "observedDate": "2026-10-19",
+      "status": "blocked",
+      "reason": "Docker Desktop stopped; Docker daemon unavailable and required volume inaccessible to the guarded launcher",
+      "dockerDesktop": "stopped",
+      "comDockerService": "Stopped",
+      "wslService": "Running",
+      "runningWslDistributions": 0,
+      "port4310Listener": false,
+      "localImageBuild": false,
+      "serviceUpdated": false,
+      "dataChanged": false,
+      "nextAction": "User starts Docker Desktop; no WSL recovery or elevation without separate authorization"
+    },
+    "jevDiffReview": "not run: required private profile/credential unavailable; historical Jev receipts do not cover this diff"
   },
   "higgsfieldEvidence": {
     "receipt": "artifacts/higgsfield-live-smoke.json",

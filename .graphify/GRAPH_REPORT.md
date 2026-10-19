@@ -1,11 +1,11 @@
 # FrameForge structural graph
 
-Native Graphify code extraction: **1274 nodes, 2858 edges**.
+Native Graphify code extraction: **1463 nodes, 3631 edges**.
 
 The installed native CLI can accumulate exact duplicate edge records. This refresh
-normalized 4342 native records to
-2858 whole-record-unique edges, removing
-1484 exact duplicates before HTML
+normalized 4881 native records to
+3631 whole-record-unique edges, removing
+1250 exact duplicates before HTML
 export. Stable sorted-key JSON identifies equality of the entire record; edges
 with different metadata remain separate. graph.json, this report and graph.html
 all derive from the normalized artifact. No duplicate records remain.

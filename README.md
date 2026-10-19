@@ -171,9 +171,9 @@ python .mex/verify-knowledge.py
 
 ## 검증과 현재 경계
 
-운영 개요 변경의 최신 로컬 검증은 `npm run check` **61개 모듈**, `npm test` **254/254 통과·실패 0·skip 0**, 격리 브라우저 검사 **94개**, 시각 검토 **94/100 PASS**입니다. 정확한 범위와 한계는 [운영 작업공간 검증](docs/verification.md)과 [검증 영수증](artifacts/ops-workspace/verification.json)에 있습니다. 이전 흰색 UI/작업 창의 Linux Docker 검증은 55개 모듈·213개 테스트·이미지 `d4424d7f59c495f97d72ea2e85fb643fe64e9f35b69ff374da90617ca9ce6023`에 대한 역사적 기준선이며, 이 새 이미지의 빌드·운영 반영 증거와 구분합니다.
+운영 개요 변경의 최신 로컬 검증은 `npm run check` **61개 모듈**, `npm test` **254/254 통과·실패 0·skip 0**, 격리 브라우저 검사 **94개**, 시각 검토 **94/100 PASS**입니다. 이어서 commit `0af4b0698abcffb9f719401605fa2a6cdf1fa2ee`의 [GitHub Actions run 39201562842](https://github.com/akillness/frameforge-studio/actions/runs/39201562842)에서 Linux Docker image build, 인증 렌더·다운로드와 재시작 persistence 검증도 통과했습니다([receipt](artifacts/ops-workspace-ci-smoke.json)). CI는 격리 volume을 사용합니다. Windows 운영 서비스는 아직 최신화되지 않았습니다: Docker Desktop 시작 실패로 로컬 런처가 기존 volume에 접근하지 못해 중단됐으며 4310 listener도 없습니다. 정확한 범위와 한계는 [운영 작업공간 검증](docs/verification.md)을 참조하세요.
 
-최종 Linux Docker 전체 테스트의 213/213 결과는 위 영수증에 기록되어 있습니다. 아래 명령은 기능별 재검증 레시피이며, 각 명령을 다시 실행할 때 해당 범위의 영수증도 함께 갱신해야 합니다.
+이전 흰색 UI의 Linux Docker 전체 테스트는 당시 소스에서 213/213 통과했습니다. 최신 운영 개요 소스는 별도 정확한 커밋 근거가 있습니다. GitHub Actions run 39201562842가 Linux Docker 이미지를 빌드·기동하고 인증 MP4를 렌더·다운로드했으며 재시작 후 영속성도 검증했습니다. 이 CI 결과는 Windows 운영 배포 영수증이 아닙니다.
 
 ```powershell
 npm test

@@ -16,7 +16,13 @@
 | 무결성 | 소스·캡처 SHA-256 24/24 일치; harness 1.4.0 검증·불변; `git diff --check` 통과 | `artifacts/ops-workspace/verification.json`, `node scripts/version-harness.mjs verify` |
 | Jev 독립 diff 리뷰 | 실행하지 않음: `frameforge-codex` private profile/credential이 로컬에 없고 status exit 2. 과거 Jev 영수증은 이번 diff 리뷰가 아님 | `artifacts/jev-live-review.json`은 이전 변경의 역사 자료 |
 
-브라우저 smoke는 loopback 임시 DB와 명시적으로 분리된 한국어 fixture만 썼습니다. 한 번의 테스트 편집 저장은 해당 임시 DB에만 적용됐으며 production data, port 4310, provider, render, upload, publication은 건드리지 않았습니다. 결과물 뷰는 기존 API가 반환하는 media references만 표시하며 전체 uploads inventory는 아닙니다. 200% zoom 검증은 동등 viewport reflow였고, native browser zoom 및 full screen-reader certification은 수행하지 않았습니다. 이 기록은 로컬 검증을 설명하며 production deployment 증거는 별도로 추가합니다.
+브라우저 smoke는 loopback 임시 DB와 명시적으로 분리된 한국어 fixture만 썼습니다. 한 번의 테스트 편집 저장은 해당 임시 DB에만 적용됐으며 production data, port 4310, provider, render, upload, publication은 건드리지 않았습니다. 결과물 뷰는 기존 API가 반환하는 media references만 표시하며 전체 uploads inventory는 아닙니다. 200% zoom 검증은 동등 viewport reflow였고, native browser zoom 및 full screen-reader certification은 수행하지 않았습니다. 이 기록은 로컬 검증을 설명합니다. 아래 CI 결과는 격리 환경 근거이며, 로컬 운영 서비스 배포는 확인되지 않았습니다.
+
+## 최신 GitHub CI 및 로컬 운영 반영 상태 — 2026-10-19
+
+`0af4b0698abcffb9f719401605fa2a6cdf1fa2ee`를 `main`에 push한 뒤 GitHub Actions run [39201562842](https://github.com/akillness/frameforge-studio/actions/runs/39201562842)가 성공했습니다. Node/harness 회귀 검증과 격리된 Linux Compose Docker image build, 인증된 1080×1920 H.264/AAC 렌더·다운로드, 서비스 재시작 후 episode/history/job/exact-MP4-hash 보존이 통과했습니다. [CI smoke receipt](../artifacts/ops-workspace-ci-smoke.json). 이는 runner의 격리 데이터 볼륨에 대한 증거이며 Windows 운영 서비스의 배포 완료 증거가 아닙니다.
+
+로컬 `scripts/start-docker.ps1` 재개 시도는 Docker Desktop이 시작되지 않아 완료되지 않았습니다. `docker desktop status`는 `stopped`, `com.docker.service`는 `Stopped`, `WslService`는 `Running`, 실행 중인 WSL 배포판과 4310 listener는 없었습니다. 런처는 기존 production volume에 접근할 수 없어 안전하게 중단했습니다. 볼륨 생성·복원·삭제, SQLite 변경, 서비스 최신화는 하지 않았습니다. Docker Desktop이 사용자 세션에서 정상 실행된 뒤에만 같은 기존-volume 가드 경로로 계속할 수 있습니다; WSL 복구나 관리자 권한 동의는 별도 승인 없이 수행하지 않습니다.
 
 ## 몰입형 워크플로우와 트렌드 보존
 
