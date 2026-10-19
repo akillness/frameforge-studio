@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { createHiggsfieldApi } from '../server/higgsfield.mjs';
 import { GenerationQueue } from '../server/generations.mjs';
 import { Store, starterScene } from '../server/store.mjs';
-import { createWorkflowEditor, workflowErrors } from '../public/workflow.js';
+import { addWorkflowNode, createWorkflowEditor, fitWorkflowCanvas, workflowCanvasHintText, workflowErrors, workflowRunHistoryHtml } from '../public/workflow.js';
 
 const model = 'bytedance/seedance-2.5/text-to-video';
 const validParams = { duration: 5, resolution: '720p', aspect_ratio: '16:9', output_format: 'mp4', generate_audio: true };
@@ -224,5 +224,71 @@ test('openGeneration makes a safe five-node draft instead of reusing a saved stu
   assert.deepEqual(existing, originalGraph);
   assert.deepEqual(workflowErrors(result), []);
   assert.equal(f.calls.some(call => call.method === 'POST' || call.url.includes('/generations')), false);
+});
+
+test('workflow run history renders collapsed searchable pages with traceable run summaries', () => {
+  const html = workflowRunHistoryHtml({
+    items: [{
+      id: 'run-123', workflowId: 'workflow-1', workflowName: 'Research flow', workflowVersion: 4,
+      episodeId: 'episode-2', episodeTitle: 'Source check', episodeVersion: 7, status: 'failed',
+      createdAt: '2026-10-19T03:00:00.000Z', nodeRuns: [{ nodeId: 'script-1', type: 'script', status: 'failed' }],
+    }],
+    total: 21, page: 2, pageSize: 20, pageCount: 2,
+  }, 'source');
+
+  assert.match(html, /<details class="wf-history-record" data-run-id="run-123">/);
+  assert.doesNotMatch(html, /<details[^>]*\bopen\b/);
+  assert.match(html, /data-run-history-search/);
+  assert.match(html, /run-123/);
+  assert.match(html, /workflow-1/);
+  assert.match(html, /episode-2/);
+  assert.match(html, /data-wf-action="history-page" data-page="1"/);
+  assert.match(html, /data-wf-action="history-page" data-page="2"/);
+  assert.match(html, /검색 결과 21개 · 2\/2 페이지/);
+});
+
+test('workflow canvas auto-fit scales uniformly and keeps graph bounds inside the resized viewport', () => {
+  const nodes = [0, 1, 2, 3, 4, 5].map(index => ({ x: 80 + index * 260, y: 180, type: 'stage' }));
+  const fit = fitWorkflowCanvas(nodes, 1019, 540);
+  const left = Math.min(...nodes.map(node => node.x));
+  const right = Math.max(...nodes.map(node => node.x + 210));
+  const top = Math.min(...nodes.map(node => node.y));
+  const bottom = Math.max(...nodes.map(node => node.y + 140));
+  assert.ok(fit.scale > 0 && fit.scale < 1);
+  assert.ok(fit.pan.x + left * fit.scale >= 0);
+  assert.ok(fit.pan.x + right * fit.scale <= 1019);
+  assert.ok(fit.pan.y + top * fit.scale >= 0);
+  assert.ok(fit.pan.y + bottom * fit.scale <= 490);
+  const mobile = fitWorkflowCanvas(nodes, 326, 420);
+  assert.deepEqual(mobile, { scale: 1, pan: { x: 0, y: 0 }, layout: 'stacked' });
+  const tablet = fitWorkflowCanvas(nodes, 631, 460);
+  assert.deepEqual(tablet, { scale: 1, pan: { x: 0, y: 0 }, layout: 'stacked' });
+  assert.match(workflowCanvasHintText('stacked'), /목록.*설정.*입력\/출력/);
+  assert.match(workflowCanvasHintText('canvas'), /드래그.*확대\/축소/);
+});
+
+test('adding a workflow node inserts it at its stage position and rewires adjacent stages', () => {
+  const workflow = {
+    name: 'Connected flow',
+    nodes: [
+      { id: 'script', type: 'script', x: 0, y: 0, config: {} },
+      { id: 'storyboard', type: 'storyboard', x: 1, y: 0, config: {} },
+      { id: 'render', type: 'render', x: 2, y: 0, config: {} },
+      { id: 'review', type: 'review', x: 3, y: 0, config: {} },
+    ],
+    edges: [
+      { id: 'a', source: 'script', target: 'storyboard' },
+      { id: 'b', source: 'storyboard', target: 'render' },
+      { id: 'c', source: 'render', target: 'review' },
+    ],
+  };
+  const result = addWorkflowNode(workflow, 'generate', { id: 'generate', x: 99, y: 42, config: { model: 'fixture' } });
+  assert.deepEqual(result.nodes.map(node => node.id), ['script', 'storyboard', 'generate', 'render', 'review']);
+  assert.ok(result.edges.some(edge => edge.source === 'storyboard' && edge.target === 'generate'));
+  assert.ok(result.edges.some(edge => edge.source === 'generate' && edge.target === 'render'));
+  assert.equal(result.edges.some(edge => edge.source === 'storyboard' && edge.target === 'render'), false);
+  assert.deepEqual(workflowErrors(result), []);
+  assert.equal(workflow.nodes.some(node => node.id === 'generate'), false);
+  assert.throws(() => addWorkflowNode(result, 'generate', { id: 'duplicate' }), /one|하나|already/i);
 });
 

@@ -81,6 +81,31 @@ export class Store {
     if (!row) throw new HttpError(404, `${kind} item not found`);
     return JSON.parse(row.data);
   }
+  listWorkflowRunHistory({ page = 1, limit = 20, query = '' } = {}) {
+    const offset = (page - 1) * limit;
+    const where = query ? ' AND instr(lower(data), lower(?)) > 0' : '';
+    const params = query ? ['workflowRuns', query] : ['workflowRuns'];
+    const total = Number(this.db.prepare(`SELECT COUNT(*) AS count FROM entities WHERE kind = ?${where}`).get(...params).count);
+    const rows = this.db.prepare(`SELECT data FROM entities WHERE kind = ?${where} ORDER BY json_extract(data, '$.createdAt') DESC, rowid DESC LIMIT ? OFFSET ?`).all(...params, limit, offset);
+    const items = rows.map(({ data }) => {
+      const run = JSON.parse(data);
+      return {
+        id: run.id,
+        workflowId: run.workflowId,
+        workflowName: run.workflowSnapshot?.name || '',
+        workflowVersion: run.workflowVersion,
+        episodeId: run.episodeId,
+        episodeTitle: run.episodeSnapshot?.title || '',
+        episodeVersion: run.episodeVersion,
+        selectedStages: Array.isArray(run.selectedStages) ? run.selectedStages : [],
+        status: run.status,
+        createdAt: run.createdAt,
+        updatedAt: run.updatedAt,
+        nodeRuns: Array.isArray(run.nodeRuns) ? run.nodeRuns.map(({ nodeId, type, status }) => ({ nodeId, type, status })) : [],
+      };
+    });
+    return { items, total, page, pageSize: limit, pageCount: Math.ceil(total / limit) };
+  }
   save(kind, item) {
     this.db.prepare('INSERT INTO entities(kind,id,data) VALUES (?,?,?) ON CONFLICT(kind,id) DO UPDATE SET data=excluded.data').run(kind, item.id, JSON.stringify(item));
     return item;

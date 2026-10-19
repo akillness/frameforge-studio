@@ -584,3 +584,85 @@ test('restart fails interrupted runs and late responses cannot write into a clos
   assert.match(failed.error, /restarted/);
   assert.equal(f.renderCount(), 0);
 });
+
+test('workflow run history is searchable, paginated, and directly traceable to its stored snapshot', async (t) => {
+  const f = await setup(t);
+  const db = new DatabaseSync(path.join(f.dataDir, 'studio.sqlite'));
+  const insert = db.prepare('INSERT INTO entities(kind, id, data) VALUES (?, ?, ?)');
+  for (let index = 0; index < 25; index++) {
+    const id = index === 7 ? 'run-special-target' : `run-fixture-${String(index).padStart(2, '0')}`;
+    const run = {
+      id,
+      workflowId: f.workflow.id,
+      workflowVersion: 3,
+      episodeId: f.episode.id,
+      episodeVersion: index + 1,
+      createdAt: new Date(Date.UTC(2026, 0, 1, 0, index)).toISOString(),
+      updatedAt: new Date(Date.UTC(2026, 0, 1, 0, index)).toISOString(),
+      status: index === 7 ? 'failed' : 'awaiting_review',
+      selectedStages: ['script', 'storyboard', 'render', 'review'],
+      workflowSnapshot: { name: 'History fixture', nodes: [], edges: [] },
+      episodeSnapshot: { title: index === 7 ? 'Searchable unique phrase' : `Episode ${index}` },
+      nodeRuns: [{ nodeId: 'script-node', type: 'script', status: index === 7 ? 'failed' : 'completed', error: index === 7 ? 'Fixture failure' : null }],
+    };
+    insert.run('workflowRuns', id, JSON.stringify(run));
+  }
+  db.close();
+
+  const firstResponse = await f.request('/api/workflow-runs?page=1&limit=20');
+  assert.equal(firstResponse.status, 200);
+  const first = await firstResponse.json();
+  assert.equal(first.total, 25);
+  assert.equal(first.page, 1);
+  assert.equal(first.pageSize, 20);
+  assert.equal(first.pageCount, 2);
+  assert.equal(first.items.length, 20);
+  assert.equal(first.items[0].id, 'run-fixture-24');
+  assert.equal(first.items[0].workflowSnapshot, undefined, 'list responses should be summaries, not unbounded snapshots');
+
+  const second = await (await f.request('/api/workflow-runs?page=2&limit=20')).json();
+  assert.equal(second.items.length, 5);
+  assert.equal(second.items.at(-1).id, 'run-fixture-00');
+
+  const search = await (await f.request('/api/workflow-runs?page=1&limit=20&q=searchable%20unique%20phrase')).json();
+  assert.equal(search.total, 1);
+  assert.equal(search.items[0].id, 'run-special-target');
+  assert.equal(search.items[0].nodeRuns[0].status, 'failed');
+
+  const detailResponse = await f.request('/api/workflow-runs/run-special-target');
+  assert.equal(detailResponse.status, 200);
+  const detail = await detailResponse.json();
+  assert.equal(detail.episodeSnapshot.title, 'Searchable unique phrase');
+  assert.equal(detail.workflowSnapshot.name, 'History fixture');
+  assert.equal(detail.nodeRuns[0].error, 'Fixture failure');
+
+  assert.equal((await f.request('/api/workflow-runs?page=0')).status, 400);
+  assert.equal((await f.request('/api/workflow-runs?limit=101')).status, 400);
+  assert.equal((await f.request('/api/workflow-runs/missing-run')).status, 404);
+});
+
+test('Hermes-selected script stages use the connected agent and expose saved execution progress', async (t) => {
+  const calls = [];
+  const hermesStatus = { available: true, status: 'installed', detail: 'Hermes CLI discovered; runtime response not yet verified' };
+  const f = await setup(t, { integrations: {
+    ...baseIntegrations,
+    integrationStatus: async () => ({ studio: { available: true }, hermes: hermesStatus }),
+    runAgent: async (agent, message, episode) => {
+      calls.push({ agent, message, episodeId: episode.id });
+      return { message: 'Hermes fixture response', scenes: episode.scenes };
+    },
+  } });
+  const status = await (await f.request('/api/integrations')).json();
+  assert.deepEqual(status.hermes, hermesStatus);
+
+  const workflow = { ...f.workflow, nodes: f.workflow.nodes.map(node => node.type === 'script' ? { ...node, config: { agent: 'hermes', prompt: 'Return storyboard JSON' } } : node) };
+  const save = await f.request(`/api/workflows/${workflow.id}`, 'PUT', { ...workflow, expectedVersion: 1 });
+  assert.equal(save.status, 200);
+  const started = await (await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id })).json();
+  const run = await waitRun(f, started.id);
+  assert.equal(run.status, 'awaiting_review');
+  assert.deepEqual(calls.map(call => call.agent), ['hermes']);
+  assert.equal(run.nodeRuns.find(node => node.type === 'script').output.agent, 'hermes');
+  assert.equal(run.nodeRuns.find(node => node.type === 'script').status, 'completed');
+  assert.equal(run.workflowSnapshot.nodes.find(node => node.type === 'script').config.agent, 'hermes');
+});

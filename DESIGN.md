@@ -95,6 +95,14 @@ The listed concept values are starting values, not a contrast certification. Adj
 - Keep workspace view preferences client-local. Server-side sharing/collaboration, user/owner assignment, due dates, custom workflow status schema, audit actors, backup/storage telemetry, and remote fleet observability remain out of scope until their models and APIs exist.
 - **Performance evidence:** no numeric Core Web Vitals target or “fast” claim is made in this redesign contract because a matched pre-change browser baseline (device, route, load shape, and attribution) has not been captured. Avoid new runtime dependencies and network fonts; compare fresh before/after captures under one named profile before setting a numeric budget.
 
+## 9. Workflow cockpit extension
+
+- Keep the workflow canvas in the full available content width. Node settings, creation, connection, deletion, execution detail, and history detail open as focused native dialogs/popovers over the canvas; do not reserve a persistent inspector column or displace the active canvas.
+- Every node exposes a keyboard-accessible details action. Connection choices are based on the saved graph and server validation; show invalid/reversed/duplicate connections as unavailable with a reason, never as fake success.
+- Node execution status is derived from persisted workflow-run/node-run records. Show state text, stage counts, timestamps, and error details only when present in the API; no synthesized progress percentages or sample runs.
+- Run history is a `<details>` disclosure closed by default. Search and pagination use a bounded server query; each entry shows stable run ID, workflow/episode versions, actual status, and can open the immutable run snapshot and stage outputs in an overlay.
+- Dialogs restore focus to the triggering control, contain keyboard focus while open, close on Escape/cancel, and do not steal focus during background polling. Destructive node removal names the node and confirms before applying the draft mutation.
+
 ## Implementation and QA gate
 
 1. Keep this file current before changing component code; every new token or interaction state belongs here first.

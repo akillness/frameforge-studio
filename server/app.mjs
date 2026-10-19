@@ -326,6 +326,23 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     if (request.method === 'GET' && path === '/api/knowledge') return json(response, 200, store.knowledge());
     if (request.method === 'GET' && path === '/api/commands') return json(response, 200, store.list('commands'));
     if (request.method === 'GET' && path === '/api/workflows') return json(response, 200, store.list('workflows'));
+    if (request.method === 'GET' && path === '/api/workflow-runs') {
+      const readPositiveInteger = (key, fallback, maximum) => {
+        const raw = requestUrl.searchParams.get(key);
+        if (raw === null) return fallback;
+        if (!/^[1-9]\d*$/.test(raw)) throw new HttpError(400, `Workflow run ${key} must be a positive integer`);
+        const value = Number(raw);
+        if (!Number.isSafeInteger(value) || value > maximum) throw new HttpError(400, `Workflow run ${key} exceeds the supported range`);
+        return value;
+      };
+      const page = readPositiveInteger('page', 1, 1000000);
+      const limit = readPositiveInteger('limit', 20, 100);
+      const query = (requestUrl.searchParams.get('q') || '').trim();
+      if (query.length > 200) throw new HttpError(400, 'Workflow run search query must be at most 200 characters');
+      return json(response, 200, store.listWorkflowRunHistory({ page, limit, query }));
+    }
+    const workflowRunDetail = /^\/api\/workflow-runs\/([^/]+)$/.exec(path);
+    if (request.method === 'GET' && workflowRunDetail) return json(response, 200, store.get('workflowRuns', decodeURIComponent(workflowRunDetail[1])));
     const workflowGet = /^\/api\/workflows\/([^/]+)\/(runs|history)$/.exec(path);
     if (request.method === 'GET' && workflowGet) return json(response, 200, workflowGet[2] === 'runs' ? workflows.listRuns(workflowGet[1]) : store.workflowHistory(workflowGet[1]));
     const history = /^\/api\/episodes\/([^/]+)\/history$/.exec(path);

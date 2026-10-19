@@ -1,18 +1,10 @@
 {
-  "verifiedAt": "2026-10-18T02:38:46.244Z",
-  "workflowId": "56e5fccd-48a0-4ac9-be8e-4e8dd16e9f5d",
-  "episodeId": "7a367236-5c6b-4685-abd1-e6c47b36625b",
-  "runId": "1361502c-9450-4399-9fbb-adda3a38d96c",
+  "verifiedAt": "2026-10-19T07:47:48.418Z",
+  "workflowId": "c992c905-14e3-4ff4-97d5-1a8c2db349c9",
+  "episodeId": "c5884d1f-61b5-4231-ad2f-807c56553c6f",
+  "runId": "fa91d58e-e6e5-4acd-8a07-01211c2a6e1f",
   "status": "awaiting_review",
   "nodes": [
-    {
-      "type": "trend",
-      "status": "completed"
-    },
-    {
-      "type": "research",
-      "status": "completed"
-    },
     {
       "type": "script",
       "status": "completed"
@@ -31,9 +23,10 @@
     }
   ],
   "output": {
-    "filename": "bed7d03e-05a7-446b-bb29-6fb32f3db0ad.mp4",
-    "outputUrl": "/api/exports/bed7d03e-05a7-446b-bb29-6fb32f3db0ad.mp4",
-    "jobId": "aff084c8-54fc-43ac-bfe7-54ed246abc13",
+    "filename": "90404b08-a333-4ae6-9bb0-88f9a925b2e8.mp4",
+    "outputUrl": "/api/exports/90404b08-a333-4ae6-9bb0-88f9a925b2e8.mp4",
+    "sha256": "5fe5094d4a2b71b2e0ee5173d697ac1e250b2878213b2b3d747c202889de5355",
+    "jobId": "0ed0a8ba-71a2-4e0f-8fea-53a623fc58ee",
     "episodeVersion": 2
   }
 }

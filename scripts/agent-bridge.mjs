@@ -18,7 +18,24 @@ const codexScript = process.env.CODEX_CLI || path.join(npmRoot, '@openai/codex/b
 const jeoScript = process.env.JEO_CLI || path.join(npmRoot, 'jeo-code/src/cli.ts');
 const jeopiBinary = process.env.JEOPI_CLI || path.join(homedir(), '.bun/bin', process.platform === 'win32' ? 'jeopi.exe' : 'jeopi');
 const bunBinary = process.env.BUN_CLI || path.join(homedir(), '.bun/bin', process.platform === 'win32' ? 'bun.exe' : 'bun');
+const hermesBinary = process.env.HERMES_CLI || (process.platform === 'win32'
+  ? path.join(homedir(), 'AppData/Local/hermes/hermes-agent/venv/Scripts/hermes.exe')
+  : 'hermes');
 const root = path.resolve('data/agent-work');
+function commandAvailable(binary) {
+  if (path.isAbsolute(binary) || binary.includes('/') || binary.includes('\\\\')) return existsSync(binary);
+  return (process.env.PATH || '').split(path.delimiter).some(directory =>
+    [binary, `${binary}.exe`, `${binary}.cmd`, `${binary}.bat`].some(name => existsSync(path.join(directory, name))));
+}
+export async function runHermesAgent(prompt, { cwd, binary = hermesBinary, executeImpl = execute } = {}) {
+  if (typeof prompt !== 'string' || !prompt.trim() || !cwd) throw new Error('Invalid Hermes request');
+  const queryFile = path.join(cwd, 'hermes-query.txt');
+  await writeFile(queryFile, prompt, { mode: 0o600 });
+  return executeImpl(binary, [
+    'chat', '--query-file', queryFile, '--oneshot', '--quiet',
+    '--toolsets', 'search', '--max-turns', '1', '--run-budget', '150', '--source', 'tool',
+  ], { cwd, timeout: 170000, maxBytes: 262144 });
+}
 const sceneSchema = {
   type: 'object', additionalProperties: false,
   required: ['id', 'title', 'text', 'duration', 'background', 'kind', 'layout'],
@@ -27,19 +44,38 @@ const sceneSchema = {
 const schema = { type: 'object', additionalProperties: false, required: ['message', 'scenes'], properties: { message: { type: 'string' }, scenes: { type: 'array', items: sceneSchema } } };
 const verified = new Set();
 function availability() {
-  const flags = { codex: existsSync(codexScript), jeo: existsSync(jeoScript) && existsSync(bunBinary), jeopi: existsSync(jeopiBinary), hermes: false };
-  return Object.fromEntries(Object.entries(flags).map(([name, installed]) => [name, { available: installed, status: installed ? (verified.has(name) ? 'verified' : 'installed') : 'unavailable', detail: name === 'hermes' ? '기존 하니스는 참고 자료로 보존. 안전한 텍스트 전용 어댑터 미설정' : installed ? (verified.has(name) ? '실제 응답·스토리보드 적용 검증됨' : 'CLI 발견 · 인증/모델은 실행 시 검증') : '호스트 CLI 설정 필요' }]));
+  const flags = { codex: existsSync(codexScript), jeo: existsSync(jeoScript) && existsSync(bunBinary), jeopi: existsSync(jeopiBinary), hermes: commandAvailable(hermesBinary) };
+  return Object.fromEntries(Object.entries(flags).map(([name, installed]) => [name, { available: installed, status: installed ? (verified.has(name) ? 'verified' : 'installed') : 'unavailable', detail: name === 'hermes' ? (installed ? (verified.has(name) ? '실제 응답·스토리보드 적용 검증됨' : 'Hermes CLI 발견 · 인증/모델은 실행 시 확인') : 'Hermes CLI를 찾을 수 없음') : installed ? (verified.has(name) ? '실제 응답·스토리보드 적용 검증됨' : 'CLI 발견 · 인증/모델은 실행 시 검증') : '호스트 CLI 설정 필요' }]));
 }
 function parseResult(text) {
   const plain = text.replace(/\x1b\[[0-9;]*m/g, '').trim();
   const fenced = plain.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const candidate = fenced ? fenced[1] : plain.slice(plain.indexOf('{'), plain.lastIndexOf('}') + 1);
-  const result = JSON.parse(candidate);
-  if (typeof result.message !== 'string' || result.message.length > 12000) throw new Error('Agent returned invalid message');
+  const candidates = fenced ? [fenced[1]] : [];
+  for (let start = 0; start < plain.length; start++) {
+    if (plain[start] !== '{') continue;
+    let depth = 0, inString = false, escaped = false;
+    for (let end = start; end < plain.length; end++) {
+      const char = plain[end];
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (char.charCodeAt(0) === 92) escaped = true;
+        else if (char === '"') inString = false;
+        continue;
+      }
+      if (char === '"') inString = true;
+      else if (char === '{') depth++;
+      else if (char === '}' && --depth === 0) { candidates.push(plain.slice(start, end + 1)); break; }
+    }
+  }
+  let result;
+  for (const candidate of candidates) {
+    try { result = JSON.parse(candidate); break; } catch { /* Try the next complete JSON object. */ }
+  }
+  if (!result || typeof result !== 'object' || Array.isArray(result) || typeof result.message !== 'string' || result.message.length > 12000) throw new Error('Agent returned invalid message');
   return { message: result.message, scenes: validateScenes(result.scenes) };
 }
 async function run(body) {
-  if (!['codex', 'jeo', 'jeopi'].includes(body.agent) || !availability()[body.agent].available) throw new Error('Agent adapter unavailable');
+  if (!['codex', 'jeo', 'jeopi', 'hermes'].includes(body.agent) || !availability()[body.agent].available) throw new Error('Agent adapter unavailable');
   if (typeof body.message !== 'string' || body.message.length > 12000 || !body.episode) throw new Error('Invalid agent request');
   const jobDir = path.join(root, randomUUID());
   await mkdir(root, { recursive: true });
@@ -55,8 +91,10 @@ async function run(body) {
       output = await readFile(out, 'utf8');
     } else if (body.agent === 'jeo') {
       output = (await execute(bunBinary, [fileURLToPath(new URL('./jeo-adapter.mjs', import.meta.url))], { cwd: jobDir, input: prompt, timeout: 170000 })).stdout;
-    } else {
+    } else if (body.agent === 'jeopi') {
       output = (await execute(jeopiBinary, ['--print', '--no-tools', '--no-extensions', '--no-skills', '--no-rules', '--no-session', '--no-title', '--thinking=low', prompt], { cwd: jobDir, timeout: 170000 })).stdout;
+    } else {
+      output = (await runHermesAgent(prompt, { cwd: jobDir })).stdout;
     }
     const result = parseResult(output);
     verified.add(body.agent);
