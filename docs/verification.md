@@ -1,5 +1,27 @@
 # 실동작 검증 기록
 
+## Single-admin canonical graph editing — 2026-10-19
+
+Scoped local implementation on baseline `525cadd603d6ff349892633b5855e56ed38076ea`. All application tests and browser writes used disposable OS-temporary fixture databases. No production data, credentials, deployment, build, commit, push or external service execution was performed.
+
+| Command | Observed result |
+| --- | --- |
+| `npm run check` | Exit 0; syntax passed for 61 modules |
+| `node --test tests/api.test.mjs tests/narration.test.mjs` | Exit 0; 25/25 passed, including all 18 API tests |
+| `npm test` | Exit 0; 260 passed, zero failures, zero skipped (unfiltered, after the graph-export metadata fix) |
+| `node scripts/version-harness.mjs verify` | Exit 0; immutable 1.4.0 bundle verified |
+| `node --test tests/harness.test.mjs` | Exit 0; 5/5 passed |
+| `node scripts/ops-workspace-browser-smoke.mjs` | Exit 0; 105 checks; zero page errors, external requests or provider calls |
+| `git diff --check` | Exit 0 |
+
+The targeted regression initially showed that persisted `graph.json` must not inherit role-independent UI editing metadata. `Store.exportKnowledge()` now strips `editable`, `edit`, and `readOnlyReason` from persisted nodes/edges while retaining those fields in authenticated API graph responses; the targeted regression and complete unfiltered suite were rerun successfully.
+
+Authorization coverage includes 32 unauthenticated mutation routes (401), real token-issued admin sessions and successful guarded edits, ignored client role claims, same-origin/cross-site rejection, and authenticated non-admin rejection (403) through the pure `requireAdmin` policy seam. Production cannot issue non-admin sessions. Browser viewer capability is mocked only to verify disabled controls and continued reads; it is not server authorization evidence.
+
+Canonical SQLite read-back, graph JSON/OKF atom regeneration and obsolete-topic cleanup, episode history/audit, channel fingerprint and episode version conflicts, read-only/invalid edits, media/unrelated-record preservation, restart persistence, and injected audit-failure rollback are covered. Browser checks exercise channel/episode/relation edits, derived read-only topics and retained typed input after a stale conflict. Evidence and 15 screenshots are written to a fresh OS-temporary `frameforge-ops-browser-evidence-*` directory, printed by the smoke command; tracked historical receipts are untouched.
+
+A fresh Codex read-only review of the exact candidate (same provider family as implementation, so not fully independent) returned `no_ship` and identified two UI defects: unauthenticated role gating left the persistent modal submit disabled after successful admin login, and moving the selected episode left the studio channel context stale. Both findings were reproduced by new browser-smoke assertions that failed before fixes and passed afterward. A follow-up Codex review of the updated diff returned `ship` (confidence 0.88), confirmed both fixes and found no remaining P0–P3 issues by static inspection. Neither Codex pass ran tests; coordinator-run checks are listed above, and provider independence remains limited. The reviewer noted the documented post-commit export-failure boundary and a stale relation request may be classified 400 instead of 409 although it is safely rejected. Claude's separate-provider review remains unavailable until its weekly quota resets on October 20, 2026, at 8 p.m. KST. Filesystem export remains after the SQLite commit; an export failure cannot roll back an already committed source record and is documented in the API contract.
+
 최종 갱신: 2026-10-19. 이전 macOS 로컬 검증, 현재 Windows 로컬 운영작업공간 검증, 과거 Linux Docker 전체 테스트와 이전 Windows/Tailscale 운영 근거를 구분합니다. fixture를 라이브 제공자 성공으로 취급하지 않습니다.
 
 ## 운영 작업공간 — 2026-10-19

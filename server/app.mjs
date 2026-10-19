@@ -21,6 +21,12 @@ const MEDIA_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.mp4', '.we
 const digest = (value) => createHash('sha256').update(value).digest();
 const safeEqual = (left, right) => timingSafeEqual(digest(left), digest(right));
 
+// Pure policy seam: exercise non-admin principals without issuing such sessions.
+export function requireAdmin(session) {
+  if (!session?.authenticated) throw new HttpError(401, 'Login required');
+  if (session.role !== 'admin') throw new HttpError(403, 'Administrator required');
+}
+
 function json(response, status, value, headers = {}) {
   response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...headers });
   response.end(JSON.stringify(value));
@@ -144,14 +150,14 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     return waitForCompletion ? completion : job;
   }
 
-  function authenticated(request) {
-    if (!loginToken) return true;
+  function sessionState(request) {
+    if (!loginToken) return { authenticated: true, role: 'admin', canMutate: true };
     const cookie = (request.headers.cookie || '').split(';').map((part) => part.trim()).find((part) => part.startsWith('frameforge_session='))?.slice(19);
-    if (!cookie || !/^[a-f0-9]{64}$/.test(cookie)) return false;
+    if (!cookie || !/^[a-f0-9]{64}$/.test(cookie)) return { authenticated: false, role: null, canMutate: false };
     const key = digest(cookie).toString('hex');
-    const expiry = sessions.get(key);
-    if (!expiry || expiry < Date.now()) { sessions.delete(key); return false; }
-    return true;
+    const session = sessions.get(key);
+    if (!session || session.expiresAt < Date.now()) { sessions.delete(key); return { authenticated: false, role: null, canMutate: false }; }
+    return { authenticated: true, role: session.role, canMutate: session.role === 'admin' };
   }
 
   function login(request, response, body) {
@@ -164,11 +170,11 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       throw new HttpError(401, 'Invalid login token');
     }
     loginAttempts.delete(address);
-    for (const [key, expiry] of sessions) if (expiry < Date.now()) sessions.delete(key);
+    for (const [key, session] of sessions) if (session.expiresAt < Date.now()) sessions.delete(key);
     const token = randomBytes(32).toString('hex');
-    sessions.set(digest(token).toString('hex'), Date.now() + SESSION_AGE);
+    sessions.set(digest(token).toString('hex'), { expiresAt: Date.now() + SESSION_AGE, role: 'admin' });
     const secure = request.socket.encrypted || publicOrigin?.startsWith('https:');
-    return json(response, 200, { authenticated: true }, { 'Set-Cookie': `frameforge_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${SESSION_AGE / 1000}${secure ? '; Secure' : ''}` });
+    return json(response, 200, { authenticated: true, role: 'admin', canMutate: true }, { 'Set-Cookie': `frameforge_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${SESSION_AGE / 1000}${secure ? '; Secure' : ''}` });
   }
 
   function validateAssets(sceneList) {
@@ -284,7 +290,10 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     assertSameOrigin(request, publicOrigin);
     if (request.method === 'GET' && path === '/api/health') return json(response, 200, { status: 'ok', service: 'frameforge-studio', authRequired: Boolean(loginToken), storage: 'sqlite', version: '1.0.0' });
     if (request.method === 'POST' && path === '/api/login') return login(request, response, await readJson(request));
-    if (path.startsWith('/api/') && !authenticated(request)) throw new HttpError(401, 'Login required');
+    const session = sessionState(request);
+    if (request.method === 'GET' && path === '/api/session') return json(response, 200, session);
+    if (path.startsWith('/api/') && !session.authenticated) throw new HttpError(401, 'Login required');
+    if (path.startsWith('/api/') && !['GET', 'HEAD', 'OPTIONS'].includes(request.method)) requireAdmin(session);
     if (request.method === 'POST' && path === '/api/logout') {
       const token = (request.headers.cookie || '').split(';').map((part) => part.trim()).find((part) => part.startsWith('frameforge_session='))?.slice(19);
       if (token) sessions.delete(digest(token).toString('hex'));
@@ -306,7 +315,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       const state = Object.fromEntries(['channels', 'episodes', 'templates', 'references', 'jobs', 'events', 'workflows', 'workflowRuns', 'narrationJobs', 'generationJobs'].map((kind) => [kind, store.list(kind)]));
       state.trends = [...new Map(store.list('trends').map((trend) => [`${trend.keyword}\u0000${trend.source || ''}`, trend])).values()];
       const { nodes, edges } = store.knowledge();
-      return json(response, 200, { ...state, ...trendState(), integrations: await integrationStatus(), graph: { nodes, edges } });
+      return json(response, 200, { ...state, session, ...trendState(), integrations: await integrationStatus(), graph: { nodes, edges } });
     }
     if (request.method === 'GET' && path === '/api/integrations') return json(response, 200, await integrationStatus());
     if (request.method === 'GET' && path === '/api/speech/voices') return json(response, 200, await speechProvider.listVoices());
@@ -332,6 +341,9 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     }
     if (['POST', 'PUT'].includes(request.method) && path.startsWith('/api/')) {
       const body = await readJson(request);
+      const knowledgeNode = /^\/api\/knowledge\/nodes\/([a-zA-Z0-9_-]+)$/.exec(path);
+      if (request.method === 'PUT' && knowledgeNode) return json(response, 200, { record: store.editKnowledgeNode(knowledgeNode[1], body), graph: store.knowledge() });
+      if (request.method === 'PUT' && path === '/api/knowledge/edges') return json(response, 200, { record: store.editKnowledgeEdge(body), graph: store.knowledge() });
       if (request.method === 'POST' && path === '/api/generation/estimate') return json(response, 200, await generationCall(() => generationProvider.estimate(body)));
       const generationStart = /^\/api\/episodes\/([^/]+)\/generations$/.exec(path);
       if (request.method === 'POST' && generationStart) return json(response, 202, await generations.start(generationStart[1], body));
@@ -440,8 +452,10 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
           return json(response, 202, enqueueRender(episode));
         }
       }
+      if (path.startsWith('/api/knowledge/')) throw new HttpError(400, 'Unsupported graph edit');
       throw new HttpError(404, 'API route not found');
     }
+    if (path.startsWith('/api/knowledge/') && !['GET', 'HEAD'].includes(request.method)) throw new HttpError(400, 'Unsupported graph edit');
     if (path.startsWith('/api/')) throw new HttpError(404, 'API route not found');
     if (!['GET', 'HEAD'].includes(request.method)) throw new HttpError(405, 'Method not allowed');
     return serveFile(request, response, PUBLIC_DIR, path === '/' ? 'index.html' : path.slice(1));

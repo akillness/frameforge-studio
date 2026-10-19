@@ -196,3 +196,7 @@ ECC 2.2.3 활성 설치를 확인했고 실제 코드/검증 작업에 적용했
 Docker 변경에 대해서도 Jev 실제 API 검토를 추가 실행했습니다. 결과는 `proposal_only`이며, [현재 구현 검토 영수증](artifacts/jev-docker-review.json)에 근거와 한계를 보존했습니다. 자동 허가로 취급하지 않고 ECC 독립 리뷰와 실동작 검증을 별도로 완료했습니다.
 
 설계 참고: [ComfyUI 노드](https://docs.comfy.org/development/core-concepts/nodes), [Tailscale Serve](https://tailscale.com/docs/features/tailscale-serve), [Google Trends](https://support.google.com/trends/answer/3076011), [Naver DataLab](https://developers.naver.com/docs/serviceapi/datalab/search/search.md). README SVG는 이 프로젝트를 위해 직접 작성했습니다.
+
+## Single-admin knowledge graph editing
+
+Log in with the existing `LOGIN_TOKEN` to edit canonical channel labels and episode titles, topics and channel/topic relationships from Knowledge. Every dashboard API write requires the server-side admin role. Episode edits use version guards and append history; channel renames compare the complete source record fingerprint. Graph JSON and OKF atoms regenerate from SQLite after saving. Derived topics, trends, generation/assets and unsupported reference edits are marked read-only. No extra credential, role account or graph-only storage is used. See [the API contract](docs/contract.md#single-administrator-and-canonical-knowledge-editing).

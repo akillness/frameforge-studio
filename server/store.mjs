@@ -2,13 +2,14 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, writeFileSync, renameSync, existsSync, unlinkSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
-import { HttpError, scenes as validateScenes } from './validation.mjs';
+import { HttpError, object, text, scenes as validateScenes } from './validation.mjs';
 
 const DEFAULT_TREND_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_TREND_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
 const DEFAULT_TREND_MAX_CONCURRENCY = 2;
 const MIN_TREND_RETENTION_MS = DEFAULT_TREND_RETENTION_MS;
 const now = () => new Date().toISOString();
+const recordToken = (record) => createHash('sha256').update(JSON.stringify(record)).digest('hex');
 const trendDate = (value, fallback = now()) => {
   const parsed = new Date(value || fallback);
   return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : fallback;
@@ -261,7 +262,7 @@ export class Store {
       next = { ...previous, ...patch, version: previous.version + 1, updatedAt: now() };
       this.save('episodes', next);
       this.snapshot(next, reason);
-      this.record('episodes.updated', { entityId: id, version: next.version, reason });
+      this.record('episodes.updated', { entityId: id, version: next.version, reason, ...(reason === 'knowledge edited' ? { actorRole: 'admin' } : {}) });
       this.db.exec('COMMIT');
     } catch (error) { this.db.exec('ROLLBACK'); throw error; }
     this.exportKnowledge();
@@ -437,6 +438,52 @@ export class Store {
 
   workflowReviews(runId) { return this.db.prepare('SELECT data FROM workflow_reviews WHERE run_id=? ORDER BY rowid').all(runId).map((row) => JSON.parse(row.data)); }
 
+  editKnowledgeNode(id, body) {
+    object(body);
+    const node = this.knowledge().nodes.find((item) => item.id === id);
+    if (!node?.editable) throw new HttpError(400, node?.readOnlyReason || 'Unknown or read-only graph node');
+    const allowed = node.type === 'channel' ? ['label', 'expectedRecord'] : ['label', 'topic', 'channelId', 'expectedVersion'];
+    if (Object.keys(body).some((key) => !allowed.includes(key))) throw new HttpError(400, 'Unsupported graph edit field');
+    if (node.type === 'channel') {
+      const name = text(body.label, 'label', 160);
+      if (typeof body.expectedRecord !== 'string' || !/^[a-f0-9]{64}$/.test(body.expectedRecord)) throw new HttpError(400, 'expectedRecord is required');
+      let next;
+      this.db.exec('BEGIN IMMEDIATE');
+      try {
+        const previous = this.get('channels', id);
+        if (recordToken(previous) !== body.expectedRecord) throw new HttpError(409, 'Channel changed. Reload before saving.');
+        next = { ...previous, name, updatedAt: now() };
+        this.save('channels', next);
+        this.record('channels.updated', { entityId: id, reason: 'knowledge edited', actorRole: 'admin' });
+        this.db.exec('COMMIT');
+      } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+      this.exportKnowledge();
+      return next;
+    }
+    if (!Number.isSafeInteger(body.expectedVersion) || body.expectedVersion < 1) throw new HttpError(400, 'expectedVersion is required');
+    const patch = {};
+    if ('label' in body) patch.title = text(body.label, 'label', 200);
+    if ('topic' in body) patch.topic = text(body.topic, 'topic', 500);
+    if ('channelId' in body) {
+      patch.channelId = text(body.channelId, 'channelId', 100);
+      if (!this.list('channels').some((channel) => channel.id === patch.channelId)) throw new HttpError(400, 'Unknown target channel');
+    }
+    if (!Object.keys(patch).length) throw new HttpError(400, 'No editable fields supplied');
+    return this.updateEpisode(id, patch, body.expectedVersion, 'knowledge edited');
+  }
+
+  editKnowledgeEdge(body) {
+    object(body);
+    if (Object.keys(body).some((key) => !['source', 'target', 'relation', 'newTarget', 'expectedVersion'].includes(key))) throw new HttpError(400, 'Unsupported graph edge field');
+    const graph = this.knowledge();
+    const edge = graph.edges.find((item) => item.source === body.source && item.target === body.target && item.relation === body.relation);
+    if (!edge?.editable) throw new HttpError(400, edge?.readOnlyReason || 'Unknown or read-only graph relation');
+    const target = graph.nodes.find((node) => node.id === body.newTarget);
+    const field = edge.edit.field;
+    if (!target || target.type !== (field === 'channelId' ? 'channel' : 'topic')) throw new HttpError(400, 'Invalid relation target');
+    return this.editKnowledgeNode(body.source, { [field]: field === 'topic' ? target.label : target.id, expectedVersion: body.expectedVersion });
+  }
+
   knowledge() {
     const nodes = [], edges = [], atoms = [];
     const nodeIds = new Set();
@@ -462,11 +509,31 @@ export class Store {
         if (output.original) add(output.original.uploadId, 'asset', 'Original provider output', `Preserved original; SHA-256 ${output.original.sha256}; ${output.original.codecName || 'unknown codec'}`, job.completedAt || job.updatedAt, [job.id, job.episodeId], output.original.url);
       }
     }
+    for (const node of nodes) {
+      node.editable = ['channel', 'episode'].includes(node.type);
+      if (node.type === 'channel') node.edit = { fields: ['label'], expectedRecord: recordToken(this.get('channels', node.id)) };
+      else if (node.type === 'episode') {
+        const episode = this.get('episodes', node.id);
+        node.edit = { fields: ['label', 'topic', 'channelId'], expectedVersion: episode.version, topic: episode.topic, channelId: episode.channelId };
+      } else node.readOnlyReason = node.type === 'topic' ? 'Derived from episode.topic; edit the episode topic instead.' : node.type === 'reference' ? 'Reference updates have no versioned concurrency path.' : 'Derived record; no canonical editable source.';
+    }
+    const byId = new Map(nodes.map((node) => [node.id, node]));
+    for (const edge of edges) {
+      const source = byId.get(edge.source), target = byId.get(edge.target);
+      edge.editable = source?.type === 'episode' && edge.relation === 'belongs_to' && ['channel', 'topic'].includes(target?.type);
+      if (edge.editable) edge.edit = { expectedVersion: source.edit.expectedVersion, field: target.type === 'channel' ? 'channelId' : 'topic' };
+      else edge.readOnlyReason = 'Derived relation; no canonical editable source.';
+    }
     return { nodes, edges, atoms };
   }
 
   exportKnowledge() {
     const graph = this.knowledge();
+    const exported = {
+      nodes: graph.nodes.map(({ editable, edit, readOnlyReason, ...node }) => node),
+      edges: graph.edges.map(({ editable, edit, readOnlyReason, ...edge }) => edge),
+      atoms: graph.atoms,
+    };
     const root = join(this.dataDir, 'knowledge');
     for (const atom of graph.atoms) {
       const metadata = ['type', 'title', 'description', 'resource', 'tags', 'timestamp'].filter((key) => atom[key] !== undefined).map((key) => `${key}: ${JSON.stringify(atom[key])}`).join('\n');
@@ -476,7 +543,7 @@ export class Store {
     const atomIds = new Set(graph.atoms.map((atom) => `${atom.id}.md`));
     for (const file of readdirSync(join(root, 'atoms'))) if (file.endsWith('.md') && !atomIds.has(file)) unlinkSync(join(root, 'atoms', file));
     const temporary = join(root, 'graph.json.tmp');
-    writeFileSync(temporary, JSON.stringify(graph, null, 2), { mode: 0o600 });
+    writeFileSync(temporary, JSON.stringify(exported, null, 2), { mode: 0o600 });
     renameSync(temporary, join(root, 'graph.json'));
   }
   close() { this.db.close(); }

@@ -1,11 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, readFile, writeFile, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createApp } from '../server/app.mjs';
+import { DatabaseSync } from 'node:sqlite';
+import { createApp, requireAdmin } from '../server/app.mjs';
+import { Store, starterScene } from '../server/store.mjs';
 import { scenes } from '../server/validation.mjs';
+
+const exportProjection = graph => ({
+  nodes: graph.nodes.map(({ editable, edit, readOnlyReason, ...node }) => node),
+  edges: graph.edges.map(({ editable, edit, readOnlyReason, ...edge }) => edge),
+  atoms: graph.atoms,
+});
 
 const integrations = {
   integrationStatus: async () => ({ studio: { available: true }, codex: { available: false } }),
@@ -119,6 +127,227 @@ test('authentication protects API/media, enforces same-origin writes, and invali
   assert.equal((await f.request('/api/commands', 'POST', { message: 'bad' }, { Cookie: cookie, Origin: 'https://evil.example' })).status, 403);
   assert.equal((await f.request('/api/logout', 'POST', {}, { Cookie: cookie })).status, 200);
   assert.equal((await f.request('/api/state', 'GET', undefined, { Cookie: cookie })).status, 401);
+});
+
+test('admin policy rejects unauthenticated and non-admin principals without issuing privileged sessions', () => {
+  for (const session of [undefined, {}, { authenticated: false, role: 'admin' }]) assert.throws(() => requireAdmin(session), { status: 401 });
+  for (const role of [undefined, null, 'viewer', 'owner', 'ADMIN']) assert.throws(() => requireAdmin({ authenticated: true, role, canMutate: true }), { status: 403 });
+  assert.doesNotThrow(() => requireAdmin({ authenticated: true, role: 'admin' }));
+});
+
+test('every dashboard mutation is authenticated before dispatch and client role claims grant no access', async (t) => {
+  const f = await fixture(t, { loginToken: 'isolated-admin-fixture-token' });
+  assert.deepEqual(await (await f.request('/api/session')).json(), { authenticated: false, role: null, canMutate: false });
+  const routes = [
+    ['POST', '/api/logout'], ['POST', '/api/uploads?name=fixture.png'], ['POST', '/api/trends/refresh'],
+    ['POST', '/api/channels'], ['POST', '/api/episodes'], ['PUT', '/api/episodes/fixture'],
+    ['POST', '/api/templates'], ['POST', '/api/references'], ['POST', '/api/trends'], ['POST', '/api/commands'],
+    ['POST', '/api/episodes/fixture/template'], ['POST', '/api/episodes/fixture/chat'],
+    ['POST', '/api/episodes/fixture/render'], ['POST', '/api/episodes/fixture/narration'], ['POST', '/api/episodes/fixture/restore'],
+    ['POST', '/api/workflows'], ['PUT', '/api/workflows/fixture'], ['POST', '/api/workflows/fixture/run'],
+    ['POST', '/api/workflows/fixture/restore'], ['POST', '/api/workflows/fixture/runs/run/cancel'], ['POST', '/api/workflows/fixture/runs/run/review'],
+    ['POST', '/api/generation/estimate'], ['POST', '/api/episodes/fixture/generations'],
+    ['POST', '/api/generations/fixture/apply'], ['POST', '/api/generations/fixture/recover'], ['POST', '/api/generations/fixture/normalize'],
+    ['POST', '/api/trends/settings'], ['PUT', '/api/trends/settings'], ['POST', '/api/trends/select'],
+    ['PUT', '/api/knowledge/nodes/fixture'], ['PUT', '/api/knowledge/edges'], ['DELETE', '/api/knowledge/nodes/fixture'],
+  ];
+  for (const [method, path] of routes) {
+    const response = await f.request(path, method, { role: 'admin', authenticated: true, canMutate: true }, { 'X-Role': 'admin' });
+    assert.equal(response.status, 401, `${method} ${path}`);
+  }
+  assert.equal((await f.request('/api/login', 'POST', { role: 'admin', authenticated: true })).status, 401);
+  const login = await f.request('/api/login', 'POST', { token: 'isolated-admin-fixture-token', role: 'viewer' });
+  assert.deepEqual(await login.json(), { authenticated: true, role: 'admin', canMutate: true });
+  const headers = { Cookie: login.headers.get('set-cookie').split(';')[0] };
+  assert.deepEqual(await (await f.request('/api/session', 'GET', undefined, headers)).json(), { authenticated: true, role: 'admin', canMutate: true });
+  assert.deepEqual((await (await f.request('/api/state', 'GET', undefined, headers)).json()).session, { authenticated: true, role: 'admin', canMutate: true });
+  for (const path of ['/api/knowledge/nodes/fixture', '/api/knowledge/edges']) {
+    assert.equal((await f.request(path, 'PUT', {}, { ...headers, Origin: 'https://foreign.example' })).status, 403);
+    assert.equal((await f.request(path, 'PUT', {}, { ...headers, 'Sec-Fetch-Site': 'cross-site' })).status, 403);
+  }
+});
+
+test('admin graph node edits persist canonical records, audit, history, media and regenerated exports across restart', async (t) => {
+  const f = await fixture(t, { loginToken: 'isolated-graph-admin-token' });
+  const login = async () => {
+    const response = await f.request('/api/login', 'POST', { token: 'isolated-graph-admin-token' });
+    assert.equal(response.status, 200);
+    return { Cookie: response.headers.get('set-cookie').split(';')[0] };
+  };
+  let headers = await login();
+  const request = (path, method = 'GET', body) => f.request(path, method, body, headers);
+  const before = await (await request('/api/state')).json();
+  const channel = before.channels[0];
+  const unrelated = await (await request('/api/episodes', 'POST', { channelId: channel.id, title: 'Unrelated episode', topic: 'Keep this subject' })).json();
+  const created = await (await request('/api/episodes', 'POST', { channelId: channel.id, title: 'Original graph episode', topic: 'Orphan subject after edit' })).json();
+  const uploadResponse = await f.raw('/api/uploads?name=fixture.png', { method: 'POST', headers, body: Buffer.from('preserved graph media') });
+  assert.equal(uploadResponse.status, 201);
+  const upload = await uploadResponse.json();
+  const withMedia = await (await request(`/api/episodes/${created.id}`, 'PUT', { expectedVersion: 1, scenes: [{ ...created.scenes[0], kind: 'image', assetUrl: upload.url }] })).json();
+  const graph = await (await request('/api/knowledge')).json();
+  const oldTopic = graph.nodes.find((node) => node.type === 'topic' && node.label === created.topic);
+  const channelNode = graph.nodes.find((node) => node.id === channel.id);
+  const channelResponse = await request(`/api/knowledge/nodes/${channel.id}`, 'PUT', { label: 'Renamed canonical channel', expectedRecord: channelNode.edit.expectedRecord });
+  assert.equal(channelResponse.status, 200);
+  const channelEdit = await channelResponse.json();
+  assert.equal(channelEdit.record.name, 'Renamed canonical channel');
+  assert.equal(channelEdit.record.category, channel.category);
+  assert.equal(channelEdit.graph.nodes.find((node) => node.id === channel.id).label, channelEdit.record.name);
+  assert.equal((await request(`/api/knowledge/nodes/${channel.id}`, 'PUT', { label: 'Stale channel write', expectedRecord: channelNode.edit.expectedRecord })).status, 409);
+  const episodeResponse = await request(`/api/knowledge/nodes/${created.id}`, 'PUT', { label: 'Canonical graph title', topic: 'New canonical subject', expectedVersion: withMedia.version });
+  assert.equal(episodeResponse.status, 200);
+  const edited = await episodeResponse.json();
+  assert.equal(edited.record.title, 'Canonical graph title');
+  assert.equal(edited.record.topic, 'New canonical subject');
+  assert.equal(edited.record.version, withMedia.version + 1);
+  assert.deepEqual(edited.record.scenes, withMedia.scenes);
+  assert.equal(edited.graph.nodes.some((node) => node.id === oldTopic.id), false);
+  assert.equal((await request(`/api/knowledge/nodes/${created.id}`, 'PUT', { label: 'Stale episode write', expectedVersion: withMedia.version })).status, 409);
+  const state = await (await request('/api/state')).json();
+  assert.deepEqual(state.episodes.find((item) => item.id === unrelated.id), unrelated);
+  assert.deepEqual(state.templates, before.templates);
+  assert.ok(state.events.some((event) => event.type === 'channels.updated' && event.entityId === channel.id && event.actorRole === 'admin' && event.reason === 'knowledge edited'));
+  assert.ok(state.events.some((event) => event.type === 'episodes.updated' && event.entityId === created.id && event.actorRole === 'admin' && event.version === edited.record.version && event.reason === 'knowledge edited'));
+  const history = await (await request(`/api/episodes/${created.id}/history`)).json();
+  assert.equal(history.length, 3);
+  assert.equal(history[0].reason, 'knowledge edited');
+  assert.deepEqual(history[0].snapshot, edited.record);
+  assert.equal(history.at(-1).snapshot.title, created.title);
+  const db = new DatabaseSync(join(f.dataDir, 'studio.sqlite'), { readOnly: true });
+  try {
+    const source = (kind, id) => JSON.parse(db.prepare('SELECT data FROM entities WHERE kind=? AND id=?').get(kind, id).data);
+    assert.deepEqual(source('episodes', created.id), edited.record);
+    assert.deepEqual(source('channels', channel.id), channelEdit.record);
+  } finally { db.close(); }
+  const exported = JSON.parse(await readFile(join(f.dataDir, 'knowledge', 'graph.json'), 'utf8'));
+  assert.deepEqual(exported, exportProjection(edited.graph));
+  assert.ok(exported.nodes.every(node => !('editable' in node) && !('edit' in node) && !('readOnlyReason' in node)));
+  assert.ok(exported.edges.every(edge => !('editable' in edge) && !('edit' in edge) && !('readOnlyReason' in edge)));
+  assert.match(await readFile(join(f.dataDir, 'knowledge', 'atoms', `${created.id}.md`), 'utf8'), /Canonical graph title[\s\S]*New canonical subject/);
+  assert.match(await readFile(join(f.dataDir, 'knowledge', 'atoms', `${channel.id}.md`), 'utf8'), /Renamed canonical channel/);
+  assert.equal((await readdir(join(f.dataDir, 'knowledge', 'atoms'))).includes(`${oldTopic.id}.md`), false);
+  assert.equal(await (await request(upload.url)).text(), 'preserved graph media');
+  await f.restart();
+  headers = await login();
+  const resumed = await (await request('/api/state')).json();
+  assert.deepEqual(resumed.episodes.find((item) => item.id === created.id), edited.record);
+  assert.deepEqual(resumed.channels.find((item) => item.id === channel.id), channelEdit.record);
+  assert.equal((await (await request(`/api/episodes/${created.id}/history`)).json()).length, 3);
+  assert.equal(await (await request(upload.url)).text(), 'preserved graph media');
+});
+
+test('graph relationship edits update only canonical episode channel and topic with version conflicts', async (t) => {
+  const f = await fixture(t);
+  assert.deepEqual(await (await f.request('/api/session')).json(), { authenticated: true, role: 'admin', canMutate: true });
+  const original = await episode(f);
+  const channel = await (await f.request('/api/channels', 'POST', { name: 'Relation target', category: 'information', platform: 'YouTube' })).json();
+  const other = await (await f.request('/api/episodes', 'POST', { channelId: channel.id, title: 'Other subject source', topic: 'Existing target topic' })).json();
+  const graph = await (await f.request('/api/knowledge')).json();
+  const sourceTopic = graph.nodes.find((node) => node.type === 'topic' && node.label === original.topic);
+  const targetTopic = graph.nodes.find((node) => node.type === 'topic' && node.label === other.topic);
+  const channelEdge = { source: original.id, target: original.channelId, relation: 'belongs_to', newTarget: channel.id, expectedVersion: 1 };
+  const response = await f.request('/api/knowledge/edges', 'PUT', channelEdge);
+  assert.equal(response.status, 200);
+  const channelEdit = await response.json();
+  assert.equal(channelEdit.record.channelId, channel.id);
+  assert.equal(channelEdit.record.version, 2);
+  assert.equal(channelEdit.graph.edges.some((edge) => edge.source === original.id && edge.target === original.channelId), false);
+  assert.ok(channelEdit.graph.edges.some((edge) => edge.source === original.id && edge.target === channel.id && edge.editable));
+  assert.equal((await f.request('/api/knowledge/edges', 'PUT', { ...channelEdge, target: channel.id, newTarget: original.channelId })).status, 409);
+  const topicResponse = await f.request('/api/knowledge/edges', 'PUT', { source: original.id, target: sourceTopic.id, relation: 'belongs_to', newTarget: targetTopic.id, expectedVersion: 2 });
+  assert.equal(topicResponse.status, 200);
+  const topicEdit = await topicResponse.json();
+  assert.equal(topicEdit.record.topic, other.topic);
+  assert.equal(topicEdit.record.version, 3);
+  assert.equal(topicEdit.graph.nodes.some((node) => node.id === sourceTopic.id), false);
+  const state = await (await f.request('/api/state')).json();
+  assert.deepEqual(state.episodes.find((item) => item.id === other.id), other);
+  assert.deepEqual(state.episodes.find((item) => item.id === original.id), topicEdit.record);
+  assert.deepEqual(JSON.parse(await readFile(join(f.dataDir, 'knowledge', 'graph.json'), 'utf8')), exportProjection(topicEdit.graph));
+  assert.equal((await readdir(join(f.dataDir, 'knowledge', 'atoms'))).includes(`${sourceTopic.id}.md`), false);
+  assert.equal((await (await f.request(`/api/episodes/${original.id}/history`)).json()).length, 3);
+});
+
+test('invalid and read-only graph node or relation edits reject without source, history or export mutation', async (t) => {
+  const f = await fixture(t);
+  const created = await episode(f);
+  await f.request('/api/references', 'POST', { channelId: created.channelId, title: 'Read-only reference', category: 'information', url: 'https://example.com/reference' });
+  await f.request('/api/trends', 'POST', { keyword: 'Read-only trend', source: 'fixture', url: 'https://example.com/trend' });
+  const graph = await (await f.request('/api/knowledge')).json();
+  const before = await (await f.request('/api/state')).json();
+  const exportBefore = await readFile(join(f.dataDir, 'knowledge', 'graph.json'), 'utf8');
+  for (const node of graph.nodes.filter((node) => !node.editable)) {
+    assert.match(node.readOnlyReason, /.+/);
+    assert.equal((await f.request(`/api/knowledge/nodes/${node.id}`, 'PUT', { label: 'Forbidden', expectedVersion: 1 })).status, 400, node.type);
+  }
+  const nodePath = `/api/knowledge/nodes/${created.id}`;
+  for (const method of ['POST', 'PATCH', 'DELETE']) assert.equal((await f.request(nodePath, method, {})).status, 400, method);
+  assert.equal((await f.request('/api/knowledge/nodes/invalid%20id', 'PUT', { label: 'Invalid', expectedVersion: 1 })).status, 400);
+  for (const body of [
+    {}, { label: 'Missing version' }, { label: 'Wrong version type', expectedVersion: '1' }, { label: 'Zero version', expectedVersion: 0 },
+    { expectedVersion: 1 }, { topic: '', expectedVersion: 1 }, { label: 'x'.repeat(201), expectedVersion: 1 },
+    { channelId: 'unknown', expectedVersion: 1 }, { label: 'No role override', expectedVersion: 1, role: 'admin' },
+    { title: 'Wrong field', expectedVersion: 1 }, { scenes: created.scenes, expectedVersion: 1 },
+  ]) assert.equal((await f.request(nodePath, 'PUT', body)).status, 400, JSON.stringify(body));
+  assert.equal((await f.request('/api/knowledge/nodes/unknown', 'PUT', { label: 'Unknown', expectedVersion: 1 })).status, 400);
+  for (const body of [{ label: 'Missing token' }, { label: 'Bad token', expectedRecord: 'abc' }, { label: '', expectedRecord: graph.nodes.find((node) => node.id === created.channelId).edit.expectedRecord }]) {
+    assert.equal((await f.request(`/api/knowledge/nodes/${created.channelId}`, 'PUT', body)).status, 400);
+  }
+  const edge = graph.edges.find((item) => item.source === created.id && item.target === created.channelId);
+  for (const body of [
+    {}, { ...edge, newTarget: created.channelId, expectedVersion: 1 },
+    { source: created.id, target: created.channelId, relation: 'unknown', newTarget: created.channelId, expectedVersion: 1 },
+    { source: created.id, target: created.channelId, relation: 'belongs_to', newTarget: created.id, expectedVersion: 1 },
+    { source: created.id, target: created.channelId, relation: 'belongs_to', newTarget: 'missing', expectedVersion: 1 },
+    { source: created.id, target: created.channelId, relation: 'belongs_to', newTarget: created.channelId },
+  ]) assert.equal((await f.request('/api/knowledge/edges', 'PUT', body)).status, 400);
+  const readOnlyEdge = graph.edges.find((item) => !item.editable);
+  assert.ok(readOnlyEdge?.readOnlyReason);
+  assert.equal((await f.request('/api/knowledge/edges', 'PUT', { source: readOnlyEdge.source, target: readOnlyEdge.target, relation: readOnlyEdge.relation, newTarget: created.channelId, expectedVersion: 1 })).status, 400);
+  assert.deepEqual(await (await f.request('/api/state')).json(), before);
+  assert.equal((await (await f.request(`/api/episodes/${created.id}/history`)).json()).length, 1);
+  assert.equal(await readFile(join(f.dataDir, 'knowledge', 'graph.json'), 'utf8'), exportBefore);
+});
+
+test('graph edits roll back canonical records and history when audit fails; channel fingerprints detect same-timestamp changes', async (t) => {
+  const dataDir = await mkdtemp(join(tmpdir(), 'frameforge-graph-atomic-'));
+  const store = new Store(dataDir);
+  t.after(async () => { store.close(); await rm(dataDir, { recursive: true, force: true }); });
+  const channel = store.list('channels')[0];
+  const created = store.create('episodes', { channelId: channel.id, title: 'Atomic original', topic: 'Atomic topic', category: 'information', status: 'draft', format: '9:16', version: 1, scenes: [starterScene('Original scene', 'Original text')], notes: '' });
+  const generation = store.create('generationJobs', { episodeId: created.id, episodeVersion: 1, model: 'fixture', transport: 'fixture', status: 'completed', outputs: [{ uploadId: 'fixture-asset', kind: 'image', sha256: 'a'.repeat(64), url: '/api/uploads/fixture.png' }] });
+  const graph = store.knowledge();
+  for (const node of graph.nodes.filter((node) => ['generation', 'asset'].includes(node.type))) {
+    assert.equal(node.editable, false);
+    assert.match(node.readOnlyReason, /.+/);
+    assert.throws(() => store.editKnowledgeNode(node.id, { label: 'Forbidden', expectedVersion: 1 }), { status: 400 });
+  }
+  for (const edge of graph.edges.filter((item) => item.source === generation.id || item.source === 'fixture-asset')) {
+    assert.equal(edge.editable, false);
+    assert.throws(() => store.editKnowledgeEdge({ source: edge.source, target: edge.target, relation: edge.relation, newTarget: channel.id, expectedVersion: 1 }), { status: 400 });
+  }
+  const graphBefore = await readFile(join(dataDir, 'knowledge', 'graph.json'), 'utf8');
+  const eventsBefore = store.list('events');
+  const historyBefore = store.history(created.id);
+  const token = graph.nodes.find((node) => node.id === channel.id).edit.expectedRecord;
+  const record = store.record;
+  store.record = () => { throw new Error('Injected isolated audit failure'); };
+  try {
+    assert.throws(() => store.editKnowledgeNode(created.id, { label: 'Must roll back', topic: 'Must also roll back', expectedVersion: 1 }), /Injected isolated audit failure/);
+    assert.throws(() => store.editKnowledgeNode(channel.id, { label: 'Must roll back', expectedRecord: token }), /Injected isolated audit failure/);
+  } finally { store.record = record; }
+  assert.deepEqual(store.get('episodes', created.id), created);
+  assert.deepEqual(store.get('channels', channel.id), channel);
+  assert.deepEqual(store.history(created.id), historyBefore);
+  assert.deepEqual(store.list('events'), eventsBefore);
+  assert.equal(await readFile(join(dataDir, 'knowledge', 'graph.json'), 'utf8'), graphBefore);
+  store.save('channels', { ...channel, name: 'Concurrent same-time rename' });
+  assert.equal(store.get('channels', channel.id).updatedAt, channel.updatedAt);
+  assert.throws(() => store.editKnowledgeNode(channel.id, { label: 'Lost update attempt', expectedRecord: token }), { status: 409 });
+  assert.equal(store.get('channels', channel.id).name, 'Concurrent same-time rename');
+  const freshToken = store.knowledge().nodes.find((node) => node.id === channel.id).edit.expectedRecord;
+  assert.notEqual(freshToken, token);
+  assert.equal(store.editKnowledgeNode(channel.id, { label: 'Reconciled name', expectedRecord: freshToken }).name, 'Reconciled name');
 });
 
 test('uploads use safe generated names and media supports byte ranges while rejecting unsafe paths', async (t) => {

@@ -349,3 +349,10 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
+.graph-records h3 { margin: 10px 0; overflow-wrap: anywhere; }
+.graph-record-id { overflow-wrap: anywhere; }
+.graph-records .badge { display: inline-block; margin: 8px 8px 12px 0; }
+.graph-readonly { margin-top: 10px; overflow-wrap: anywhere; }
+.graph-relations .data-row > div { min-width: 0; }
+.graph-relations h3 { overflow-wrap: anywhere; }
+[data-admin-only="true"]:disabled { cursor: not-allowed; }

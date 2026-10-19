@@ -26,6 +26,28 @@ let playTimer;
 let toastTimer;
 let busy = false;
 let authenticated = false;
+const canMutate = () => state.session?.role === 'admin' && state.session?.canMutate === true;
+const readActions = new Set(['view','channel','episode','scene','prev','next','play','reload','refresh-speech','refresh-commands','reload-history','history-version','refresh-knowledge','refresh-integrations','trend-popular','ops-open','ops-history']);
+const readWorkflowActions = new Set(['select-node','minimap-select','inspector-tab','select-run','inspect-run-node','zoom-in','zoom-out','fit','reload','refresh-history','history-version','refresh-runs','refresh-generation','refresh-generation-job','open-tools','open-results','open-stage-overlay','close-overlay','select-stage','close-confirm','close-dialog']);
+const mutationForms = new Set(['modal-form','chat-form','trend-form','trend-settings-form','command-form','wf-connect-form']);
+function applyAdminControls() {
+  for (const control of document.querySelectorAll('[data-action],[data-wf-action],input,select,textarea,form button[type="submit"]')) {
+    const mutation = control.dataset.action ? !readActions.has(control.dataset.action) : control.dataset.wfAction ? !readWorkflowActions.has(control.dataset.wfAction) :
+      Boolean(control.matches('[data-scene],[data-episode],[data-wf-config],[data-wf-field],[data-wf-coordinate],[data-review-notes],#wf-name,#wf-add-type,#media-file,#audio-file') || mutationForms.has(control.closest('form')?.id));
+    if (!mutation) continue;
+    control.dataset.adminOnly = 'true';
+    control.setAttribute('aria-description','관리자 전용 · Admin only');
+    if (!control.title.includes('관리자 전용')) control.title = `${control.title ? control.title + ' · ' : ''}관리자 전용`;
+    if (!canMutate() && !control.disabled) { control.disabled = true; control.dataset.adminDisabled = 'true'; }
+    else if (canMutate() && control.dataset.adminDisabled === 'true') { control.disabled = false; delete control.dataset.adminDisabled; }
+  }
+}
+// Workflow panels also replace their own controls between full page renders.
+new MutationObserver(applyAdminControls).observe(document.body,{childList:true,subtree:true});
+for (const type of ['click','input','change','submit']) document.addEventListener(type,event=>{
+  if (canMutate() || !event.target.closest('[data-admin-only="true"]') && !(type === 'submit' && mutationForms.has(event.target.id))) return;
+  event.preventDefault(); event.stopImmediatePropagation(); toast('모든 변경은 관리자 전용입니다.',true);
+},true);
 let modalHandler;
 let commands = [];
 let speech = {available:false,voices:[],detail:'음성 엔진을 확인하고 있습니다.'};
@@ -65,12 +87,14 @@ function toast(message, error = false) {
 }
 
 async function api(path, options = {}) {
+  if (!['GET','HEAD'].includes((options.method || 'GET').toUpperCase()) && path !== '/api/login' && !canMutate()) throw new Error('모든 변경은 관리자 전용입니다.');
   const headers = options.body && typeof options.body === 'string' ? {'Content-Type':'application/json', ...options.headers} : options.headers;
   const response = await fetch(path, {...options, headers, credentials:'same-origin'});
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     if (response.status === 401) {
       authenticated = false;
+      state.session = null;
       if (!path.endsWith('/login')) showLogin();
     }
     const error = new Error(data.error || data.message || `요청 실패 (${response.status})`);
@@ -237,13 +261,14 @@ function render() {
     <nav class="nav" aria-label="주요 메뉴">${views.map(([key,icon,label]) => `<button data-action="view" data-view="${key}" class="${view === key ? 'active' : ''}" ${view === key ? 'aria-current="page"' : ''} title="${label}"><span class="nav-icon" aria-hidden="true">${icon}</span><span class="nav-label">${label}</span></button>`).join('')}</nav>
     <section><div class="sidebar-label">채널 <button class="icon-btn quiet" data-action="new-channel" aria-label="채널 추가">+</button></div>${state.channels.map((item,index) => `<button class="channel ${item.id === channelId ? 'active' : ''}" data-action="channel" data-id="${esc(item.id)}" title="${esc(item.name)}"><span class="channel-avatar">${String(index + 1).padStart(2,'0')}</span><span class="channel-copy"><span class="channel-name">${esc(item.name)}</span><small>${esc(categoryNames[item.category] || item.category || item.platform)}</small></span></button>`).join('')}<button class="channel quiet" data-action="new-channel" title="새 채널 추가"><span class="channel-avatar">+</span><span class="channel-copy muted">채널 추가</span></button></section>
     <div class="sidebar-bottom"><p class="eyebrow">LOCAL WORKSPACE</p><div class="account-copy">나의 제작 기록<br><small>로컬 결과물 · 버전 이력</small></div></div>
-  </aside><div class="workspace"><header class="topbar"><div class="breadcrumb">워크스페이스 <span aria-hidden="true"> / </span><strong>${esc(channel?.name || '채널 없음')}</strong></div><div class="row"><span class="badge"><span class="connection-label">${authenticated?'인증된 API 자료':'API 확인 필요'}</span></span><button class="small quiet" data-action="view" data-view="settings">연결 관리 ↗</button></div></header>
+  </aside><div class="workspace"><header class="topbar"><div class="breadcrumb">워크스페이스 <span aria-hidden="true"> / </span><strong>${esc(channel?.name || '채널 없음')}</strong></div><div class="row"><span class="badge" data-testid="session-capability"><span class="connection-label">${canMutate()?'관리자 · 변경 권한':authenticated?'읽기 전용 · 변경은 관리자 전용':'API 확인 필요'}</span></span><button class="small quiet" data-action="view" data-view="settings">연결 관리 ↗</button></div></header>
     <main class="main" id="main" tabindex="-1">${view==='overview'?operations.html():workspaceLayout.html(renderView(), view)}</main></div></div>`;
   if (view === 'studio') updatePreview();
   if (view === 'workflow') workflowEditor.mount();
   workspaceLayout.mount();
   if (view === 'overview') operations.mount();
   updateSaveStatus();
+  applyAdminControls();
 }
 
 function heading(title, description, actions = '') {
@@ -348,7 +373,49 @@ function knowledgeView() {
   const positions = new Map(visible.map((node,index) => [node.id, {x:350 + Math.cos(index * Math.PI * 2 / visible.length) * (index % 2 ? 245 : 155), y:195 + Math.sin(index * Math.PI * 2 / visible.length) * (index % 2 ? 140 : 85)}]));
   const lines = (graph.edges || []).map(edge => { const from = positions.get(edge.source || edge.from); const to = positions.get(edge.target || edge.to); return from && to ? `<line x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}"/>` : ''; }).join('');
   const circles = visible.map(node => { const pos = positions.get(node.id); return `<g><circle class="${(node.type || node.kind) === 'episode' ? 'episode-node' : ''}" cx="${pos.x}" cy="${pos.y}" r="${(node.type || node.kind) === 'channel' ? 20 : 12}"/><text x="${pos.x}" y="${pos.y + 31}" text-anchor="middle">${esc((node.label || node.title || node.name || node.id).slice(0,16))}</text><title>${esc(node.label || node.title || node.id)}</title></g>`; }).join('');
-  return heading('지식 그래프', '채널·에피소드·소재 연결을 확인합니다.', '<button data-action="refresh-knowledge">그래프 새로고침</button>') + `<div class="row" style="margin-bottom:17px"><span class="badge lime">${nodes.length}개 노드</span><span class="badge">${graph.edges?.length || 0}개 연결</span></div><section class="panel">${nodes.length ? `<svg class="graph" viewBox="0 0 700 390" role="img" aria-label="채널, 에피소드 및 소재의 관계 그래프">${lines}${circles}</svg>` : '<div class="empty">채널과 에피소드를 만들면 연결된 지식이 여기에 나타납니다.</div>'}</section><div class="cards section-spacer">${nodes.slice(0,30).map(node => `<article class="panel panel-body"><span class="eyebrow">${esc(node.type || node.kind || '지식')}</span><h3 style="margin:10px 0">${esc(node.label || node.title || node.name || node.id)}</h3><span class="hint">${esc(node.id)}</span></article>`).join('')}</div>`;
+  const byId = new Map(nodes.map(node=>[node.id,node]));
+  const access = item => item.editable ? '<span class="badge">관리자 전용 편집</span>' : `<p class="hint graph-readonly" data-testid="graph-readonly">읽기 전용 · ${esc(item.readOnlyReason || '편집 가능한 원본이 없습니다.')}</p>`;
+  return heading('지식 그래프', '관리자 편집은 원본 기록에 저장되며 그래프와 내보내기를 갱신합니다.', '<button data-action="refresh-knowledge">그래프 새로고침</button>') + `<p class="source-note">채널 이름과 에피소드 제목·주제·소속 채널을 편집할 수 있습니다. 주제 노드는 에피소드에서 파생됩니다. 나머지 노드와 연결은 읽기 전용입니다. 모든 변경은 관리자 전용입니다.</p><div class="row" style="margin-bottom:17px"><span class="badge lime">${nodes.length}개 노드</span><span class="badge">${graph.edges?.length || 0}개 연결</span></div><section class="panel">${nodes.length ? `<svg class="graph" viewBox="0 0 700 390" role="img" aria-label="채널, 에피소드 및 소재의 관계 그래프">${lines}${circles}</svg>` : '<div class="empty">채널과 에피소드를 만들면 연결된 지식이 여기에 나타납니다.</div>'}</section><div class="cards section-spacer graph-records">${nodes.map(node => `<article class="panel panel-body" data-graph-node="${esc(node.id)}"><span class="eyebrow">${esc(node.type || node.kind || '지식')}</span><h3>${esc(node.label || node.title || node.name || node.id)}</h3><p class="hint graph-record-id">${esc(node.id)}</p>${access(node)}${node.editable ? `<button class="small" data-action="edit-graph-node" data-id="${esc(node.id)}" ${!canMutate()?'disabled':''}>원본 편집</button>`:''}</article>`).join('')}</div><section class="panel section-spacer graph-relations"><div class="panel-header"><h2>연결</h2></div>${(graph.edges || []).map((edge,index)=>`<article class="data-row" data-graph-edge="${index}"><div><h3>${esc(byId.get(edge.source)?.label || edge.source)} → ${esc(byId.get(edge.target)?.label || edge.target)}</h3><p class="hint">${esc(edge.relation)}</p>${access(edge)}</div>${edge.editable?`<button class="small" data-action="edit-graph-edge" data-index="${index}" ${!canMutate()?'disabled':''}>연결 원본 편집</button>`:''}</article>`).join('') || '<p class="panel-body hint">연결이 없습니다.</p>'}</section>`;
+}
+function guardGraphEdit() {
+  if (!canMutate()) throw new Error('모든 변경은 관리자 전용입니다.');
+  if (dirty || savePending || workflowEditor.hasChanges()) throw new Error('현재 초안을 먼저 저장해 주세요. 그래프 편집 중에도 기존 초안은 보존됩니다.');
+}
+async function refreshAfterGraphEdit() {
+  await refresh();
+  if (episode && !dirty) {
+    episode = clone(state.episodes.find(item=>item.id===episode.id) || episode);
+    channelId = episode.channelId;
+    sceneIndex = Math.min(sceneIndex,Math.max(0,episode.scenes.length-1));
+  }
+  render(); toast('원본 기록과 지식 그래프를 갱신했습니다.');
+}
+function editGraphNode(targetId) {
+  guardGraphEdit();
+  const node=state.graph.nodes.find(item=>item.id===targetId);
+  if (!node?.editable || !node.edit) throw new Error(node?.readOnlyReason || '읽기 전용 노드입니다.');
+  const fields=node.edit.fields || [];
+  const body=`<p class="hint">관리자 전용 · 원본 ${esc(node.type)} 기록을 수정합니다. 충돌이 발생하면 입력은 유지됩니다.</p>${fields.includes('label')?`<label>이름 / 제목<input name="label" required maxlength="${node.type==='channel'?160:200}" value="${esc(node.label)}"></label>`:''}${fields.includes('topic')?`<label>소재 / 주제<textarea name="topic" required>${esc(node.edit.topic)}</textarea></label>`:''}${fields.includes('channelId')?`<label>소속 채널<select name="channelId" required>${state.channels.map(channel=>`<option value="${esc(channel.id)}" ${channel.id===node.edit.channelId?'selected':''}>${esc(channel.name)}</option>`).join('')}</select></label>`:''}`;
+  openModal('지식 원본 편집',body,async data=>{
+    guardGraphEdit();
+    const payload=Object.fromEntries(fields.filter(field=>field in data).map(field=>[field,data[field]]));
+    if (node.type==='episode') payload.expectedVersion=node.edit.expectedVersion;
+    else payload.expectedRecord=node.edit.expectedRecord;
+    await api(`/api/knowledge/nodes/${encodeURIComponent(node.id)}`,{method:'PUT',body:JSON.stringify(payload)});
+    await refreshAfterGraphEdit();
+  },'원본에 저장');
+}
+function editGraphEdge(index) {
+  guardGraphEdit();
+  const edge=state.graph.edges[index];
+  if (!edge?.editable || !edge.edit) throw new Error(edge?.readOnlyReason || '읽기 전용 연결입니다.');
+  const targetType=edge.edit.field==='channelId'?'channel':'topic';
+  const targets=state.graph.nodes.filter(node=>node.type===targetType);
+  openModal('연결 원본 편집',`<p class="hint">관리자 전용 · 에피소드의 ${targetType==='channel'?'소속 채널':'주제'}를 수정합니다. 새 주제는 에피소드 원본 편집에서 입력하세요.</p><label>연결 대상<select name="newTarget" required>${targets.map(node=>`<option value="${esc(node.id)}" ${node.id===edge.target?'selected':''}>${esc(node.label)}</option>`).join('')}</select></label>`,async data=>{
+    guardGraphEdit();
+    await api('/api/knowledge/edges',{method:'PUT',body:JSON.stringify({source:edge.source,target:edge.target,relation:edge.relation,newTarget:data.newTarget,expectedVersion:edge.edit.expectedVersion})});
+    await refreshAfterGraphEdit();
+  },'원본에 저장');
 }
 function settingsView() {
   const entries = Array.isArray(state.integrations) ? state.integrations.map((item,index) => [item.name || item.id || index,item]) : Object.entries(state.integrations || {});
@@ -447,6 +514,8 @@ async function loadHistory() {
 
 async function handleAction(button) {
   const action = button.dataset.action;
+  if (action === 'edit-graph-node') { editGraphNode(button.dataset.id); return; }
+  if (action === 'edit-graph-edge') { editGraphEdge(Number(button.dataset.index)); return; }
   if (action === 'ops-open' || action === 'ops-history') {
     const target=state.episodes.find(item=>item.id===button.dataset.id);
     if (!target) throw new Error('에피소드가 현재 자료에 없습니다. 자료를 새로고침하세요.');

@@ -10,7 +10,8 @@ import {pathToFileURL} from 'node:url';
 import {randomUUID} from 'node:crypto';
 import {createApp} from '../server/app.mjs';
 
-const out=resolve('artifacts/ops-workspace');
+const out=await mkdtemp(join(tmpdir(),'frameforge-ops-browser-evidence-'));
+console.log(`Browser evidence: ${out}`);
 await mkdir(out,{recursive:true});
 const installed=process.env.OPS_PLAYWRIGHT_MODULE || join(homedir(),'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs');
 const {chromium}=await import(pathToFileURL(installed));
@@ -43,7 +44,7 @@ try {
   if(url.origin!==base){receipt.externalRequests.push(request.url());return route.abort();}
   if(!['GET','HEAD'].includes(request.method())){
    const write={phase,method:request.method(),path:url.pathname};receipt.browserWrites.push(write);
-   if(!(phase==='login'&&url.pathname==='/api/login')&&!(phase==='editor-save'&&request.method()==='PUT'&&url.pathname===allowedWrite))return route.fulfill({status:409,json:{error:'Smoke blocked unexpected mutation'}});
+   if(!(phase==='login'&&url.pathname==='/api/login')&&!(['editor-save','graph-edit'].includes(phase)&&request.method()==='PUT'&&url.pathname===allowedWrite))return route.fulfill({status:409,json:{error:'Smoke blocked unexpected mutation'}});
   }
   return route.continue();
  });
@@ -51,8 +52,9 @@ try {
  check('authentication gate shown before records',await page.locator('#ops-workspace').count()===0);
  phase='login';await page.locator('#login-form input').fill(testToken);await page.locator('#login-form button').click();await page.locator('#ops-workspace').waitFor();phase='read-only';
  check('successful isolated login opens overview',await page.locator('[data-view=overview][aria-current=page]').count()===1);
+ check('admin modal save is enabled after fresh login',await page.locator('#modal-form [type=submit]').isEnabled());
  check('honest empty queue and deliverables',await page.locator('#ops-content').innerText().then(text=>text.includes('조건에 맞는 에피소드가 없습니다')) && await page.locator('.ops-rail').innerText().then(text=>text.includes('로컬 결과물을 찾지 못했습니다')));
- await page.screenshot({path:join(out,'empty-1440.png'),fullPage:true});receipt.screenshots.push('artifacts/ops-workspace/empty-1440.png');
+ await page.screenshot({path:join(out,'empty-1440.png'),fullPage:true});receipt.screenshots.push(join(out,'empty-1440.png'));
  const client=context.request;
  const request=async(path,method='GET',body)=>{const response=await client.fetch(base+path,{method,...(body?{data:body}:{}),headers:{origin:base}});assert.ok(response.ok(),`${method} ${path}: ${response.status()} ${await response.text()}`);if(method!=='GET')receipt.fixtureRequests.push({method,path,status:response.status()});return response.json();};
  const channel=await request('/api/channels','POST',{name:'브라우저 검증 전용 · 한국어 제작실',category:'information',platform:'Local test fixture'});
@@ -106,8 +108,51 @@ try {
  // Preserve and exercise existing workspace native overlay and keyboard sizing controls.
  await page.locator('[data-workspace-action=settings]').click();check('existing workspace settings dialog opens',await page.locator('#workspace-settings-dialog').evaluate(e=>e.open));await page.keyboard.press('Escape');
  for(const view of ['trends','templates','knowledge','settings','studio','overview']){
-  await page.locator(`.nav [data-action=view][data-view=${view}]`).click();await page.waitForTimeout(150);check(`existing ${view} view renders`,await page.locator(`[data-view=${view}][aria-current=page]`).count()===1);
+  await page.locator(`.nav [data-action=view][data-view=${view}]`).click();await page.locator(`.nav [data-view=${view}][aria-current=page]`).waitFor();check(`existing ${view} view renders`,await page.locator(`[data-view=${view}][aria-current=page]`).count()===1);
  }
+ // Graph editing persists only owned fixture records through guarded canonical APIs.
+ await page.locator('.nav [data-action=view][data-view=knowledge]').click();
+ check('admin session capability is visible',await page.locator('[data-testid=session-capability]').innerText().then(text=>text.includes('\uad00\ub9ac\uc790')));
+ check('existing write controls are explicitly admin-only',await page.locator('[data-action=new-channel]').first().getAttribute('data-admin-only')==='true');
+ const derived=page.locator('[data-graph-node]').filter({has:page.locator('.eyebrow', {hasText:'topic'})}).first();
+ check('derived topic has explicit read-only reason and no edit control',await derived.locator('[data-testid=graph-readonly]').innerText().then(text=>text.includes('\uc77d\uae30 \uc804\uc6a9')&&text.includes('episode.topic'))&&await derived.locator('[data-action=edit-graph-node]').count()===0);
+ await page.screenshot({path:join(out,'knowledge-admin-1440.png'),fullPage:true});receipt.screenshots.push(join(out,'knowledge-admin-1440.png'));
+ await page.locator(`[data-action=edit-graph-node][data-id="${channel.id}"]`).click();
+ await page.locator('#modal [name=label]').fill('Graph edited channel');
+ phase='graph-edit';allowedWrite=`/api/knowledge/nodes/${channel.id}`;
+ await page.locator('#modal-form [type=submit]').click();await page.locator('#modal').waitFor({state:'hidden'});phase='read-only';
+ check('channel graph editor persists canonical channel name',await request('/api/state').then(data=>data.channels.find(item=>item.id===channel.id).name==='Graph edited channel'));
+ await page.locator(`[data-action=edit-graph-node][data-id="${edited.id}"]`).click();
+ await page.locator('#modal [name=label]').fill('Graph edited episode');await page.locator('#modal [name=topic]').fill('Graph regenerated topic');
+ phase='graph-edit';allowedWrite=`/api/knowledge/nodes/${edited.id}`;
+ await page.locator('#modal-form [type=submit]').click();await page.locator('#modal').waitFor({state:'hidden'});phase='read-only';
+ const graphSaved=await request('/api/state'), graphEpisode=graphSaved.episodes.find(item=>item.id===edited.id);
+ check('episode graph editor persists canonical title, topic, version and media',graphEpisode.title==='Graph edited episode'&&graphEpisode.topic==='Graph regenerated topic'&&graphEpisode.version===edited.version+1&&JSON.stringify(graphEpisode.scenes)===JSON.stringify(edited.scenes));
+ const refreshedGraph=await request('/api/knowledge');
+ check('canonical edit regenerates graph and atom export',refreshedGraph.nodes.some(item=>item.type==='topic'&&item.label===graphEpisode.topic)&&refreshedGraph.atoms.some(item=>item.id===edited.id&&item.title===graphEpisode.title));
+ const otherChannel=await request('/api/channels','POST',{name:'Relation target channel',category:'information',platform:'Local test fixture'});
+ await page.locator('[data-action=refresh-knowledge]').click();
+ const relationIndex=refreshedGraph.edges.findIndex(edge=>edge.source===edited.id&&edge.target===channel.id);
+ await page.locator(`[data-action=edit-graph-edge][data-index="${relationIndex}"]`).click();await page.locator('#modal [name=newTarget]').selectOption(otherChannel.id);
+ phase='graph-edit';allowedWrite='/api/knowledge/edges';
+ await page.locator('#modal-form [type=submit]').click();await page.locator('#modal').waitFor({state:'hidden'});phase='read-only';
+ const movedEpisode=(await request('/api/state')).episodes.find(item=>item.id===edited.id);
+ check('relation editor persists episode channel with new version',movedEpisode.channelId===otherChannel.id&&movedEpisode.version===graphEpisode.version+1);
+ await page.locator('[data-action=view][data-view=studio]').click();
+ check('moved episode refreshes the selected channel context',await page.locator('.breadcrumb strong').innerText()===otherChannel.name&&await page.locator('.channel.active').innerText().then(text=>text.includes(otherChannel.name)));
+ await page.locator('[data-action=view][data-view=knowledge]').click();
+ await page.locator(`[data-action=edit-graph-node][data-id="${edited.id}"]`).click();await page.locator('#modal [name=label]').fill('Preserve conflict input');
+ await request(`/api/episodes/${edited.id}`,'PUT',{expectedVersion:movedEpisode.version,notes:'Concurrent fixture change'});
+ phase='graph-edit';allowedWrite=`/api/knowledge/nodes/${edited.id}`;
+ const conflict=page.waitForResponse(response=>response.url()===base+allowedWrite&&response.request().method()==='PUT');
+ await page.locator('#modal-form [type=submit]').click();check('stale graph edit returns conflict without discarding typed input',(await conflict).status()===409&&await page.locator('#modal').evaluate(element=>element.open)&&await page.locator('#modal [name=label]').inputValue()==='Preserve conflict input');phase='read-only';
+ await page.locator('#modal-cancel').click();
+ const viewer=await browser.newContext();await viewer.addCookies(await context.cookies());
+ await viewer.route('**/api/state',async route=>{const response=await route.fetch();const data=await response.json();data.session={authenticated:true,role:'viewer',canMutate:false};await route.fulfill({response,json:data});});
+ const viewerPage=await viewer.newPage();await viewerPage.goto(base);await viewerPage.locator('#ops-workspace').waitFor();
+ await viewerPage.locator('.nav [data-action=view][data-view=knowledge]').click();
+ check('non-admin capability keeps reads available and disables graph and existing mutations',await viewerPage.locator('[data-testid=session-capability]').innerText().then(text=>text.includes('\uc77d\uae30 \uc804\uc6a9'))&&await viewerPage.locator('[data-action=edit-graph-node]').first().isDisabled()&&await viewerPage.locator('[data-action=new-channel]').first().isDisabled()&&await viewerPage.locator('[data-action=refresh-knowledge]').isEnabled());await viewer.close();
+ await page.locator('.nav [data-action=view][data-view=overview]').click();
  // Recoverable refresh error retains previously fetched records.
  await page.route('**/api/state',route=>route.fulfill({status:503,json:{error:'Intentional isolated availability test'}}));
  await page.locator('[data-ops-action=refresh]').click();await page.waitForTimeout(150);check('failed refresh explicitly retains stale records',await page.locator('#ops-freshness').innerText().then(text=>text.includes('갱신 실패')&&text.includes('이전 자료'))&&await page.locator('[data-episode-id]').count()===3);
@@ -153,17 +198,17 @@ try {
   await page.evaluate(()=>window.scrollTo(0,0));
   const geometry=await page.evaluate(()=>({client:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth,overflow:document.documentElement.scrollWidth>document.documentElement.clientWidth,visibleOverflow:[...document.querySelectorAll('main *,header *,aside *')].filter(e=>e.getClientRects().length&&!e.closest('.nav')).filter(e=>{const b=e.getBoundingClientRect();return b.left< -1||b.right>innerWidth+1;}).slice(0,10).map(e=>({tag:e.tagName,id:e.id,class:e.className}))}));
   receipt.geometry.push({width,view:'overview',...geometry});check(`overview ${width}px document has no overflow`,!geometry.overflow,geometry);
-  const path=`artifacts/ops-workspace/overview-${width}.png`;await page.screenshot({path:resolve(path),fullPage:true});receipt.screenshots.push(path);
+  const path=join(out,`overview-${width}.png`);await page.screenshot({path:resolve(path),fullPage:true});receipt.screenshots.push(path);
   await page.locator('[data-ops-action=config]').click();const d=await page.locator('#ops-config').boundingBox();check(`dialog ${width}px fits viewport`,d.x>=0&&d.x+d.width<=width+1,d);await page.keyboard.press('Escape');
-  if(width===375){await page.locator('[data-ops-action=config]').click();await page.screenshot({path:join(out,'config-375.png'),fullPage:true});receipt.screenshots.push('artifacts/ops-workspace/config-375.png');await page.keyboard.press('Escape');}
+  if(width===375){await page.locator('[data-ops-action=config]').click();await page.screenshot({path:join(out,'config-375.png'),fullPage:true});receipt.screenshots.push(join(out,'config-375.png'));await page.keyboard.press('Escape');}
   if(width===1440)for(const pane of ['deliverables','history','operations']) {
    await page.locator(`.ops-tabs [data-pane=${pane}]`).click();
-   const path=`artifacts/ops-workspace/${pane}-1440.png`;await page.screenshot({path:resolve(path),fullPage:true});receipt.screenshots.push(path);
+   const path=join(out,`${pane}-1440.png`);await page.screenshot({path:resolve(path),fullPage:true});receipt.screenshots.push(path);
   }
   for(const view of ['studio','workflow']){
    await page.locator(`.nav [data-action=view][data-view=${view}]`).click();await page.waitForTimeout(150);
    const size=await page.evaluate(()=>({client:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth}));receipt.geometry.push({width,view,...size,overflow:size.scroll>size.client});check(`${view} ${width}px document has no overflow`,size.scroll<=size.client,size);
-   const path=`artifacts/ops-workspace/${view}-${width}.png`;await page.screenshot({path:resolve(path),fullPage:true});receipt.screenshots.push(path);
+   const path=join(out,`${view}-${width}.png`);await page.screenshot({path:resolve(path),fullPage:true});receipt.screenshots.push(path);
   }
   await page.locator('[data-action=view][data-view=overview]').click();await page.waitForTimeout(150);
   for(const view of ['history','trends','templates','knowledge','settings']) {
@@ -180,7 +225,7 @@ try {
  await page.setViewportSize({width:320,height:800});const narrow=await page.evaluate(()=>({client:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth}));receipt.geometry.push({width:320,view:'overview',...narrow,overflow:narrow.scroll>narrow.client});check('overview 320px reflow has no document overflow',narrow.scroll<=narrow.client,narrow);
  check('no browser page errors',receipt.pageErrors.length===0,receipt.pageErrors);
  check('no external HTTP requests or provider execution',receipt.externalRequests.length===0&&receipt.providerCalls.length===0);
- check('browser writes limited to login and one owned dirty save',receipt.browserWrites.every(item=>item.phase==='login'||item.phase==='editor-save')&&receipt.browserWrites.filter(item=>item.phase==='editor-save').length===1,receipt.browserWrites);
+ check('browser writes limited to login, owned dirty save and explicit graph edits',receipt.browserWrites.every(item=>['login','editor-save','graph-edit'].includes(item.phase))&&receipt.browserWrites.filter(item=>item.phase==='editor-save').length===1&&receipt.browserWrites.filter(item=>item.phase==='graph-edit').length===4,receipt.browserWrites);
  receipt.result='PASS';
 } catch(error) {receipt.result='FAIL';receipt.failure=error.stack;process.exitCode=1;console.error(error.stack);}
 finally {
