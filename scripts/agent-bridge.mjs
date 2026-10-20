@@ -47,32 +47,49 @@ function availability() {
   const flags = { codex: existsSync(codexScript), jeo: existsSync(jeoScript) && existsSync(bunBinary), jeopi: existsSync(jeopiBinary), hermes: commandAvailable(hermesBinary) };
   return Object.fromEntries(Object.entries(flags).map(([name, installed]) => [name, { available: installed, status: installed ? (verified.has(name) ? 'verified' : 'installed') : 'unavailable', detail: name === 'hermes' ? (installed ? (verified.has(name) ? '실제 응답·스토리보드 적용 검증됨' : 'Hermes CLI 발견 · 인증/모델은 실행 시 확인') : 'Hermes CLI를 찾을 수 없음') : installed ? (verified.has(name) ? '실제 응답·스토리보드 적용 검증됨' : 'CLI 발견 · 인증/모델은 실행 시 검증') : '호스트 CLI 설정 필요' }]));
 }
-function parseResult(text) {
+export function parseResult(text) {
   const plain = text.replace(/\x1b\[[0-9;]*m/g, '').trim();
   const fenced = plain.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const candidates = fenced ? [fenced[1]] : [];
-  for (let start = 0; start < plain.length; start++) {
-    if (plain[start] !== '{') continue;
-    let depth = 0, inString = false, escaped = false;
-    for (let end = start; end < plain.length; end++) {
-      const char = plain[end];
-      if (inString) {
+  const parseCandidate = candidate => {
+    try {
+      const result = JSON.parse(candidate);
+      if (!result || typeof result !== 'object' || Array.isArray(result) || typeof result.message !== 'string' || result.message.length > 12000) return null;
+      return { message: result.message, scenes: validateScenes(result.scenes) };
+    } catch { return null; }
+  };
+  if (fenced) {
+    const result = parseCandidate(fenced[1]);
+    if (result) return result;
+  }
+  const scan = ignoreStrings => {
+    const starts = [];
+    let inString = false, escaped = false;
+    for (let index = 0; index < plain.length; index++) {
+      const char = plain[index];
+      if (!ignoreStrings && starts.length && inString) {
         if (escaped) escaped = false;
         else if (char.charCodeAt(0) === 92) escaped = true;
         else if (char === '"') inString = false;
         continue;
       }
-      if (char === '"') inString = true;
-      else if (char === '{') depth++;
-      else if (char === '}' && --depth === 0) { candidates.push(plain.slice(start, end + 1)); break; }
+      if (!ignoreStrings && !starts.length) {
+        if (char === '{') starts.push(index);
+        continue;
+      }
+      if (!ignoreStrings && char === '"') inString = true;
+      else if (char === '{') starts.push(index);
+      else if (char === '}' && starts.length) {
+        const start = starts.pop();
+        const result = parseCandidate(plain.slice(start, index + 1));
+        if (result) return result;
+        if (!ignoreStrings && !starts.length) { inString = false; escaped = false; }
+      }
     }
-  }
-  let result;
-  for (const candidate of candidates) {
-    try { result = JSON.parse(candidate); break; } catch { /* Try the next complete JSON object. */ }
-  }
-  if (!result || typeof result !== 'object' || Array.isArray(result) || typeof result.message !== 'string' || result.message.length > 12000) throw new Error('Agent returned invalid message');
-  return { message: result.message, scenes: validateScenes(result.scenes) };
+    return null;
+  };
+  const parsed = scan(false) || scan(true);
+  if (parsed) return parsed;
+  throw new Error('Agent returned invalid message');
 }
 async function run(body) {
   if (!['codex', 'jeo', 'jeopi', 'hermes'].includes(body.agent) || !availability()[body.agent].available) throw new Error('Agent adapter unavailable');

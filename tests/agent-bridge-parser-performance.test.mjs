@@ -1,0 +1,51 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { performance } from 'node:perf_hooks';
+import { parseResult } from '../scripts/agent-bridge.mjs';
+const result = JSON.stringify({
+  message: '검토된 결과',
+  scenes: [{ id: 'scene-1', title: '장면', text: '내용', duration: 5, background: '#20342d', kind: 'title', layout: 'center' }],
+});
+
+test('agent output parsing stays responsive after unmatched opening braces', () => {
+  const payload = `${'{'.repeat(12_000)}${result}`;
+  const started = performance.now();
+  const responseBody = parseResult(payload);
+  const elapsedMs = performance.now() - started;
+  assert.ok(elapsedMs < 250, `parsing blocked the bridge for ${Math.round(elapsedMs)}ms`);
+  assert.deepEqual(responseBody, {
+    message: '검토된 결과',
+    scenes: [{ id: 'scene-1', title: '장면', text: '내용', duration: 5, background: '#20342d', kind: 'title', layout: 'center', trimStart: 0, audioVolume: 1, narration: '' }],
+  });
+});
+
+test('agent output parsing recovers after an unmatched quote before the JSON result', () => {
+  const reordered = JSON.stringify({
+    scenes: [{ id: 'scene-1', title: '장면', text: '내용', duration: 5, background: '#20342d', kind: 'title', layout: 'center' }],
+    meta: 'ignored',
+    message: '검토된 결과',
+  });
+  assert.equal(parseResult(`{ "unterminated ${reordered}`).message, '검토된 결과');
+});
+
+test('agent output parsing keeps the earliest result after a malformed prefix', () => {
+  const trailing = JSON.stringify({
+    message: '후행 결과',
+    scenes: [{ id: 'scene-2', title: '다른 장면', text: '다른 내용', duration: 5, background: '#20342d', kind: 'title', layout: 'center' }],
+  });
+  assert.equal(parseResult(`{ "unterminated ${result} ${trailing}`).message, '검토된 결과');
+});
+
+test('agent output parsing recovers in bounded time after thousands of JSON-like prefixes', () => {
+  const prefixes = '{"message":'.repeat(4_000);
+  const started = performance.now();
+  const responseBody = parseResult(`{ "unterminated ${prefixes}${result}`);
+  const elapsedMs = performance.now() - started;
+  assert.ok(elapsedMs < 250, `recovery blocked the bridge for ${Math.round(elapsedMs)}ms`);
+  assert.equal(responseBody.message, '검토된 결과');
+});
+
+test('agent output parsing keeps an early result when followed by many JSON objects', () => {
+  const trailingObjects = Array.from({ length: 40 }, (_, index) => JSON.stringify({ noise: index })).join(' ');
+  assert.equal(parseResult(`${result} ${trailingObjects}`).message, '검토된 결과');
+});

@@ -1029,7 +1029,7 @@ export function createWorkflowEditor({api,toast,getEpisodes,getEpisode,hasEpisod
       const target=event.target;
       if (target.dataset.reviewNotes) { reviewNotes.set(target.dataset.reviewNotes,target.value); return; }
       if (target.id==='wf-name') {workflow.name=target.value;changed('name');}
-      else if (target.dataset.workflowName && workflow) {workflow.name=target.value;changed('name');}
+      else if (target.hasAttribute('data-workflow-name') && workflow) {workflow.name=target.value;changed('name');}
       else if (target.dataset.wfField && selectedNode()) {const key=target.dataset.wfField;if(target.value)selectedNode()[key]=target.value;else delete selectedNode()[key];changed(`${selected}:${key}`);const label=host.querySelector(`[data-node-id="${selected}"] .wf-node-label`);if(label)label.textContent=nodeName(selectedNode());}
       else if (target.dataset.wfConfig && selectedNode()) {
         const key=target.dataset.wfConfig,node=selectedNode();node.config ||= {};
@@ -1073,7 +1073,7 @@ export function createWorkflowEditor({api,toast,getEpisodes,getEpisode,hasEpisod
       try { connect(String(form.get('source') || ''),String(form.get('target') || ''));$('#wf-connect-dialog')?.close(); }
       catch(error) { toast(error.message,true); }
     });
-    host.addEventListener('wheel',event=>{const canvas=event.target.closest('#workflow-canvas');if(!canvas)return;event.preventDefault();const rect=canvas.getBoundingClientRect();zoom(Math.exp(-event.deltaY*0.0015),{x:event.clientX-rect.left,y:event.clientY-rect.top});},{passive:false});
+    host.addEventListener('wheel',event=>{const canvas=event.target.closest('#workflow-canvas');if(!canvas||canvas.dataset.layout==='stacked')return;event.preventDefault();const rect=canvas.getBoundingClientRect();zoom(Math.exp(-event.deltaY*0.0015),{x:event.clientX-rect.left,y:event.clientY-rect.top});},{passive:false});
     host.addEventListener('pointerdown',event=>{
       const canvas=event.target.closest('#workflow-canvas');
       if (!canvas || event.button!==0 || event.target.closest('.wf-port,.wf-zoom,select,input')) return;
