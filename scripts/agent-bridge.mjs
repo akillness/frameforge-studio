@@ -50,45 +50,106 @@ function availability() {
 export function parseResult(text) {
   const plain = text.replace(/\x1b\[[0-9;]*m/g, '').trim();
   const fenced = plain.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const parseCandidate = candidate => {
+  const keyPositions = { message: [], nonEmptyScenes: [], duration: [], background: [] };
+  for (const match of plain.matchAll(/"(message|scenes|duration|background)"\s*:/g)) {
+    if (match[1] !== 'scenes') {
+      keyPositions[match[1]].push(match.index);
+      continue;
+    }
+    let value = match.index + match[0].length;
+    while (/\s/.test(plain[value] || '')) value++;
+    if (plain[value++] !== '[') continue;
+    while (/\s/.test(plain[value] || '')) value++;
+    if (plain[value] !== ']') keyPositions.nonEmptyScenes.push(match.index);
+  }
+  const candidateStarts = new Set([...plain.matchAll(/\{\s*"(?:\\.|[^"\\])*"\s*:/g)].map(match => match.index));
+  const hasKeyInRange = (positions, start, end) => {
+    let low = 0, high = positions.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (positions[middle] < start) low = middle + 1;
+      else high = middle;
+    }
+    return positions[low] < end;
+  };
+  const parseCandidate = (candidate, start, end, budget) => {
+    if (start !== undefined && (!hasKeyInRange(keyPositions.message, start, end) || !hasKeyInRange(keyPositions.nonEmptyScenes, start, end) || !hasKeyInRange(keyPositions.duration, start, end) || !hasKeyInRange(keyPositions.background, start, end))) return null;
+    const size = start === undefined ? candidate.length : end - start;
+    if (size > budget.remaining) return null;
+    budget.remaining -= size;
     try {
-      const result = JSON.parse(candidate);
+      const result = JSON.parse(candidate ?? plain.slice(start, end));
       if (!result || typeof result !== 'object' || Array.isArray(result) || typeof result.message !== 'string' || result.message.length > 12000) return null;
       return { message: result.message, scenes: validateScenes(result.scenes) };
     } catch { return null; }
   };
+  let fencedBest;
   if (fenced) {
-    const result = parseCandidate(fenced[1]);
-    if (result) return result;
+    const result = parseCandidate(fenced[1], undefined, undefined, { remaining: plain.length * 4 });
+    if (result) fencedBest = { start: plain.indexOf(fenced[1], fenced.index), result };
   }
-  const scan = ignoreStrings => {
-    const starts = [];
-    let inString = false, escaped = false;
+  const looksLikeResult = (start, end) => hasKeyInRange(keyPositions.message, start, end)
+    && hasKeyInRange(keyPositions.nonEmptyScenes, start, end)
+    && hasKeyInRange(keyPositions.duration, start, end)
+    && hasKeyInRange(keyPositions.background, start, end);
+  const scan = recoverMalformedPrefix => {
+    const budget = { remaining: plain.length * 4 };
+    const frames = [];
+    let candidateFrame, inString = false, escaped = false, best;
+    const accept = (start, end) => {
+      const result = parseCandidate(undefined, start, end, budget);
+      if (result && (!best || start < best.start)) best = { start, result };
+    };
+    const rememberFallback = (root, start, end) => {
+      if (!root.fallback || start < root.fallback.start) root.fallback = { start, end };
+    };
+    const push = index => {
+      const candidate = candidateStarts.has(index);
+      const frame = { start: index, candidate, parent: candidateFrame };
+      if (candidate) {
+        frame.root = candidateFrame?.root || frame;
+        candidateFrame = frame;
+      }
+      frames.push(frame);
+    };
     for (let index = 0; index < plain.length; index++) {
       const char = plain[index];
-      if (!ignoreStrings && starts.length && inString) {
-        if (escaped) escaped = false;
+      if (frames.length && inString) {
+        if (recoverMalformedPrefix && char === '{' && candidateStarts.has(index)) {
+          push(index);
+          inString = false;
+          escaped = false;
+        } else if (escaped) escaped = false;
         else if (char.charCodeAt(0) === 92) escaped = true;
         else if (char === '"') inString = false;
         continue;
       }
-      if (!ignoreStrings && !starts.length) {
-        if (char === '{') starts.push(index);
+      if (!frames.length) {
+        if (char === '{') push(index);
         continue;
       }
-      if (!ignoreStrings && char === '"') inString = true;
-      else if (char === '{') starts.push(index);
-      else if (char === '}' && starts.length) {
-        const start = starts.pop();
-        const result = parseCandidate(plain.slice(start, index + 1));
-        if (result) return result;
-        if (!ignoreStrings && !starts.length) { inString = false; escaped = false; }
+      if (char === '"') inString = true;
+      else if (char === '{') push(index);
+      else if (char === '}' && frames.length) {
+        const frame = frames.pop(), start = frame.start, end = index + 1;
+        if (frame.candidate && looksLikeResult(start, end)) {
+          if (frame.root !== frame) rememberFallback(frame.root, start, end);
+          else {
+            accept(start, end);
+            if (frame.fallback && (!best || frame.fallback.start < best.start)) accept(frame.fallback.start, frame.fallback.end);
+          }
+        }
+        if (frame.candidate) candidateFrame = frame.parent;
+        if (!frames.length) { inString = false; escaped = false; }
       }
     }
-    return null;
+    const pending = candidateFrame?.root?.fallback;
+    if (pending) accept(pending.start, pending.end);
+    return best || null;
   };
-  const parsed = scan(false) || scan(true);
-  if (parsed) return parsed;
+  const candidates = [fencedBest, scan(false), scan(true)].filter(Boolean);
+  candidates.sort((left, right) => left.start - right.start);
+  if (candidates.length) return candidates[0].result;
   throw new Error('Agent returned invalid message');
 }
 async function run(body) {
