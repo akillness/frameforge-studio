@@ -11,11 +11,14 @@ const categories = ['information','drama','reenactment'];
 const categoryNames = {information:'정보 전달',drama:'드라마',reenactment:'재연'};
 const statusNames = {draft:'제작 중',review:'검토 대기',ready:'제작 완료',queued:'대기 중',running:'렌더링 중',completed:'완료',failed:'실패'};
 const views = [['overview','☷','운영 개요'],['studio','▣','스튜디오'],['workflow','⤳','워크플로우 빌더'],['trends','↗','트렌드 & 리서치'],['templates','▦','템플릿'],['history','◷','제작 히스토리'],['knowledge','⌘','지식 그래프'],['settings','⚙','연결 & 설정']];
-let state = {channels:[],episodes:[],templates:[],trends:[],trendKeywords:[],popularTrendKeywords:[],trendCollectionRuns:[],trendCollector:null,references:[],jobs:[],events:[],integrations:{},graph:{nodes:[],edges:[]}};
+let state = {channels:[],episodes:[],templates:[],trends:[],trendKeywords:[],popularTrendKeywords:[],trendCollectionRuns:[],trendCollector:null,references:[],jobs:[],events:[],integrations:{},graph:{nodes:[],edges:[]},platformSessions:[],platformUploads:[],serverExports:[]};
 let view = 'overview';
 let channelId = null;
 let episode = null;
 let sceneIndex = 0;
+let selectedSlotId = null;
+let pendingSlotUploadId = null;
+let activePlatformSessionId = null;
 let dirty = false;
 let editRevision = 0;
 let savePending = false;
@@ -27,13 +30,13 @@ let toastTimer;
 let busy = false;
 let authenticated = false;
 const canMutate = () => state.session?.role === 'admin' && state.session?.canMutate === true;
-const readActions = new Set(['view','channel','episode','scene','prev','next','play','reload','refresh-speech','refresh-commands','reload-history','history-version','refresh-knowledge','refresh-integrations','trend-popular','ops-open','ops-history']);
+const readActions = new Set(['view','channel','episode','scene','select-slot','select-platform-session','prev','next','play','reload','refresh-speech','refresh-commands','reload-history','history-version','refresh-knowledge','refresh-integrations','refresh-server-exports','trend-popular','ops-open','ops-history']);
 const readWorkflowActions = new Set(['select-node','minimap-select','inspector-tab','select-run','inspect-run-node','zoom-in','zoom-out','fit','reload','refresh-history','history-version','refresh-runs','refresh-generation','refresh-generation-job','open-tools','open-results','open-stage-overlay','close-overlay','select-stage','close-confirm','close-dialog']);
 const mutationForms = new Set(['modal-form','chat-form','trend-form','trend-settings-form','command-form','wf-connect-form']);
 function applyAdminControls() {
   for (const control of document.querySelectorAll('[data-action],[data-wf-action],input,select,textarea,form button[type="submit"]')) {
     const mutation = control.dataset.action ? !readActions.has(control.dataset.action) : control.dataset.wfAction ? !readWorkflowActions.has(control.dataset.wfAction) :
-      Boolean(control.matches('[data-scene],[data-episode],[data-wf-config],[data-wf-field],[data-wf-coordinate],[data-review-notes],#wf-name,#wf-add-type,#media-file,#audio-file') || mutationForms.has(control.closest('form')?.id));
+      Boolean(control.matches('[data-scene],[data-slot-field],[data-slot-style],[data-episode],[data-wf-config],[data-wf-field],[data-wf-coordinate],[data-review-notes],#wf-name,#wf-add-type,#media-file,#audio-file') || mutationForms.has(control.closest('form')?.id));
     if (!mutation) continue;
     control.dataset.adminOnly = 'true';
     control.setAttribute('aria-description','관리자 전용 · Admin only');
@@ -112,6 +115,10 @@ function safeUrl(value) {
   try { const url = new URL(value, location.origin); return ['http:','https:'].includes(url.protocol) ? esc(url.href) : '#'; } catch { return '#'; }
 }
 function safeColor(value) { return /^#[0-9a-f]{6}$/i.test(value || '') ? value : '#294434'; }
+const SLOT_FONTS = ['system-ui', 'Arial', 'Georgia', 'ui-monospace'];
+const safeFontFamily = value => SLOT_FONTS.includes(value) ? value : 'system-ui';
+const safeTextColor = value => /^#[0-9a-f]{6}$/i.test(value || '') ? value : '#ffffff';
+const safeAlign = value => ['left', 'center', 'right'].includes(value) ? value : 'center';
 function activeChannel() { return state.channels.find(channel => channel.id === channelId); }
 function currentScene() { return episode?.scenes?.[sceneIndex]; }
 function duration() { return episode?.scenes?.reduce((sum, scene) => sum + Number(scene.duration || 0), 0) || 0; }
@@ -303,6 +310,173 @@ function renderView() {
   return settingsView() + commandsHtml();
 }
 
+function buildDefaultSlots(preset, scene = {}) {
+  const title = scene.title || '핵심 장면';
+  const bodyText = scene.text || '자막 및 핵심 메시지';
+  const narration = scene.narration || bodyText;
+  if (preset === 'premiere-3tier') {
+    return [
+      { id: 'slot-top-banner', name: '상단 HTML 뉴스 배너 오버레이', role: 'html-overlay', dataBinding: 'news.headline', x: 4, y: 3, w: 92, h: 12, zIndex: 8, text: title, html: `<div class="pencil-card"><span class="pencil-badge">BREAKING</span><strong>${esc(title)}</strong></div>`, style: { backgroundColor: '#173ea8', textColor: '#ffffff', fontSize: 34, opacity: 0.92, borderRadius: 10, align: 'left', badge: 'NEWS' } },
+      { id: 'slot-top-image', name: '상단 AI 이미지 & 텍스트 슬롯', role: 'image-gen', dataBinding: 'scene.imagePrompt', x: 4, y: 17, w: 92, h: 31, zIndex: 2, text: title, prompt: `${title} · 고해상도 인포그래픽 및 상황 일러스트`, style: { backgroundColor: '#242c35', textColor: '#ffffff', fontSize: 32, opacity: 0.85, borderRadius: 8, align: 'center' } },
+      { id: 'slot-mid-video', name: '중단 Higgsfield 배경 영상 레이어', role: 'video-bg', dataBinding: 'scene.videoPrompt', x: 0, y: 50, w: 100, h: 50, zIndex: 1, prompt: `${bodyText} · 시네마틱 카메라 워크 배경 영상`, ...(scene.assetUrl && scene.kind === 'video' ? { assetUrl: scene.assetUrl, mediaKind: 'video' } : {}), style: { backgroundColor: '#121820', textColor: '#ffffff', fontSize: 28, opacity: 1, align: 'center' } },
+      { id: 'slot-mid-subtitle', name: '중단/하단 자막 오버레이 레이어', role: 'subtitle-layer', dataBinding: 'scene.narration', x: 6, y: 76, w: 88, h: 16, zIndex: 10, text: narration, style: { backgroundColor: '#0f1419', textColor: '#ffffff', fontSize: 42, opacity: 0.82, borderRadius: 8, align: 'center', badge: 'SUBTITLE' } },
+    ];
+  }
+  return [
+    { id: 'slot-top-image', name: '상단 이미지 생성 모듈', role: 'image-gen', dataBinding: 'scene.imagePrompt', x: 4, y: 4, w: 92, h: 34, zIndex: 2, text: title, prompt: `${title} · 핵심 시각 자료 이미지 생성`, ...(scene.assetUrl && scene.kind === 'image' ? { assetUrl: scene.assetUrl, mediaKind: 'image' } : {}), style: { backgroundColor: '#1e293b', textColor: '#ffffff', fontSize: 34, opacity: 0.9, borderRadius: 8, align: 'center' } },
+    { id: 'slot-top-text', name: '상단 텍스트 레이아웃 오버레이', role: 'text-overlay', dataBinding: 'scene.title', x: 8, y: 7, w: 84, h: 12, zIndex: 6, text: title, style: { backgroundColor: '#2851c8', textColor: '#ffffff', fontSize: 38, opacity: 0.88, borderRadius: 6, align: 'center', badge: 'HEADLINE' } },
+    { id: 'slot-mid-video', name: '중단 배경 영상 레이어 (Higgsfield)', role: 'video-bg', dataBinding: 'scene.videoPrompt', x: 0, y: 40, w: 100, h: 60, zIndex: 1, prompt: `${bodyText} · 역동적인 배경 영상 연출`, ...(scene.assetUrl && scene.kind === 'video' ? { assetUrl: scene.assetUrl, mediaKind: 'video' } : {}), style: { backgroundColor: '#0f172a', textColor: '#ffffff', fontSize: 30, opacity: 1, align: 'center' } },
+    { id: 'slot-mid-subtitle', name: '중단 영상 위 자막 레이어', role: 'subtitle-layer', dataBinding: 'scene.text', x: 6, y: 74, w: 88, h: 18, zIndex: 10, text: bodyText, html: `<div class="pencil-subtitle">${esc(bodyText)}</div>`, style: { backgroundColor: '#111827', textColor: '#ffffff', fontSize: 44, opacity: 0.84, borderRadius: 8, align: 'center', badge: 'CC' } },
+  ];
+}
+
+function currentSlot() {
+  const scene = currentScene();
+  if (!scene?.slots?.length) return null;
+  return scene.slots.find(item => item.id === selectedSlotId) || scene.slots[0];
+}
+
+function activePlatformSession() {
+  const sessions = state.platformSessions || [];
+  return sessions.find(item => item.id === activePlatformSessionId && item.status !== 'closed') || sessions.find(item => item.status !== 'closed') || null;
+}
+
+async function refreshPlatformSessions() {
+  const [sessions, exportsList] = await Promise.allSettled([api('/api/platform-sessions'), api('/api/server-exports')]);
+  if (sessions.status === 'fulfilled' && Array.isArray(sessions.value)) state.platformSessions = sessions.value;
+  if (exportsList.status === 'fulfilled' && Array.isArray(exportsList.value)) state.serverExports = exportsList.value;
+}
+
+function slotBuilderHtml(scene) {
+  const slots = Array.isArray(scene.slots) ? scene.slots : [];
+  const active = currentSlot();
+  const roleNames = { 'image-gen': '상단 이미지 생성', 'video-bg': '중단 배경 영상(Higgsfield)', 'text-overlay': '텍스트 레이아웃', 'subtitle-layer': '자막 레이어', 'html-overlay': 'Pencil HTML 오버레이' };
+  const bindingNames = { 'scene.imagePrompt': '장면 이미지 생성 프롬프트', 'scene.videoPrompt': '장면 Higgsfield 영상 프롬프트', 'scene.title': '장면 제목', 'scene.text': '장면 본문 텍스트', 'scene.narration': '내레이션 자막', 'trend.keyword': '트렌드 키워드', 'news.headline': '뉴스 헤드라인', 'custom': '직접 지정 데이터' };
+  return `<section class="slot-builder-box section-spacer" aria-label="레이아웃 템플릿 및 Pencil 오버레이 설정">
+    <div class="row between"><span class="eyebrow">PREMIERE SCENE LAYOUT &amp; PENCIL OVERLAY</span><span class="badge">${slots.length} SLOTS</span></div>
+    <p class="hint">상단 이미지·텍스트, 중단 배경영상·자막 등 모듈별 저장 데이터와 위치·크기를 설정합니다. 모니터 캔버스에서 드래그로 이동·크기 조절이 가능합니다.</p>
+    <div class="row" style="flex-wrap:wrap;gap:6px;margin:8px 0">
+      <button type="button" class="small" data-action="apply-layout-preset" data-preset="top-image-mid-video">상단 이미지 + 중단 영상·자막</button>
+      <button type="button" class="small" data-action="apply-layout-preset" data-preset="premiere-3tier">프리미어 3단 + HTML 배너</button>
+      <button type="button" class="small quiet" data-action="apply-layout-preset" data-preset="top-image-mid-video" data-scope="all">전체 씬 일괄 적용</button>
+      ${slots.length ? '<button type="button" class="small quiet" data-action="apply-layout-preset" data-preset="clear">단일 레이아웃 초기화</button>' : ''}
+    </div>
+    <div class="row" style="flex-wrap:wrap;gap:6px;margin-bottom:10px">
+      <button type="button" class="small quiet" data-action="add-slot" data-role="image-gen">＋ 이미지 모듈</button>
+      <button type="button" class="small quiet" data-action="add-slot" data-role="text-overlay">＋ 텍스트 모듈</button>
+      <button type="button" class="small quiet" data-action="add-slot" data-role="video-bg">＋ 배경영상 레이어</button>
+      <button type="button" class="small quiet" data-action="add-slot" data-role="subtitle-layer">＋ 자막 레이어</button>
+      <button type="button" class="small quiet" data-action="add-slot" data-role="html-overlay">＋ Pencil HTML 오버레이</button>
+    </div>
+    ${slots.length ? `<div class="slot-pill-list" role="tablist" aria-label="장면 레이아웃 슬롯 목록">${slots.map(slot => `<button type="button" class="small ${active?.id === slot.id ? 'primary' : 'quiet'}" data-action="select-slot" data-slot-id="${esc(slot.id)}">${esc(slot.name)} · Z${slot.zIndex}</button>`).join('')}</div>` : '<p class="hint">위 템플릿 버튼을 눌러 상단 이미지·중단 배경영상·자막 슬롯을 구성하세요.</p>'}
+    ${active ? `<div class="slot-inspector-card">
+      <div class="row between"><strong>${esc(active.name)}</strong><button type="button" class="small quiet danger" data-action="delete-slot" data-slot-id="${esc(active.id)}">슬롯 삭제</button></div>
+      <label>모듈 이름<input data-slot-field="name" maxlength="120" value="${esc(active.name)}"></label>
+      <div class="two-cols">
+        <label>모듈 용도 (Role)<select data-slot-field="role">${Object.entries(roleNames).map(([k, v]) => `<option value="${k}" ${active.role === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+        <label>저장 정보 바인딩<select data-slot-field="dataBinding">${Object.entries(bindingNames).map(([k, v]) => `<option value="${k}" ${active.dataBinding === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+      </div>
+      <div class="four-cols">
+        <label>X (%)<input type="number" data-slot-field="x" min="0" max="95" step="1" value="${active.x}"></label>
+        <label>Y (%)<input type="number" data-slot-field="y" min="0" max="95" step="1" value="${active.y}"></label>
+        <label>폭 W (%)<input type="number" data-slot-field="w" min="5" max="100" step="1" value="${active.w}"></label>
+        <label>높이 H (%)<input type="number" data-slot-field="h" min="5" max="100" step="1" value="${active.h}"></label>
+      </div>
+      <div class="two-cols">
+        <label>레이어 순서 (Z-Index)<input type="number" data-slot-field="zIndex" min="0" max="100" step="1" value="${active.zIndex}"></label>
+        <label>배지 태그<input data-slot-style="badge" maxlength="40" value="${esc(active.style?.badge || '')}" placeholder="예: NEWS, CC, AI"></label>
+      </div>
+      <label>슬롯 표시 텍스트 / 자막<textarea data-slot-field="text" rows="2" maxlength="2000" placeholder="이 레이아웃 모듈에 표시할 텍스트 또는 자막">${esc(active.text || '')}</textarea></label>
+      ${active.role === 'html-overlay' || active.html ? `<label>Pencil HTML 오버레이 마크업<textarea data-slot-field="html" rows="2" maxlength="4000" placeholder="<div class='pencil-card'>...</div>">${esc(active.html || '')}</textarea></label>` : ''}
+      ${active.role === 'image-gen' || active.role === 'video-bg' ? `<label>연출·생성 프롬프트 (Higgsfield 연동)<textarea data-slot-field="prompt" rows="2" maxlength="4000" placeholder="시나리오 기반 이미지·영상 연출 프롬프트">${esc(active.prompt || '')}</textarea></label>` : ''}
+      <div class="two-cols">
+        <label>배경색<input type="color" class="color-input" data-slot-style="backgroundColor" value="${safeColor(active.style?.backgroundColor || '#1e293b')}"></label>
+        <label>글자색<input type="color" class="color-input" data-slot-style="textColor" value="${safeTextColor(active.style?.textColor || '#ffffff')}"></label>
+      </div>
+      <div class="two-cols">
+        <label>글자 크기 (px)<input type="number" data-slot-style="fontSize" min="10" max="140" step="1" value="${active.style?.fontSize || 36}"></label>
+        <label>불투명도<input type="number" data-slot-style="opacity" min="0" max="1" step="0.05" value="${active.style?.opacity ?? 0.85}"></label>
+      </div>
+      <div class="two-cols">
+        <label>텍스트 정렬<select data-slot-style="align">${['left','center','right'].map(value => `<option value="${value}" ${safeAlign(active.style?.align) === value ? 'selected' : ''}>${value === 'left' ? '왼쪽' : value === 'right' ? '오른쪽' : '가운데'}</option>`).join('')}</select></label>
+        <label>모서리 반경 (px)<input type="number" data-slot-style="borderRadius" min="0" max="80" step="1" value="${Math.max(0, Math.min(80, Number(active.style?.borderRadius ?? 8)))}"></label>
+      </div>
+      <div class="row" style="flex-wrap:wrap;gap:6px;margin-top:8px">
+        <button type="button" class="small" data-action="upload-slot-media" data-slot-id="${esc(active.id)}">↑ 슬롯 미디어 첨부</button>
+        ${active.assetUrl ? `<button type="button" class="small quiet" data-action="remove-slot-media" data-slot-id="${esc(active.id)}">슬롯 미디어 제거</button>` : ''}
+        ${active.role === 'image-gen' || active.role === 'video-bg' ? `<button type="button" class="small primary" data-action="open-slot-generation" data-slot-id="${esc(active.id)}">✦ 이 슬롯으로 Higgsfield 생성</button>` : ''}
+      </div>
+    </div>` : ''}
+  </section>`;
+}
+
+function platformBrowserHtml() {
+  const session = activePlatformSession();
+  const completedJobs = state.jobs.filter(j => j.status === 'completed' && j.outputUrl);
+  const exportsList = (state.serverExports && state.serverExports.length)
+    ? state.serverExports
+    : completedJobs.map(j => ({ filename: j.outputUrl.split('/').pop(), exportUrl: j.outputUrl, episodeId: j.episodeId, episodeTitle: state.episodes.find(e => e.id === j.episodeId)?.title || j.episodeId, sha256: j.sha256 }));
+  const available = session?.browser?.available === true;
+  const statusLabel = !available ? '브라우저 사용 불가' : session.attachmentStatus === 'attached' ? '서버 MP4 연결됨' : session.publicationStatus === 'unknown' ? '게시 상태 확인 필요' : '브라우저 세션 활성';
+  const screenshotUrl = session?.screenshotUrl ? safeUrl(session.screenshotUrl) : '';
+  const sessionOptions = (state.platformSessions || []).map(item => `<option value="${esc(item.id)}" ${item.id === session?.id ? 'selected' : ''}>${esc(item.platform?.toUpperCase() || '플랫폼')} · ${esc(item.channelName || item.channelId || item.id)}</option>`).join('');
+  return `<section class="panel section-spacer" id="platform-browser-panel" aria-label="플랫폼 서버 브라우저 및 서버 저장소 첨부">
+    <div class="panel-header">
+      <div><span class="eyebrow">REAL SERVER BROWSER</span><h3>플랫폼 스튜디오 브라우저 · 서버 MP4 첨부</h3></div>
+      <div class="row">
+        <button type="button" class="small quiet" data-action="refresh-server-exports">서버 MP4 목록 갱신</button>
+        <button type="button" class="small primary" data-action="open-platform-session">서버 브라우저 열기</button>
+      </div>
+    </div>
+    <div class="panel-body">
+      <p class="hint">Chromium 세션의 실제 화면을 서버에서 캡처합니다. 서버 저장소 MP4는 검증된 파일 입력으로만 연결하며, 게시 상태는 플랫폼 화면에서 직접 확인합니다.</p>
+      <div class="three-cols" style="margin-top:10px">
+        <label>지정 채널<select id="platform-session-channel">${state.channels.map(ch => `<option value="${esc(ch.id)}" ${(session?.channelId || channelId) === ch.id ? 'selected' : ''}>${esc(ch.name)} (${esc(ch.platform)})</option>`).join('')}</select></label>
+        <label>플랫폼 스튜디오<select id="platform-session-platform">${['youtube','tiktok','instagram','other'].map(p => `<option value="${p}" ${(session?.platform || activeChannel()?.platform?.toLowerCase() || 'youtube') === p ? 'selected' : ''}>${esc(platformNames[p] || p)}</option>`).join('')}</select></label>
+        <label>서버 MP4<select id="platform-session-export"><option value="">렌더링된 MP4 선택</option>${exportsList.map(item => `<option value="${esc(item.exportUrl)}" ${session?.attachedExport?.exportUrl === item.exportUrl ? 'selected' : ''}>${esc(item.episodeTitle || item.filename)} · ${esc(item.filename)}</option>`).join('')}</select></label>
+      </div>
+      <div class="three-cols">
+        <label>제목<input id="platform-session-title" maxlength="200" value="${esc(session?.metadata?.title || episode?.title || '')}"></label>
+        <label>설명<input id="platform-session-description" maxlength="2000" value="${esc(session?.metadata?.description || episode?.topic || '')}"></label>
+        <label>공개 범위<select id="platform-session-visibility">${[['private','비공개'],['unlisted','일부 공개'],['public','전체 공개']].map(([k,v]) => `<option value="${k}" ${(session?.metadata?.visibility || 'private') === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+      </div>
+      ${session ? `<div class="platform-session-viewport-wrap">
+        <div class="row between platform-session-bar">
+          <div class="row" style="flex:1;gap:8px;min-width:240px">
+            <span class="badge ${available ? '' : 'danger'}">${esc(statusLabel)}</span>
+            <input id="platform-session-url" value="${esc(session.url || '')}" style="flex:1;margin:0" aria-label="플랫폼 세션 URL">
+            <button type="button" class="small quiet" data-action="platform-session-interact" data-interact="navigate" ${available ? '' : 'disabled'}>이동</button>
+          </div>
+          <div class="row" style="gap:6px">
+            <button type="button" class="small quiet" data-action="platform-session-interact" data-interact="refresh" ${available ? '' : 'disabled'}>새로고침</button>
+            <button type="button" class="small quiet danger" data-action="platform-session-interact" data-interact="close">세션 닫기</button>
+          </div>
+        </div>
+        <div class="platform-browser-controls" aria-label="브라우저 컨트롤">
+          <label>CSS 선택자<input id="platform-session-selector" maxlength="300" value=""></label>
+          <label>입력값<input id="platform-session-input-value" maxlength="4000" value=""></label>
+          <button type="button" class="small" data-action="platform-session-interact" data-interact="input" ${available ? '' : 'disabled'}>입력</button>
+          <button type="button" class="small" data-action="platform-session-interact" data-interact="click" ${available ? '' : 'disabled'}>클릭</button>
+          <label>키<input id="platform-session-key" maxlength="40" value="Enter"></label>
+          <button type="button" class="small" data-action="platform-session-interact" data-interact="key" ${available ? '' : 'disabled'}>키 전송</button>
+          <label>가로 스크롤<input id="platform-session-scroll-x" type="number" step="100" value="0"></label>
+          <label>세로 스크롤<input id="platform-session-scroll-y" type="number" step="100" value="600"></label>
+          <button type="button" class="small" data-action="platform-session-interact" data-interact="scroll" ${available ? '' : 'disabled'}>스크롤</button>
+        </div>
+        <div class="row platform-session-actions">
+          <button type="button" class="small primary" data-action="platform-session-interact" data-interact="attach-export" ${available ? '' : 'disabled'}>선택한 MP4를 파일 입력에 첨부</button>
+          <button type="button" class="small" data-action="platform-session-interact" data-interact="update-metadata" ${available ? '' : 'disabled'}>메타데이터 입력</button>
+          <span class="hint">첨부 후 게시 버튼은 실제 플랫폼 화면에서 확인하세요.</span>
+        </div>
+        <div class="platform-session-screen">
+          ${screenshotUrl && available ? `<img src="${screenshotUrl}" alt="${esc(session.platform || '플랫폼')} 실제 서버 브라우저 화면" class="platform-viewport-img">` : `<p class="platform-session-unavailable" role="status">${esc(available ? '서버 브라우저 화면을 아직 캡처하지 못했습니다.' : '브라우저 세션을 사용할 수 없습니다. 서버에서 Chromium과 인증 상태를 확인하세요.')}</p>`}
+        </div>
+      </div>` : '<div class="empty" style="padding:18px">서버 브라우저 열기를 누르면 인증된 플랫폼 화면이 이곳에 표시됩니다.</div>'}
+      ${state.platformSessions?.length > 1 ? `<label class="platform-session-picker">열린 브라우저 세션<select id="platform-session-picker"><option value="">선택하세요</option>${sessionOptions}</select></label>` : ''}
+    </div>
+  </section>`;
+}
+
 function studioView() {
   const episodes = state.episodes.filter(item => item.channelId === channelId);
   const actions = `${episode ? '<button data-action="save" id="save-button">변경 저장</button><button class="primary" data-action="open-generation">Higgsfield 장면 생성</button><button data-action="render">영상 내보내기</button>' : ''}<button class="icon-btn" data-action="new-episode" aria-label="새 에피소드">+</button>`;
@@ -312,13 +486,14 @@ function studioView() {
   const scene = currentScene();
   html += `<div class="editor-grid"><div><div class="monitor-deck"><aside class="panel project-bin" aria-label="프로젝트 장면 목록"><div class="panel-header"><h3>프로젝트</h3><span class="badge">${episode.scenes.length}</span></div><div class="source-heading"><span class="eyebrow">PROJECT BIN</span><strong>${esc(episode.title)}</strong></div><div class="project-bin-list" id="project-bin-list">${sceneBinItems()}</div><p class="source-note">장면 선택은 미리보기와 편집 패널에 함께 반영됩니다.</p></aside><section class="panel program-monitor"><div class="panel-header"><div class="row"><span class="eyebrow">PROGRAM MONITOR</span><span class="badge">${esc(episode.format)}</span></div><span id="save-status" class="${dirty ? 'unsaved' : 'hint'}">${dirty ? '저장되지 않은 변경' : `버전 ${episode.version} · 저장됨`}</span></div><div class="preview-stage"><span class="stage-tag">LIVE CANVAS / ${esc(episode.category?.toUpperCase() || 'STUDIO')}</span><div id="preview" class="preview" data-format="${esc(episode.format)}" aria-label="현재 장면 미리보기"></div></div><div class="transport"><span class="time" id="play-time">${time(episode.scenes.slice(0,sceneIndex).reduce((sum,s) => sum + s.duration,0))} / ${time(duration())}</span><div class="row"><button class="icon-btn quiet" data-action="prev" aria-label="이전 장면">‹</button><button class="icon-btn primary" data-action="play" aria-label="${playing ? '미리보기 정지' : '미리보기 재생'}">${playing ? 'Ⅱ' : '▶'}</button><button class="icon-btn quiet" data-action="next" aria-label="다음 장면">›</button></div><span class="hint">${sceneIndex + 1} / ${episode.scenes.length} 장면</span></div></section></div>
     <section class="panel timeline"><div class="panel-header"><div><span class="eyebrow">SEQUENCE</span><h3>장면 타임라인</h3></div><span class="hint" id="total-duration">총 ${duration()}초</span></div><div class="timeline-body"><div class="ruler"><span>00:00</span><span>V1 · 장면 순서 / A · 첨부 오디오</span><span>${time(duration())}</span></div><div class="scenes" id="scenes">${sceneCards()}</div><div class="row between timeline-actions"><button class="small quiet" data-action="add-scene">＋ 장면 추가</button><div class="row"><button class="small quiet" data-action="save-template">템플릿으로 저장</button><button class="small quiet" data-action="view" data-view="templates">템플릿 불러오기 ↗</button></div></div></div></section>
-    <section class="panel section-spacer"><div class="panel-header"><h3>내보내기 작업</h3><span class="hint">FFmpeg · MP4</span></div><div id="jobs">${jobsHtml()}</div></section></div>
+    <section class="panel section-spacer"><div class="panel-header"><h3>내보내기 작업</h3><span class="hint">FFmpeg · MP4</span></div><div id="jobs">${jobsHtml()}</div></section>
+    ${platformBrowserHtml()}</div>
     <div class="right-column"><section class="panel inspector"><div class="panel-header"><h3>장면 편집</h3><span class="badge">SCENE ${String(sceneIndex + 1).padStart(2,'0')}</span></div><div class="panel-body">${scene ? inspectorHtml(scene) : '<p>장면을 추가해 주세요.</p>'}</div></section>${narrationHtml()}${chatHtml()}</div></div><p class="footnote">변경 사항은 버전별로 기록됩니다. 영상 업로드 전 채널 연결과 콘텐츠 권리를 확인하세요.</p>`;
   return html;
 }
 
 function inspectorHtml(scene) {
-  return `<details><summary class="hint" style="cursor:pointer;margin-bottom:13px">에피소드 설정 · ${esc(episode.title)}</summary><label>에피소드 제목<input data-episode="title" value="${esc(episode.title)}" maxlength="200"></label><label>소재 / 주제<textarea data-episode="topic">${esc(episode.topic)}</textarea></label><div class="two-cols"><label>화면 비율<select data-episode="format">${['9:16','16:9','1:1'].map(format => `<option ${episode.format === format ? 'selected' : ''}>${format}</option>`).join('')}</select></label><label>제작 상태<select data-episode="status">${['draft','review','ready'].map(status => `<option value="${status}" ${episode.status === status ? 'selected' : ''}>${statusNames[status]}</option>`).join('')}</select></label></div><label>제작 메모<textarea data-episode="notes">${esc(episode.notes)}</textarea></label></details><label>장면 이름<input data-scene="title" value="${esc(scene.title)}" maxlength="120"></label><label>화면 텍스트<textarea data-scene="text" rows="3" placeholder="이 장면에 보여줄 문장을 입력하세요">${esc(scene.text)}</textarea></label><div class="two-cols"><label>길이 (초)<input type="number" data-scene="duration" min="0.5" max="120" step="0.5" value="${scene.duration}"></label><label>배경 색상<input type="color" class="color-input" data-scene="background" value="${safeColor(scene.background)}"></label></div><label>텍스트 레이아웃<select data-scene="layout"><option value="center" ${scene.layout === 'center' ? 'selected' : ''}>중앙 정렬</option><option value="lower-third" ${scene.layout === 'lower-third' ? 'selected' : ''}>하단 자막</option><option value="split" ${scene.layout === 'split' ? 'selected' : ''}>상하 분할</option></select></label><label>내레이션 원고<textarea data-scene="narration" rows="2" placeholder="장면별 음성 제작용 원고">${esc(scene.narration)}</textarea></label><p class="hint">원고를 입력한 다음 아래 내레이션 패널에서 실제 음성을 생성하세요. 생성하거나 첨부한 오디오가 MP4에 반영됩니다.</p><div class="row"><button class="small" data-action="upload">↑ 이미지 / 영상</button>${scene.assetUrl ? '<button class="small quiet" data-action="remove-media">소스 제거</button>' : '<span class="hint">로컬 파일</span>'}</div>${audioInspectorHtml(scene)}<div class="row between" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><div class="row"><button class="icon-btn quiet" data-action="move-left" aria-label="장면 앞으로 이동">←</button><button class="icon-btn quiet" data-action="move-right" aria-label="장면 뒤로 이동">→</button><button class="small quiet" data-action="duplicate-scene">복제</button></div><button class="small quiet danger" data-action="delete-scene">삭제</button></div>`;
+  return `<details><summary class="hint" style="cursor:pointer;margin-bottom:13px">에피소드 설정 · ${esc(episode.title)}</summary><label>에피소드 제목<input data-episode="title" value="${esc(episode.title)}" maxlength="200"></label><label>소재 / 주제<textarea data-episode="topic">${esc(episode.topic)}</textarea></label><div class="two-cols"><label>화면 비율<select data-episode="format">${['9:16','16:9','1:1'].map(format => `<option ${episode.format === format ? 'selected' : ''}>${format}</option>`).join('')}</select></label><label>제작 상태<select data-episode="status">${['draft','review','ready'].map(status => `<option value="${status}" ${episode.status === status ? 'selected' : ''}>${statusNames[status]}</option>`).join('')}</select></label></div><label>제작 메모<textarea data-episode="notes">${esc(episode.notes)}</textarea></label></details><label>장면 이름<input data-scene="title" value="${esc(scene.title)}" maxlength="120"></label><label>화면 텍스트<textarea data-scene="text" rows="3" placeholder="이 장면에 보여줄 문장을 입력하세요">${esc(scene.text)}</textarea></label><div class="two-cols"><label>길이 (초)<input type="number" data-scene="duration" min="0.5" max="120" step="0.5" value="${scene.duration}"></label><label>배경 색상<input type="color" class="color-input" data-scene="background" value="${safeColor(scene.background)}"></label></div><label>텍스트·장면 레이아웃<select data-scene="layout"><option value="center" ${scene.layout === 'center' ? 'selected' : ''}>중앙 정렬</option><option value="lower-third" ${scene.layout === 'lower-third' ? 'selected' : ''}>하단 자막</option><option value="split" ${scene.layout === 'split' ? 'selected' : ''}>상하 분할</option><option value="top-image-mid-video" ${scene.layout === 'top-image-mid-video' ? 'selected' : ''}>상단 이미지·텍스트 + 중단 배경영상·자막</option><option value="premiere-3tier" ${scene.layout === 'premiere-3tier' ? 'selected' : ''}>프리미어 3단 (뉴스 배너 + 이미지 + 영상·자막)</option><option value="custom" ${scene.layout === 'custom' ? 'selected' : ''}>사용자 지정 다중 슬롯</option></select></label>${slotBuilderHtml(scene)}<label>내레이션 원고<textarea data-scene="narration" rows="2" placeholder="장면별 음성 제작용 원고">${esc(scene.narration)}</textarea></label><p class="hint">원고를 입력한 다음 아래 내레이션 패널에서 실제 음성을 생성하세요. 생성하거나 첨부한 오디오가 MP4에 반영됩니다.</p><div class="row"><button class="small" data-action="upload">↑ 이미지 / 영상</button>${scene.assetUrl ? '<button class="small quiet" data-action="remove-media">소스 제거</button>' : '<span class="hint">로컬 파일</span>'}</div>${audioInspectorHtml(scene)}<div class="row between" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><div class="row"><button class="icon-btn quiet" data-action="move-left" aria-label="장면 앞으로 이동">←</button><button class="icon-btn quiet" data-action="move-right" aria-label="장면 뒤로 이동">→</button><button class="small quiet" data-action="duplicate-scene">복제</button></div><button class="small quiet danger" data-action="delete-scene">삭제</button></div>`;
 }
 
 function updatePreview() {
@@ -330,7 +505,36 @@ function updatePreview() {
   preview.dataset.layout = scene.layout;
   let media = '';
   if (scene.assetUrl) media = scene.kind === 'video' ? `<video src="${safeUrl(scene.assetUrl)}" muted playsinline ${playing ? 'autoplay' : ''} loop></video>` : `<img src="${safeUrl(scene.assetUrl)}" alt="장면에 업로드한 이미지">`;
-  preview.innerHTML = `${media}<div class="preview-copy ${['center','lower-third','split'].includes(scene.layout) ? scene.layout : 'center'}"><span class="scene-overline">${esc(scene.title || 'YOUR NEXT STORY')}</span><div class="scene-text">${esc(scene.text || '여기에 이야기를 담아보세요')}</div></div><div class="preview-footer"><span>FRAMEFORGE</span><span>${String(sceneIndex + 1).padStart(2,'0')}</span></div>`;
+  const slots = Array.isArray(scene.slots) ? [...scene.slots].sort((a, b) => (Number(a.zIndex) || 0) - (Number(b.zIndex) || 0)) : [];
+  if (slots.length) {
+    const activeId = currentSlot()?.id;
+    const slotsHtml = slots.map(slot => {
+      const bg = safeColor(slot.style?.backgroundColor || '#1e293b');
+      const opacity = Math.max(0, Math.min(1, Number(slot.style?.opacity ?? 0.85)));
+      const radius = Math.max(0, Math.min(80, Number(slot.style?.borderRadius ?? 8)));
+      const fontSize = Math.max(10, Math.min(140, Number(slot.style?.fontSize || 36)));
+      const textColor = safeTextColor(slot.style?.textColor || '#ffffff');
+      const align = safeAlign(slot.style?.align);
+      const slotMedia = slot.assetUrl
+        ? (slot.mediaKind === 'video' || /\.(?:mp4|webm|mov)$/i.test(slot.assetUrl)
+          ? `<video src="${safeUrl(slot.assetUrl)}" muted playsinline ${playing ? 'autoplay' : ''} loop class="slot-media"></video>`
+          : `<img src="${safeUrl(slot.assetUrl)}" alt="${esc(slot.name)}" class="slot-media">`)
+        : '';
+      const badge = slot.style?.badge ? `<span class="slot-badge">${esc(slot.style.badge)}</span>` : `<span class="slot-role-tag">${esc(slot.role)}</span>`;
+      const copyText = slot.text || (slot.dataBinding === 'scene.title' ? scene.title : slot.dataBinding === 'scene.narration' ? (scene.narration || scene.text) : slot.dataBinding === 'scene.text' ? scene.text : slot.prompt || '');
+      return `<div class="preview-slot ${activeId === slot.id ? 'selected' : ''} role-${esc(slot.role)}" data-slot-id="${esc(slot.id)}" style="left:${Number(slot.x)||0}%;top:${Number(slot.y)||0}%;width:${Number(slot.w)||50}%;height:${Number(slot.h)||25}%;z-index:${Number(slot.zIndex)||1};background:${bg};opacity:${opacity};border-radius:${radius}px;color:${textColor};text-align:${align}">
+        ${slotMedia}
+        <div class="slot-overlay-content">
+          <div class="slot-header-meta">${badge}<small>${esc(slot.dataBinding)}</small></div>
+          <div class="slot-copy" style="font-size:${fontSize}px;color:${textColor};text-align:${align}">${esc(copyText)}</div>
+        </div>
+        <span class="slot-resize-handle" title="크기 조절">◢</span>
+      </div>`;
+    }).join('');
+    preview.innerHTML = `${media}<div class="preview-slots-layer">${slotsHtml}</div><div class="preview-footer"><span>FRAMEFORGE · MULTI-SLOT</span><span>${String(sceneIndex + 1).padStart(2,'0')}</span></div>`;
+  } else {
+    preview.innerHTML = `${media}<div class="preview-copy ${['center','lower-third','split'].includes(scene.layout) ? scene.layout : 'center'}"><span class="scene-overline">${esc(scene.title || 'YOUR NEXT STORY')}</span><div class="scene-text">${esc(scene.text || '여기에 이야기를 담아보세요')}</div></div><div class="preview-footer"><span>FRAMEFORGE</span><span>${String(sceneIndex + 1).padStart(2,'0')}</span></div>`;
+  }
   const video = $('video',preview);
   if (video && Number(scene.trimStart) > 0) video.addEventListener('loadedmetadata', () => { video.currentTime = Math.min(Number(scene.trimStart), Math.max(0,video.duration - 0.01)); }, {once:true});
 }
@@ -339,13 +543,14 @@ function sceneCards() {
   return episode.scenes.map((scene,index) => {
     const start = time(elapsed);
     elapsed += Number(scene.duration) || 0;
-    return `<button class="scene-card ${index===sceneIndex?'selected':''}" data-action="scene" data-index="${index}" data-scene-id="${esc(scene.id)}" aria-pressed="${index===sceneIndex}" aria-label="장면 ${index+1}: ${esc(scene.title)} · ${start} 시작 · ${Number(scene.duration)}초"><div class="scene-clip-header"><span>V1 · ${String(index+1).padStart(2,'0')}</span><time>${start}</time></div><div class="scene-thumb" style="background:${safeColor(scene.background)}">${esc(scene.text?.slice(0,45) || scene.title)}</div><div class="scene-meta"><span>${esc(scene.title?.slice(0,18))}</span><span>${Number(scene.duration)}s</span></div><span class="scene-media-state">${scene.audioUrl?'A · 첨부 오디오':'A · 오디오 없음'}</span></button>`;
+    const slotBadge = Array.isArray(scene.slots) && scene.slots.length ? ` · ${scene.slots.length}슬롯` : '';
+    return `<button class="scene-card ${index===sceneIndex?'selected':''}" data-action="scene" data-index="${index}" data-scene-id="${esc(scene.id)}" aria-pressed="${index===sceneIndex}" aria-label="장면 ${index+1}: ${esc(scene.title)} · ${start} 시작 · ${Number(scene.duration)}초"><div class="scene-clip-header"><span>V1 · ${String(index+1).padStart(2,'0')}${esc(slotBadge)}</span><time>${start}</time></div><div class="scene-thumb" style="background:${safeColor(scene.background)}">${esc(scene.text?.slice(0,45) || scene.title)}</div><div class="scene-meta"><span>${esc(scene.title?.slice(0,18))}</span><span>${Number(scene.duration)}s</span></div><span class="scene-media-state">${scene.audioUrl?'A · 첨부 오디오':'A · 오디오 없음'}</span></button>`;
   }).join('');
 }
 function jobsHtml() {
   const jobs = state.jobs.filter(job => job.episodeId === episode?.id).slice().reverse();
   if (!jobs.length) return '<div class="panel-body hint">영상을 내보내면 이곳에서 진행 상황과 다운로드를 확인할 수 있습니다.</div>';
-  return jobs.slice(0,6).map(job => `<div class="job-item"><span class="badge ${job.status === 'completed' ? 'lime' : ''}">${esc(statusNames[job.status] || job.status)}</span><span class="muted">${date(job.createdAt)}</span>${['queued','running'].includes(job.status) ? `<progress value="${Number(job.progress) || 0}" max="100" aria-label="렌더링 진행률"></progress>` : ''}${job.outputUrl ? `<a href="${safeUrl(job.outputUrl)}" download>MP4 다운로드 ↓</a>` : ''}${job.error ? `<span class="danger">${esc(job.error)}</span>` : ''}</div>`).join('');
+  return jobs.slice(0,6).map(job => `<div class="job-item"><span class="badge ${job.status === 'completed' ? 'lime' : ''}">${esc(statusNames[job.status] || job.status)}</span><span class="muted">${date(job.createdAt)}</span>${['queued','running'].includes(job.status) ? `<progress value="${Number(job.progress) || 0}" max="100" aria-label="렌더링 진행률"></progress>` : ''}${job.outputUrl ? `<a href="${safeUrl(job.outputUrl)}" download>MP4 다운로드 ↓</a><button type="button" class="small quiet" data-action="platform-session-interact" data-interact="attach-export" data-export-url="${esc(job.outputUrl)}">플랫폼 세션에 마운트 ↗</button>` : ''}${job.error ? `<span class="danger">${esc(job.error)}</span>` : ''}</div>`).join('');
 }
 function chatHtml() {
   const messages = chatLogs.get(episode.id) || [];
@@ -572,7 +777,155 @@ async function handleAction(button) {
   else if (action === 'channel') { stopPlayback(); if (workflowEditor.hasChanges()) await workflowEditor.save(); await save(true); channelId = button.dataset.id; episode = clone(state.episodes.find(item => item.channelId === channelId) || null); sceneIndex = 0; view = 'studio'; render(); $('#main')?.focus(); }
   else if (action === 'episode') { stopPlayback(); await save(true); episode = clone(state.episodes.find(item => item.id === button.dataset.id)); sceneIndex = 0; render(); }
   else if (action === 'open-generation') { stopPlayback(); if (!episode) return; await workflowEditor.openGeneration({episode,episodeId:episode.id,sceneIndex,sceneId:currentScene()?.id}); view = 'workflow'; render(); toast('Higgsfield 생성 설정을 열었습니다. 실행 전 비용을 확인합니다.'); }
-  else if (action === 'scene') { const fromBin=Boolean(button.closest('.project-bin')); stopPlayback(); sceneIndex = Number(button.dataset.index); render(); $(fromBin?'.project-bin [aria-current="true"]':'.scene-card.selected')?.focus({preventScroll:true}); }
+  else if (action === 'open-slot-generation') {
+    stopPlayback();
+    if (!episode || !currentScene()) return;
+    const slot = currentScene().slots?.find(item => item.id === button.dataset.slotId) || currentSlot();
+    await workflowEditor.openGeneration({episode,episodeId:episode.id,sceneIndex,sceneId:currentScene().id,slotId:slot?.id,prompt:slot?.prompt || slot?.text || currentScene().text});
+    view = 'workflow';
+    render();
+    toast(`'${slot?.name || '레이아웃 슬롯'}'의 Higgsfield 생성 설정을 열었습니다.`);
+  }
+  else if (action === 'apply-layout-preset') {
+    const scene = currentScene();
+    if (!scene) return;
+    const preset = button.dataset.preset;
+    const applyAll = button.dataset.scope === 'all';
+    const targets = applyAll ? episode.scenes : [scene];
+    for (const target of targets) {
+      if (preset === 'clear') {
+        delete target.slots;
+        target.layout = 'center';
+      } else {
+        target.layout = preset === 'premiere-3tier' ? 'premiere-3tier' : 'top-image-mid-video';
+        target.slots = buildDefaultSlots(preset, target);
+      }
+    }
+    selectedSlotId = scene.slots?.[0]?.id || null;
+    markDirty();
+    render();
+    toast(preset === 'clear' ? '단일 레이아웃으로 초기화했습니다.' : `${applyAll ? '모든 장면에 ' : ''}레이아웃 템플릿 슬롯을 구성했습니다.`);
+  }
+  else if (action === 'add-slot') {
+    const scene = currentScene();
+    if (!scene) return;
+    scene.slots ||= [];
+    if (scene.slots.length >= 16) { toast('장면당 최대 16개의 레이아웃 슬롯만 추가할 수 있습니다.', true); return; }
+    const role = button.dataset.role || 'html-overlay';
+    const nextIdx = scene.slots.length + 1;
+    const newSlot = {
+      id: `slot-${id().slice(0, 8)}`,
+      name: role === 'image-gen' ? `상단 이미지 슬롯 ${nextIdx}` : role === 'video-bg' ? `중단 배경 영상 ${nextIdx}` : role === 'subtitle-layer' ? `자막 레이어 ${nextIdx}` : role === 'text-overlay' ? `텍스트 레이아웃 ${nextIdx}` : `Pencil HTML 오버레이 ${nextIdx}`,
+      role,
+      dataBinding: role === 'image-gen' ? 'scene.imagePrompt' : role === 'video-bg' ? 'scene.videoPrompt' : role === 'subtitle-layer' ? 'scene.narration' : role === 'text-overlay' ? 'scene.title' : 'news.headline',
+      x: role === 'video-bg' ? 0 : 6,
+      y: role === 'image-gen' ? 5 : role === 'video-bg' ? 40 : role === 'subtitle-layer' ? 74 : 12,
+      w: role === 'video-bg' ? 100 : 88,
+      h: role === 'image-gen' ? 32 : role === 'video-bg' ? 60 : 18,
+      zIndex: role === 'video-bg' ? 1 : role === 'image-gen' ? 2 : role === 'subtitle-layer' ? 10 : 6,
+      text: role === 'subtitle-layer' ? (scene.narration || scene.text) : scene.title,
+      ...(role === 'html-overlay' ? { html: `<div class="pencil-card"><span class="pencil-badge">OVERLAY</span><strong>${esc(scene.title)}</strong></div>` } : {}),
+      ...(role === 'image-gen' || role === 'video-bg' ? { prompt: `${scene.title} · ${scene.text || episode.topic}` } : {}),
+      style: { backgroundColor: role === 'html-overlay' ? '#173ea8' : '#111827', textColor: '#ffffff', fontSize: role === 'subtitle-layer' ? 42 : 34, opacity: 0.85, borderRadius: 8, align: 'center', badge: role === 'html-overlay' ? 'HTML' : role === 'subtitle-layer' ? 'CC' : '' },
+    };
+    scene.slots.push(newSlot);
+    if (!['top-image-mid-video','premiere-3tier','custom'].includes(scene.layout)) scene.layout = 'custom';
+    selectedSlotId = newSlot.id;
+    markDirty();
+    render();
+  }
+  else if (action === 'select-slot') {
+    selectedSlotId = button.dataset.slotId;
+    render();
+  }
+  else if (action === 'delete-slot') {
+    const scene = currentScene();
+    if (!scene?.slots?.length) return;
+    scene.slots = scene.slots.filter(item => item.id !== button.dataset.slotId);
+    if (!scene.slots.length) { delete scene.slots; scene.layout = 'center'; }
+    selectedSlotId = scene.slots?.[0]?.id || null;
+    markDirty();
+    render();
+  }
+  else if (action === 'upload-slot-media') {
+    pendingSlotUploadId = button.dataset.slotId || currentSlot()?.id || null;
+    $('#media-file').click();
+  }
+  else if (action === 'remove-slot-media') {
+    const slot = currentScene()?.slots?.find(item => item.id === (button.dataset.slotId || currentSlot()?.id));
+    if (!slot) return;
+    delete slot.assetUrl;
+    slot.mediaKind = 'none';
+    markDirty();
+    render();
+  }
+  else if (action === 'open-platform-session') {
+    const targetChannelId = $('#platform-session-channel')?.value || channelId || state.channels[0]?.id;
+    const targetPlatform = $('#platform-session-platform')?.value || activeChannel()?.platform?.toLowerCase() || 'youtube';
+    const targetExportUrl = $('#platform-session-export')?.value || '';
+    const session = await post('/api/platform-sessions', {
+      channelId: targetChannelId,
+      episodeId: episode?.id,
+      platform: targetPlatform,
+      visibility: $('#platform-session-visibility')?.value || 'private',
+      title: $('#platform-session-title')?.value || episode?.title || '',
+      description: $('#platform-session-description')?.value || episode?.topic || '',
+      ...(targetExportUrl ? { exportUrl: targetExportUrl } : {}),
+    });
+    activePlatformSessionId = session.id;
+    await refreshPlatformSessions();
+    render();
+    toast(`${session.platform.toUpperCase()} 서버 측 비동기 브라우저 세션을 열었습니다.`);
+  }
+  else if (action === 'select-platform-session') {
+    activePlatformSessionId = button.dataset.id;
+    render();
+  }
+  else if (action === 'platform-session-interact') {
+    const session = activePlatformSession();
+    if (!session) { toast('먼저 사용 가능한 서버 브라우저 세션을 열어 주세요.', true); return; }
+    const interactAction = button.dataset.interact;
+    const payload = { action: interactAction };
+    if (interactAction === 'navigate') payload.url = $('#platform-session-url')?.value || session.url;
+    if (interactAction === 'input' || interactAction === 'click') {
+      payload.selector = $('#platform-session-selector')?.value?.trim();
+      if (!payload.selector) throw new Error('CSS 선택자를 입력하세요.');
+      if (interactAction === 'input') payload.value = $('#platform-session-input-value')?.value || '';
+    }
+    if (interactAction === 'key') payload.key = $('#platform-session-key')?.value?.trim() || 'Enter';
+    if (interactAction === 'scroll') {
+      payload.x = Number($('#platform-session-scroll-x')?.value || 0);
+      payload.y = Number($('#platform-session-scroll-y')?.value || 0);
+      if (!Number.isFinite(payload.x) || !Number.isFinite(payload.y)) throw new Error('스크롤 값은 숫자여야 합니다.');
+    }
+    if (interactAction === 'attach-export') {
+      payload.exportUrl = button.dataset.exportUrl || $('#platform-session-export')?.value;
+      payload.selector = $('#platform-session-selector')?.value?.trim() || undefined;
+      if (!payload.exportUrl) throw new Error('먼저 서버 MP4를 선택하세요.');
+    }
+    if (interactAction === 'update-metadata') {
+      payload.title = $('#platform-session-title')?.value || session.metadata?.title || episode?.title || '';
+      payload.description = $('#platform-session-description')?.value || session.metadata?.description || episode?.topic || '';
+      payload.visibility = $('#platform-session-visibility')?.value || session.metadata?.visibility || 'private';
+      payload.channelId = $('#platform-session-channel')?.value || session.channelId || channelId || undefined;
+    }
+    const updated = await post(`/api/platform-sessions/${encodeURIComponent(session.id)}/interact`, payload);
+    if (interactAction === 'close') activePlatformSessionId = null;
+    else activePlatformSessionId = updated.id;
+    await refreshPlatformSessions();
+    render();
+    const messages = {
+      navigate: '플랫폼 페이지를 이동했습니다.', input: '서버 브라우저에 입력했습니다.', click: '서버 브라우저에서 클릭했습니다.', key: '키 입력을 전송했습니다.', scroll: '서버 브라우저를 스크롤했습니다.',
+      'attach-export': '검증된 서버 MP4를 플랫폼 파일 입력에 첨부했습니다.', 'update-metadata': '플랫폼 화면에 메타데이터를 입력했습니다.', refresh: '플랫폼 브라우저 화면을 새로 고쳤습니다.', close: '플랫폼 브라우저 세션을 닫았습니다.',
+    };
+    toast(messages[interactAction] || '플랫폼 브라우저 세션을 갱신했습니다.');
+  }
+  else if (action === 'refresh-server-exports') {
+    await refreshPlatformSessions();
+    render();
+    toast('서버 저장소(data/exports) MP4 목록을 새로고침했습니다.');
+  }
+  else if (action === 'scene') { const fromBin=Boolean(button.closest('.project-bin')); stopPlayback(); sceneIndex = Number(button.dataset.index); selectedSlotId = currentScene()?.slots?.[0]?.id || null; render(); $(fromBin?'.project-bin [aria-current="true"]':'.scene-card.selected')?.focus({preventScroll:true}); }
   else if (action === 'save') { await save(); render(); }
   else if (action === 'prev' || action === 'next') { stopPlayback(); sceneIndex = Math.max(0,Math.min(episode.scenes.length - 1, sceneIndex + (action === 'prev' ? -1 : 1))); render(); }
   else if (action === 'play') { if (playing) stopPlayback(); else { playing = true; playNext(); } render(); }
@@ -583,7 +936,7 @@ async function handleAction(button) {
   else if (action === 'upload-audio') $('#audio-file').click();
   else if (action === 'remove-audio') { delete currentScene().audioUrl; markDirty(); render(); }
   else if (action === 'refresh-commands') { await loadCommands(); render(); }
-  else if (action === 'upload') $('#media-file').click();
+  else if (action === 'upload') { pendingSlotUploadId = null; $('#media-file').click(); }
   else if (action === 'remove-media') { delete currentScene().assetUrl; currentScene().kind = 'title'; markDirty(); render(); }
   else if (action === 'render') { await save(true); const job = await post(`/api/episodes/${episode.id}/render`); state.jobs.push(job); render(); toast('MP4 렌더링을 시작했습니다. 아래에서 진행 상황을 확인하세요.'); }
   else if (action === 'save-template') { if (!episode) return; openModal('내 템플릿 저장', `<label>템플릿 이름<input name="name" required value="${esc(episode.title)} 템플릿"></label><label>콘텐츠 유형<select name="category">${categoryOptions(episode.category)}</select></label>`, async data => { await post('/api/templates',{...data,format:episode.format,scenes:episode.scenes}); await refresh(); render(); toast('템플릿을 저장했습니다.'); },'저장'); }
@@ -609,6 +962,7 @@ document.addEventListener('click', async event => {
 });
 
 document.addEventListener('change',async event=>{
+  if (event.target.id === 'platform-session-picker') { activePlatformSessionId = event.target.value || null; render(); return; }
   if (event.target.id!=='history-episode') return;
   const targetId=event.target.value;
   try {await save(true);episode=clone(state.episodes.find(item=>item.id===targetId));channelId=episode.channelId;sceneIndex=0;historyVersion=null;await loadHistory();render();}
@@ -619,6 +973,31 @@ document.addEventListener('input', event => {
   const target = event.target;
   if (target.id === 'speech-voice') { speechVoice=target.value; return; }
   if (target.id === 'speech-rate') { if (target.checkValidity() && target.value !== '') speechRate=Number(target.value); return; }
+  if (target.dataset.slotField && currentSlot()) {
+    const slot = currentSlot();
+    const key = target.dataset.slotField;
+    if (['x','y','w','h','zIndex'].includes(key)) {
+      if (!target.checkValidity() || target.value === '') return;
+      slot[key] = Number(target.value);
+    } else {
+      slot[key] = target.value;
+    }
+    markDirty();
+    return;
+  }
+  if (target.dataset.slotStyle && currentSlot()) {
+    const slot = currentSlot();
+    slot.style ||= {};
+    const key = target.dataset.slotStyle;
+    if (['fontSize','opacity','borderRadius'].includes(key)) {
+      if (!target.checkValidity() || target.value === '') return;
+      slot.style[key] = Number(target.value);
+    } else {
+      slot.style[key] = target.value;
+    }
+    markDirty();
+    return;
+  }
   if (target.dataset.scene && currentScene()) {
     if (['duration','trimStart','audioVolume'].includes(target.dataset.scene)) { if (!target.checkValidity() || target.value === '') return; currentScene()[target.dataset.scene] = Number(target.value); }
     else currentScene()[target.dataset.scene] = target.value;
@@ -683,6 +1062,8 @@ $('#media-file').addEventListener('change', async event => {
   const file = event.target.files?.[0];
   const selectedEpisode = episode?.id;
   const selectedScene = currentScene()?.id;
+  const targetSlotId = pendingSlotUploadId;
+  pendingSlotUploadId = null;
   if (!file || !selectedScene) return;
   try {
     toast('미디어를 업로드하는 중입니다…');
@@ -690,13 +1071,79 @@ $('#media-file').addEventListener('change', async event => {
     if (episode?.id !== selectedEpisode) { toast('업로드했습니다. 선택한 에피소드가 바뀌어 장면에는 적용하지 않았습니다.',true); return; }
     const scene = episode.scenes.find(item => item.id === selectedScene);
     if (!scene) return;
+    const mediaKind = file.type.startsWith('video/') ? 'video' : 'image';
+    if (targetSlotId && Array.isArray(scene.slots)) {
+      const slot = scene.slots.find(item => item.id === targetSlotId);
+      if (slot) {
+        slot.assetUrl = asset.url;
+        slot.mediaKind = mediaKind;
+        selectedSlotId = slot.id;
+        markDirty();
+        render();
+        toast(`미디어를 '${slot.name}' 레이아웃 슬롯에 연결했습니다. 변경 저장을 눌러 보관하세요.`);
+        return;
+      }
+    }
     scene.assetUrl = asset.url;
-    scene.kind = file.type.startsWith('video/') ? 'video' : 'image';
+    scene.kind = mediaKind;
     markDirty();
     render();
     toast('미디어를 장면에 추가했습니다. 변경 저장을 눌러 보관하세요.');
   } catch (error) { toast(error.message,true); }
   finally { event.target.value = ''; }
+});
+
+let slotDrag = null;
+document.addEventListener('pointerdown', event => {
+  const slotEl = event.target.closest('.preview-slot[data-slot-id]');
+  const preview = $('#preview');
+  if (!slotEl || !preview || event.button !== 0 || !canMutate()) return;
+  const scene = currentScene();
+  const slot = scene?.slots?.find(item => item.id === slotEl.dataset.slotId);
+  if (!slot) return;
+  event.preventDefault();
+  const resizeHandle = event.target.closest('.slot-resize-handle');
+  selectedSlotId = slot.id;
+  const rect = preview.getBoundingClientRect();
+  slotDrag = {
+    pointerId: event.pointerId,
+    mode: resizeHandle ? 'resize' : 'move',
+    slotId: slot.id,
+    startX: event.clientX,
+    startY: event.clientY,
+    rectW: Math.max(1, rect.width),
+    rectH: Math.max(1, rect.height),
+    origX: Number(slot.x) || 0,
+    origY: Number(slot.y) || 0,
+    origW: Number(slot.w) || 50,
+    origH: Number(slot.h) || 25,
+    moved: false,
+  };
+  slotEl.setPointerCapture?.(event.pointerId);
+});
+document.addEventListener('pointermove', event => {
+  if (!slotDrag || event.pointerId !== slotDrag.pointerId) return;
+  const scene = currentScene();
+  const slot = scene?.slots?.find(item => item.id === slotDrag.slotId);
+  if (!slot) return;
+  const dxPct = ((event.clientX - slotDrag.startX) / slotDrag.rectW) * 100;
+  const dyPct = ((event.clientY - slotDrag.startY) / slotDrag.rectH) * 100;
+  if (Math.abs(dxPct) < 0.2 && Math.abs(dyPct) < 0.2 && !slotDrag.moved) return;
+  slotDrag.moved = true;
+  if (slotDrag.mode === 'resize') {
+    slot.w = Math.round(Math.max(5, Math.min(100 - slot.x, slotDrag.origW + dxPct)));
+    slot.h = Math.round(Math.max(5, Math.min(100 - slot.y, slotDrag.origH + dyPct)));
+  } else {
+    slot.x = Math.round(Math.max(0, Math.min(100 - slot.w, slotDrag.origX + dxPct)));
+    slot.y = Math.round(Math.max(0, Math.min(100 - slot.h, slotDrag.origY + dyPct)));
+  }
+  markDirty();
+});
+document.addEventListener('pointerup', event => {
+  if (!slotDrag || event.pointerId !== slotDrag.pointerId) return;
+  const wasMoved = slotDrag.moved;
+  slotDrag = null;
+  if (wasMoved || view === 'studio') render();
 });
 
 $('#audio-file').addEventListener('change', async event => {

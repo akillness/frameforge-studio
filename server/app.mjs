@@ -11,6 +11,7 @@ import { WorkflowEngine, validateWorkflow } from './workflows.mjs';
 import { NarrationQueue, createSpeechProvider } from './narration.mjs';
 import { GenerationQueue } from './generations.mjs';
 import { createGenerationProvider } from './generation-provider.mjs';
+import { PlatformSessionManager } from './platform-session.mjs';
 
 const PUBLIC_DIR = fileURLToPath(new URL('../public/', import.meta.url));
 const MAX_JSON = 1024 * 1024;
@@ -103,7 +104,7 @@ async function generationCall(operation) {
 }
 
 /** Dependency overrides are for local tests; production imports actual adapters. */
-export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), loginToken = process.env.LOGIN_TOKEN || '', publicOrigin = process.env.PUBLIC_ORIGIN, integrations, renderer, speech, generation, generationOptions } = {}) {
+export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), loginToken = process.env.LOGIN_TOKEN || '', publicOrigin = process.env.PUBLIC_ORIGIN, integrations, renderer, speech, generation, generationOptions, platformSessions: injectedPlatformSessions, platformSessionOptions } = {}) {
   if (loginToken && (typeof loginToken !== 'string' || loginToken.length < 16)) throw new Error('LOGIN_TOKEN must contain at least 16 characters');
   if (publicOrigin) {
     const parsed = new URL(publicOrigin);
@@ -186,6 +187,15 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
         if (scene.kind === 'video' && !upload.type.startsWith('video/')) throw new HttpError(400, 'Video scene requires video media');
         if (scene.kind === 'image' && !upload.type.startsWith('image/')) throw new HttpError(400, 'Image scene requires image media');
       }
+      if (Array.isArray(scene.slots)) {
+        for (const slot of scene.slots) {
+          if (!slot.assetUrl) continue;
+          const slotUpload = uploads.get(slot.assetUrl);
+          if (!slotUpload) throw new HttpError(400, 'Slot refers to an unknown uploaded asset');
+          if (slot.mediaKind === 'video' && !slotUpload.type.startsWith('video/')) throw new HttpError(400, 'Video slot requires video media');
+          if (slot.mediaKind === 'image' && !slotUpload.type.startsWith('image/')) throw new HttpError(400, 'Image slot requires image media');
+        }
+      }
       if (scene.audioUrl) {
         const audio = uploads.get(scene.audioUrl);
         if (!audio) throw new HttpError(400, 'Scene refers to an unknown uploaded audio file');
@@ -238,7 +248,8 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
 
   const generationProvider = generation || createGenerationProvider();
   const generations = new GenerationQueue({ store, provider: generationProvider, ...generationOptions });
-  const workflows = new WorkflowEngine({ store, fetchTrends: refreshTrends, runAgent: async (...args) => (await adapter()).runAgent(...args), render: (episode) => enqueueRender(episode, true), validateAssets, generations });
+  const platformSessions = injectedPlatformSessions || new PlatformSessionManager({ store, ...(platformSessionOptions || {}) });
+  const workflows = new WorkflowEngine({ store, fetchTrends: refreshTrends, runAgent: async (...args) => (await adapter()).runAgent(...args), render: (episode) => enqueueRender(episode, true), validateAssets, generations, platformSessions });
   const speechProvider = speech || createSpeechProvider();
   const narration = new NarrationQueue({ store, ...speechProvider });
   trendCollector.start();
@@ -312,11 +323,19 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       return json(response, 200, store.listPopularTrendKeywords({ since: window.since, limit: window.limit }));
     }
     if (request.method === 'GET' && path === '/api/state') {
-      const state = Object.fromEntries(['channels', 'episodes', 'templates', 'references', 'jobs', 'events', 'workflows', 'workflowRuns', 'narrationJobs', 'generationJobs'].map((kind) => [kind, store.list(kind)]));
+      const state = Object.fromEntries(['channels', 'episodes', 'templates', 'references', 'jobs', 'events', 'workflows', 'workflowRuns', 'narrationJobs', 'generationJobs', 'platformSessions', 'platformUploads'].map((kind) => [kind, store.list(kind)]));
       state.trends = [...new Map(store.list('trends').map((trend) => [`${trend.keyword}\u0000${trend.source || ''}`, trend])).values()];
       const { nodes, edges } = store.knowledge();
       return json(response, 200, { ...state, session, ...trendState(), integrations: await integrationStatus(), graph: { nodes, edges } });
     }
+    const platformScreenshot = /^\/api\/platform-sessions\/([^/]+)\/screenshot$/.exec(path);
+    if (request.method === 'GET' && platformScreenshot) {
+      const image = await platformSessions.screenshot(decodeURIComponent(platformScreenshot[1]));
+      response.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'private, no-store', 'Content-Length': image.length });
+      return response.end(image);
+    }
+    if (request.method === 'GET' && path === '/api/platform-sessions') return json(response, 200, platformSessions.listSessions());
+    if (request.method === 'GET' && path === '/api/server-exports') return json(response, 200, await platformSessions.listServerExports());
     if (request.method === 'GET' && path === '/api/integrations') return json(response, 200, await integrationStatus());
     if (request.method === 'GET' && path === '/api/speech/voices') return json(response, 200, await speechProvider.listVoices());
     if (request.method === 'GET' && path === '/api/generation/status') return json(response, 200, await generationProvider.capability());
@@ -433,6 +452,9 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       }
       if (request.method === 'POST' && path === '/api/trends') return write('trends', { keyword: text(body.keyword, 'keyword', 300), source: text(body.source, 'source', 100), url: url(body.url), category: optionalText(body.category, 'category', 100), capturedAt: new Date().toISOString() });
       if (request.method === 'POST' && path === '/api/commands') return write('commands', { message: text(body.message, 'message', 20000), source: text(body.source, 'source', 100, 'studio'), sessionId: optionalText(body.sessionId, 'sessionId', 100), status: 'received' });
+      if (request.method === 'POST' && path === '/api/platform-sessions') return json(response, 201, await platformSessions.openSession(body));
+      const platformSessionInteract = /^\/api\/platform-sessions\/([^/]+)\/interact$/.exec(path);
+      if (request.method === 'POST' && platformSessionInteract) return json(response, 200, await platformSessions.interact(decodeURIComponent(platformSessionInteract[1]), body));
       const reviewRoute = /^\/api\/workflows\/([^/]+)\/runs\/([^/]+)\/review$/.exec(path);
       if (request.method === 'POST' && reviewRoute) return json(response, 200, await workflows.review(reviewRoute[1], reviewRoute[2], body));
       const episodeRoute = /^\/api\/episodes\/([^/]+)(?:\/(template|chat|render|narration))?$/.exec(path);
@@ -487,7 +509,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
   });
   server.requestTimeout = 120_000;
   server.headersTimeout = 15_000;
-  server.on('close', () => { closing = true; trendCollector.close(); narration.close(); generations.close(); workflows.close(); store.close(); });
+  server.on('close', () => { closing = true; trendCollector.close(); narration.close(); generations.close(); workflows.close(); platformSessions.close(); store.close(); });
   return server;
 }
 

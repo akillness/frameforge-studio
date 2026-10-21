@@ -1,5 +1,14 @@
 // Compare authored content by stable identity. Timestamps and version counters are metadata.
-export const FIELD_LABELS = {title:'제목',topic:'소재',format:'화면 비율',status:'제작 상태',notes:'메모',name:'이름',label:'노드 이름',text:'화면 텍스트',narration:'내레이션',duration:'길이 (초)',background:'배경',layout:'레이아웃',kind:'소스 종류',assetUrl:'이미지 / 영상',audioUrl:'오디오',audioVolume:'볼륨',trimStart:'영상 시작점',agent:'에이전트',prompt:'제작 지시문',query:'검색 키워드',limit:'참고 자료 수',instructions:'검토 지침',x:'X 위치',y:'Y 위치'};
+export const FIELD_LABELS = {
+  title:'제목',topic:'소재',format:'화면 비율',status:'제작 상태',notes:'메모',name:'이름',label:'노드 이름',
+  text:'화면 텍스트',narration:'내레이션',duration:'길이 (초)',background:'배경',layout:'레이아웃',slots:'레이아웃 슬롯 구성',
+  kind:'소스 종류',assetUrl:'이미지 / 영상',audioUrl:'오디오',audioVolume:'볼륨',trimStart:'영상 시작점',
+  agent:'에이전트',prompt:'제작 지시문',query:'검색 키워드',keywords:'뉴스 키워드',maxArticles:'최대 뉴스 수',source:'뉴스 출처',
+  limit:'참고 자료 수',preset:'레이아웃 프리셋',topSlotRole:'상단 모듈 용도',midSlotRole:'중단 모듈 용도',
+  enableSubtitles:'자막 레이어 포함',enableHtmlOverlay:'HTML 오버레이 포함',autoPrompts:'슬롯 프롬프트 자동 생성',
+  slotId:'대상 슬롯',targetMode:'생성 단위',instructions:'검토 지침',channelId:'대상 채널',platform:'플랫폼',
+  visibility:'공개 범위',autoAttachExport:'서버 MP4 자동 첨부',titleTemplate:'제목 템플릿',x:'X 위치',y:'Y 위치',
+};
 const same = (a,b) => JSON.stringify(a ?? '') === JSON.stringify(b ?? '');
 const fields = (before,after,keys,scope) => keys.filter(key=>!same(before?.[key],after?.[key])).map(key=>({scope,field:key,label:FIELD_LABELS[key] || key,before:before?.[key],after:after?.[key],kind:'changed'}));
 
@@ -11,7 +20,11 @@ export function episodeChanges(before,after) {
   for (const scene of newScenes) {
     const previous=oldScenes.find(item=>item.id===scene.id),scope=scene.title || scene.id;
     if (!previous) changes.push({scope,field:'scene',label:'장면 추가',before:null,after:scene,kind:'added'});
-    else changes.push(...fields({audioVolume:1,trimStart:0,...previous},{audioVolume:1,trimStart:0,...scene},['title','text','narration','duration','background','layout','kind','assetUrl','audioUrl','audioVolume','trimStart'],scope));
+    else {
+      const compareKeys = ['title','text','narration','duration','background','layout','kind','assetUrl','audioUrl','audioVolume','trimStart'];
+      if (previous.slots !== undefined || scene.slots !== undefined) compareKeys.push('slots');
+      changes.push(...fields({audioVolume:1,trimStart:0,...previous},{audioVolume:1,trimStart:0,...scene},compareKeys,scope));
+    }
   }
   const commonOld=oldIds.filter(id=>newIds.includes(id)),commonNew=newIds.filter(id=>oldIds.includes(id));
   if (!same(commonOld,commonNew)) changes.push({scope:'타임라인',field:'order',label:'장면 순서',before:oldScenes.map(scene=>scene.title || scene.id),after:newScenes.map(scene=>scene.title || scene.id),kind:'moved'});
@@ -40,6 +53,7 @@ export function workflowChanges(before,after) {
 
 export function historyReason(reason='edited') {
   if (reason.startsWith('restore:')) return `v${reason.split(':')[1].replace(/^v/,'')}에서 복원`;
+  if (reason.endsWith(':layout')) return '레이아웃 연출 초안 구성';
   if (reason.startsWith('workflow:')) return '워크플로우 실행';
   if (reason.startsWith('generation:')) return 'Higgsfield 생성 결과 적용';
   return {created:'처음 생성',edited:'직접 편집',narration:'내레이션 생성',template:'템플릿 적용',restored:'이전 버전 복원'}[reason] || reason;
@@ -48,7 +62,7 @@ export function historyReason(reason='edited') {
 export function displayValue(value) {
   if (value === undefined || value === null || value === '') return '없음';
   if (Array.isArray(value)) return value.map(displayValue).join(' → ');
-  if (typeof value === 'object') return [value.title || value.label || value.type,value.text,value.narration,value.duration !== undefined ? `${value.duration}초` : ''].filter(Boolean).join(' · ') || JSON.stringify(value);
+  if (typeof value === 'object') return [value.title || value.name || value.label || value.type || value.role,value.text || value.prompt,value.narration,value.duration !== undefined ? `${value.duration}초` : ''].filter(Boolean).join(' · ') || JSON.stringify(value);
   return String(value);
 }
 

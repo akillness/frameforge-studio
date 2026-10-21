@@ -380,7 +380,7 @@ export class Store {
     return next;
   }
 
-  applyGeneration(id, expectedVersion, sceneId) {
+  applyGeneration(id, expectedVersion, sceneId, slotId) {
     if (!Number.isInteger(expectedVersion) || expectedVersion < 1) throw new HttpError(400, 'Applying generation requires a positive expectedVersion');
     this.db.exec('BEGIN IMMEDIATE');
     let episode, applied;
@@ -391,16 +391,34 @@ export class Store {
       if (job.sceneId !== sceneId) throw new HttpError(400, 'Generation belongs to a different scene');
       const previous = this.get('episodes', job.episodeId);
       if (previous.version !== expectedVersion) throw new HttpError(409, `Episode changed: current version is ${previous.version}. Reload before applying generation.`);
-      if (!previous.scenes.some((scene) => scene.id === sceneId)) throw new HttpError(409, 'The generation target scene no longer exists');
+      const currentScene = previous.scenes.find((scene) => scene.id === sceneId);
+      if (!currentScene) throw new HttpError(409, 'The generation target scene no longer exists');
       const output = job.outputs[0], upload = this.get('uploads', output.uploadId);
       if (upload.generationJobId !== id || upload.url !== output.url || upload.sha256 !== output.sha256 || !['image', 'video'].includes(upload.kind)) throw new HttpError(409, 'Generation output identity does not match its imported upload');
-      const scenes = validateScenes(previous.scenes.map((scene) => scene.id === sceneId ? { ...scene, kind: upload.kind, assetUrl: upload.url, trimStart: 0, ...(upload.kind === 'video' ? { duration: Math.max(0.5, Math.min(120, upload.duration)) } : {}) } : scene));
+      const targetSlotId = slotId || job.slotId;
+      const targetSlot = targetSlotId ? currentScene.slots?.find((slot) => slot.id === targetSlotId) : undefined;
+      if (targetSlotId && !targetSlot) throw new HttpError(409, 'The generation target slot no longer exists');
+      if (targetSlot && ((upload.kind === 'image' && targetSlot.role !== 'image-gen') || (upload.kind === 'video' && targetSlot.role !== 'video-bg'))) throw new HttpError(409, 'Generation output media kind does not match the target slot role');
+      const scenes = validateScenes(previous.scenes.map((scene) => {
+        if (scene.id !== sceneId) return scene;
+        if (targetSlot) {
+          const updatedSlots = scene.slots.map((slot) => slot.id === targetSlot.id ? { ...slot, assetUrl: upload.url, mediaKind: upload.kind } : slot);
+          return { ...scene, slots: updatedSlots };
+        }
+        return {
+          ...scene,
+          kind: upload.kind,
+          assetUrl: upload.url,
+          trimStart: 0,
+          ...(upload.kind === 'video' ? { duration: Math.max(0.5, Math.min(120, upload.duration)) } : {}),
+        };
+      }));
       episode = { ...previous, scenes, status: 'draft', version: previous.version + 1, updatedAt: now() };
       this.save('episodes', episode);
       this.snapshot(episode, `generation:${id}`);
-      applied = { ...job, applied: true, appliedVersion: episode.version, appliedSceneId: sceneId, appliedAt: now(), updatedAt: now() };
+      applied = { ...job, applied: true, appliedVersion: episode.version, appliedSceneId: sceneId, ...(targetSlotId ? { appliedSlotId: targetSlotId } : {}), appliedAt: now(), updatedAt: now() };
       this.save('generationJobs', applied);
-      this.record('generation.applied', { entityId: previous.id, jobId: id, sceneId, version: episode.version });
+      this.record('generation.applied', { entityId: previous.id, jobId: id, sceneId, ...(targetSlotId ? { slotId: targetSlotId } : {}), version: episode.version });
       this.db.exec('COMMIT');
     } catch (error) { this.db.exec('ROLLBACK'); throw error; }
     try { this.exportKnowledge(); } catch (error) { console.error('Generation committed; knowledge export refresh failed:', error.message); }

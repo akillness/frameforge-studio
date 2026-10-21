@@ -1,5 +1,18 @@
 # 실동작 검증 기록
 
+## Scene layout and browser delivery — 2026-10-21
+**Scene layout editor with reusable slots:** browser-smoke receipt `artifacts/scene-layout-browser-smoke.json` records 24 checks passed on isolated loopback with disposable fixtures, Playwright running real Chromium via `PLATFORM_CHROMIUM_PATH` environment variable. Docker now includes both ffmpeg and chromium packages. Container render and restart verified at `artifacts/layout-container-smoke.json`.
+
+| Scene slots | 24 checks: authentication, presets (premiere/top-image/clear), image-gen/text-overlay/video-bg/subtitle-layer slots, geometry/copy/styling/z-order persistence, slot preview rendering | `artifacts/scene-layout-browser-smoke.json`, before-save and after-reload screenshots |
+| --- | --- | --- |
+| Editable overlays | Image slot (attachment, geometry), text slot (copy, styling, z-order), video slot (prompt, geometry), subtitle layer (copy, styling) | All edits persisted through save/reload cycle |
+| Browser isolation | No provider calls, no external origins, zero unexpected console errors | One expected pre-login 401 for unauthenticated resource requests |
+| Database writes | Login, local upload, one episode PUT with fixture channel/episode creation | Temporary disposable fixture database, no production data |
+| Docker build | Includes chromium (already present) and Playwright path configured in environment | `PLATFORM_CHROMIUM_PATH=/usr/bin/chromium` in Dockerfile |
+| Playwright session | Final corrected image Linux run (checkout path redacted): `docker run --rm -v <checkout>/tests:/app/tests:ro -e PLATFORM_PLAYWRIGHT_MODULE=/app/node_modules/playwright/index.mjs frameforge-studio:layout-20261021 node --test tests/platform-session.test.mjs tests/layout-pipeline-session.test.mjs` passed 8/8 zero skipped, includes cross-type pixel z/alignment regression. Real Chromium file input exact-hash attachment verified; publication not attempted | Receipt `artifacts/layout-container-smoke.json` persistence-verified 08:12:32Z |
+
+This evidence distinguishes: local browser-fixture testing (completed) ≠ paid provider execution ≠ external publication ≠ CI/deployment claims.
+
 ## Single-admin canonical graph editing — 2026-10-19
 
 Scoped local implementation on baseline `525cadd603d6ff349892633b5855e56ed38076ea`. All application tests and browser writes used disposable OS-temporary fixture databases. No production data, credentials, deployment, build, commit, push or external service execution was performed.

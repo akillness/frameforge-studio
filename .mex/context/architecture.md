@@ -9,7 +9,7 @@ edges:
   - target: context/decisions.md
     condition: when related context is needed
 grounds_to: []
-last_updated: 2026-10-20
+last_updated: 2026-10-21
 ---
 
 # Architecture
@@ -48,6 +48,9 @@ Source evidence and template edits remain associated with channel and episode hi
 - Workflow review nodes do not perform human visual review or channel publication.
 
 ## Runtime evidence
+
+**Scene layout editor (2026-10-21):** 24 browser checks on isolated loopback with real Playwright/Chromium, one expected pre-login 401, zero unexpected errors/external/provider calls. Slot types: image-gen, text-overlay, video-bg, subtitle-layer with editable geometry/copy/styling/z-order. Presets: premiere (four-slot), top-image, clear. Local image attachment without provider execution. Save/reload persistence across all slot edits. `artifacts/scene-layout-browser-smoke.json` with before-save/after-reload screenshots. Container render and restart verified at `artifacts/layout-container-smoke.json`. Docker includes chromium with `PLATFORM_CHROMIUM_PATH` environment variable. Focused layout 3/3 pass. This evidence is isolated browser-fixture testing, not paid…
+
 Latest macOS white-studio/workspace QA: 16 scoped regression tests, Linux Docker `npm test` 213/213 with 0 failures and 0 skipped, `npm run check` 55 modules, actual host FFmpeg 1080x1920 H.264/AAC output, 101 authenticated white-studio browser checks and 157 authenticated workspace checks on loopback port 4329, with zero page errors. Provider catalog/quote/recovery/apply responses are fixtures; `artifacts/white-studio-research.json` links the design and official Higgsfield evidence. See [verification](../../docs/verification.md) for exact evidence boundaries. No paid generation or public deployment occurred in this change; bundle 1.4.0 remains unchanged.
 
 `artifacts/white-studio-verification.json` records final image `sha256:d4424d7f59c495f97d72ea2e85fb643fe64e9f35b69ff374da90617ca9ce6023` built, 15/15 inspected source SHA-256 values matching checkout and authenticated Docker browser QA on loopback port 4329. `artifacts/white-studio-container-smoke.json` records final-image render/authenticated download, exact-output saved-edit review and restart persistence. These receipts do not establish public production deployment, live paid Higgsfield generation, Developer REST authentication or owner acceptance; historical Windows/Tailscale and CI evidence remains separate.

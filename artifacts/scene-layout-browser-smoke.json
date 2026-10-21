@@ -1,0 +1,79 @@
+{
+  "scope": "Isolated loopback app with disposable fixtures; scene-layout editor only",
+  "startedAt": "2026-10-21T08:07:09.731Z",
+  "checks": [
+    "authentication gate is shown before the scene editor",
+    "channel navigation opens the scene layout editor",
+    "editor starts with the fixture scene and no unsupported slot state",
+    "premiere preset switches to the supported four-slot layout",
+    "top-image preset switches back to the supported image-text-video-subtitle layout",
+    "clear preset removes the prior scene slots before custom additions",
+    "image-gen slot can be added from the scene editor",
+    "image slot edits update the inspector contract",
+    "image slot accepts a local image attachment without provider execution",
+    "text-overlay slot can be added from the scene editor",
+    "text slot edits preserve copy, geometry, z-order and supported styling",
+    "video-bg slot can be added from the scene editor",
+    "video slot edits preserve prompt and bounded geometry controls",
+    "subtitle-layer slot can be added from the scene editor",
+    "subtitle styling reaches the rendered preview",
+    "preview renders slots in the configured z-index order",
+    "save persists custom slot roles and edited values",
+    "reload returns to the saved scene layout editor",
+    "reload preserves image slot geometry and prompt",
+    "reload preserves text slot copy and styling",
+    "reload preserves video slot prompt and geometry",
+    "reload preserves subtitle copy and styling",
+    "browser did not call providers or external origins",
+    "browser mutations are limited to local uploads and one episode save"
+  ],
+  "pageErrors": [],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+  ],
+  "expectedAuthConsoleErrors": [
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+  ],
+  "unexpectedConsoleErrors": [],
+  "externalRequests": [],
+  "unauthorizedResponses": [],
+  "expectedAuthResponses": [
+    "http://127.0.0.1:60933/api/state"
+  ],
+  "providerCalls": [],
+  "browserWrites": [
+    {
+      "phase": "login",
+      "method": "POST",
+      "path": "/api/login"
+    },
+    {
+      "phase": "edit",
+      "method": "POST",
+      "path": "/api/uploads"
+    },
+    {
+      "phase": "save",
+      "method": "PUT",
+      "path": "/api/episodes/816a082f-d786-493a-b0c5-531cf6339a64"
+    }
+  ],
+  "fixtureRequests": [
+    {
+      "method": "POST",
+      "path": "/api/channels",
+      "status": 201
+    },
+    {
+      "method": "POST",
+      "path": "/api/episodes",
+      "status": 201
+    }
+  ],
+  "screenshots": [
+    "artifacts/scene-layout-browser-smoke/before-save.png",
+    "artifacts/scene-layout-browser-smoke/after-reload.png"
+  ],
+  "result": "PASS",
+  "finishedAt": "2026-10-21T08:07:16.499Z"
+}

@@ -75,9 +75,10 @@ export class GenerationQueue {
     if (!/^[a-zA-Z0-9_:-]+$/.test(requestId)) throw new HttpError(400, 'requestId must be a portable unique token');
     if (!Number.isInteger(body.expectedVersion) || body.expectedVersion < 1) throw new HttpError(400, 'Generation requires a positive expectedVersion');
     const model = text(body.model, 'model', 200), prompt = text(body.prompt, 'prompt', 10000), sceneId = text(body.sceneId, 'sceneId', 80);
+    const slotId = body.slotId !== undefined && body.slotId !== '' ? text(body.slotId, 'slotId', 80) : undefined;
     const params = object(body.params ?? {});
     if ('prompt' in params || JSON.stringify(params).length > 20000) throw new HttpError(400, 'Generation params must be bounded and must not override prompt');
-    const input = { episodeId, expectedVersion: body.expectedVersion, sceneId, model, prompt, params, transport: this.provider.transport };
+    const input = { episodeId, expectedVersion: body.expectedVersion, sceneId, ...(slotId ? { slotId } : {}), model, prompt, params, transport: this.provider.transport };
     const inputHash = signature(input);
     const existing = this.store.list('generationJobs').find((job) => job.requestId === requestId);
     if (existing) {
@@ -93,10 +94,14 @@ export class GenerationQueue {
     const episode = this.store.get('episodes', episodeId);
     if (episode.version !== body.expectedVersion) throw new HttpError(409, 'Episode changed. Save and reload before generation.');
     if (!episode.scenes.some((scene) => scene.id === sceneId)) throw new HttpError(400, 'Generation requires an existing scene');
+    const scene = episode.scenes.find((item) => item.id === sceneId);
+    if (slotId && !scene.slots?.some((slot) => slot.id === slotId)) throw new HttpError(400, 'Generation requires an existing target slot');
+    const targetSlot = slotId ? scene.slots.find((slot) => slot.id === slotId) : undefined;
     const promise = (async () => {
       let schema, normalized;
       try {
         schema = await this.provider.modelSchema(model);
+        if (slotId && ((schema.type === 'image' && targetSlot.role !== 'image-gen') || (schema.type === 'video' && targetSlot.role !== 'video-bg'))) throw new HttpError(422, 'Generation model media type does not match the target slot role');
         if (!['image', 'video'].includes(schema.type)) throw new HttpError(422, 'Only image and video generation can be attached to scenes');
         normalized = validateGenerationInput(schema, { ...params, prompt });
         if (this.provider.transport === 'cli') buildHiggsfieldCliArgs('create', { model, prompt, params }, schema);
@@ -108,7 +113,7 @@ export class GenerationQueue {
       if (this.closed) throw new HttpError(503, 'Generation service is stopping');
       if (this.store.get('episodes', episodeId).version !== episode.version) throw new HttpError(409, 'Episode changed while validating the generation request');
       const { prompt: checkedPrompt, ...checkedParams } = normalized;
-      const job = this.store.create('generationJobs', { requestId, inputHash, episodeId, episodeVersion: episode.version, sceneId, model, prompt: checkedPrompt, params: checkedParams, transport: this.provider.transport, mediaKind: schema.type, status: 'queued', outputs: [], applied: false });
+      const job = this.store.create('generationJobs', { requestId, inputHash, episodeId, episodeVersion: episode.version, sceneId, ...(slotId ? { slotId } : {}), model, prompt: checkedPrompt, params: checkedParams, transport: this.provider.transport, mediaKind: schema.type, status: 'queued', outputs: [], applied: false });
       this.schedule(job.id, 0);
       return job;
     })();
@@ -273,7 +278,8 @@ export class GenerationQueue {
     if (this.normalizing.has(id)) throw new HttpError(409, 'Generation media is being normalized. Apply the new candidate after it finishes.');
     const body = object(raw);
     if (!Number.isInteger(body.expectedVersion) || body.expectedVersion < 1) throw new HttpError(400, 'Applying generation requires a positive expectedVersion');
-    return this.store.applyGeneration(id, body.expectedVersion, text(body.sceneId, 'sceneId', 80));
+    const slotId = body.slotId !== undefined && body.slotId !== '' ? text(body.slotId, 'slotId', 80) : undefined;
+    return this.store.applyGeneration(id, body.expectedVersion, text(body.sceneId, 'sceneId', 80), slotId);
   }
 
   wait(id, { timeoutMs = 30 * 60 * 1000 } = {}) {

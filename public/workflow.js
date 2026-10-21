@@ -2,12 +2,15 @@
 import {workflowChanges,nodeChanges,changesHtml,displayValue,historyReason,createDraftHistory} from './history.js';
 const TYPES = {
   trend:{name:'트렌드 수집',icon:'↗',summary:'Google RSS · 관심 키워드',color:'#81cfa9'},
+  news:{name:'뉴스 검색',icon:'📰',summary:'키워드 · 뉴스 시나리오 소재',color:'#70d6ff'},
   research:{name:'리서치 정리',icon:'⌕',summary:'소재와 출처 · 제작 맥락',color:'#87bded'},
   script:{name:'대본 작성',icon:'✳',summary:'Studio / 외부 에이전트',color:'#c9f079'},
   storyboard:{name:'스토리보드',icon:'▦',summary:'대본을 편집 가능한 장면으로',color:'#dfc48f'},
-  generate:{name:'Higgsfield 생성',icon:'✦',summary:'모델로 장면 영상 / 이미지 생성',color:'#ec9ed0'},
-  render:{name:'영상 렌더',icon:'▶',summary:'FFmpeg · MP4 실제 생성',color:'#ffac96'},
+  layout:{name:'레이아웃 연출',icon:'⊞',summary:'상단 이미지·중단 영상·HTML 오버레이 배치',color:'#ffd166'},
+  generate:{name:'Higgsfield 생성',icon:'✦',summary:'모델로 장면·슬롯 영상 / 이미지 생성',color:'#ec9ed0'},
+  render:{name:'영상 렌더',icon:'▶',summary:'FFmpeg 다중 레이어 · MP4 생성',color:'#ffac96'},
   review:{name:'사람의 검토',icon:'✓',summary:'검토 대기 · 자동 게시 없음',color:'#c5b3ef'},
+  publish:{name:'플랫폼 업로드',icon:'☁',summary:'서버 브라우저 세션 · 지정 채널 게시',color:'#a8e6cf'},
 };
 const TYPE_ORDER = Object.keys(TYPES);
 const STATUS = {queued:'대기',pending:'대기',running:'실행 중',completed:'완료',succeeded:'완료',failed:'실패',cancelled:'취소됨',cancelling:'취소 요청됨',skipped:'건너뜀',awaiting_review:'사람의 검토 대기'};
@@ -22,9 +25,24 @@ const copy = value => structuredClone(value);
 const newId = () => crypto.randomUUID();
 const stamp = value => value ? new Date(value).toLocaleString('ko-KR',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
 
+function defaultNodeConfig(type, defaultModel = 'seedance_2_5') {
+  if (type === 'script') return {agent:'studio',prompt:''};
+  if (type === 'news') return {query:'',keywords:'',maxArticles:5,source:'all'};
+  if (type === 'layout') return {preset:'top-image-mid-video',topSlotRole:'image-gen',midSlotRole:'video-bg',enableSubtitles:true,enableHtmlOverlay:true,autoPrompts:true};
+  if (type === 'generate') return {model:defaultModel,prompt:'',params:{},sceneIndex:0};
+  if (type === 'publish') return {platform:'youtube',visibility:'private',autoAttachExport:true,titleTemplate:''};
+  return {};
+}
+
 function initialGraph() {
-  const nodes = TYPE_ORDER.filter(type=>type!=='generate').map((type,index)=>({id:newId(),type,x:50 + index % 3 * 285,y:65 + Math.floor(index / 3) * 230,config:type === 'script' ? {agent:'studio',prompt:''} : {}}));
+  const baseTypes = ['trend','research','script','storyboard','render','review'];
+  const nodes = baseTypes.map((type,index)=>({id:newId(),type,x:50 + index % 3 * 285,y:65 + Math.floor(index / 3) * 230,config:defaultNodeConfig(type)}));
   return {name:'새 제작 워크플로우',nodes,edges:nodes.slice(1).map((node,index)=>({id:newId(),source:nodes[index].id,target:node.id}))};
+}
+
+export function fullPipelineGraph(defaultModel = 'seedance_2_5') {
+  const nodes = TYPE_ORDER.map((type,index)=>({id:newId(),type,x:50 + index % 4 * 270,y:60 + Math.floor(index / 4) * 210,config:defaultNodeConfig(type, defaultModel)}));
+  return {name:'엔드투엔드 제작·업로드 파이프라인',nodes,edges:nodes.slice(1).map((node,index)=>({id:newId(),source:nodes[index].id,target:node.id}))};
 }
 
 export function workflowErrors(workflow) {
@@ -64,8 +82,14 @@ export function workflowErrors(workflow) {
   if (walk(nodes[0].id,undirected).size !== nodes.length) errors.push('모든 노드를 하나의 실행 흐름으로 연결하세요.');
   const required = ['script','storyboard','render','review'].map(type=>nodes.find(node=>node.type===type));
   for (let index=1;index<required.length;index++) if (required[index-1] && required[index] && !walk(required[index-1].id,adjacent).has(required[index].id)) errors.push(`${TYPES[required[index-1].type].name} → ${TYPES[required[index].type].name} 순서를 연결하세요.`);
+  const layoutNode=nodes.find(node=>node.type==='layout');
+  if (layoutNode && required[1] && !walk(required[1].id,adjacent).has(layoutNode.id)) errors.push('스토리보드 → 레이아웃 연출 순서로 연결하세요.');
+  if (layoutNode && required[2] && !walk(layoutNode.id,adjacent).has(required[2].id)) errors.push('레이아웃 연출 → 영상 렌더 순서로 연결하세요.');
   const generation=nodes.find(node=>node.type==='generate');
   if (generation && required[1] && required[2] && (!walk(required[1].id,adjacent).has(generation.id) || !walk(generation.id,adjacent).has(required[2].id))) errors.push('스토리보드 → Higgsfield 생성 → 렌더 순서로 연결하세요.');
+  const publishNode=nodes.find(node=>node.type==='publish');
+  if (publishNode && required[2] && !walk(required[2].id,adjacent).has(publishNode.id)) errors.push('영상 렌더 → 플랫폼 업로드 순서로 연결하세요.');
+  if (publishNode && required[3] && !walk(required[3].id,adjacent).has(publishNode.id)) errors.push('사람의 검토 → 플랫폼 업로드 순서로 연결하세요.');
   return [...new Set(errors)];
 }
 
@@ -333,7 +357,7 @@ export function createWorkflowEditor({api,toast,getEpisodes,getEpisode,hasEpisod
   function shell() {
     const episodes = getEpisodes();
     if (!episodes.some(item=>item.id===episodeId)) episodeId=episodes[0]?.id || null;
-    return `<div class="page-heading"><div><span class="eyebrow">FLOW EDITOR / 제작 설계</span><h1>콘텐츠를 만드는, 나만의 순서.</h1><p>단계를 연결하고 선택한 에피소드의 제작 흐름을 설계하세요.</p></div><div class="row"><button data-wf-action="new">＋ 새 워크플로우</button><button data-wf-action="save" ${!workflow?'disabled':''}>워크플로우 저장</button><button class="primary" data-wf-action="run" ${!workflow || !episodeId || running()?'disabled':''}>워크플로우 실행</button></div></div>
+    return `<div class="page-heading"><div><span class="eyebrow">FLOW EDITOR / 제작 설계</span><h1>콘텐츠를 만드는, 나만의 순서.</h1><p>단계를 연결하고 선택한 에피소드의 제작 흐름을 설계하세요.</p></div><div class="row"><button data-wf-action="new">＋ 새 워크플로우</button><button data-wf-action="preset-full-pipeline" title="뉴스 검색·레이아웃 연출·Higgsfield 생성·플랫폼 업로드까지 포함한 전체 파이프라인 초안">＋ 전체 파이프라인 구성</button><button data-wf-action="save" ${!workflow?'disabled':''}>워크플로우 저장</button><button class="primary" data-wf-action="run" ${!workflow || !episodeId || running()?'disabled':''}>워크플로우 실행</button></div></div>
     ${workflow ? `<nav class="wf-section-nav" aria-label="워크플로우 작업 탐색"><a href="#workflow-canvas" data-wf-section>설계 <span>${workflow.nodes.length} 단계</span></a><a href="#wf-run-history" data-wf-section>실행 히스토리</a><a href="#wf-workflow-history" data-wf-section>버전 기록</a><a href="#wf-review" data-wf-section>결과 검토</a><span class="wf-design-note">저장 후 다음 실행부터 적용 · 자동 게시 없음</span></nav>` : ''}
     <section class="panel wf-toolbar"><label>저장된 워크플로우<select id="wf-select" aria-label="워크플로우 선택"><option value="">${workflow&&!workflow.id?'저장되지 않은 새 워크플로우':'선택하세요'}</option>${workflows.map(item=>`<option value="${escapeHtml(item.id)}" ${item.id===workflow?.id?'selected':''}>${escapeHtml(item.name)}</option>`).join('')}</select></label><label>실행 대상 에피소드<select id="wf-episode" aria-label="워크플로우 실행 에피소드"><option value="">에피소드를 선택하세요</option>${episodes.map(item=>`<option value="${escapeHtml(item.id)}" ${item.id===episodeId?'selected':''}>${escapeHtml(item.title)}</option>`).join('')}</select></label><div class="wf-save-state"><span id="wf-save-status" class="hint" role="status" aria-live="polite"></span><div class="row"><button class="small quiet" data-wf-action="undo" title="Ctrl/⌘ Z">↶ 실행 취소</button><button class="small quiet" data-wf-action="redo" title="Ctrl/⌘ Shift Z">↷ 다시 실행</button><button class="small quiet" data-wf-action="reload">새로고침</button><button class="small quiet" data-wf-action="discard">변경 되돌리기</button></div></div></section>
     ${!workflow ? '<div class="panel empty"><div class="empty-mark">⌘</div><h2>실행 가능한 제작 흐름을 만드세요</h2><p>새 워크플로우에서 노드를 연결하고<br>에피소드를 선택해 실제 작업을 실행하세요.</p></div>' : `<div class="wf-layout"><section class="panel wf-graph-panel"><div class="panel-header"><div class="row"><span class="eyebrow">WORKFLOW CANVAS</span><span class="badge">${workflow.nodes.length} NODES</span></div><div class="row"><button class="small" data-wf-action="open-add-node">＋ 노드 추가</button><button class="small" data-wf-action="open-workflow-settings">워크플로 설정</button></div></div><div id="workflow-canvas" class="wf-canvas" tabindex="0" aria-label="워크플로우 캔버스. 노드 제목을 드래그해 이동하고 출력과 입력을 순서대로 선택해 연결하세요."><div id="wf-world" class="wf-world"><svg id="wf-edges" class="wf-edges" aria-hidden="true"></svg><div id="wf-nodes">${nodesHtml()}</div></div><div class="wf-canvas-hint" id="wf-connect-hint">빈 공간 드래그 · 휠 확대/축소 · 출력 → 입력 연결</div><div class="wf-zoom"><button class="icon-btn" data-wf-action="zoom-out" aria-label="축소">−</button><span id="wf-zoom-value">100%</span><button class="icon-btn" data-wf-action="zoom-in" aria-label="확대">+</button><button class="small" data-wf-action="fit">전체 보기</button><button class="small" data-wf-action="layout">자동 배치</button></div></div><div id="wf-validation" class="wf-validation" role="status"></div></section><aside class="wf-side"><section class="panel wf-secondary"><details><summary class="panel-header"><h3>워크플로우 이름과 구성</h3><span aria-hidden="true">⌄</span></summary><div class="panel-body"><label>이름<input id="wf-name" value="${escapeHtml(workflow.name)}" maxlength="160"></label><p class="hint">대본 → 스토리보드 → 렌더 → 사람의 검토가 필수입니다. 트렌드와 리서치는 선택 단계입니다.</p></div></details></section><section class="panel wf-primary"><div class="panel-header"><h3>선택한 노드</h3><span class="badge" id="wf-node-type"></span></div><div class="wf-inspector-tabs" role="tablist" aria-label="노드 상세">${inspectorTabsHtml()}</div><div class="panel-body" id="wf-inspector" role="tabpanel" tabindex="0">${inspectorHtml()}</div></section><section class="panel wf-secondary"><details><summary class="panel-header"><h3>노드 연결 편집</h3><span aria-hidden="true">⌄</span></summary><form id="wf-connect-form" class="panel-body"><label>출력 노드<select name="source" aria-label="연결 출발 노드">${options(selected)}</select></label><label>입력 노드<select name="target" aria-label="연결 도착 노드">${options(null)}</select></label><button class="small" type="submit">연결 추가 →</button><div class="wf-connection-list">${connectionsHtml()}</div></form></details></section></aside></div><details id="wf-workflow-history" class="panel section-spacer wf-collapsible"><summary class="wf-collapsible-summary"><h2>워크플로우 버전 기록</h2></summary><div class="panel-body"><button class="small" data-wf-action="refresh-history">↻ 기록 새로고침</button><div id="wf-history">${historyHtml()}</div></div></details><details id="wf-current-runs" class="panel section-spacer wf-collapsible"><summary class="wf-collapsible-summary"><h2>현재 워크플로우 최근 실행</h2><span class="hint">최신 상태·최대 10건</span></summary><div class="panel-body"><button class="small" data-wf-action="refresh-runs">↻ 실행 상태 확인</button><div id="wf-runs">${runsHtml()}</div></div></details><details id="wf-run-history" class="panel section-spacer wf-collapsible"><summary class="wf-collapsible-summary"><h2>전체 실행 이력</h2><span class="hint">검색 · 페이지 이동 · 실행 추적</span></summary><div class="panel-body" id="wf-run-history-content">${runHistoryLoaded ? workflowRunHistoryHtml(runHistory, runHistoryQuery, { loading: runHistoryLoading, error: runHistoryError }) : '<p class="hint">열면 저장된 실행 기록을 불러옵니다.</p>'}</div></details><div id="wf-review" tabindex="-1">${reviewHtml() || '<p class="source-note">검토할 렌더 결과가 아직 없습니다. 실행 결과를 확인한 뒤 사람이 검토하며, 외부 채널에는 자동 게시하지 않습니다.</p>'}</div>${dialogsHtml()}`}`;
@@ -373,7 +397,10 @@ export function createWorkflowEditor({api,toast,getEpisodes,getEpisode,hasEpisod
 
   function nodeSummary(node) {
     if (node.type==='script') return `${node.config?.agent || 'studio'} · ${node.config?.prompt?'사용자 지시문':'에피소드 소재 사용'}`;
-    if (node.type==='generate') return `${node.config?.model || '모델 선택'} · 장면 ${(node.config?.sceneIndex || 0)+1}`;
+    if (node.type==='news') return `${node.config?.query || node.config?.keywords || '트렌드·주제 뉴스 검색'} · 최대 ${node.config?.maxArticles || 5}건`;
+    if (node.type==='layout') return `${node.config?.preset === 'premiere-3tier' ? '프리미어 3단 뉴스·오버레이' : '상단 이미지 + 중단 영상·자막'}`;
+    if (node.type==='generate') return `${node.config?.model || '모델 선택'} · 장면 ${(node.config?.sceneIndex || 0)+1}${node.config?.slotId ? ` (${node.config.slotId})` : ''}`;
+    if (node.type==='publish') return `${(node.config?.platform || 'youtube').toUpperCase()} · ${node.config?.visibility || 'private'} · 서버 세션`;
     if (node.type==='trend' && node.config?.query) return node.config.query;
     if (node.type==='research' && node.config?.limit) return `참고 자료 최대 ${node.config.limit}개`;
     return TYPES[node.type]?.summary || node.type;
@@ -390,16 +417,19 @@ export function createWorkflowEditor({api,toast,getEpisodes,getEpisode,hasEpisod
     let controls='';
     if (node.type==='script') controls=`<label>실행 에이전트<select id="wf-agent" data-wf-config="agent">${['existing','studio','codex','jeo','jeopi','hermes'].map(agent=>`<option value="${agent}" ${(config.agent || 'studio')===agent?'selected':''}>${agent==='existing'?'저장된 편집본 사용':agent==='studio'?'Studio · 규칙 기반':agent.toUpperCase()+' · 외부 연결'}</option>`).join('')}</select></label><label>제작 지시문<textarea id="wf-prompt" data-wf-config="prompt" maxlength="12000" rows="5" placeholder="대상 시청자, 톤, 장면 구성 지시">${escapeHtml(config.prompt || '')}</textarea></label><p class="hint">저장된 편집본 사용은 기존 장면과 음성을 유지합니다. 이 모드에서는 지시문을 사용하지 않습니다. 외부 에이전트는 실제 연결이 필요합니다.</p>`;
     if (node.type==='trend') controls=`<label>검색 키워드<input data-wf-config="query" value="${escapeHtml(config.query || '')}" maxlength="200" placeholder="비워두면 전체 수집 결과"></label><p class="hint">수집된 키워드 중 입력한 문구가 포함된 항목을 사용합니다. 결과가 없으면 실패로 기록됩니다.</p>`;
+    if (node.type==='news') controls=`<label>뉴스 검색어<input data-wf-config="query" value="${escapeHtml(config.query || '')}" maxlength="200" placeholder="예: AI 반도체, 금리 인하 (비워두면 에피소드 소재·트렌드 사용)"></label><label>보조 키워드 (쉼표 구분)<input data-wf-config="keywords" value="${escapeHtml(config.keywords || '')}" maxlength="400" placeholder="핵심 키워드1, 키워드2"></label><div class="two-cols"><label>최대 기사 수<input type="number" data-wf-config="maxArticles" min="1" max="20" step="1" value="${config.maxArticles ?? 5}"></label><label>뉴스 출처<select data-wf-config="source"><option value="all" ${(config.source || 'all')==='all'?'selected':''}>통합 뉴스 + 트렌드</option><option value="google_news" ${config.source==='google_news'?'selected':''}>Google News KR</option><option value="trend_news" ${config.source==='trend_news'?'selected':''}>트렌드 연동 뉴스</option></select></label></div><p class="hint">키워드 및 뉴스 검색 결과로부터 시나리오 도입부(훅)와 장면별 구성을 대본 노드에 전달합니다.</p>`;
     if (node.type==='research') controls=`<label>참고 자료 수 (선택)<input type="number" data-wf-config="limit" value="${config.limit ?? ''}" min="1" max="50" step="1" placeholder="전체 자료"></label><p class="hint">채널에 연결된 참고 자료에서 최대 이 수만큼 사용합니다.</p>`;
+    if (node.type==='layout') controls=`<label>장면 레이아웃 템플릿<select data-wf-config="preset"><option value="top-image-mid-video" ${(config.preset || 'top-image-mid-video')==='top-image-mid-video'?'selected':''}>상단 이미지·텍스트 + 중단 배경영상·자막 (Premiere 2단)</option><option value="premiere-3tier" ${config.preset==='premiere-3tier'?'selected':''}>상단 HTML 뉴스 배너 + 상단 이미지 + 중단 배경영상·자막 (Premiere 3단)</option><option value="split" ${config.preset==='split'?'selected':''}>상하 분할 기본</option><option value="custom" ${config.preset==='custom'?'selected':''}>사용자 지정 슬롯 유지</option></select></label><div class="two-cols"><label>상단 레이아웃 모듈<select data-wf-config="topSlotRole"><option value="image-gen" ${(config.topSlotRole || 'image-gen')==='image-gen'?'selected':''}>이미지 생성 + 텍스트</option><option value="text-overlay" ${config.topSlotRole==='text-overlay'?'selected':''}>텍스트 전용 레이아웃</option><option value="html-overlay" ${config.topSlotRole==='html-overlay'?'selected':''}>Pencil HTML 오버레이</option></select></label><label>중단 레이아웃 모듈<select data-wf-config="midSlotRole"><option value="video-bg" ${(config.midSlotRole || 'video-bg')==='video-bg'?'selected':''}>Higgsfield 배경 영상</option><option value="image-gen" ${config.midSlotRole==='image-gen'?'selected':''}>배경 이미지</option></select></label></div><label class="generation-checkbox"><input type="checkbox" data-wf-config="enableSubtitles" ${config.enableSubtitles!==false?'checked':''}> 중단 배경 영상 위 자막 레이어 자동 배치</label><label class="generation-checkbox"><input type="checkbox" data-wf-config="enableHtmlOverlay" ${config.enableHtmlOverlay!==false?'checked':''}> Pencil 스타일 HTML 오버레이 슬롯 활성화</label><label class="generation-checkbox"><input type="checkbox" data-wf-config="autoPrompts" ${config.autoPrompts!==false?'checked':''}> 시나리오에서 슬롯별 이미지·Higgsfield 영상 연출 프롬프트 초안 자동 작성</label><p class="hint">연출 초안을 각 장면의 레이아웃 슬롯에 바인딩하며, 스튜디오 편집기에서 위치·크기·용도를 자유롭게 미세 조정할 수 있습니다.</p>`;
     if (node.type==='review') controls=`<label>검토 지침<textarea data-wf-config="instructions" maxlength="2000" rows="5" placeholder="자막, 연출, 사실 확인 등 검토할 항목">${escapeHtml(config.instructions || '')}</textarea></label><p class="hint">결과와 함께 보존되는 검토 지침입니다. 승인하거나 게시하는 자동 규칙이 아닙니다.</p>`;
+    if (node.type==='publish') controls=`<div class="two-cols"><label>대상 플랫폼<select data-wf-config="platform"><option value="youtube" ${(config.platform || 'youtube')==='youtube'?'selected':''}>YouTube Studio</option><option value="tiktok" ${config.platform==='tiktok'?'selected':''}>TikTok Studio</option><option value="instagram" ${config.platform==='instagram'?'selected':''}>Instagram</option><option value="other" ${config.platform==='other'?'selected':''}>기타 플랫폼</option></select></label><label>공개 설정<select data-wf-config="visibility"><option value="private" ${(config.visibility || 'private')==='private'?'selected':''}>비공개 (검토용)</option><option value="unlisted" ${config.visibility==='unlisted'?'selected':''}>일부 공개</option><option value="public" ${config.visibility==='public'?'selected':''}>전체 공개</option></select></label></div><label>업로드 제목 템플릿 (선택)<input data-wf-config="titleTemplate" maxlength="200" value="${escapeHtml(config.titleTemplate || '')}" placeholder="{title} · 비워두면 에피소드 제목 사용"></label><label class="generation-checkbox"><input type="checkbox" data-wf-config="autoAttachExport" ${config.autoAttachExport!==false?'checked':''}> 렌더링된 서버 저장소(data/exports) MP4를 비동기 브라우저 세션에 즉시 마운트</label><p class="hint">실행 시 서버 측 비동기 브라우저 세션을 열고 서버 저장소의 MP4 파일을 지정된 채널 업로드 창에 연결합니다.</p>`;
     if (node.type==='generate') controls=generationControlsHtml(node);
     return `<h3>${escapeHtml(nodeName(node))}</h3><p class="hint">${escapeHtml(TYPES[node.type]?.summary)}</p><label>노드 이름<input data-wf-field="label" maxlength="80" value="${escapeHtml(node.label || '')}" placeholder="${escapeHtml(TYPES[node.type]?.name)}"></label>${controls}<label>작업 메모<textarea data-wf-field="notes" rows="3" maxlength="2000" placeholder="이 단계의 의도와 수정할 점">${escapeHtml(node.notes || '')}</textarea></label><details class="history-advanced"><summary>캔버스 위치</summary><div class="two-cols"><label>X 위치<input type="number" id="wf-node-x" data-wf-coordinate="x" step="10" min="0" max="10000" value="${Math.round(node.x)}"></label><label>Y 위치<input type="number" id="wf-node-y" data-wf-coordinate="y" step="10" min="0" max="10000" value="${Math.round(node.y)}"></label></div></details><button class="small danger" data-wf-action="confirm-delete-node">노드 삭제</button><p class="hint">필수 단계를 삭제하면 다시 추가하고 연결해야 저장할 수 있습니다.</p>`;
   }
   function factsHtml(value) {
     if (!value || typeof value!=='object') return `<p class="result-copy">${escapeHtml(displayValue(value))}</p>`;
-    const labels={message:'설명',agent:'에이전트',mode:'실행 방식',query:'검색 키워드',sceneCount:'장면 수',version:'결과 버전',episodeVersion:'에피소드 버전',model:'생성 모델',requestId:'요청 ID',providerRequestId:'제공자 요청 ID',generationJobId:'생성 작업 ID',type:'결과 형식',status:'상태',instructions:'검토 지침',sceneId:'대상 장면',outputUrl:'결과 파일'};
+    const labels={message:'설명',agent:'에이전트',mode:'실행 방식',query:'검색 키워드',preset:'레이아웃 프리셋',slotCount:'총 슬롯 수',sceneCount:'장면 수',version:'결과 버전',episodeVersion:'에피소드 버전',model:'생성 모델',slotId:'대상 슬롯',requestId:'요청 ID',providerRequestId:'제공자 요청 ID',generationJobId:'생성 작업 ID',sessionId:'플랫폼 세션 ID',channelName:'대상 채널',platform:'플랫폼',exportUrl:'서버 저장소 MP4',type:'결과 형식',status:'상태',instructions:'검토 지침',sceneId:'대상 장면',outputUrl:'결과 파일'};
     let html=`<dl class="result-facts">${Object.entries(labels).filter(([key])=>value[key]!==undefined && typeof value[key]!=='object').map(([key,label])=>`<div><dt>${label}</dt><dd>${escapeHtml(displayValue(value[key]))}</dd></div>`).join('')}</dl>`;
-    for (const [key,label] of [['trends','키워드'],['references','참고 자료'],['scenes','장면']]) if (Array.isArray(value[key])) html+=`<h4>${label} · ${value[key].length}</h4><ul class="result-list">${value[key].slice(0,12).map(item=>`<li><strong>${escapeHtml(item.title || item.keyword || item.name || item.id || label)}</strong>${item.text?`<p>${escapeHtml(item.text)}</p>`:''}${item.narration?`<p>음성 · ${escapeHtml(item.narration)}</p>`:''}${item.duration?`<small>${Number(item.duration)}초</small>`:''}</li>`).join('')}</ul>${value[key].length>12?'<p class="hint">전체 내용은 원본 기록에서 확인할 수 있습니다.</p>':''}`;
+    for (const [key,label] of [['trends','키워드'],['articles','뉴스 기사'],['references','참고 자료'],['scenes','장면']]) if (Array.isArray(value[key])) html+=`<h4>${label} · ${value[key].length}</h4><ul class="result-list">${value[key].slice(0,12).map(item=>`<li><strong>${escapeHtml(item.headline || item.title || item.keyword || item.name || item.id || label)}</strong>${item.summary || item.text?`<p>${escapeHtml(item.summary || item.text)}</p>`:''}${item.narration?`<p>음성 · ${escapeHtml(item.narration)}</p>`:''}${Array.isArray(item.slots)&&item.slots.length?`<small>레이아웃 슬롯 ${item.slots.length}개 (${item.slots.map(s=>s.name||s.role).join(', ')})</small>`:''}${item.duration?`<small>${Number(item.duration)}초</small>`:''}</li>`).join('')}</ul>${value[key].length>12?'<p class="hint">전체 내용은 원본 기록에서 확인할 수 있습니다.</p>':''}`;
     const url=value.asset?.url || value.assetUrl || value.outputUrl || value.url;
     if (typeof url==='string' && /^\/api\/(uploads|exports)\/[a-zA-Z0-9_.-]+$/.test(url)) html+=/\.(mp4|webm)$/i.test(url)?`<video class="node-result-media" controls preload="metadata" src="${escapeHtml(url)}"></video>`:/\.(png|jpg|jpeg|webp)$/i.test(url)?`<img class="node-result-media" src="${escapeHtml(url)}" alt="생성 결과">`:'';
     if(Array.isArray(value.outputs)) html+=value.outputs.slice(0,8).map(output=>factsHtml(output)).join('');
@@ -497,7 +527,9 @@ export function createWorkflowEditor({api,toast,getEpisodes,getEpisode,hasEpisod
     const requiredParams=requiredFields.map(field=>generationParameterHtml(field,config.params || {})).join('');
     const optionalParams=optionalFields.map(field=>generationParameterHtml(field,config.params || {})).join('');
     const params=schema?`${requiredParams}${optionalParams?`<details class="generation-advanced"><summary>선택 설정</summary>${optionalParams}</details>`:''}`:'<p class="hint">모델 정보를 불러오면 설정 항목을 표시합니다.</p>';
-    return `<p class="generation-flow" aria-label="생성 단계"><strong>1 프롬프트</strong><span aria-hidden="true">→</span><strong>2 설정</strong><span aria-hidden="true">→</span><strong>3 확인 후 실행</strong><span aria-hidden="true">→</span><strong>결과</strong></p><div class="generation-connection" role="status" aria-live="polite"><span class="badge ${provider.tone}">${provider.label}</span><p class="hint">${escapeHtml(generationError || status.detail || provider.detail)}</p><button class="small" data-wf-action="refresh-generation">연결·모델 확인</button></div><p class="generation-target"><strong>대상</strong> ${escapeHtml(selectedEpisode?.title || '에피소드 미선택')} · 장면 ${displaySceneIndex+1}${selectedScene?.title?` · ${escapeHtml(selectedScene.title)}`:''}</p><label>생성 모델<select data-wf-config="model" id="wf-generation-model">${availableModels.map(model=>`<option value="${escapeHtml(model.id)}" ${model.id===(config.model || DEFAULT_GENERATION_MODEL)?'selected':''}>${escapeHtml(model.name || model.id)}${model.type?` · ${escapeHtml(model.type)}`:''}</option>`).join('')}</select></label><label>대상 장면 번호<input type="number" min="1" max="60" step="1" data-wf-config="sceneIndex" value="${displaySceneIndex+1}"></label><label>생성 지시문<textarea id="wf-generation-prompt" aria-describedby="generation-safety" data-wf-config="prompt" maxlength="4000" rows="5" placeholder="비워두면 대상 장면의 화면 텍스트 또는 에피소드 주제를 사용합니다.">${escapeHtml(config.prompt || '')}</textarea></label>${schema?`<fieldset class="generation-parameters"><legend>필수 모델 설정</legend>${requiredParams || '<p class="hint">필수 추가 설정이 없습니다.</p>'}${optionalParams?`<details class="generation-advanced"><summary>선택 설정</summary>${optionalParams}</details>`:''}</fieldset>`:params}<p id="generation-safety" class="generation-safety wf-review-warning">이 화면을 여는 동안 생성 요청·저장·비용은 발생하지 않습니다. 실행 전 비용 견적과 별도 확인을 거칩니다. 실행하면 선택한 장면에 결과를 자동 적용하고 이어서 렌더합니다. 실패하거나 중단된 결과만 실행 결과에서 별도로 적용할 수 있습니다.</p>`;
+    const sceneSlots = Array.isArray(selectedScene?.slots) ? selectedScene.slots.filter(s => s.role === 'video-bg' || s.role === 'image-gen') : [];
+    const slotSelector = sceneSlots.length ? `<label>대상 레이아웃 슬롯 (선택)<select data-wf-config="slotId"><option value="">장면 전체 (기본)</option>${sceneSlots.map(s => `<option value="${escapeHtml(s.id)}" ${config.slotId === s.id ? 'selected' : ''}>${escapeHtml(s.name)} (${escapeHtml(s.role)})</option>`).join('')}</select></label>` : '';
+    return `<p class="generation-flow" aria-label="생성 단계"><strong>1 프롬프트</strong><span aria-hidden="true">→</span><strong>2 설정</strong><span aria-hidden="true">→</span><strong>3 확인 후 실행</strong><span aria-hidden="true">→</span><strong>결과</strong></p><div class="generation-connection" role="status" aria-live="polite"><span class="badge ${provider.tone}">${provider.label}</span><p class="hint">${escapeHtml(generationError || status.detail || provider.detail)}</p><button class="small" data-wf-action="refresh-generation">연결·모델 확인</button></div><p class="generation-target"><strong>대상</strong> ${escapeHtml(selectedEpisode?.title || '에피소드 미선택')} · 장면 ${displaySceneIndex+1}${selectedScene?.title?` · ${escapeHtml(selectedScene.title)}`:''}${config.slotId?` · 슬롯 ${escapeHtml(config.slotId)}`:''}</p><label>생성 모델<select data-wf-config="model" id="wf-generation-model">${availableModels.map(model=>`<option value="${escapeHtml(model.id)}" ${model.id===(config.model || DEFAULT_GENERATION_MODEL)?'selected':''}>${escapeHtml(model.name || model.id)}${model.type?` · ${escapeHtml(model.type)}`:''}</option>`).join('')}</select></label><label>대상 장면 번호<input type="number" min="1" max="60" step="1" data-wf-config="sceneIndex" value="${displaySceneIndex+1}"></label>${slotSelector}<label>생성 지시문<textarea id="wf-generation-prompt" aria-describedby="generation-safety" data-wf-config="prompt" maxlength="4000" rows="5" placeholder="비워두면 대상 슬롯·장면의 연출 프롬프트 또는 에피소드 주제를 사용합니다.">${escapeHtml(config.prompt || '')}</textarea></label>${schema?`<fieldset class="generation-parameters"><legend>필수 모델 설정</legend>${requiredParams || '<p class="hint">필수 추가 설정이 없습니다.</p>'}${optionalParams?`<details class="generation-advanced"><summary>선택 설정</summary>${optionalParams}</details>`:''}</fieldset>`:params}<p id="generation-safety" class="generation-safety wf-review-warning">이 화면을 여는 동안 생성 요청·저장·비용은 발생하지 않습니다. 실행 전 비용 견적과 별도 확인을 거칩니다. 실행하면 선택한 장면·레이아웃 슬롯에 결과를 자동 적용하고 이어서 렌더합니다. 실패하거나 중단된 결과만 실행 결과에서 별도로 적용할 수 있습니다.</p>`;
   }
   function generationParameterHtml(field,params) {
     const value=params[field.name] ?? field.default ?? '',name=escapeHtml(field.name),required=field.required?'required':'';
@@ -884,9 +916,10 @@ export function createWorkflowEditor({api,toast,getEpisodes,getEpisode,hasEpisod
       }
       if (name==='save') { await save(); paint(); toast('워크플로우를 저장했습니다.'); }
       else if (name==='new') { if (dirty) await save(); workflow=initialGraph(); saved=null; selected=workflow.nodes[0].id; runs=[];versions=[];compareVersion=null; selectedRunId=null; connecting=null; needsFit=true;resetDrafts(); changed(); paint(); }
+      else if (name==='preset-full-pipeline') { if (dirty) await save(); workflow=fullPipelineGraph(models[0]?.id || DEFAULT_GENERATION_MODEL); saved=null; selected=workflow.nodes[0].id; runs=[];versions=[];compareVersion=null; selectedRunId=null; connecting=null; needsFit=true;resetDrafts(); changed(); paint(); toast('뉴스 검색 → 시나리오 → 레이아웃 연출 → Higgsfield 생성 → 플랫폼 업로드 전체 파이프라인을 구성했습니다.'); }
       else if (name==='reload') { await load(true); paint(); }
       else if (name==='discard') { workflow=copy(saved || workflows[0] || null); selected=workflow?.nodes[0]?.id || null; dirty=false; connecting=null; needsFit=true; revision++;resetDrafts(); await Promise.all([loadRuns(),loadVersions()]); paint(); }
-      else if (name==='add-node') { const type=$('#wf-add-type')?.value,label=$('#wf-add-label')?.value || '',config=type==='script'?{agent:'studio',prompt:''}:type==='generate'?generationConfig(0):{};$('#wf-add-node-dialog')?.close();const id=newId();workflow=addWorkflowNode(workflow,type,{id,x:Math.max(30,Math.round((100-pan.x)/scale)),y:Math.max(30,Math.round((120-pan.y)/scale)),label,config});selected=id;inspectorTab='settings';changed();paint();const dialog=$('#wf-tools-dialog'),trigger=host.querySelector('[data-wf-action="open-tools"]');if(dialog){overlayTrigger=trigger;if(!dialog.open)dialog.showModal();}if(type==='generate')loadGeneration(); }
+      else if (name==='add-node') { const type=$('#wf-add-type')?.value,label=$('#wf-add-label')?.value || '',config=type==='generate'?generationConfig(0):defaultNodeConfig(type, models[0]?.id || DEFAULT_GENERATION_MODEL);$('#wf-add-node-dialog')?.close();const id=newId();workflow=addWorkflowNode(workflow,type,{id,x:Math.max(30,Math.round((100-pan.x)/scale)),y:Math.max(30,Math.round((120-pan.y)/scale)),label,config});selected=id;inspectorTab='settings';changed();paint();const dialog=$('#wf-tools-dialog'),trigger=host.querySelector('[data-wf-action="open-tools"]');if(dialog){overlayTrigger=trigger;if(!dialog.open)dialog.showModal();}if(type==='generate')loadGeneration(); }
             else if (name==='delete-node') { $('#wf-delete-node-dialog')?.close();workflow.nodes=workflow.nodes.filter(node=>node.id!==selected);workflow.edges=workflow.edges.filter(edge=>edge.source!==selected&&edge.target!==selected);selected=workflow.nodes[0]?.id || null;connecting=null;changed();paint(); }
       else if (name==='delete-edge') { workflow.edges=workflow.edges.filter(edge=>edge.id!==button.dataset.id); changed(); paint(); }
       else if (name==='layout') { const ordered=[...workflow.nodes].sort((a,b)=>TYPE_ORDER.indexOf(a.type)-TYPE_ORDER.indexOf(b.type)); ordered.forEach((node,index)=>{node.x=50+index%3*285;node.y=65+Math.floor(index/3)*230;}); changed(); needsFit=true; paint(); }
@@ -975,7 +1008,7 @@ export function createWorkflowEditor({api,toast,getEpisodes,getEpisode,hasEpisod
     return getEpisode?.(targetId) || getEpisodes().find(item => item.id === targetId);
   }
 
-  async function openGeneration({episode:targetEpisodeSnapshot,episodeId:targetEpisodeId,sceneIndex:targetSceneIndex,sceneId:targetSceneId} = {}) {
+  async function openGeneration({episode:targetEpisodeSnapshot,episodeId:targetEpisodeId,sceneIndex:targetSceneIndex,sceneId:targetSceneId,slotId:targetSlotId,prompt:targetPrompt} = {}) {
     await load();
     if (dirty) throw new Error('현재 워크플로우 변경을 먼저 저장하거나 되돌려 주세요.');
     const targetId = targetEpisodeId || episodeId;
@@ -997,6 +1030,8 @@ export function createWorkflowEditor({api,toast,getEpisodes,getEpisode,hasEpisod
       workflow = generationDraft(targetEpisode,index,activeCatalogModel(catalog.status,catalog.models));
       runs=[]; versions=[]; compareVersion=null; selectedRunId=null; connecting=null; needsFit=true;
       node = workflow.nodes.find(item => item.type === 'generate');
+      if (targetSlotId) node.config.slotId = targetSlotId;
+      if (targetPrompt) node.config.prompt = targetPrompt;
       selected = node.id;
       inspectorTab = 'settings';
       resetDrafts();
@@ -1006,6 +1041,12 @@ export function createWorkflowEditor({api,toast,getEpisodes,getEpisode,hasEpisod
       let changedNode = false;
       if (!config.model) { config.model = models[0]?.id || DEFAULT_GENERATION_MODEL; changedNode = true; }
       if (config.sceneIndex !== index) { config.sceneIndex = index; changedNode = true; }
+      if (targetSlotId !== undefined && config.slotId !== targetSlotId) {
+        if (targetSlotId) config.slotId = targetSlotId;
+        else delete config.slotId;
+        changedNode = true;
+      }
+      if (targetPrompt && config.prompt !== targetPrompt) { config.prompt = targetPrompt; changedNode = true; }
       if (changedNode) changed('generation:target');
       selected = node.id;
       inspectorTab = 'settings';
@@ -1035,11 +1076,12 @@ export function createWorkflowEditor({api,toast,getEpisodes,getEpisode,hasEpisod
       else if (target.dataset.wfConfig && selectedNode()) {
         const key=target.dataset.wfConfig,node=selectedNode();node.config ||= {};
         if (target.type==='number' && target.value!=='' && !target.checkValidity()) return;
-        if (key==='limit' && target.value==='') delete node.config.limit;
+        if (target.type==='checkbox') node.config[key]=target.checked;
+        else if ((key==='limit' || key==='slotId') && target.value==='') delete node.config[key];
         else if (key==='sceneIndex') {if(target.value==='')return;node.config.sceneIndex=Number(target.value)-1;const targetEpisode=liveEpisode(episodeId) || generationTargetEpisode;generationTargetSceneId=targetEpisode?.scenes?.[node.config.sceneIndex]?.id || null;}
         else node.config[key]=target.type==='number'?Number(target.value):target.value;
         if(key==='model')node.config.params={};
-        if (node.type==='generate' && ['model','sceneIndex','prompt'].includes(key)) invalidateGenerationEstimate();
+        if (node.type==='generate' && ['model','sceneIndex','slotId','prompt'].includes(key)) invalidateGenerationEstimate();
         changed(`${selected}:config:${key}`);const content=host.querySelector(`[data-node-id="${selected}"] .wf-node-content p`);if(content)content.textContent=nodeSummary(node);
       }
       else if (target.dataset.wfParam && selectedNode()) {

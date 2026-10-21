@@ -416,3 +416,161 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
 .graph-relations .data-row > div { min-width: 0; }
 .graph-relations h3 { overflow-wrap: anywhere; }
 [data-admin-only="true"]:disabled { cursor: not-allowed; }
+
+/* Premiere Multi-Slot Scene Layout & Pencil HTML Overlay Builder */
+.preview-slots-layer { position: absolute; inset: 0; overflow: hidden; pointer-events: auto; }
+.preview-slot {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px dashed rgba(255, 255, 255, 0.55);
+  color: #ffffff;
+  overflow: hidden;
+  cursor: move;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 6px 8px;
+}
+.preview-slot.selected {
+  border: 2px solid var(--accent, #2851c8);
+  box-shadow: 0 0 0 2px rgba(40, 81, 200, 0.35);
+}
+.preview-slot .slot-media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  z-index: 0;
+}
+.slot-overlay-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  pointer-events: none;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+}
+.slot-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  opacity: 0.9;
+}
+.slot-badge, .slot-role-tag {
+  background: rgba(40, 81, 200, 0.9);
+  color: #ffffff;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+.slot-copy {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  word-break: keep-all;
+}
+.slot-resize-handle {
+  position: absolute;
+  right: 2px;
+  bottom: 1px;
+  font-size: 11px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: nwse-resize;
+  z-index: 2;
+  padding: 2px;
+}
+.slot-builder-box {
+  background: var(--surface-subtle, #f0f2e9);
+  border: 1px solid var(--line, #ddded5);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 14px;
+}
+.slot-pill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.slot-inspector-card {
+  background: var(--surface, #fffefa);
+  border: 1px solid var(--line, #ddded5);
+  border-radius: 6px;
+  padding: 10px;
+}
+.three-cols {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.four-cols {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.platform-session-viewport-wrap {
+  margin-top: 12px;
+  border: 1px solid var(--line-strong, #858b82);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0f172a;
+}
+.platform-session-bar {
+  background: var(--surface-side, #eeede6);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line, #ddded5);
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.platform-session-screen {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #0f172a;
+  padding: 8px;
+}
+.platform-viewport-img {
+  width: 100%;
+  max-height: 440px;
+  object-fit: contain;
+  border-radius: 4px;
+  display: block;
+}
+.platform-browser-controls {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.4fr) minmax(150px, 1.4fr) auto auto minmax(90px, .6fr) auto minmax(90px, .6fr) minmax(90px, .6fr) auto;
+  gap: 8px;
+  align-items: end;
+  padding: 10px 12px;
+  background: var(--surface, #fffefa);
+  border-bottom: 1px solid var(--line, #ddded5);
+}
+.platform-browser-controls label { min-width: 0; }
+.platform-browser-controls input { width: 100%; min-width: 0; }
+.platform-session-actions {
+  padding: 10px 12px;
+  background: var(--surface, #fffefa);
+  border-bottom: 1px solid var(--line, #ddded5);
+  align-items: center;
+}
+.platform-session-unavailable {
+  margin: 0;
+  padding: 36px 18px;
+  color: #f8fafc;
+  text-align: center;
+  line-height: 1.6;
+}
+.platform-session-picker { display: block; margin-top: 10px; max-width: 420px; }
+@media (max-width: 900px) {
+  .three-cols { grid-template-columns: 1fr; }
+  .four-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .platform-browser-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

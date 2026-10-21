@@ -1,15 +1,40 @@
-import { HttpError, object, text, optionalText, choice, scenes } from './validation.mjs';
+import { HttpError, object, text, optionalText, choice, scenes, createPresetSlots } from './validation.mjs';
 import { starterScene } from './store.mjs';
 import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
 import { lstat, open, realpath } from 'node:fs/promises';
 import path from 'node:path';
 
-const TYPES = ['trend', 'research', 'script', 'storyboard', 'generate', 'render', 'review'];
+export const TYPES = ['trend', 'news', 'research', 'script', 'storyboard', 'layout', 'generate', 'render', 'review', 'publish'];
 const AGENTS = ['existing', 'studio', 'codex', 'jeo', 'jeopi', 'hermes'];
 const TERMINAL = ['completed', 'failed', 'cancelled', 'awaiting_review', 'approved', 'changes_requested'];
 const MAX_ACTIVE_RUNS = 4;
 const timestamp = () => new Date().toISOString();
+const safeHttpUrl = (value) => {
+  try {
+    const parsed = new URL(String(value || ''));
+    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) return null;
+    return parsed.href;
+  } catch { return null; }
+};
+const decodeXml = (value = '') => String(value).replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
+function parseNewsRss(xml, maxArticles) {
+  return [...String(xml || '').matchAll(/<item>([\s\S]*?)<\/item>/gi)].slice(0, maxArticles).map(([, body]) => {
+    const field = (name) => decodeXml(body.match(new RegExp(`<${name}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${name}>`, 'i'))?.[1] || '');
+    const headline = field('title'), url = safeHttpUrl(field('link')), source = field('source'), summary = field('description'), publishedAt = field('pubDate');
+    if (!headline || !url || !source) return null;
+    return { id: `news-${createHash('sha256').update(`${url}:${headline}`).digest('hex').slice(0, 16)}`, headline, source, url, ...(summary ? { summary } : {}), capturedAt: Number.isFinite(Date.parse(publishedAt)) ? new Date(publishedAt).toISOString() : timestamp(), evidence: { source, url, ...(publishedAt ? { publishedAt } : {}) } };
+  }).filter(Boolean);
+}
+async function fetchGoogleNews(query, maxArticles) {
+  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ko&gl=KR&ceid=KR:ko`;
+  const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
+  if (!response.ok) throw new Error(`News source HTTP ${response.status}`);
+  const xml = await response.text();
+  const articles = parseNewsRss(xml, maxArticles);
+  if (!articles.length) throw new Error('News source returned no verified articles');
+  return { query, source: 'google_news', sourceUrl: url, articles };
+}
 
 function identifier(value, name) {
   const id = text(value, name, 80);
@@ -21,8 +46,8 @@ function identifier(value, name) {
 export function validateWorkflow(raw) {
   const body = object(raw);
   const name = text(body.name, 'workflow name', 160);
-  if (!Array.isArray(body.nodes) || body.nodes.length < 1 || body.nodes.length > TYPES.length) throw new HttpError(400, 'Workflow requires 1–7 nodes');
-  if (!Array.isArray(body.edges) || body.edges.length > 21) throw new HttpError(400, 'Workflow requires 0–21 edges');
+  if (!Array.isArray(body.nodes) || body.nodes.length < 1 || body.nodes.length > TYPES.length) throw new HttpError(400, `Workflow requires 1–${TYPES.length} nodes`);
+  if (!Array.isArray(body.edges) || body.edges.length > 45) throw new HttpError(400, 'Workflow requires 0–45 edges');
   const nodeIds = new Set(), types = new Set();
   const nodes = body.nodes.map((rawNode) => {
     const node = object(rawNode);
@@ -32,13 +57,50 @@ export function validateWorkflow(raw) {
     nodeIds.add(id); types.add(type);
     for (const key of ['x', 'y']) if (typeof node[key] !== 'number' || !Number.isFinite(node[key]) || Math.abs(node[key]) > 100000) throw new HttpError(400, 'Node coordinates must be finite and within ±100000');
     const config = object(node.config ?? {});
-    const allowed = { script: ['agent', 'prompt'], trend: ['query'], research: ['limit'], review: ['instructions'], generate: ['model', 'prompt', 'params', 'sceneIndex'] }[type] || [];
+    const allowed = {
+      trend: ['query'],
+      news: ['query', 'keywords', 'maxArticles', 'source'],
+      research: ['limit'],
+      script: ['agent', 'prompt'],
+      storyboard: [],
+      layout: ['preset', 'topSlotRole', 'midSlotRole', 'enableSubtitles', 'enableHtmlOverlay', 'autoPrompts'],
+      generate: ['model', 'prompt', 'params', 'sceneIndex', 'slotId', 'targetMode'],
+      render: [],
+      review: ['instructions'],
+      publish: ['channelId', 'platform', 'visibility', 'autoAttachExport', 'titleTemplate'],
+    }[type] || [];
     if (Object.keys(config).some((key) => !allowed.includes(key))) throw new HttpError(400, `Unknown ${type} configuration field`);
     const normalized = type === 'script' ? { agent: choice(config.agent, AGENTS, 'script agent'), prompt: optionalText(config.prompt, 'script prompt', 12000) } : {};
     if (type === 'trend' && config.query !== undefined) normalized.query = optionalText(config.query, 'trend query', 200);
+    if (type === 'news') {
+      if (config.query !== undefined) normalized.query = optionalText(config.query, 'news query', 200);
+      if (config.keywords !== undefined) normalized.keywords = optionalText(config.keywords, 'news keywords', 400);
+      if (config.maxArticles !== undefined) {
+        if (!Number.isInteger(config.maxArticles) || config.maxArticles < 1 || config.maxArticles > 20) throw new HttpError(400, 'News maxArticles must be an integer from 1 to 20');
+        normalized.maxArticles = config.maxArticles;
+      }
+      if (config.source !== undefined) normalized.source = choice(config.source, ['google_news', 'trend_news', 'all'], 'news source', 'all');
+    }
     if (type === 'research' && config.limit !== undefined) {
       if (!Number.isInteger(config.limit) || config.limit < 1 || config.limit > 50) throw new HttpError(400, 'Research limit must be an integer from 1 to 50');
       normalized.limit = config.limit;
+    }
+    if (type === 'layout') {
+      normalized.preset = choice(config.preset, ['top-image-mid-video', 'premiere-3tier', 'split', 'custom'], 'layout preset', 'top-image-mid-video');
+      if (config.topSlotRole !== undefined) normalized.topSlotRole = choice(config.topSlotRole, ['image-gen', 'text-overlay', 'html-overlay'], 'topSlotRole', 'image-gen');
+      if (config.midSlotRole !== undefined) normalized.midSlotRole = choice(config.midSlotRole, ['video-bg', 'image-gen'], 'midSlotRole', 'video-bg');
+      if (config.enableSubtitles !== undefined) {
+        if (typeof config.enableSubtitles !== 'boolean') throw new HttpError(400, 'layout enableSubtitles must be boolean');
+        normalized.enableSubtitles = config.enableSubtitles;
+      }
+      if (config.enableHtmlOverlay !== undefined) {
+        if (typeof config.enableHtmlOverlay !== 'boolean') throw new HttpError(400, 'layout enableHtmlOverlay must be boolean');
+        normalized.enableHtmlOverlay = config.enableHtmlOverlay;
+      }
+      if (config.autoPrompts !== undefined) {
+        if (typeof config.autoPrompts !== 'boolean') throw new HttpError(400, 'layout autoPrompts must be boolean');
+        normalized.autoPrompts = config.autoPrompts;
+      }
     }
     if (type === 'review' && config.instructions !== undefined) normalized.instructions = optionalText(config.instructions, 'review instructions', 2000);
     if (type === 'generate') {
@@ -46,8 +108,22 @@ export function validateWorkflow(raw) {
       normalized.prompt = optionalText(config.prompt, 'generation prompt', 4000);
       normalized.sceneIndex = config.sceneIndex ?? 0;
       if (!Number.isInteger(normalized.sceneIndex) || normalized.sceneIndex < 0 || normalized.sceneIndex > 59) throw new HttpError(400, 'Generation scene index must be 0–59');
+      if (config.slotId !== undefined && config.slotId !== '') normalized.slotId = identifier(config.slotId, 'generation slotId');
+      if (config.targetMode !== undefined) normalized.targetMode = choice(config.targetMode, ['scene', 'slot', 'all-slots'], 'generation targetMode', 'scene');
+      if (normalized.targetMode === 'slot' && !normalized.slotId) throw new HttpError(400, 'Slot-targeted generation requires slotId');
+      if (normalized.targetMode === 'all-slots' && normalized.slotId) throw new HttpError(400, 'All-slots generation must not specify slotId');
       normalized.params = object(config.params ?? {});
       if (Object.keys(normalized.params).length > 30 || Object.entries(normalized.params).some(([key, value]) => !/^[a-z][a-z0-9_]{0,63}$/.test(key) || !['string','number','boolean'].includes(typeof value) || (typeof value === 'number' && !Number.isFinite(value)) || (typeof value === 'string' && (value.length > 4000 || value.includes('\0')))) || JSON.stringify(normalized.params).length > 16000) throw new HttpError(400, 'Generation parameters must be bounded primitive values');
+    }
+    if (type === 'publish') {
+      if (config.channelId !== undefined && config.channelId !== '') normalized.channelId = identifier(config.channelId, 'publish channelId');
+      if (config.platform !== undefined) normalized.platform = choice(config.platform, ['youtube', 'tiktok', 'instagram', 'other'], 'publish platform', 'youtube');
+      if (config.visibility !== undefined) normalized.visibility = choice(config.visibility, ['private', 'unlisted', 'public'], 'publish visibility', 'private');
+      if (config.autoAttachExport !== undefined) {
+        if (typeof config.autoAttachExport !== 'boolean') throw new HttpError(400, 'publish autoAttachExport must be boolean');
+        normalized.autoAttachExport = config.autoAttachExport;
+      }
+      if (config.titleTemplate !== undefined) normalized.titleTemplate = optionalText(config.titleTemplate, 'publish titleTemplate', 200);
     }
     return { id, type, x: node.x, y: node.y, ...(node.label !== undefined ? { label: optionalText(node.label, 'node label', 80) } : {}), ...(node.notes !== undefined ? { notes: optionalText(node.notes, 'node notes', 2000) } : {}), config: normalized };
   });
@@ -82,17 +158,29 @@ export function validateWorkflow(raw) {
     return seen;
   };
   const storyboard = nodes.find((node) => node.type === 'storyboard');
+  const layout = nodes.find((node) => node.type === 'layout');
   const render = nodes.find((node) => node.type === 'render');
   const generate = nodes.find((node) => node.type === 'generate');
   const review = nodes.find((node) => node.type === 'review');
+  const publish = nodes.find((node) => node.type === 'publish');
+  if (layout && storyboard && !ancestors(layout.id).has(storyboard.id)) throw new HttpError(400, 'Layout stage must depend on storyboard');
+  if (layout && render && !ancestors(render.id).has(layout.id)) throw new HttpError(400, 'Layout stage must feed render');
   if (generate && (!storyboard || !render || !ancestors(generate.id).has(storyboard.id) || !ancestors(render.id).has(generate.id))) throw new HttpError(400, 'Generation must depend on storyboard and feed render');
-  if (review && ancestors(review.id).size !== nodes.length - 1) throw new HttpError(400, 'Every node must be connected to the review output');
+  if (publish) {
+    if (!render || !ancestors(publish.id).has(render.id)) throw new HttpError(400, 'Publish stage must depend on render');
+    if (!review) throw new HttpError(400, 'Publish stage requires a human review stage');
+    if (!ancestors(publish.id).has(review.id)) throw new HttpError(400, 'Publish stage must depend on review');
+    if (ancestors(publish.id).size !== nodes.length - 1) throw new HttpError(400, 'Every node must be connected to the publish output');
+  } else if (review && ancestors(review.id).size !== nodes.length - 1) {
+    throw new HttpError(400, 'Every node must be connected to the review output');
+  }
   if (body.expectedVersion !== undefined && (!Number.isInteger(body.expectedVersion) || body.expectedVersion < 1)) throw new HttpError(400, 'expectedVersion must be a positive integer');
   return { name, nodes, edges };
 }
 
 export function defaultWorkflow() {
-  const nodes = TYPES.filter(type => type !== 'generate').map((type, index) => ({ id: type, type, x: 80 + index * 260, y: 180, config: type === 'script' ? { agent: 'studio', prompt: '출처가 확인된 내용으로 한국어 영상 스토리보드를 구성하세요.' } : {} }));
+  const classicTypes = ['trend', 'research', 'script', 'storyboard', 'render', 'review'];
+  const nodes = classicTypes.map((type, index) => ({ id: type, type, x: 80 + index * 260, y: 180, config: type === 'script' ? { agent: 'studio', prompt: '출처가 확인된 내용으로 한국어 영상 스토리보드를 구성하세요.' } : {} }));
   return { name: '기본 제작 DAG · 트렌드에서 검토까지', nodes, edges: nodes.slice(1).map((node, index) => ({ id: `edge-${index + 1}`, source: nodes[index].id, target: node.id })), version: 1, sample: true };
 }
 
@@ -109,7 +197,7 @@ function reusableNodeRun(nodeRun) {
 
 function stageSelection(workflow, options, episode, store) {
   const selectedValues = options.selectedStages;
-  if (selectedValues !== undefined && (!Array.isArray(selectedValues) || !selectedValues.length || selectedValues.length > workflow.nodes.length)) throw new HttpError(400, 'selectedStages must contain 1–7 stage ids or types');
+  if (selectedValues !== undefined && (!Array.isArray(selectedValues) || !selectedValues.length || selectedValues.length > workflow.nodes.length)) throw new HttpError(400, `selectedStages must contain 1–${workflow.nodes.length} stage ids or types`);
   const selected = new Map();
   for (const value of selectedValues ?? workflow.nodes.map((node) => node.id)) {
     const node = resolveStage(workflow, value, 'selected stage');
@@ -132,7 +220,18 @@ function stageSelection(workflow, options, episode, store) {
   }
 
   const sourceById = new Map((source?.nodeRuns || []).map((nodeRun) => [nodeRun.nodeId, nodeRun]));
-  const hardDependency = { storyboard: 'script', generate: 'storyboard', review: 'render' };
+  const hardDependency = { storyboard: 'script', layout: 'storyboard', generate: 'storyboard', review: 'render', publish: 'review' };
+  if (orderedSelected.some((node) => node.type === 'publish')) {
+    const artifactStage = orderedSelected.find((node) => ['storyboard', 'layout', 'generate', 'render'].includes(node.type));
+    if (artifactStage) throw new HttpError(409, `Cannot resume publish while rerunning ${artifactStage.type}; obtain a new human review for the new artifact`);
+    const reviewNode = workflow.nodes.find((node) => node.type === 'review');
+    const renderNode = workflow.nodes.find((node) => node.type === 'render');
+    const priorReview = reviewNode ? sourceById.get(reviewNode.id) : undefined;
+    const priorRender = renderNode ? sourceById.get(renderNode.id) : undefined;
+    const approved = priorReview?.output?.review;
+    if (!source || priorReview?.status !== 'approved' || approved?.decision !== 'approved') throw new HttpError(409, 'Publish requires an approved human review from a terminal run');
+    if (!priorRender?.output || approved.jobId !== priorRender.output.jobId || approved.outputUrl !== priorRender.output.outputUrl || approved.sha256 !== priorRender.output.sha256) throw new HttpError(409, 'Approved review does not match the render artifact being published');
+  }
   const requiredReuse = new Set();
   for (const node of orderedSelected) {
     let dependencyType = hardDependency[node.type];
@@ -160,7 +259,7 @@ function stageSelection(workflow, options, episode, store) {
     if (paidReplayGuard || reusePrerequisite) {
       outputs.set(node.id, prior.output);
       reusedOutputs.push(node.id);
-      return { nodeId: node.id, type: node.type, status: node.type === 'review' ? 'awaiting_review' : 'completed', reused: true, output: prior.output, reusedFrom: source.id };
+      return { nodeId: node.id, type: node.type, status: node.type === 'review' ? prior.status : 'completed', reused: true, output: prior.output, reusedFrom: source.id };
     }
     const lineage = node.type === 'generate' && prior?.output?.generationJobId
       ? { output: prior.output }
@@ -181,13 +280,14 @@ function stageSelection(workflow, options, episode, store) {
 }
 
 export class WorkflowEngine {
-  constructor({ store, fetchTrends, runAgent, render, validateAssets, generations }) {
+  constructor({ store, fetchTrends, runAgent, render, validateAssets, generations, platformSessions }) {
     this.store = store;
     this.fetchTrends = fetchTrends;
     this.runAgent = runAgent;
     this.render = render;
     this.validateAssets = validateAssets;
     this.generations = generations;
+    this.platformSessions = platformSessions;
     this.closed = false;
     this.activeExecutions = new Map();
     if (!store.list('workflows').length) store.create('workflows', defaultWorkflow());
@@ -328,6 +428,43 @@ export class WorkflowEngine {
           output = await this.fetchTrends(node.config.query);
           if (node.config.query) output = { ...output, query: node.config.query, trends: (output.trends || []).filter((trend) => trend.keyword.toLocaleLowerCase().includes(node.config.query.toLocaleLowerCase())) };
           if (!output.trends?.length) throw new Error('Trend source returned no verified keywords; review source errors and retry');
+        } else if (node.type === 'news') {
+          const trendNode = workflow.nodes.find((item) => item.type === 'trend');
+          const trendOutput = trendNode ? outputs.get(trendNode.id) : undefined;
+          const baseKeywords = [
+            ...(node.config.query ? [node.config.query] : []),
+            ...(node.config.keywords ? node.config.keywords.split(',').map((k) => k.trim()).filter(Boolean) : []),
+            ...((trendOutput?.trends || []).map((t) => t.keyword).filter(Boolean)),
+            episode.topic,
+            episode.title,
+          ].filter(Boolean);
+          const uniqueKeywords = [...new Set(baseKeywords)].slice(0, 8);
+          const query = uniqueKeywords.join(' OR ').slice(0, 200) || episode.topic;
+          const maxArticles = node.config.maxArticles ?? 5;
+          const storedTrends = this.store.list('trends').filter((item) => item.keyword && item.source && item.source !== 'unknown' && safeHttpUrl(item.url));
+          const trendArticles = node.config.source === 'google_news'
+            ? []
+            : storedTrends.slice(0, maxArticles).map((item) => ({
+              id: `trend-${item.id || createHash('sha256').update(`${item.url}:${item.keyword}`).digest('hex').slice(0, 16)}`,
+              keyword: item.keyword,
+              headline: item.title || item.keyword,
+              source: item.source,
+              url: safeHttpUrl(item.url),
+              ...(item.summary ? { summary: item.summary } : {}),
+              capturedAt: item.capturedAt || timestamp(),
+              evidence: { source: item.source, url: safeHttpUrl(item.url) },
+            }));
+          const google = node.config.source === 'trend_news' ? null : await fetchGoogleNews(query, maxArticles);
+          const articles = [...trendArticles, ...(google?.articles || [])].slice(0, maxArticles);
+          if (!articles.length) throw new Error('News stage could not obtain source-backed articles; no fabricated output was created');
+          output = {
+            query,
+            keywords: uniqueKeywords,
+            source: google ? (node.config.source || 'google_news') : 'trend_news',
+            sourceUrl: google?.sourceUrl,
+            articles,
+            scenarioOutline: articles.map((a, idx) => `[씬 ${idx + 1}] ${a.headline}${a.summary ? `: ${a.summary}` : ''}`).join('\n'),
+          };
         } else if (node.type === 'research') {
           const references = this.store.list('references').filter((reference) => !reference.channelId || reference.channelId === episode.channelId);
           output = { references: node.config.limit === undefined ? references : references.slice(0, node.config.limit), inputs };
@@ -336,7 +473,10 @@ export class WorkflowEngine {
           if (node.config.agent === 'existing') {
             output = { agent: 'existing', mode: 'saved', message: '저장된 장면 편집과 오디오를 유지합니다.', scenes: this.validateAssets(scenes(episode.scenes)) };
           } else if (node.config.agent === 'studio') {
-            output = { agent: 'studio', mode: 'deterministic', message: '규칙 기반 3장면 스토리보드. 사실 및 출처 검토가 필요합니다.', scenes: [starterScene('훅', episode.title), starterScene('전개', `${episode.topic}\n${node.config.prompt || '핵심 정보를 근거와 함께 설명하세요.'}`.slice(0, 2000), '#173940'), starterScene('마무리', '출처 확인과 내용 검토 후 공개하세요.', '#382d46')] };
+            const newsNode = workflow.nodes.find((item) => item.type === 'news');
+            const newsOutput = newsNode ? outputs.get(newsNode.id) : undefined;
+            const leadHeadline = newsOutput?.articles?.[0]?.headline || episode.title;
+            output = { agent: 'studio', mode: 'deterministic', message: '규칙 기반 3장면 스토리보드. 사실 및 출처 검토가 필요합니다.', scenes: [starterScene('훅', leadHeadline), starterScene('전개', `${episode.topic}\n${node.config.prompt || '핵심 정보를 근거와 함께 설명하세요.'}`.slice(0, 2000), '#173940'), starterScene('마무리', '출처 확인과 내용 검토 후 공개하세요.', '#382d46')] };
           } else {
             const result = await this.runAgent(node.config.agent, prompt, episode);
             output = { agent: node.config.agent, mode: 'provider', message: text(result.message, 'agent response', 20000), scenes: this.validateAssets(scenes(result.scenes)) };
@@ -347,9 +487,45 @@ export class WorkflowEngine {
           const normalized = this.validateAssets(scenes(script.scenes));
           episode = this.store.updateEpisode(episode.id, { scenes: normalized }, episode.version, `workflow:${workflow.id}:${id}`);
           output = { episodeId: episode.id, version: episode.version, sceneCount: episode.scenes.length, scenes: episode.scenes };
+        } else if (node.type === 'layout') {
+          const preset = node.config.preset || 'top-image-mid-video';
+          const newsNode = workflow.nodes.find((item) => item.type === 'news');
+          const newsOutput = newsNode ? outputs.get(newsNode.id) : undefined;
+          const stagedScenes = episode.scenes.map((scene, index) => {
+            const headline = newsOutput?.articles?.[index]?.headline || newsOutput?.articles?.[0]?.headline || scene.title || episode.title;
+            let slots = Array.isArray(scene.slots) && scene.slots.length ? structuredClone(scene.slots) : createPresetSlots(preset === 'premiere-3tier' ? 'premiere-3tier' : 'top-image-mid-video', { ...scene, title: headline });
+            if (node.config.enableSubtitles === false) slots = slots.filter((slot) => slot.role !== 'subtitle-layer');
+            if (node.config.enableHtmlOverlay === false) slots = slots.filter((slot) => slot.role !== 'html-overlay');
+            if (node.config.autoPrompts !== false) {
+              slots = slots.map((slot) => {
+                if (slot.role === 'image-gen') return { ...slot, prompt: slot.prompt || `${headline} · ${episode.topic} 상단 인포그래픽 이미지` };
+                if (slot.role === 'video-bg') return { ...slot, prompt: slot.prompt || `${scene.text || episode.topic} · 시네마틱 배경 영상 연출 (Higgsfield)` };
+                return slot;
+              });
+            }
+            return {
+              ...scene,
+              layout: preset === 'premiere-3tier' ? 'premiere-3tier' : 'top-image-mid-video',
+              slots,
+            };
+          });
+          const normalized = this.validateAssets(scenes(stagedScenes));
+          episode = this.store.updateEpisode(episode.id, { scenes: normalized }, episode.version, `workflow:${workflow.id}:${id}:layout`);
+          output = {
+            episodeId: episode.id,
+            version: episode.version,
+            preset,
+            sceneCount: episode.scenes.length,
+            slotCount: episode.scenes.reduce((sum, s) => sum + (s.slots?.length || 0), 0),
+            scenes: episode.scenes,
+          };
         } else if (node.type === 'generate') {
           const scene = episode.scenes[node.config.sceneIndex ?? 0];
           if (!scene) throw new HttpError(400, 'Generation target scene does not exist');
+          const targetSlot = node.config.slotId
+            ? scene.slots?.find((s) => s.id === node.config.slotId)
+            : scene.slots?.find((s) => s.role === 'video-bg' || s.role === 'image-gen');
+          const resolvedPrompt = node.config.prompt || targetSlot?.prompt || scene.text || episode.topic;
           const prior = sourceById.get(node.id);
           const priorJobId = nodeRun?.output?.generationJobId || prior?.output?.generationJobId;
           const requestId = `${run.resumedFrom || id}:${node.id}`;
@@ -362,30 +538,78 @@ export class WorkflowEngine {
             else throw new HttpError(409, 'Existing generation requires provider recovery before this workflow can resume');
             if (!completed.applied) {
               if (!this.current(id)) return;
-              const applied = this.generations.apply(job.id, { expectedVersion: episode.version, sceneId: scene.id });
+              const applied = this.generations.apply(job.id, { expectedVersion: episode.version, sceneId: scene.id, ...(node.config.slotId ? { slotId: node.config.slotId } : {}) });
               episode = applied.episode;
             }
-            output = { generationJobId: job.id, provider: 'higgsfield', model: job.model, transport: job.transport, status: completed.status, outputs: completed.outputs, episodeVersion: episode.version };
+            output = { generationJobId: job.id, provider: 'higgsfield', model: job.model, transport: job.transport, status: completed.status, outputs: completed.outputs, episodeVersion: episode.version, ...(targetSlot ? { slotId: targetSlot.id } : {}) };
           } else {
-            job = await this.generations.start(episode.id, { expectedVersion: episode.version, sceneId: scene.id, model: node.config.model, prompt: node.config.prompt || scene.text || episode.topic, params: node.config.params || {}, requestId });
+            job = await this.generations.start(episode.id, { expectedVersion: episode.version, sceneId: scene.id, ...(node.config.slotId ? { slotId: node.config.slotId } : {}), model: node.config.model, prompt: resolvedPrompt, params: node.config.params || {}, requestId });
             if (!this.persistNode(id, node.id, { output: { generationJobId: job.id, provider: 'higgsfield', model: job.model, status: job.status } })) throw new HttpError(503, 'Generation job started but could not be durably linked; inspect provider history before retrying');
             completed = await this.generations.wait(job.id);
             if (!this.current(id)) return; // Paid output remains available even when a workflow is cancelled.
-            const applied = this.generations.apply(job.id, { expectedVersion: episode.version, sceneId: scene.id });
+            const applied = this.generations.apply(job.id, { expectedVersion: episode.version, sceneId: scene.id, ...(node.config.slotId ? { slotId: node.config.slotId } : {}) });
             episode = applied.episode;
-            output = { generationJobId: job.id, provider: 'higgsfield', model: job.model, transport: job.transport, status: completed.status, outputs: completed.outputs, episodeVersion: episode.version };
+            output = { generationJobId: job.id, provider: 'higgsfield', model: job.model, transport: job.transport, status: completed.status, outputs: completed.outputs, episodeVersion: episode.version, ...(targetSlot ? { slotId: targetSlot.id } : {}) };
           }
         } else if (node.type === 'render') {
           output = await this.render(episode);
-        } else {
+        } else if (node.type === 'review') {
           const render = outputs.get(workflow.nodes.find((item) => item.type === 'render')?.id);
           if (!render) throw new HttpError(409, 'review requires a completed render prerequisite or valid resume evidence');
           output = { message: 'Rendered output requires human review. No channel publication was performed.', ...(node.config.instructions ? { instructions: node.config.instructions } : {}), episodeId: episode.id, render, inputs };
+        } else if (node.type === 'publish') {
+          const render = outputs.get(workflow.nodes.find((item) => item.type === 'render')?.id);
+          if (!render?.outputUrl || !render.jobId || !render.sha256) throw new HttpError(409, 'publish requires a completed hashed render prerequisite');
+          const reviewOutput = outputs.get(workflow.nodes.find((item) => item.type === 'review')?.id);
+          const approvedReview = reviewOutput?.review;
+          if (approvedReview?.decision !== 'approved' || approvedReview.jobId !== render.jobId || approvedReview.outputUrl !== render.outputUrl || approvedReview.sha256 !== render.sha256) throw new HttpError(409, 'Approved review does not match the render artifact being published');
+          const targetChannelId = node.config.channelId || episode.channelId;
+          const channel = targetChannelId ? this.store.list('channels').find((c) => c.id === targetChannelId) : this.store.list('channels')[0];
+          const platform = (node.config.platform || channel?.platform || 'youtube').toLowerCase();
+          const title = node.config.titleTemplate ? node.config.titleTemplate.replace(/\{title\}/g, episode.title) : episode.title;
+          if (this.platformSessions) {
+            const session = await this.platformSessions.openSession({
+              channelId: channel?.id,
+              episodeId: episode.id,
+              platform,
+              visibility: node.config.visibility || 'private',
+              title,
+              description: episode.topic,
+              ...(node.config.autoAttachExport !== false ? { exportUrl: render.outputUrl } : {}),
+            });
+            output = {
+              sessionId: session.id,
+              channelId: session.channelId,
+              channelName: session.channelName,
+              platform: session.platform,
+              url: session.url,
+              exportUrl: render.outputUrl,
+              attachmentStatus: session.attachmentStatus || session.status || 'unknown',
+              publicationStatus: session.publicationStatus || 'not_attempted',
+              message: '서버 저장소의 렌더링 결과를 실제 브라우저 세션에 준비했습니다. 공개 게시를 수행하지 않았습니다.',
+            };
+          } else {
+            output = {
+              channelId: channel?.id || null,
+              platform,
+              exportUrl: render.outputUrl,
+              status: 'staged',
+              message: '서버 저장소 렌더링 결과가 지정 채널 업로드 대기열에 준비되었습니다.',
+            };
+          }
         }
         if (!this.current(id)) return;
         outputs.set(node.id, output);
         const review = node.type === 'review';
-        this.nodeUpdate(id, node.id, { status: review ? 'awaiting_review' : 'completed', output, completedAt: timestamp() }, review ? { status: 'awaiting_review', completedAt: timestamp(), episodeVersion: episode.version } : { episodeVersion: episode.version });
+        const hasDownstreamSelected = ordered.slice(ordered.indexOf(node) + 1).some((later) => selected.has(later.id));
+        this.nodeUpdate(id, node.id, { status: review ? 'awaiting_review' : 'completed', output, completedAt: timestamp() }, review && !hasDownstreamSelected ? { status: 'awaiting_review', completedAt: timestamp(), episodeVersion: episode.version } : { episodeVersion: episode.version });
+        if (review) {
+          const awaiting = this.current(id);
+          if (!awaiting) return;
+          this.store.save('workflowRuns', { ...awaiting, status: 'awaiting_review', completedAt: timestamp(), episodeVersion: episode.version, updatedAt: timestamp() });
+          this.store.record('workflow.awaiting_review', { entityId: workflow.id, runId: id, episodeId: episode.id, executed });
+          return;
+        }
       }
       const latest = this.current(id);
       if (!latest) return;
