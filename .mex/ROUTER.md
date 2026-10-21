@@ -98,6 +98,8 @@ For every task, follow this loop:
 
 **CI browser prerequisites (2026-10-21):** browser regressions default to the locked project Playwright package, not a developer Codex cache. The Node verification job installs locked dependencies and Chromium with Linux system libraries before `npm test`. Focused Linux browser/layout tests passed 8/8 without skips; GitHub execution remains distinct from this local proof. See [verification](../docs/verification.md#github-actions-browser-prerequisites).
 
+**GitHub CI recovery:** run [39569217617](https://github.com/akillness/frameforge-studio/actions/runs/39569217617) on `f7c0afa` passed 291/291 regressions, 69-module syntax, harness verification and Docker render/restart persistence. The workflow additionally pins Ubuntu 24.04 and Node 24-based action runtimes to remove the deprecation/migration annotations; application Node remains 22.
+
 
 
 **Prior structural refresh:** MEX 70 files, 1735 nodes/5331 edges, check100 with zero drift; Graphify 1274 nodes/2858 unique edges from 183 source files; wiki 9 pages/7 OKF atoms with zero errors. These counts predate the white-studio changes. The parent refreshes graphs and wiki validation after final sources; use those receipts before claiming freshness.

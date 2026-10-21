@@ -18,6 +18,8 @@ Run [39568134293](https://github.com/akillness/frameforge-studio/actions/runs/39
 
 Focused Linux verification with the project package and system Chromium: `docker run --rm -v <checkout>/tests:/app/tests:ro -e PLATFORM_CHROMIUM_PATH=/usr/bin/chromium frameforge-studio:layout-20261021 node --test tests/platform-session.test.mjs tests/layout-pipeline-session.test.mjs` passed 8/8, zero skipped. This local result is separate from the subsequent GitHub Actions run.
 
+GitHub run [39569217617](https://github.com/akillness/frameforge-studio/actions/runs/39569217617) on `f7c0afa` subsequently passed all 291 tests with zero failures/skips, 69-module syntax, immutable harness verification, Docker build/render/download and restart persistence. Its runner annotations identified Node 20 action deprecation and the moving `ubuntu-latest` label; the workflow now uses Node 24-based checkout/setup-node/upload-artifact v6 and explicit `ubuntu-24.04`. The application/test Node version remains 22.
+
 ## Single-admin canonical graph editing — 2026-10-19
 
 Scoped local implementation on baseline `525cadd603d6ff349892633b5855e56ed38076ea`. All application tests and browser writes used disposable OS-temporary fixture databases. No production data, credentials, deployment, build, commit, push or external service execution was performed.

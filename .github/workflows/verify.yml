@@ -14,11 +14,11 @@ concurrency:
 
 jobs:
   node-and-harness:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: '22'
       - name: Install locked dependencies
@@ -42,15 +42,15 @@ jobs:
 
   docker-render-and-persistence:
     needs: node-and-harness
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
       COMPOSE_PROJECT_NAME: frameforge-ci
       STUDIO_URL: http://127.0.0.1:4310
       CONTAINER_SMOKE_PROBE: container
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: '22'
       - name: Generate ephemeral CI login token
@@ -75,7 +75,7 @@ jobs:
         run: node scripts/container-smoke.mjs verify-persistence
       - name: Upload bounded verification receipt
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: container-smoke-${{ github.run_id }}-${{ github.run_attempt }}
           path: artifacts/container-smoke.json
