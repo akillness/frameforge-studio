@@ -13,6 +13,11 @@
 
 This evidence distinguishes: local browser-fixture testing (completed) ≠ paid provider execution ≠ external publication ≠ CI/deployment claims.
 
+### GitHub Actions browser prerequisites
+Run [39568134293](https://github.com/akillness/frameforge-studio/actions/runs/39568134293) failed before two browser test files could execute because they imported Playwright from a developer-only Codex cache. Both tests now resolve the locked project package by default; explicit module and executable overrides remain supported. The Node CI job runs `npm ci` and `npx playwright install --with-deps chromium` before regression tests. Missing browser prerequisites still fail rather than skip coverage.
+
+Focused Linux verification with the project package and system Chromium: `docker run --rm -v <checkout>/tests:/app/tests:ro -e PLATFORM_CHROMIUM_PATH=/usr/bin/chromium frameforge-studio:layout-20261021 node --test tests/platform-session.test.mjs tests/layout-pipeline-session.test.mjs` passed 8/8, zero skipped. This local result is separate from the subsequent GitHub Actions run.
+
 ## Single-admin canonical graph editing — 2026-10-19
 
 Scoped local implementation on baseline `525cadd603d6ff349892633b5855e56ed38076ea`. All application tests and browser writes used disposable OS-temporary fixture databases. No production data, credentials, deployment, build, commit, push or external service execution was performed.

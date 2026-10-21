@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtemp, mkdir, writeFile, readFile, rm, access, readdir } from 'node:fs/promises';
-import { tmpdir, homedir } from 'node:os';
+import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { Store, starterScene } from '../server/store.mjs';
@@ -16,20 +16,14 @@ import { addWorkflowNode, fullPipelineGraph, workflowErrors } from '../public/wo
 import { episodeChanges } from '../public/history.js';
 
 const ffmpeg = process.env.FFMPEG_PATH || 'ffmpeg';
-const playwrightPath = process.env.PLATFORM_PLAYWRIGHT_MODULE || process.env.OPS_PLAYWRIGHT_MODULE || path.join(homedir(), '.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs');
-const browserModule = await import(pathToFileURL(playwrightPath));
-async function findChromiumExecutable() {
-  const requested = process.env.PLATFORM_CHROMIUM_PATH || process.env.CHROMIUM_PATH || process.env.PLAYWRIGHT_EXECUTABLE_PATH || browserModule.chromium.executablePath();
-  try { await access(requested); return requested; } catch {}
-  const cacheRoot = path.resolve(path.dirname(requested), '../../../../..');
-  const versions = (await readdir(cacheRoot)).filter((name) => /^chromium-\d+$/.test(name)).sort().reverse();
-  for (const version of versions) {
-    const candidate = path.join(cacheRoot, version, 'chrome-mac-arm64', 'Google Chrome for Testing.app', 'Contents', 'MacOS', 'Google Chrome for Testing');
-    try { await access(candidate); return candidate; } catch {}
-  }
-  return requested;
-}
-const chromiumExecutable = await findChromiumExecutable();
+const playwrightModulePath = process.env.PLATFORM_PLAYWRIGHT_MODULE || process.env.OPS_PLAYWRIGHT_MODULE;
+const browserModule = playwrightModulePath
+  ? await import(pathToFileURL(playwrightModulePath))
+  : await import('playwright');
+const chromiumExecutable = process.env.PLATFORM_CHROMIUM_PATH
+  || process.env.CHROMIUM_PATH
+  || process.env.PLAYWRIGHT_EXECUTABLE_PATH
+  || browserModule.chromium.executablePath();
 const fixtureBrowserModule = {
   ...browserModule,
   chromium: {

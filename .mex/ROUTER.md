@@ -96,6 +96,8 @@ For every task, follow this loop:
 
 **Docker release CI:** code commit `0f59211601cba11c7885ed2d28a76581cc695bad` passed [run 39110221470](https://github.com/akillness/frameforge-studio/actions/runs/39110221470): 77 regressions, immutable harness verification, Linux Docker build/render/exact-review/restart persistence. Receipts: `artifacts/docker-ci-run.json` and `artifacts/docker-ci-smoke.json`. Later documentation-only commits do not replace this tested source identity.
 
+**CI browser prerequisites (2026-10-21):** browser regressions default to the locked project Playwright package, not a developer Codex cache. The Node verification job installs locked dependencies and Chromium with Linux system libraries before `npm test`. Focused Linux browser/layout tests passed 8/8 without skips; GitHub execution remains distinct from this local proof. See [verification](../docs/verification.md#github-actions-browser-prerequisites).
+
 
 
 **Prior structural refresh:** MEX 70 files, 1735 nodes/5331 edges, check100 with zero drift; Graphify 1274 nodes/2858 unique edges from 183 source files; wiki 9 pages/7 OKF atoms with zero errors. These counts predate the white-studio changes. The parent refreshes graphs and wiki validation after final sources; use those receipts before claiming freshness.
