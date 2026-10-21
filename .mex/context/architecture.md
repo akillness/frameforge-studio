@@ -9,7 +9,7 @@ edges:
   - target: context/decisions.md
     condition: when related context is needed
 grounds_to: []
-last_updated: 2026-10-19
+last_updated: 2026-10-20
 ---
 
 # Architecture
@@ -61,3 +61,8 @@ The 2026-10-18 full workflow receipt in `artifacts/workflow-smoke.json` records 
 Container migration uses `scripts/snapshot-data.mjs` and `scripts/import-snapshot.mjs` to preserve consistent SQLite state, referenced media, IDs, versions, history and review hashes in a new data volume. Neither utility constructs Store or resets live data. `artifacts/docker-migration.json` records the real migration; `artifacts/local-container-smoke.json` records restart persistence.
 
 `artifacts/higgsfield-live-smoke.json` records the historical paid-generation path: project MCP -> authenticated API -> Docker/host CLI produced a real 1080x1920 video, verified its local hash, applied it as a new episode version and completed a Docker render. This did not verify Developer REST authentication, vendor MCP OAuth or channel publication. `artifacts/usability-browser-smoke.json` had a different scope: 23 local browser checks, with direct-API catalog and recovery interactions explicitly using HTTP fixtures.
+
+## FRAME workspace boundary (2026-10-20)
+The existing application/workflow modules still own actions, version-bound saves and generation consent. Presentation adds real-record platform grouping, one task navigation, a scene bin synchronized by scene identity with the monitor/inspector/timeline, cumulative scene timing, and links that disclose/focus existing workflow histories. No arbitrary stage types, skip toggles, independent tracks, provider transport or publication API was added. Shared tokens remain in public/styles.css, workflow presentation in public/workflow.css and shell breakpoints in public/workspace.css.
+
+The latest image was deployed from source-hash-bound working-tree content, not a newly published commit. artifacts/premiere-workspace-deployment.json records 57 matching runtime files and unchanged SQLite integrity/IDs/versions/table counts/22 media hashes, plus authenticated Windows-host browser checks over the existing private Tailscale HTTPS proxy. The browser/render gates are distinct from research, snippet review, unvalidated Jev proposals and public publication. See the workspace-ui-verification pattern and docs/premiere-workspace.md for the 65-module, 283-test, 72-new/105-regression-browser evidence and exact limitations.

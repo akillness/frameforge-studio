@@ -1,0 +1,75 @@
+{
+  "verifiedAt": "2026-10-20T17:22:35.938669+00:00",
+  "mex": [
+    {
+      "command": "mex graph refresh",
+      "exit": 0,
+      "output": "Code graph refreshed: 0 nodes, 0 edges across 0 files in 2646ms; status fresh."
+    },
+    {
+      "command": "mex check",
+      "exit": 0,
+      "output": "Drift score: 100/100 — 0 errors, 0 warnings, 0 info\n16 files checked\ngraph fresh · 0 source changes (0 added, 0 modified, 0 deleted)"
+    }
+  ],
+  "graphify": {
+    "nodes": 1693,
+    "edges": 4236,
+    "sourceFiles": 242,
+    "commandExits": [
+      0,
+      0,
+      0
+    ],
+    "graphSha256": "ee1459eeca8c3a756511639f6d26d70b76ece107e588525cbc26201272c04b74",
+    "localStateAudit": {
+      "excludedPrefixes": [
+        ".jeo/",
+        ".omc/",
+        ".omx/",
+        "llm-wiki/.graphify/",
+        "llm-wiki/.state/"
+      ],
+      "nodesRemoved": 59,
+      "edgesRemoved": 81
+    },
+    "offlineRegressionTests": 4,
+    "semanticEnrichmentRun": false
+  },
+  "fullWiki": {
+    "status": "NOT PASSING; unrelated existing capture/schema and resolver diagnostics retained",
+    "genericExit": 1,
+    "missingPaths": [],
+    "reportedBrokenLinks": 44,
+    "reportedTargetsActuallyExist": 44,
+    "orphans": [
+      ".graphify/GRAPH_REPORT"
+    ],
+    "projectExit": 1,
+    "projectErrorCount": 513,
+    "projectErrorCategories": {
+      "raw-link resolution": 44,
+      "other existing diagnostics": 347,
+      "missing OKF fields": 66,
+      "orphan pages": 56
+    },
+    "existingImmutableSourcesChecked": 1,
+    "globalToolingOrExistingCapturesRewritten": false
+  },
+  "newAuthoredPages": {
+    "requiredOkfFields": "PASS",
+    "wikiNavigationAndRelativeCitations": "PASS",
+    "newPageDiagnostics": [],
+    "scope": "Only the two new authored source/report pages and their docs/runbook citations; does not replace the failing full-vault check"
+  },
+  "newImmutableCapture": {
+    "path": "llm-wiki/raw/sources/premiere-workspace-2026-10-20.md",
+    "sha256": "856c563c8288977de50f18448d1ba479c01282d2adf494a85b09c27fd0604753"
+  },
+  "mexIncrementalRefreshNote": "The last refresh reported zero changed nodes/files, not an empty index; exact where-defined channelHierarchyHtml query returned one fresh source-backed definition.",
+  "knownRuntimeCredentialScan": {
+    "result": "PASS",
+    "filesChecked": 31,
+    "scope": "Current runtime credential values only; not proof against all unknown secrets"
+  }
+}

@@ -1,0 +1,803 @@
+{
+  "scope": "Isolated loopback, disposable fixtures; no production/provider/publication evidence",
+  "startedAt": "2026-10-20T17:01:07.077Z",
+  "checks": [
+    "platform disclosure exposes its channel through a native control",
+    "platform hierarchy uses actual channel platforms",
+    "task navigation has exactly one active view",
+    "project bin lists real scene identities and escaped titles",
+    "project selection synchronizes monitor inspector and timeline",
+    "keyboard project selection restores focus after rerender",
+    "timeline selection synchronizes project bin",
+    "project title reflects unsaved inspector edits",
+    "timeline exposes actual cumulative timing and audio availability",
+    "save retains optimistic version and scene identity",
+    "keyboard task navigation transfers focus into the new main content",
+    "workflow design navigation targets real history and review sections",
+    "workflow cards expose ordered stages without new execution semantics",
+    "history link opens real records and focuses their summary",
+    "design link returns keyboard focus to the canvas",
+    "review empty state explains the real human review boundary",
+    "stage insertion uses existing executable types only",
+    "stage dialog restores keyboard focus",
+    "studio at 1600px has no document overflow",
+    "workflow at 1600px has no document overflow",
+    "overview at 1600px has no document overflow",
+    "history at 1600px has no document overflow",
+    "trends at 1600px has no document overflow",
+    "templates at 1600px has no document overflow",
+    "knowledge at 1600px has no document overflow",
+    "settings at 1600px has no document overflow",
+    "studio at 1440px has no document overflow",
+    "workflow at 1440px has no document overflow",
+    "overview at 1440px has no document overflow",
+    "history at 1440px has no document overflow",
+    "trends at 1440px has no document overflow",
+    "templates at 1440px has no document overflow",
+    "knowledge at 1440px has no document overflow",
+    "settings at 1440px has no document overflow",
+    "studio at 1024px has no document overflow",
+    "workflow at 1024px has no document overflow",
+    "overview at 1024px has no document overflow",
+    "history at 1024px has no document overflow",
+    "trends at 1024px has no document overflow",
+    "templates at 1024px has no document overflow",
+    "knowledge at 1024px has no document overflow",
+    "settings at 1024px has no document overflow",
+    "studio at 768px has no document overflow",
+    "workflow at 768px has no document overflow",
+    "overview at 768px has no document overflow",
+    "history at 768px has no document overflow",
+    "trends at 768px has no document overflow",
+    "templates at 768px has no document overflow",
+    "knowledge at 768px has no document overflow",
+    "settings at 768px has no document overflow",
+    "studio at 375px has no document overflow",
+    "workflow at 375px has no document overflow",
+    "overview at 375px has no document overflow",
+    "history at 375px has no document overflow",
+    "trends at 375px has no document overflow",
+    "templates at 375px has no document overflow",
+    "knowledge at 375px has no document overflow",
+    "settings at 375px has no document overflow",
+    "mobile platform switch reaches an honest empty episode state",
+    "mobile channel switch returns to the preserved editor",
+    "studio at 320px has no document overflow",
+    "workflow at 320px has no document overflow",
+    "overview at 320px has no document overflow",
+    "history at 320px has no document overflow",
+    "trends at 320px has no document overflow",
+    "templates at 320px has no document overflow",
+    "knowledge at 320px has no document overflow",
+    "settings at 320px has no document overflow",
+    "existing workspace layout settings remain operational",
+    "read-only navigation preserves saved episodes and workflows",
+    "no script errors, external requests or provider execution",
+    "browser mutations limited to login and one explicit fixture save"
+  ],
+  "pageErrors": [],
+  "externalRequests": [],
+  "providerCalls": [],
+  "browserWrites": [
+    {
+      "method": "POST",
+      "path": "/api/login"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/episodes/4a26c58c-2b72-4075-a657-938629998946"
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "docs/assets/premiere-workspace/studio-1600.png",
+      "sha256": "c2234dd98ae305eb1d9766ef53602ed91ad4f3f1d847832547d5926237c468c4"
+    },
+    {
+      "path": "docs/assets/premiere-workspace/workflow-1600.png",
+      "sha256": "e6c525d49e2a857d0826c7ce1bf655c655ebc0e6e78cd38d8818a2e9bdf530de"
+    },
+    {
+      "path": "docs/assets/premiere-workspace/overview-1600.png",
+      "sha256": "6dddaa689982225b272d19565b314856fd6d9517930f619f17fa9873e2f4c405"
+    },
+    {
+      "path": "docs/assets/premiere-workspace/studio-375.png",
+      "sha256": "48ee576a4d3b6671e7823618e4cbe806d304d68046c576cba70803c4d54ce708"
+    },
+    {
+      "path": "docs/assets/premiere-workspace/workflow-375.png",
+      "sha256": "b63e4cffa505c921bf07ac03d63da9f2ab9fd988e66f842b1cefb0e44d1d7abc"
+    },
+    {
+      "path": "docs/assets/premiere-workspace/overview-375.png",
+      "sha256": "04e8cfa72342158f866d8438cefeafb904abcfb3b7f11e0067262161d0fb2f74"
+    }
+  ],
+  "geometry": [
+    {
+      "width": 1600,
+      "view": "studio",
+      "client": 1600,
+      "scroll": 1600
+    },
+    {
+      "width": 1600,
+      "view": "workflow",
+      "client": 1600,
+      "scroll": 1600
+    },
+    {
+      "width": 1600,
+      "view": "overview",
+      "client": 1600,
+      "scroll": 1600
+    },
+    {
+      "width": 1600,
+      "view": "history",
+      "client": 1600,
+      "scroll": 1600
+    },
+    {
+      "width": 1600,
+      "view": "trends",
+      "client": 1600,
+      "scroll": 1600
+    },
+    {
+      "width": 1600,
+      "view": "templates",
+      "client": 1600,
+      "scroll": 1600
+    },
+    {
+      "width": 1600,
+      "view": "knowledge",
+      "client": 1600,
+      "scroll": 1600
+    },
+    {
+      "width": 1600,
+      "view": "settings",
+      "client": 1600,
+      "scroll": 1600
+    },
+    {
+      "width": 1440,
+      "view": "studio",
+      "client": 1440,
+      "scroll": 1440
+    },
+    {
+      "width": 1440,
+      "view": "workflow",
+      "client": 1440,
+      "scroll": 1440
+    },
+    {
+      "width": 1440,
+      "view": "overview",
+      "client": 1440,
+      "scroll": 1440
+    },
+    {
+      "width": 1440,
+      "view": "history",
+      "client": 1440,
+      "scroll": 1440
+    },
+    {
+      "width": 1440,
+      "view": "trends",
+      "client": 1440,
+      "scroll": 1440
+    },
+    {
+      "width": 1440,
+      "view": "templates",
+      "client": 1440,
+      "scroll": 1440
+    },
+    {
+      "width": 1440,
+      "view": "knowledge",
+      "client": 1440,
+      "scroll": 1440
+    },
+    {
+      "width": 1440,
+      "view": "settings",
+      "client": 1440,
+      "scroll": 1440
+    },
+    {
+      "width": 1024,
+      "view": "studio",
+      "client": 1024,
+      "scroll": 1024
+    },
+    {
+      "width": 1024,
+      "view": "workflow",
+      "client": 1024,
+      "scroll": 1024
+    },
+    {
+      "width": 1024,
+      "view": "overview",
+      "client": 1024,
+      "scroll": 1024
+    },
+    {
+      "width": 1024,
+      "view": "history",
+      "client": 1024,
+      "scroll": 1024
+    },
+    {
+      "width": 1024,
+      "view": "trends",
+      "client": 1024,
+      "scroll": 1024
+    },
+    {
+      "width": 1024,
+      "view": "templates",
+      "client": 1024,
+      "scroll": 1024
+    },
+    {
+      "width": 1024,
+      "view": "knowledge",
+      "client": 1024,
+      "scroll": 1024
+    },
+    {
+      "width": 1024,
+      "view": "settings",
+      "client": 1024,
+      "scroll": 1024
+    },
+    {
+      "width": 768,
+      "view": "studio",
+      "client": 768,
+      "scroll": 768
+    },
+    {
+      "width": 768,
+      "view": "workflow",
+      "client": 768,
+      "scroll": 768
+    },
+    {
+      "width": 768,
+      "view": "overview",
+      "client": 768,
+      "scroll": 768
+    },
+    {
+      "width": 768,
+      "view": "history",
+      "client": 768,
+      "scroll": 768
+    },
+    {
+      "width": 768,
+      "view": "trends",
+      "client": 768,
+      "scroll": 768
+    },
+    {
+      "width": 768,
+      "view": "templates",
+      "client": 768,
+      "scroll": 768
+    },
+    {
+      "width": 768,
+      "view": "knowledge",
+      "client": 768,
+      "scroll": 768
+    },
+    {
+      "width": 768,
+      "view": "settings",
+      "client": 768,
+      "scroll": 768
+    },
+    {
+      "width": 375,
+      "view": "studio",
+      "client": 375,
+      "scroll": 375
+    },
+    {
+      "width": 375,
+      "view": "workflow",
+      "client": 375,
+      "scroll": 375
+    },
+    {
+      "width": 375,
+      "view": "overview",
+      "client": 375,
+      "scroll": 375
+    },
+    {
+      "width": 375,
+      "view": "history",
+      "client": 375,
+      "scroll": 375
+    },
+    {
+      "width": 375,
+      "view": "trends",
+      "client": 375,
+      "scroll": 375
+    },
+    {
+      "width": 375,
+      "view": "templates",
+      "client": 375,
+      "scroll": 375
+    },
+    {
+      "width": 375,
+      "view": "knowledge",
+      "client": 375,
+      "scroll": 375
+    },
+    {
+      "width": 375,
+      "view": "settings",
+      "client": 375,
+      "scroll": 375
+    },
+    {
+      "width": 320,
+      "view": "studio",
+      "client": 320,
+      "scroll": 320
+    },
+    {
+      "width": 320,
+      "view": "workflow",
+      "client": 320,
+      "scroll": 320
+    },
+    {
+      "width": 320,
+      "view": "overview",
+      "client": 320,
+      "scroll": 320
+    },
+    {
+      "width": 320,
+      "view": "history",
+      "client": 320,
+      "scroll": 320
+    },
+    {
+      "width": 320,
+      "view": "trends",
+      "client": 320,
+      "scroll": 320
+    },
+    {
+      "width": 320,
+      "view": "templates",
+      "client": 320,
+      "scroll": 320
+    },
+    {
+      "width": 320,
+      "view": "knowledge",
+      "client": 320,
+      "scroll": 320
+    },
+    {
+      "width": 320,
+      "view": "settings",
+      "client": 320,
+      "scroll": 320
+    }
+  ],
+  "result": "PASS",
+  "finishedAt": "2026-10-20T17:01:21.629Z",
+  "dataBoundary": "Disposable OS-temporary SQLite fixtures removed by the browser gate; production data was not used",
+  "sourceBinding": {
+    "server/app.mjs": "f50d79d278c0fcb69440cb0849355d565fb760b2fc045153d1e3581929fca037",
+    "server/generation-provider.mjs": "650bd5cdd2559b86a31cb46367bef418c273f569e3e912196d88ec9178a57c98",
+    "server/generations.mjs": "88def43a2488dfa44ca416f16597beceae259545271d0346f5ad7b6e4e3d8ccd",
+    "server/higgsfield-cli.mjs": "fb27ea122bfb2cdf52456f0c02230e364fae58746924709c691472d0f9b706a7",
+    "server/higgsfield.mjs": "68779d8f4c3c399ba1f3c3a6fbc0972e61542195fd13dd9f0f73975d37a14968",
+    "server/integrations.mjs": "9f5de7db4c5bb9d4734fd9e1db280edc78499b7c300ea8b14d6cb4a1faa6dad8",
+    "server/narration.mjs": "db6d232a4aec3366bbfb557c5357e73ea5632da64e34d7a4dc27471753e44927",
+    "server/process.mjs": "8f60a127601c719dbc510610e350f2637fa5eed98d5c026c93675e1a55f0408a",
+    "server/render.mjs": "63983b97157277d8f7eab25c732b2fbdfa7d4d8d462a68d43ef133efc9ccbc80",
+    "server/store.mjs": "2ab597d033364b8d91b6e647f10b642f0c6d72bf22c67bb1641c646db8f96daa",
+    "server/trend-collector.mjs": "e42b8fd66bc8e4a4e2a27b6f7c244ccc5adb426977e54b219fcb1a6e556ee1b9",
+    "server/validation.mjs": "af1323e1c4e0631d04cfb54ae1378b397dd3c1111029fa93e63286a8952af933",
+    "server/workflows.mjs": "33902a69f9e8ae59a8febf44f8cfa3d3a873648efb89fcaae4ba50a770ca2500",
+    "public/app.js": "ab32937fcdbf4111f9bb0e87855dab2a49765849f37fbe236790cf70b3874720",
+    "public/history.js": "64c6df913542b193083791512727d608d154b8d75796b6759101cdcc6ae45a78",
+    "public/index.html": "e301043995666a477105d624dd1bf46f88616026ca93efbdf94660067f248840",
+    "public/styles.css": "b026160b0d3139c9ae7c36e07be736e1ee8986f8ed1a3fbb5a048cef2a6f9100",
+    "public/workflow.css": "89ce72e99992c6fa1f36cf647df2e22870c4e8a8783e84d3800fbc3d17eabc90",
+    "public/workflow.js": "ed66367d856828e9a2fc0d1f3b5f3b89e76c3bb542f5db8097ad678e12fa8f51",
+    "public/workspace-state.js": "22f68d61849891d055870252e849f3b7bb14eb073a5e7a348a61529d63ddb29e",
+    "public/workspace.css": "7697eca01724b4fc791076293b166b18b7309323e7b84a9ff4c4111cbc0816cc",
+    "public/workspace.js": "d6e28b496af8bfad6c47e160fbc58d0dab0eba4ce2c66d9299615c99933569c4",
+    "scripts/acceptance.mjs": "9eee55df42b5af589fb003e10f395fcaf1bff55179403e3b9292197aead63641",
+    "scripts/agent-bridge.mjs": "3f03c6bbf9786c6c7ef0ab9d86e275085c2699e58798a813fd5aa1254279b84c",
+    "scripts/agent-smoke.mjs": "f2eb11b1b923babc75e75bbff59772ff74196f8146faa7c155d186f71dfb5573",
+    "scripts/aside-inbox.mjs": "c70e2fa4cf6232f94ab2eff14b02c7ab484ace72bc413f2df65a34fe3149b2f1",
+    "scripts/browser-smoke.py": "6f88645d43e6b0fc3745f558b07296b44e576a03e108905cc3bebe25f78a4799",
+    "scripts/check.mjs": "c9fd8233c646ac26fbfe8049d637ecd1bb694027386684a4d341a46abcc67dec",
+    "scripts/configure.mjs": "21aecb1d7acaae409271e1292dd7ecb1b056c0e2f8116193c933d62a492b8a35",
+    "scripts/container-smoke.mjs": "97930b4b6df5d6a76e874cec84d8576fc9cff2284c935dc31ab450b66febfa1b",
+    "scripts/higgsfield-browser-smoke.py": "c34aa99b2d13faf3600c61298aa135bc0008b37f16da3867dc6efdc99e3fa4df",
+    "scripts/higgsfield-mcp.mjs": "0298db5d3fed7e49016ba63dddc0ce4e2579e9db22fc91e167b269747f4f4ca6",
+    "scripts/import-research.mjs": "5d432254252310b323cd946feca41aaf21329d9af9453ddfb88dba13b25a3c08",
+    "scripts/import-snapshot.mjs": "3513c602bf51c7de282b57059056ef4744a5f2bf8738827865ce1fb5c7f8fcc0",
+    "scripts/jeo-adapter.mjs": "2d00671bbe24ba94fbb41e5d9168f7b54c43b30d4033ef3462fc362e48bbdd61",
+    "scripts/jev-review.mjs": "53747f09bef122b9f3ed889bd715ce3c7a3c3a56a2c01c2ad2e124cf4de2b827",
+    "scripts/media-smoke.mjs": "26258091147d1f7cd7cab4c2613cd06f56cf0a40a723f1771009a7bd6e8082c0",
+    "scripts/ops-workspace-browser-smoke.mjs": "787d09f6cbec6012e6d19ecb005d9250db12e3b61849e6b428f56fd426b520df",
+    "scripts/premiere-workspace-browser-smoke.mjs": "22b1bfccf2e6bfab7033a394078fa7107d6c6a76de36cb4e49bd3221fb94c2bc",
+    "scripts/production-browser-smoke.py": "87b12b5448ed2a48fb7dbc528efd780032df0c51f7c488699f3b9985be373740",
+    "scripts/production-smoke.mjs": "f655311efa80a4f475f1c9d46b79b69d1d8b403739e3d967445a63fc55ca35f0",
+    "scripts/render-smoke.mjs": "31974d7e389af48b66ce6381d0d486ea2f4195fd37f61ac5c3459280294114f7",
+    "scripts/repair-docker-wsl.ps1": "2af2b4b40be520feb51b6e47ed07bad50471ecc85bd6bf36d9eabca468d60ad2",
+    "scripts/snapshot-data.mjs": "51e88c06f3a67870f02720aae7e4af44c1274de901cbe1b4c9fe57195b8be30d",
+    "scripts/speech.ps1": "f55dac2a5ee10d1afb0e3c76a816b74805424554695fad2e5b0163732c208820",
+    "scripts/start-docker.ps1": "f8e2f01f9568c3da39a758e4edde0de173deaa71deb9a1996de715c81b2e193d",
+    "scripts/start-local.ps1": "e807988de31dace4451fbd53e20053025483795e242036600520ae6e0763a9cb",
+    "scripts/stop-local.ps1": "91c8d2c5d0b4aaaa116589f8f8f7cbf54a9dd450dbc8eff984feb1f7ca6273cb",
+    "scripts/trends-browser-smoke.py": "e537b8ae1d9f6b3fd65ef172fad086a9e5ef792854fbcfa86c1e34a8587b593d",
+    "scripts/usability-browser-smoke.py": "3ca75e1842ae4a806bd34d9555378b8fcc472c5d61c88837934185a88d389ede",
+    "scripts/version-harness.mjs": "71b8d23acfe2775f0bfb50424d389ae756f3e2d185f779ea09abf0eb6891e12c",
+    "scripts/white-studio-browser-smoke.py": "b0ff6d041ccab0db29d2b3c9dbf5fb0b050b753c2ab3f8d9b5a268ba45867157",
+    "scripts/workflow-browser-smoke.py": "b62153efc25af29aa5109b42e0a2aa20aa6e25b94020a4aa7cec8553d513adc6",
+    "scripts/workflow-smoke.mjs": "d8eed9d9fc11bfc693d1dddf924449bc0bbce1935252d2d6472df8c5fe32bfa3",
+    "scripts/workspace-browser-smoke.py": "3aec63557a2e8580967479d77f0e253025274f1d2cda417a1f2269f8f5e7b914",
+    "scripts/__pycache__/higgsfield-browser-smoke.cpython-310.pyc": "334681bfa90e6f4732ab109aa6ce88bf70627c867b92c78d013bedb5b795589c",
+    "package.json": "e77d48e5dc4b6b8a71aa8349f809e68eb4e50cefef928754f7afa38c161495ac"
+  },
+  "regressions": {
+    "result": "PASS",
+    "checks": 105,
+    "pageErrors": [],
+    "externalRequests": [],
+    "providerCalls": [],
+    "contrast": [
+      {
+        "foreground": "--ink",
+        "background": "--surface",
+        "minimum": 4.5,
+        "ratio": 11.159262431184294
+      },
+      {
+        "foreground": "--text-secondary",
+        "background": "--canvas",
+        "minimum": 4.5,
+        "ratio": 5.851895007331262
+      },
+      {
+        "foreground": "--muted",
+        "background": "--surface-side",
+        "minimum": 4.5,
+        "ratio": 5.058039806863441
+      },
+      {
+        "foreground": "--muted",
+        "background": "--surface-subtle",
+        "minimum": 4.5,
+        "ratio": 5.417587844522687
+      },
+      {
+        "foreground": "--accent",
+        "background": "--accent-soft",
+        "minimum": 4.5,
+        "ratio": 6.281875636876209
+      },
+      {
+        "foreground": "--surface",
+        "background": "--accent",
+        "minimum": 4.5,
+        "ratio": 7.570959356779787
+      },
+      {
+        "foreground": "--success",
+        "background": "--success-soft",
+        "minimum": 4.5,
+        "ratio": 5.886324932013081
+      },
+      {
+        "foreground": "--warning",
+        "background": "--warning-soft",
+        "minimum": 4.5,
+        "ratio": 5.207925172528828
+      },
+      {
+        "foreground": "--danger",
+        "background": "--danger-soft",
+        "minimum": 4.5,
+        "ratio": 5.370608304178265
+      },
+      {
+        "foreground": "--line-strong",
+        "background": "--surface",
+        "minimum": 3,
+        "ratio": 3.4462860767383336
+      },
+      {
+        "foreground": "--focus",
+        "background": "--surface",
+        "minimum": 3,
+        "ratio": 10.14689213028663
+      }
+    ],
+    "geometry": [
+      {
+        "width": 1440,
+        "view": "overview",
+        "client": 1440,
+        "scroll": 1440,
+        "overflow": false,
+        "visibleOverflow": []
+      },
+      {
+        "width": 1440,
+        "view": "studio",
+        "client": 1440,
+        "scroll": 1440,
+        "overflow": false
+      },
+      {
+        "width": 1440,
+        "view": "workflow",
+        "client": 1440,
+        "scroll": 1440,
+        "overflow": false
+      },
+      {
+        "width": 1440,
+        "view": "history",
+        "client": 1440,
+        "scroll": 1440,
+        "overflow": false
+      },
+      {
+        "width": 1440,
+        "view": "trends",
+        "client": 1440,
+        "scroll": 1440,
+        "overflow": false
+      },
+      {
+        "width": 1440,
+        "view": "templates",
+        "client": 1440,
+        "scroll": 1440,
+        "overflow": false
+      },
+      {
+        "width": 1440,
+        "view": "knowledge",
+        "client": 1440,
+        "scroll": 1440,
+        "overflow": false
+      },
+      {
+        "width": 1440,
+        "view": "settings",
+        "client": 1440,
+        "scroll": 1440,
+        "overflow": false
+      },
+      {
+        "width": 768,
+        "view": "overview",
+        "client": 768,
+        "scroll": 768,
+        "overflow": false,
+        "visibleOverflow": [
+          {
+            "tag": "TABLE",
+            "id": "",
+            "class": "ops-table"
+          },
+          {
+            "tag": "THEAD",
+            "id": "",
+            "class": ""
+          },
+          {
+            "tag": "TR",
+            "id": "",
+            "class": ""
+          },
+          {
+            "tag": "TH",
+            "id": "",
+            "class": ""
+          },
+          {
+            "tag": "TH",
+            "id": "",
+            "class": ""
+          },
+          {
+            "tag": "TBODY",
+            "id": "",
+            "class": ""
+          },
+          {
+            "tag": "TR",
+            "id": "",
+            "class": ""
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": ""
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": ""
+          },
+          {
+            "tag": "BUTTON",
+            "id": "",
+            "class": "small"
+          }
+        ]
+      },
+      {
+        "width": 768,
+        "view": "studio",
+        "client": 768,
+        "scroll": 768,
+        "overflow": false
+      },
+      {
+        "width": 768,
+        "view": "workflow",
+        "client": 768,
+        "scroll": 768,
+        "overflow": false
+      },
+      {
+        "width": 768,
+        "view": "history",
+        "client": 768,
+        "scroll": 768,
+        "overflow": false
+      },
+      {
+        "width": 768,
+        "view": "trends",
+        "client": 768,
+        "scroll": 768,
+        "overflow": false
+      },
+      {
+        "width": 768,
+        "view": "templates",
+        "client": 768,
+        "scroll": 768,
+        "overflow": false
+      },
+      {
+        "width": 768,
+        "view": "knowledge",
+        "client": 768,
+        "scroll": 768,
+        "overflow": false
+      },
+      {
+        "width": 768,
+        "view": "settings",
+        "client": 768,
+        "scroll": 768,
+        "overflow": false
+      },
+      {
+        "width": 375,
+        "view": "overview",
+        "client": 375,
+        "scroll": 375,
+        "overflow": false,
+        "visibleOverflow": [
+          {
+            "tag": "BUTTON",
+            "id": "",
+            "class": "channel quiet"
+          },
+          {
+            "tag": "SPAN",
+            "id": "",
+            "class": "channel-avatar"
+          },
+          {
+            "tag": "SPAN",
+            "id": "",
+            "class": "channel-copy muted"
+          }
+        ]
+      },
+      {
+        "width": 375,
+        "view": "studio",
+        "client": 375,
+        "scroll": 375,
+        "overflow": false
+      },
+      {
+        "width": 375,
+        "view": "workflow",
+        "client": 375,
+        "scroll": 375,
+        "overflow": false
+      },
+      {
+        "width": 375,
+        "view": "history",
+        "client": 375,
+        "scroll": 375,
+        "overflow": false
+      },
+      {
+        "width": 375,
+        "view": "trends",
+        "client": 375,
+        "scroll": 375,
+        "overflow": false
+      },
+      {
+        "width": 375,
+        "view": "templates",
+        "client": 375,
+        "scroll": 375,
+        "overflow": false
+      },
+      {
+        "width": 375,
+        "view": "knowledge",
+        "client": 375,
+        "scroll": 375,
+        "overflow": false
+      },
+      {
+        "width": 375,
+        "view": "settings",
+        "client": 375,
+        "scroll": 375,
+        "overflow": false
+      },
+      {
+        "width": 720,
+        "view": "overview",
+        "zoom": "200% equivalent CSS viewport",
+        "client": 720,
+        "scroll": 720,
+        "overflow": false
+      },
+      {
+        "width": 320,
+        "view": "overview",
+        "client": 320,
+        "scroll": 320,
+        "overflow": false
+      }
+    ]
+  },
+  "warnings": [
+    "Node 22 SQLite experimental API warning remains; no warnings suppressed",
+    "Git reports CRLF-to-LF normalization on affected tracked files"
+  ]
+}

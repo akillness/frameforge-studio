@@ -1,0 +1,177 @@
+{
+  "observedAt": "2026-10-20T17:07:33.999065+00:00",
+  "method": "Aside delegated public-browser research; final synthesis captured separately from browser transcript",
+  "inspectedPagesReportedBySubagent": 12,
+  "references": [
+    {
+      "title": "Premiere workspaces and home screen overview",
+      "url": "https://helpx.adobe.com/premiere/desktop/get-started/tour-the-workspace/what-are-workspaces.html"
+    },
+    {
+      "title": "Dock, group, or undock panels",
+      "url": "https://helpx.adobe.com/premiere/desktop/get-started/tour-the-workspace/dock-group-undock-panels.html"
+    },
+    {
+      "title": "Navigate panels",
+      "url": "https://helpx.adobe.com/premiere/desktop/get-started/tour-the-workspace/navigate-the-panels.html"
+    },
+    {
+      "title": "Source and Program Monitor overview",
+      "url": "https://helpx.adobe.com/premiere/desktop/get-started/source-and-program-monitor-adjustments/about-source-monitor-and-program-monitor.html"
+    },
+    {
+      "title": "Timeline navigation controls",
+      "url": "https://helpx.adobe.com/premiere/desktop/edit-projects/change-clip-sequence/navigation-controls-in-the-timeline.html"
+    },
+    {
+      "title": "Properties panel",
+      "url": "https://helpx.adobe.com/premiere/desktop/add-text-images/stylize-text/about-properties-panel.html"
+    },
+    {
+      "title": "Navigate Premiere using the keyboard",
+      "url": "https://helpx.adobe.com/premiere/desktop/get-started/set-up-accessibility-features/navigate-premiere-using-the-keyboard.html"
+    },
+    {
+      "title": "Screen reader and accessibility support",
+      "url": "https://helpx.adobe.com/premiere/desktop/get-started/set-up-accessibility-features/screen-reader-screen-magnifier-and-operating-system-accessibility-support.html"
+    },
+    {
+      "title": "Export video",
+      "url": "https://helpx.adobe.com/premiere/desktop/render-and-export/export-files/export-video.html"
+    },
+    {
+      "title": "Export options in Premiere",
+      "url": "https://helpx.adobe.com/premiere/desktop/render-and-export/export-files/export-options-in-premiere.html"
+    },
+    {
+      "title": "Export settings reference",
+      "url": "https://helpx.adobe.com/premiere/desktop/render-and-export/export-files/overview-of-export-settings.html"
+    },
+    {
+      "title": "Share for review with Frame.io",
+      "url": "https://helpx.adobe.com/premiere/desktop/collaborate-with-others/share-for-review-using-frame-io/share-for-review-with-frame-io.html"
+    },
+    {
+      "title": "Add comments on shared projects",
+      "url": "https://helpx.adobe.com/premiere/desktop/collaborate-with-others/share-for-review-using-frame-io/add-comments-on-shared-projects.html"
+    },
+    {
+      "title": "Export directly to Adobe Media Encoder",
+      "url": "https://helpx.adobe.com/premiere/desktop/render-and-export/export-files/export-directly-to-adobe-media-encoder.html"
+    }
+  ],
+  "adopted": [
+    "sage/white semantic tokens",
+    "platform/channel hierarchy",
+    "task-oriented navigation",
+    "project bin and monitor-over-timeline layout",
+    "selection-driven existing inspector",
+    "real workflow history and review navigation",
+    "responsive native controls and focus preservation"
+  ],
+  "notImplemented": [
+    "arbitrary stage types or conditional scheduling",
+    "new skip/bypass semantics",
+    "fake waveforms or independent audio/video tracks",
+    "automatic external publication or Frame.io integration"
+  ],
+  "ecc": {
+    "harness": "Codex native plugin inventory",
+    "plugin": "ecc@ecc",
+    "version": "2.2.3",
+    "enabled": true,
+    "hookTrust": "Not established by plugin inventory",
+    "installationChanged": false,
+    "skillSource": "installed .agents/skills/ecc/SKILL.md (home path redacted)",
+    "duplicateSkillRootObserved": "secondary jeo-skills checkout .agent-skills/ecc/SKILL.md; preferred installed skills root, did not mix or remove copies (home path redacted)"
+  },
+  "jev": {
+    "parentProfile": "jeo",
+    "parentStatus": "disabled; exit 2; no parent live call",
+    "delegatedManualReview": {
+      "verdict": "proposal_only",
+      "reason": "Below threshold or unfavorable in: evidence_supports (ans=no, conf=0.55); unrelated_changes (ans=no, conf=0.78); needs_clarification (ans=no, conf=0.66)",
+      "failingQuestions": [
+        "evidence_supports (ans=no, conf=0.55)",
+        "unrelated_changes (ans=no, conf=0.78)",
+        "needs_clarification (ans=no, conf=0.66)"
+      ],
+      "threshold": 0.8,
+      "mode": "jev",
+      "backend": {
+        "kind": "api",
+        "driver": "typesafe",
+        "model": "jev-1.13.0",
+        "configuredModel": "jev-latest",
+        "tier": "unvalidated",
+        "attestation": null
+      },
+      "attempted": [
+        "api"
+      ],
+      "receiptVersion": 2,
+      "receipt": "82d62330ba3f2df462d7db9ed48edaff6f43eb1a8a0d86947453bc860189a76c",
+      "review": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "addresses_task": {
+            "probability": 0.85,
+            "answer": "yes",
+            "confidence": 0.85
+          },
+          "evidence_supports": {
+            "probability": 0.45,
+            "answer": "no",
+            "confidence": 0.55
+          },
+          "unrelated_changes": {
+            "probability": 0.22,
+            "answer": "no",
+            "confidence": 0.78
+          },
+          "needs_clarification": {
+            "probability": 0.34,
+            "answer": "no",
+            "confidence": 0.6599999999999999
+          }
+        },
+        "usage": {
+          "input_tokens": 576,
+          "output_tokens": 80
+        },
+        "requests": 1,
+        "source": "api",
+        "backend": {
+          "kind": "api",
+          "driver": "typesafe",
+          "model": "jev-1.13.0",
+          "configuredModel": "jev-latest",
+          "tier": "unvalidated",
+          "attestation": null
+        },
+        "attempted": [
+          "api"
+        ],
+        "attemptDetails": [
+          {
+            "kind": "api",
+            "error": null
+          }
+        ],
+        "error": null,
+        "latencyMs": 332
+      }
+    },
+    "reviewScope": "Pre-implementation research proposal; not final-source approval",
+    "receiptBindingRecomputed": false,
+    "hostAuthorityGranted": false,
+    "configurationChanged": false
+  },
+  "independentReview": {
+    "scope": "Separate Aside subagent reviewed supplied current-source snippets, not the full repository and not test execution",
+    "hardBlockerReported": false,
+    "actionableFinding": "Task navigation lost keyboard focus after rerender",
+    "resolution": "Task and channel navigation now focus main; final real-browser gate verifies keyboard task focus",
+    "responsiveConcern": "Reviewer lacked the full CSS; global mobile rule already hides the sidebar label; actual mobile platform switching and 320px reflow passed"
+  }
+}

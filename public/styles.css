@@ -1,23 +1,23 @@
 :root {
   color-scheme: light;
-  --canvas: #f5f4ef;
-  --surface: #fffefa;
-  --surface-side: #eeede6;
-  --surface-subtle: #f0f2e9;
-  --ink: #242c35;
-  --text-secondary: #46514f;
-  --muted: #606966;
-  --line: #ddded5;
-  --line-strong: #858b82;
-  --accent: #2851c8;
-  --accent-soft: #e9eefc;
+  --canvas: #f0f5f2;
+  --surface: #ffffff;
+  --surface-side: #eaf1ec;
+  --surface-subtle: #f4f8f5;
+  --ink: #21422d;
+  --text-secondary: #436650;
+  --muted: #526b5c;
+  --line: #d3dfd7;
+  --line-strong: #7b8f82;
+  --accent: #2d5e3a;
+  --accent-soft: #e1ede3;
   --success: #326655;
   --success-soft: #edf3ed;
   --warning: #8a5b22;
   --warning-soft: #fbf1df;
   --danger: #a34437;
   --danger-soft: #faeee9;
-  --focus: #173ea8;
+  --focus: #1e4a2b;
   --bg: var(--canvas);
   --surface-hover: var(--surface-subtle);
   --raised: var(--surface);
@@ -29,9 +29,9 @@
   --primary-soft: var(--accent-soft);
   --lime: var(--accent);
   --coral: var(--danger);
-  --radius-control: 5px;
-  --radius-panel: 9px;
-  --radius-dialog: 9px;
+  --radius-control: 3px;
+  --radius-panel: 4px;
+  --radius-dialog: 6px;
   --shadow-soft: none;
   font-family: "Segoe UI", "Pretendard", "Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
   font-size: 14px;
@@ -282,6 +282,66 @@ dialog::backdrop { background: rgba(16, 24, 40, .45); }
 #narration-status .danger { margin: 10px 0 0; overflow-wrap: anywhere; }
 #narration-status .unsaved { line-height: 1.7; }
 .narration-panel { min-width: 0; }
+
+/* FRAME: task spaces above, real platform/channel hierarchy at the left. */
+.sidebar { position: sticky; top: 0; height: 100dvh; overflow-y: auto; gap: 22px; }
+.brand-copy { font-size: 26px; letter-spacing: -1px; }
+.brand small { font-size: 8px; letter-spacing: 1.4px; }
+.brandmark { border-radius: 3px; }
+.sidebar-workspace { margin: -10px 0 0; color: var(--muted); font-size: 12px; }
+.platform-group { margin-bottom: 10px; }
+.platform-group > summary { display: flex; align-items: center; gap: 8px; padding: 10px 8px; cursor: pointer; list-style: none; font-size: 13px; font-weight: 700; border-radius: var(--radius-control); }
+.platform-group > summary::-webkit-details-marker { display: none; }
+.platform-group > summary::after { content: '⌄'; margin-left: auto; color: var(--muted); }
+.platform-group[open] > summary { background: var(--surface-side); }
+.platform-group[open] > summary::after { content: '⌃'; }
+.platform-symbol { display: grid; place-items: center; width: 21px; height: 21px; background: var(--surface); border: 1px solid var(--border); border-radius: 3px; font: 600 11px ui-monospace, monospace; }
+.platform-count { color: var(--muted); font: 11px ui-monospace, monospace; }
+.platform-channels { margin: 7px 0 0 10px; padding-left: 7px; border-left: 1px solid var(--border); }
+.channel-avatar { width: 25px; height: 25px; border-radius: 3px; font: 11px ui-monospace, monospace; }
+.channel.active { background: var(--accent-soft); }
+.task-nav { display: flex; gap: 8px; padding: 0 24px; max-width: 100%; overflow-x: auto; border-bottom: 1px solid var(--border); background: var(--surface); scrollbar-width: thin; }
+.task-nav button { flex: 0 0 auto; min-height: 48px; padding: 10px 12px; gap: 7px; border-bottom: 2px solid transparent; border-radius: 0; white-space: nowrap; font-size: 12px; }
+.task-nav button.active { background: transparent; border-bottom-color: var(--accent); }
+.task-nav .nav-label { display: inline; }
+.task-nav .nav-icon { font-size: 15px; }
+.monitor-deck { display: grid; grid-template-columns: minmax(0,1fr); gap: 12px; }
+.monitor-deck > * { min-width: 0; }
+.source-heading { padding: 12px; min-width: 0; }
+.source-heading strong { display: block; margin-top: 5px; font-size: 12px; overflow-wrap: anywhere; }
+.project-bin-list { display: flex; gap: 4px; padding: 5px 8px 10px; overflow-x: auto; scrollbar-width: thin; }
+.source-item { display: flex; align-items: flex-start; gap: 9px; min-width: 150px; flex: 0 0 170px; text-align: left; padding: 10px 8px; border-color: transparent; }
+.source-item.selected { border-color: var(--accent); background: var(--accent-soft); }
+.source-number { color: var(--muted); font: 11px ui-monospace, monospace; padding-top: 3px; }
+.source-copy { min-width: 0; }
+.source-copy strong { display: block; font-size: 12px; overflow-wrap: anywhere; }
+.source-copy small { display: block; color: var(--muted); font-size: 10px; margin-top: 5px; }
+.project-bin > .source-note { margin: 0; border: 0; border-top: 1px solid var(--border); border-radius: 0; font-size: 11px; }
+.program-monitor .preview-stage { background: var(--surface-side); }
+.scene-clip-header { display: flex; justify-content: space-between; padding: 5px 8px; font: 10px ui-monospace, monospace; color: var(--text-secondary); background: var(--surface-subtle); }
+.scene-card { border-radius: 3px; }
+.scene-meta > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.scene-meta > span:last-child { white-space: nowrap; }
+.scene-media-state { display: block; padding: 5px 8px; border-top: 1px solid var(--border); background: var(--success-soft); font-size: 10px; color: var(--text-secondary); }
+@container workspace-content (min-width: 1100px) {
+  .monitor-deck { grid-template-columns: 176px minmax(0,1fr); }
+  .project-bin { align-self: stretch; }
+  .project-bin-list { display: grid; gap: 3px; max-height: 360px; overflow-y: auto; }
+  .source-item { min-width: 0; width: 100%; }
+}
+@media (max-width: 920px) {
+  .sidebar-workspace, .platform-name, .platform-count, .sidebar-bottom > .eyebrow { display: none; }
+  .platform-group > summary { justify-content: center; padding: 8px 0; gap: 2px; }
+  .platform-group > summary::after { display: none; }
+  .platform-channels { margin-left: 0; padding-left: 0; border: 0; }
+  .task-nav { padding-inline: 12px; gap: 2px; }
+}
+@media (max-width: 500px) {
+  .task-nav { padding-inline: 6px; }
+  .task-nav button { padding-inline: 10px; min-height: 44px; }
+  .task-nav .nav-icon { display: none; }
+}
+
 
 @media (min-width: 1500px) {
   .editor-grid { grid-template-columns: minmax(0, 1fr) 340px; }

@@ -222,6 +222,7 @@ function applyNarrationResult(job, latest) {
     const status = $('#save-status');
     if (status) status.textContent = dirty ? '저장되지 않은 변경 · 음성 결과 반영됨' : `버전 ${episode.version} · 저장됨`;
     if ($('#scenes')) $('#scenes').innerHTML = sceneCards();
+    if ($('#project-bin-list')) $('#project-bin-list').innerHTML = sceneBinItems();
     if ($('#total-duration')) $('#total-duration').textContent = `총 ${duration()}초`;
   }
 }
@@ -253,15 +254,33 @@ function showLogin() {
   $('#login-form input').focus();
 }
 
+const platformNames = {youtube:'YouTube',instagram:'Instagram',tiktok:'TikTok',other:'기타 플랫폼'};
+function channelHierarchyHtml() {
+  const groups = new Map();
+  for (const channel of state.channels) {
+    const key = (channel.platform || 'other').trim().toLowerCase();
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(channel);
+  }
+  return [...groups].map(([key,channels]) => {
+    const label = platformNames[key] || channels[0].platform;
+    return `<details class="platform-group" ${channels.some(item=>item.id===channelId)?'open':''}><summary title="${esc(label)}" aria-label="${esc(label)} 채널"><span class="platform-symbol" aria-hidden="true">${esc(label.slice(0,1))}</span><span class="platform-name">${esc(label)}</span><span class="platform-count">${channels.length}</span></summary><div class="platform-channels">${channels.map(item => `<button class="channel ${item.id===channelId?'active':''}" data-action="channel" data-id="${esc(item.id)}" ${item.id===channelId?'aria-current="true"':''} title="${esc(item.name)}"><span class="channel-avatar">${String(state.channels.indexOf(item)+1).padStart(2,'0')}</span><span class="channel-copy"><span class="channel-name">${esc(item.name)}</span><small>${state.episodes.filter(episode=>episode.channelId===item.id).length} 에피소드 · ${esc(categoryNames[item.category] || item.category || '제작 공간')}</small></span></button>`).join('')}</div></details>`;
+  }).join('');
+}
+function sceneBinItems() {
+  return episode.scenes.map((scene,index) => `<button class="source-item ${index===sceneIndex?'selected':''}" data-action="scene" data-index="${index}" ${index===sceneIndex?'aria-current="true"':''}><span class="source-number">${String(index+1).padStart(2,'0')}</span><span class="source-copy"><strong>${esc(scene.title || '이름 없는 장면')}</strong><small>${scene.assetUrl?(scene.kind==='video'?'영상':'이미지'):'텍스트'} · ${Number(scene.duration)}초${scene.audioUrl?' · 오디오 첨부':''}</small></span></button>`).join('');
+}
+
 function render() {
   workspaceLayout.beforeRender();
   const channel = activeChannel();
   $('#app').innerHTML = `<div class="shell"><aside class="sidebar" aria-label="워크스페이스 탐색">
-    <div class="brand"><span class="brandmark" aria-hidden="true">F</span><div class="brand-copy">FrameForge<small>STUDIO</small></div></div>
-    <nav class="nav" aria-label="주요 메뉴">${views.map(([key,icon,label]) => `<button data-action="view" data-view="${key}" class="${view === key ? 'active' : ''}" ${view === key ? 'aria-current="page"' : ''} title="${label}"><span class="nav-icon" aria-hidden="true">${icon}</span><span class="nav-label">${label}</span></button>`).join('')}</nav>
-    <section><div class="sidebar-label">채널 <button class="icon-btn quiet" data-action="new-channel" aria-label="채널 추가">+</button></div>${state.channels.map((item,index) => `<button class="channel ${item.id === channelId ? 'active' : ''}" data-action="channel" data-id="${esc(item.id)}" title="${esc(item.name)}"><span class="channel-avatar">${String(index + 1).padStart(2,'0')}</span><span class="channel-copy"><span class="channel-name">${esc(item.name)}</span><small>${esc(categoryNames[item.category] || item.category || item.platform)}</small></span></button>`).join('')}<button class="channel quiet" data-action="new-channel" title="새 채널 추가"><span class="channel-avatar">+</span><span class="channel-copy muted">채널 추가</span></button></section>
-    <div class="sidebar-bottom"><p class="eyebrow">LOCAL WORKSPACE</p><div class="account-copy">나의 제작 기록<br><small>로컬 결과물 · 버전 이력</small></div></div>
-  </aside><div class="workspace"><header class="topbar"><div class="breadcrumb">워크스페이스 <span aria-hidden="true"> / </span><strong>${esc(channel?.name || '채널 없음')}</strong></div><div class="row"><span class="badge" data-testid="session-capability"><span class="connection-label">${canMutate()?'관리자 · 변경 권한':authenticated?'읽기 전용 · 변경은 관리자 전용':'API 확인 필요'}</span></span><button class="small quiet" data-action="view" data-view="settings">연결 관리 ↗</button></div></header>
+    <div class="brand"><span class="brandmark" aria-hidden="true">F</span><div class="brand-copy">FRAME<small>PRODUCTION STUDIO</small></div></div>
+    <p class="sidebar-workspace">제작 워크스페이스</p>
+    <section class="platform-browser" aria-label="플랫폼과 채널"><div class="sidebar-label">PLATFORMS <button class="icon-btn quiet" data-action="new-channel" aria-label="채널 추가">+</button></div>${channelHierarchyHtml() || '<p class="hint platform-name">등록된 채널이 없습니다.</p>'}<button class="channel quiet" data-action="new-channel" title="새 채널 추가"><span class="channel-avatar">+</span><span class="channel-copy muted">채널 추가</span></button></section>
+    <div class="sidebar-bottom"><button class="channel quiet" data-action="view" data-view="settings" title="플랫폼 연결 관리"><span class="nav-icon" aria-hidden="true">⚙</span><span class="channel-copy">플랫폼 연결 관리</span></button><p class="eyebrow">LOCAL WORKSPACE</p><div class="account-copy">나의 제작 기록<br><small>로컬 결과물 · 버전 이력</small></div></div>
+  </aside><div class="workspace"><header class="topbar"><div class="breadcrumb">${esc(platformNames[channel?.platform?.toLowerCase()] || channel?.platform || '워크스페이스')} <span aria-hidden="true"> / </span><strong>${esc(channel?.name || '채널 없음')}</strong><span aria-hidden="true"> / </span>${esc(views.find(([key])=>key===view)?.[2] || '')}</div><div class="row"><span class="badge" data-testid="session-capability"><span class="connection-label">${canMutate()?'관리자 · 변경 권한':authenticated?'읽기 전용 · 변경은 관리자 전용':'API 확인 필요'}</span></span><button class="small quiet" data-action="view" data-view="settings">연결 관리 ↗</button></div></header>
+    <nav class="nav task-nav" aria-label="제작 작업 공간">${views.map(([key,icon,label]) => `<button data-action="view" data-view="${key}" class="${view===key?'active':''}" ${view===key?'aria-current="page"':''} title="${label}"><span class="nav-icon" aria-hidden="true">${icon}</span><span class="nav-label">${label}</span></button>`).join('')}</nav>
     <main class="main" id="main" tabindex="-1">${view==='overview'?operations.html():workspaceLayout.html(renderView(), view)}</main></div></div>`;
   if (view === 'studio') updatePreview();
   if (view === 'workflow') workflowEditor.mount();
@@ -287,12 +306,12 @@ function renderView() {
 function studioView() {
   const episodes = state.episodes.filter(item => item.channelId === channelId);
   const actions = `${episode ? '<button data-action="save" id="save-button">변경 저장</button><button class="primary" data-action="open-generation">Higgsfield 장면 생성</button><button data-action="render">영상 내보내기</button>' : ''}<button class="icon-btn" data-action="new-episode" aria-label="새 에피소드">+</button>`;
-  let html = heading('스튜디오', '에피소드 장면을 편집하고 결과를 내보냅니다.', actions);
+  let html = heading('이야기를 편집하는 제작실.', '프로젝트에서 장면을 고르고, 모니터와 속성 패널에서 편집하세요.', actions);
   html += `<div class="episode-strip" aria-label="에피소드">${episodes.map((item,index) => `<button class="episode-tab ${episode?.id === item.id ? 'selected' : ''}" data-action="episode" data-id="${esc(item.id)}"><span>EP ${String(index + 1).padStart(2,'0')} · ${esc(statusNames[item.status] || item.status)}</span><strong>${esc(item.title)}</strong></button>`).join('')}<button class="episode-tab" data-action="new-episode"><span>새 에피소드</span><strong>＋ 에피소드 만들기</strong></button></div>`;
   if (!episode) return html + `<div class="panel empty"><div class="empty-mark">✳</div><h2>에피소드를 만드세요</h2><p>채널을 선택한 뒤 장면 편집과 MP4 내보내기를 시작하세요.</p><button class="primary" data-action="${channelId ? 'new-episode' : 'new-channel'}">${channelId ? '에피소드 만들기' : '채널 만들기'}</button></div>`;
   const scene = currentScene();
-  html += `<div class="editor-grid"><div><section class="panel"><div class="panel-header"><div class="row"><span class="eyebrow">PREVIEW</span><span class="badge">${esc(episode.format)}</span></div><span id="save-status" class="${dirty ? 'unsaved' : 'hint'}">${dirty ? '저장되지 않은 변경' : `버전 ${episode.version} · 저장됨`}</span></div><div class="preview-stage"><span class="stage-tag">LIVE CANVAS / ${esc(episode.category?.toUpperCase() || 'STUDIO')}</span><div id="preview" class="preview" data-format="${esc(episode.format)}" aria-label="현재 장면 미리보기"></div></div><div class="transport"><span class="time" id="play-time">${time(episode.scenes.slice(0,sceneIndex).reduce((sum,s) => sum + s.duration,0))} / ${time(duration())}</span><div class="row"><button class="icon-btn quiet" data-action="prev" aria-label="이전 장면">‹</button><button class="icon-btn primary" data-action="play" aria-label="${playing ? '미리보기 정지' : '미리보기 재생'}">${playing ? 'Ⅱ' : '▶'}</button><button class="icon-btn quiet" data-action="next" aria-label="다음 장면">›</button></div><span class="hint">${sceneIndex + 1} / ${episode.scenes.length} 장면</span></div></section>
-    <section class="panel timeline"><div class="panel-header"><h3>장면 타임라인</h3><span class="hint" id="total-duration">총 ${duration()}초</span></div><div class="timeline-body"><div class="ruler"><span>00:00</span><span>STORY → SCENE → FRAME</span><span>${time(duration())}</span></div><div class="scenes" id="scenes">${sceneCards()}</div><div class="row between timeline-actions"><button class="small quiet" data-action="add-scene">＋ 장면 추가</button><div class="row"><button class="small quiet" data-action="save-template">템플릿으로 저장</button><button class="small quiet" data-action="view" data-view="templates">템플릿 불러오기 ↗</button></div></div></div></section>
+  html += `<div class="editor-grid"><div><div class="monitor-deck"><aside class="panel project-bin" aria-label="프로젝트 장면 목록"><div class="panel-header"><h3>프로젝트</h3><span class="badge">${episode.scenes.length}</span></div><div class="source-heading"><span class="eyebrow">PROJECT BIN</span><strong>${esc(episode.title)}</strong></div><div class="project-bin-list" id="project-bin-list">${sceneBinItems()}</div><p class="source-note">장면 선택은 미리보기와 편집 패널에 함께 반영됩니다.</p></aside><section class="panel program-monitor"><div class="panel-header"><div class="row"><span class="eyebrow">PROGRAM MONITOR</span><span class="badge">${esc(episode.format)}</span></div><span id="save-status" class="${dirty ? 'unsaved' : 'hint'}">${dirty ? '저장되지 않은 변경' : `버전 ${episode.version} · 저장됨`}</span></div><div class="preview-stage"><span class="stage-tag">LIVE CANVAS / ${esc(episode.category?.toUpperCase() || 'STUDIO')}</span><div id="preview" class="preview" data-format="${esc(episode.format)}" aria-label="현재 장면 미리보기"></div></div><div class="transport"><span class="time" id="play-time">${time(episode.scenes.slice(0,sceneIndex).reduce((sum,s) => sum + s.duration,0))} / ${time(duration())}</span><div class="row"><button class="icon-btn quiet" data-action="prev" aria-label="이전 장면">‹</button><button class="icon-btn primary" data-action="play" aria-label="${playing ? '미리보기 정지' : '미리보기 재생'}">${playing ? 'Ⅱ' : '▶'}</button><button class="icon-btn quiet" data-action="next" aria-label="다음 장면">›</button></div><span class="hint">${sceneIndex + 1} / ${episode.scenes.length} 장면</span></div></section></div>
+    <section class="panel timeline"><div class="panel-header"><div><span class="eyebrow">SEQUENCE</span><h3>장면 타임라인</h3></div><span class="hint" id="total-duration">총 ${duration()}초</span></div><div class="timeline-body"><div class="ruler"><span>00:00</span><span>V1 · 장면 순서 / A · 첨부 오디오</span><span>${time(duration())}</span></div><div class="scenes" id="scenes">${sceneCards()}</div><div class="row between timeline-actions"><button class="small quiet" data-action="add-scene">＋ 장면 추가</button><div class="row"><button class="small quiet" data-action="save-template">템플릿으로 저장</button><button class="small quiet" data-action="view" data-view="templates">템플릿 불러오기 ↗</button></div></div></div></section>
     <section class="panel section-spacer"><div class="panel-header"><h3>내보내기 작업</h3><span class="hint">FFmpeg · MP4</span></div><div id="jobs">${jobsHtml()}</div></section></div>
     <div class="right-column"><section class="panel inspector"><div class="panel-header"><h3>장면 편집</h3><span class="badge">SCENE ${String(sceneIndex + 1).padStart(2,'0')}</span></div><div class="panel-body">${scene ? inspectorHtml(scene) : '<p>장면을 추가해 주세요.</p>'}</div></section>${narrationHtml()}${chatHtml()}</div></div><p class="footnote">변경 사항은 버전별로 기록됩니다. 영상 업로드 전 채널 연결과 콘텐츠 권리를 확인하세요.</p>`;
   return html;
@@ -316,7 +335,12 @@ function updatePreview() {
   if (video && Number(scene.trimStart) > 0) video.addEventListener('loadedmetadata', () => { video.currentTime = Math.min(Number(scene.trimStart), Math.max(0,video.duration - 0.01)); }, {once:true});
 }
 function sceneCards() {
-  return episode.scenes.map((scene,index) => `<button class="scene-card ${index === sceneIndex ? 'selected' : ''}" data-action="scene" data-index="${index}" data-scene-id="${esc(scene.id)}" aria-label="장면 ${index + 1}: ${esc(scene.title)}"><div class="scene-thumb" style="background:${safeColor(scene.background)}">${esc(scene.text?.slice(0,45) || scene.title)}</div><div class="scene-meta"><span>${String(index + 1).padStart(2,'0')} · ${esc(scene.title?.slice(0,12))}</span><span>${scene.duration}s</span></div></button>`).join('');
+  let elapsed = 0;
+  return episode.scenes.map((scene,index) => {
+    const start = time(elapsed);
+    elapsed += Number(scene.duration) || 0;
+    return `<button class="scene-card ${index===sceneIndex?'selected':''}" data-action="scene" data-index="${index}" data-scene-id="${esc(scene.id)}" aria-pressed="${index===sceneIndex}" aria-label="장면 ${index+1}: ${esc(scene.title)} · ${start} 시작 · ${Number(scene.duration)}초"><div class="scene-clip-header"><span>V1 · ${String(index+1).padStart(2,'0')}</span><time>${start}</time></div><div class="scene-thumb" style="background:${safeColor(scene.background)}">${esc(scene.text?.slice(0,45) || scene.title)}</div><div class="scene-meta"><span>${esc(scene.title?.slice(0,18))}</span><span>${Number(scene.duration)}s</span></div><span class="scene-media-state">${scene.audioUrl?'A · 첨부 오디오':'A · 오디오 없음'}</span></button>`;
+  }).join('');
 }
 function jobsHtml() {
   const jobs = state.jobs.filter(job => job.episodeId === episode?.id).slice().reverse();
@@ -429,6 +453,8 @@ function markDirty() {
   if (status) { status.textContent = '저장되지 않은 변경'; status.className = 'unsaved'; }
   updatePreview();
   if ($('#scenes')) $('#scenes').innerHTML = sceneCards();
+  if ($('#project-bin-list')) $('#project-bin-list').innerHTML = sceneBinItems();
+  if ($('.source-heading strong')) $('.source-heading strong').textContent = episode.title;
   if ($('#total-duration')) $('#total-duration').textContent = `총 ${duration()}초`;
   updateSaveStatus();
 }
@@ -540,13 +566,13 @@ async function handleAction(button) {
   else if (action === 'history-version') {historyVersion=Number(button.dataset.version);render();}
   else if (action === 'restore-episode') restoreEpisode(Number(button.dataset.version));
   else if (action === 'save-history-draft') {await save(true);await loadHistory();render();}
-  else if (action === 'view') { stopPlayback(); if (view==='workflow' && workflowEditor.hasChanges()) await workflowEditor.save(); await save(true); view = button.dataset.view; if (view === 'history') await loadHistory(); if (view === 'settings') await loadCommands(); if (view === 'workflow') await workflowEditor.load(); if (view === 'trends') await loadTrendBrowser(); render(); }
+  else if (action === 'view') { stopPlayback(); if (view==='workflow' && workflowEditor.hasChanges()) await workflowEditor.save(); await save(true); view = button.dataset.view; if (view === 'history') await loadHistory(); if (view === 'settings') await loadCommands(); if (view === 'workflow') await workflowEditor.load(); if (view === 'trends') await loadTrendBrowser(); render(); $('#main')?.focus(); }
   else if (action === 'new-channel') newChannel();
   else if (action === 'new-episode') newEpisode();
-  else if (action === 'channel') { stopPlayback(); if (workflowEditor.hasChanges()) await workflowEditor.save(); await save(true); channelId = button.dataset.id; episode = clone(state.episodes.find(item => item.channelId === channelId) || null); sceneIndex = 0; view = 'studio'; render(); }
+  else if (action === 'channel') { stopPlayback(); if (workflowEditor.hasChanges()) await workflowEditor.save(); await save(true); channelId = button.dataset.id; episode = clone(state.episodes.find(item => item.channelId === channelId) || null); sceneIndex = 0; view = 'studio'; render(); $('#main')?.focus(); }
   else if (action === 'episode') { stopPlayback(); await save(true); episode = clone(state.episodes.find(item => item.id === button.dataset.id)); sceneIndex = 0; render(); }
   else if (action === 'open-generation') { stopPlayback(); if (!episode) return; await workflowEditor.openGeneration({episode,episodeId:episode.id,sceneIndex,sceneId:currentScene()?.id}); view = 'workflow'; render(); toast('Higgsfield 생성 설정을 열었습니다. 실행 전 비용을 확인합니다.'); }
-  else if (action === 'scene') { stopPlayback(); sceneIndex = Number(button.dataset.index); render(); }
+  else if (action === 'scene') { const fromBin=Boolean(button.closest('.project-bin')); stopPlayback(); sceneIndex = Number(button.dataset.index); render(); $(fromBin?'.project-bin [aria-current="true"]':'.scene-card.selected')?.focus({preventScroll:true}); }
   else if (action === 'save') { await save(); render(); }
   else if (action === 'prev' || action === 'next') { stopPlayback(); sceneIndex = Math.max(0,Math.min(episode.scenes.length - 1, sceneIndex + (action === 'prev' ? -1 : 1))); render(); }
   else if (action === 'play') { if (playing) stopPlayback(); else { playing = true; playNext(); } render(); }

@@ -17,6 +17,24 @@ commands = [
 ]
 
 
+def exclude_checkout_local_state(graph):
+    """Keep canonical source evidence separate from local agent state and copies."""
+    prefixes = ('.jeo/', '.omc/', '.omx/', 'llm-wiki/.graphify/', 'llm-wiki/.state/')
+    def excluded(value):
+        filename = str(value or '').replace(chr(92), '/')
+        if filename.startswith('./'):
+            filename = filename[2:]
+        return any(filename == prefix.rstrip('/') or filename.startswith(prefix) for prefix in prefixes)
+    removed = {node['id'] for node in graph['nodes'] if excluded(node.get('source_file'))}
+    graph['nodes'] = [node for node in graph['nodes'] if node['id'] not in removed]
+    field = 'links' if 'links' in graph else 'edges'
+    edges = graph.get(field, [])
+    graph[field] = [edge for edge in edges if not excluded(edge.get('source_file'))
+                    and edge.get('source') not in removed and edge.get('target') not in removed]
+    return {'excludedPrefixes': list(prefixes), 'nodesRemoved': len(removed),
+            'edgesRemoved': len(edges) - len(graph[field])}
+
+
 def normalize_edges(graph):
     """Keep the first full record; metadata differences remain separate edges."""
     field = 'links' if 'links' in graph else 'edges'
@@ -41,6 +59,7 @@ for command in commands:
     if command[1] == 'tree':
         graph_path = OUT / 'graph.json'
         graph = json.loads(graph_path.read_text(encoding='utf-8'))
+        receipt['checkoutLocalStateAudit'] = exclude_checkout_local_state(graph)
         receipt['edgeRecordAudit'] = normalize_edges(graph)
         temporary = graph_path.with_suffix('.json.tmp')
         temporary.write_text(json.dumps(graph, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
@@ -66,7 +85,7 @@ receipt.update(nodes=len(graph['nodes']), edges=len(graph.get('links', graph.get
                             'Native tree HTML loads D3 from its CDN for interactive rendering'])
 (OUT / 'verification.json').write_text(json.dumps(receipt, indent=2) + '\n', encoding='utf-8')
 (OUT / 'scope.json').write_text(json.dumps({'mode': 'source paths observed in native AST output',
-    'excluded': ['data/', 'ops/', '.env', 'private media', 'credentials'], 'files': paths}, indent=2) + '\n', encoding='utf-8')
+    'excluded': ['data/', 'ops/', '.env', 'private media', 'credentials'] + receipt['checkoutLocalStateAudit']['excludedPrefixes'], 'files': paths}, indent=2) + '\n', encoding='utf-8')
 report = f'''# FrameForge structural graph
 
 Native Graphify code extraction: **{receipt['nodes']} nodes, {receipt['edges']} edges**.
@@ -78,6 +97,13 @@ normalized {receipt['edgeRecordAudit']['raw']} native records to
 export. Stable sorted-key JSON identifies equality of the entire record; edges
 with different metadata remain separate. graph.json, this report and graph.html
 all derive from the normalized artifact. No duplicate records remain.
+
+Before normalization/export, checkout-local agent state and generated vault metadata
+are removed with their incident or locally sourced edges. This refresh removed
+{receipt['checkoutLocalStateAudit']['nodesRemoved']} nodes and
+{receipt['checkoutLocalStateAudit']['edgesRemoved']} edges from these noncanonical
+paths. The exclusion audit is retained in verification.json; canonical source
+relationships with distinct metadata remain intact.
 
 This is a deterministic AST graph, not an LLM semantic graph. Extraction and
 interactive tree export were executed through the installed Graphify CLI.

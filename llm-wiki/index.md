@@ -10,3 +10,6 @@
 - [[wiki/reports/ops-workspace-2026-10-19]] — operational overview UI, exact-source CI Docker build/render/restart evidence, and the local Docker Desktop blocker that left the Windows service un-updated.
 
 Read current verification receipts before making operational claims. [[log]] records maintenance.
+
+- [[wiki/sources/premiere-workspace-2026-10-20]] — Aside public Adobe research, observed guidance and advisory-review boundaries.
+- [[wiki/reports/premiere-workspace-2026-10-20]] — sage FRAME workspace, 72 new/105 regression browser checks, 283 Linux tests, preserved Docker data and authenticated private Tailscale HTTPS verification; Git commit/publication remains separate.

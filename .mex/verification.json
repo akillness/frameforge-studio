@@ -405,5 +405,23 @@
     "usability": "artifacts/usability-browser-smoke.json",
     "normalization": "artifacts/higgsfield-normalization.json",
     "persistence": "artifacts/higgsfield-persistence.json"
+  },
+  "premiereWorkspace": {
+    "observedAt": "2026-10-20T17:22:35.938669+00:00",
+    "sourceAndRuntimeReceipt": "artifacts/premiere-workspace-deployment.json",
+    "browserReceipt": "artifacts/premiere-workspace-browser.json",
+    "researchReceipt": "artifacts/premiere-workspace-research.json",
+    "knowledgeReceipt": "artifacts/premiere-workspace-knowledge.json",
+    "syntaxModules": 65,
+    "linuxTests": {
+      "passed": 283,
+      "failed": 0,
+      "skipped": 0
+    },
+    "newBrowserChecks": 72,
+    "operationalRegressionChecks": 105,
+    "privateTailscaleBrowserVerified": true,
+    "publication": "Source/runtime receipts predate Git publication; follow-up user authorized a scoped commit and push",
+    "fullWikiValidation": "Not passing; see scoped diagnostics, not a green claim"
   }
 }

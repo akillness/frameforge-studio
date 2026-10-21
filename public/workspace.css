@@ -358,8 +358,10 @@ input, select, textarea { border-color: var(--line-strong); }
 @media (min-width: 700px) and (max-width: 1279px) {
   .shell { grid-template-columns: 72px minmax(0, 1fr); }
   .sidebar { padding: 20px 8px; }
-  .brand-copy, .sidebar .nav-label, .sidebar .channel-copy, .sidebar-label, .sidebar-bottom { display: none; }
+  .brand-copy, .sidebar .nav-label, .sidebar .channel-copy, .sidebar-label, .sidebar-bottom, .sidebar-workspace, .platform-name, .platform-count { display: none; }
   .sidebar .brand { justify-content: center; }
+  .platform-group > summary { justify-content: center; padding-inline: 0; }
+  .platform-group > summary::after { display: none; }
   .nav button { justify-content: center; padding: 8px; }
   .channel { justify-content: center; }
   .main { padding: 24px; }
@@ -371,15 +373,18 @@ input, select, textarea { border-color: var(--line-strong); }
 }
 @media (max-width: 699px) {
   .shell { display: block; }
-  .sidebar { padding: 16px; display: block; border-right: 0; border-bottom: 1px solid var(--line); }
+  .sidebar { position: static; height: auto; overflow: visible; padding: 16px; display: block; border-right: 0; border-bottom: 1px solid var(--line); }
   .brand-copy { display: block; }
-  .brand { margin-bottom: 16px; }
-  .brand small { display: inline; margin-left: 8px; }
-  .sidebar .nav { display: flex; overflow-x: auto; padding-bottom: 4px; gap: 4px; }
+  .brand { margin-bottom: 12px; }
+  .brand small { display: block; }
+  .sidebar .platform-browser { display: flex; align-items: flex-start; gap: 8px; overflow-x: auto; max-height: 180px; scrollbar-width: thin; }
+  .sidebar .platform-group { flex: 0 0 170px; margin: 0; }
+  .sidebar .platform-group > summary { justify-content: flex-start; gap: 8px; padding: 8px; }
+  .sidebar .platform-name, .sidebar .channel-copy { display: block; }
+  .sidebar .channel { justify-content: flex-start; }
+  .sidebar .platform-browser > .channel { flex: 0 0 130px; }
+  .sidebar-bottom { display: none; }
   .nav button { flex: 0 0 auto; min-height: 44px; white-space: nowrap; }
-  .sidebar .nav-label { display: inline; }
-  .sidebar .nav-icon { display: none; }
-  .sidebar section, .sidebar-bottom { display: none; }
   .topbar { height: auto; padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
   .topbar .row { flex-wrap: wrap; }
   .breadcrumb { white-space: normal; overflow-wrap: anywhere; }

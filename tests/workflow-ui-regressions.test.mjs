@@ -61,3 +61,48 @@ test('stacked workflow wheel events retain native page scrolling', async () => {
     fixture.restore();
   }
 });
+
+test('workflow history navigation opens the disclosure and transfers keyboard focus without editing', async () => {
+  const fixture = await editorFixture();
+  try {
+    const events = [];
+    const summary = { focus: options => events.push(['focus', options]) };
+    const section = { tagName: 'DETAILS', open: false, scrollIntoView: options => events.push(['scroll', options]), querySelector: selector => selector === 'summary' ? summary : null };
+    fixture.host.querySelector = selector => selector === '#wf-run-history' ? section : null;
+    const link = { getAttribute: name => name === 'href' ? '#wf-run-history' : null };
+    let prevented = false;
+    fixture.listeners.get('click')({ preventDefault() { prevented = true; }, target: { closest: selector => selector === '[data-wf-section]' ? link : null } });
+    assert.equal(prevented, true);
+    assert.equal(section.open, true);
+    assert.deepEqual(events, [['scroll', { block: 'start' }], ['focus', { preventScroll: true }]]);
+    assert.equal(fixture.editor.hasChanges(), false);
+  } finally {
+    fixture.restore();
+  }
+});
+
+test('workflow design navigation focuses the canvas rather than searching for a disclosure summary', async () => {
+  const fixture = await editorFixture();
+  try {
+    let focused = false;
+    const canvas = { tagName: 'DIV', scrollIntoView() {}, focus() { focused = true; } };
+    fixture.host.querySelector = selector => selector === '#workflow-canvas' ? canvas : null;
+    const link = { getAttribute: () => '#workflow-canvas' };
+    fixture.listeners.get('click')({ preventDefault() {}, target: { closest: selector => selector === '[data-wf-section]' ? link : null } });
+    assert.equal(focused, true);
+    assert.equal(fixture.editor.hasChanges(), false);
+  } finally {
+    fixture.restore();
+  }
+});
+
+test('workflow section navigation tolerates a target removed during rerender', async () => {
+  const fixture = await editorFixture();
+  try {
+    const link = { getAttribute: () => '#wf-review' };
+    assert.doesNotThrow(() => fixture.listeners.get('click')({ preventDefault() {}, target: { closest: selector => selector === '[data-wf-section]' ? link : null } }));
+    assert.equal(fixture.editor.hasChanges(), false);
+  } finally {
+    fixture.restore();
+  }
+});

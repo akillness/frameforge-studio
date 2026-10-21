@@ -42,6 +42,14 @@
 .history-activity-heading h2 { font-size: 15px; }
 .history-activity-heading + div { border-top: 1px solid var(--border); }
 
+.wf-section-nav { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 24px; margin-bottom: 18px; border-bottom: 1px solid var(--border); }
+.wf-section-nav a { padding: 10px 0; color: var(--text-secondary); font-size: 12px; border-bottom: 2px solid transparent; }
+.wf-section-nav a:first-child { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
+.wf-section-nav a span { margin-left: 6px; color: var(--muted); font-size: 10px; }
+.wf-design-note { margin-left: auto; color: var(--muted); font-size: 11px; }
+.wf-stage-index { color: var(--muted); font: 10px ui-monospace, monospace; }
+.wf-node.selected .wf-node-header { background: var(--accent-soft); }
+@container workspace-content (max-width: 720px) { .wf-section-nav { gap: 4px 16px; } .wf-design-note { width: 100%; margin: 0 0 10px; } }
 .wf-toolbar { display: flex; gap: 20px; padding: 15px 18px; margin-bottom: 18px; align-items: center; flex-wrap: wrap; }
 .wf-toolbar label { margin: 0; min-width: 200px; flex: 1; }
 .wf-save-state { min-width: 0; flex: 0 0 auto; display: grid; gap: 7px; text-align: right; }
@@ -57,7 +65,7 @@
   isolation: isolate;
   touch-action: none;
   cursor: grab;
-  background: var(--surface-subtle);
+  background: var(--surface-subtle) radial-gradient(var(--line) 1px, transparent 1px) 0 0 / 20px 20px;
 }
 .wf-canvas.dragging { cursor: grabbing; }
 .wf-world { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0; will-change: transform; }
@@ -71,12 +79,12 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-top: 3px solid var(--node-color);
-  border-radius: 8px;
-  box-shadow: 0 5px 16px rgba(16, 24, 40, .12);
+  border-radius: var(--radius-panel);
+  box-shadow: none;
   overflow: visible;
   cursor: default;
 }
-.wf-node.selected { outline: 2px solid var(--primary); outline-offset: 3px; box-shadow: 0 7px 20px rgba(29, 78, 216, .18); }
+.wf-node.selected { outline: 2px solid var(--primary); outline-offset: 3px; box-shadow: none; }
 .wf-node-header {
   display: flex;
   align-items: center;
