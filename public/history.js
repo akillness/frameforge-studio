@@ -1,4 +1,6 @@
 // Compare authored content by stable identity. Timestamps and version counters are metadata.
+import {defaultComposition} from './composition.js';
+
 export const FIELD_LABELS = {
   title:'제목',topic:'소재',format:'화면 비율',status:'제작 상태',notes:'메모',name:'이름',label:'노드 이름',
   text:'화면 텍스트',narration:'내레이션',duration:'길이 (초)',background:'배경',layout:'레이아웃',slots:'레이아웃 슬롯 구성',
@@ -8,6 +10,7 @@ export const FIELD_LABELS = {
   enableSubtitles:'자막 레이어 포함',enableHtmlOverlay:'HTML 오버레이 포함',autoPrompts:'슬롯 프롬프트 자동 생성',
   slotId:'대상 슬롯',targetMode:'생성 단위',instructions:'검토 지침',channelId:'대상 채널',platform:'플랫폼',
   visibility:'공개 범위',autoAttachExport:'서버 MP4 자동 첨부',titleTemplate:'제목 템플릿',x:'X 위치',y:'Y 위치',
+  'composition.media':'미디어 배치','composition.title':'제목 배치','composition.body':'본문 배치',
 };
 const same = (a,b) => JSON.stringify(a ?? '') === JSON.stringify(b ?? '');
 const fields = (before,after,keys,scope) => keys.filter(key=>!same(before?.[key],after?.[key])).map(key=>({scope,field:key,label:FIELD_LABELS[key] || key,before:before?.[key],after:after?.[key],kind:'changed'}));
@@ -24,6 +27,8 @@ export function episodeChanges(before,after) {
       const compareKeys = ['title','text','narration','duration','background','layout','kind','assetUrl','audioUrl','audioVolume','trimStart'];
       if (previous.slots !== undefined || scene.slots !== undefined) compareKeys.push('slots');
       changes.push(...fields({audioVolume:1,trimStart:0,...previous},{audioVolume:1,trimStart:0,...scene},compareKeys,scope));
+      const beforeComposition=previous.composition || defaultComposition(previous.layout),afterComposition=scene.composition || defaultComposition(scene.layout);
+      for (const layer of ['media','title','body']) if (!same(beforeComposition[layer],afterComposition[layer])) changes.push({scope,field:`composition.${layer}`,label:FIELD_LABELS[`composition.${layer}`],before:beforeComposition[layer],after:afterComposition[layer],kind:'changed'});
     }
   }
   const commonOld=oldIds.filter(id=>newIds.includes(id)),commonNew=newIds.filter(id=>oldIds.includes(id));

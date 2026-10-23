@@ -442,8 +442,8 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       }
       if (request.method === 'POST' && path === '/api/episodes') {
         const channel = store.get('channels', text(body.channelId, 'channelId', 80));
-        const title = text(body.title, 'title', 200);
-        return write('episodes', { channelId: channel.id, title, topic: text(body.topic, 'topic', 500), category: text(body.category, 'category', 100, channel.category), status: 'draft', format: '9:16', version: 1, scenes: [starterScene('오프닝', title)], notes: '' });
+        const title = text(body.title, 'title', 200, undefined, true);
+        return write('episodes', { channelId: channel.id, title, topic: text(body.topic, 'topic', 500, undefined, true), category: text(body.category, 'category', 100, channel.category), status: 'draft', format: '9:16', version: 1, scenes: [starterScene('오프닝', title)], notes: '' });
       }
       if (request.method === 'POST' && path === '/api/templates') return write('templates', { name: text(body.name, 'name', 160), category: text(body.category, 'category', 100), format: choice(body.format, formats, 'format'), scenes: validateAssets(scenes(body.scenes)), sample: false });
       if (request.method === 'POST' && path === '/api/references') {

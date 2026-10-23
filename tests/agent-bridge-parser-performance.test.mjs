@@ -15,7 +15,8 @@ test('agent output parsing stays responsive after unmatched opening braces', () 
   assert.ok(elapsedMs < 250, `parsing blocked the bridge for ${Math.round(elapsedMs)}ms`);
   assert.deepEqual(responseBody, {
     message: '검토된 결과',
-    scenes: [{ id: 'scene-1', title: '장면', text: '내용', duration: 5, background: '#20342d', kind: 'title', layout: 'center', trimStart: 0, audioVolume: 1, narration: '' }],
+    scenes: [{ id: 'scene-1', title: '장면', text: '내용', duration: 5, background: '#20342d', kind: 'title', layout: 'center', trimStart: 0, audioVolume: 1, narration: '',
+      composition: { media: { x: 0, y: 0, width: 1, height: 1 }, title: { x: .08, y: .32, width: .84, height: .16 }, body: { x: .08, y: .5, width: .84, height: .26 } } }],
   });
 });
 

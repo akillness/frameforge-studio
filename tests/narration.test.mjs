@@ -47,6 +47,47 @@ async function assertNoCandidates({ root, store }) {
   assert.deepEqual(await readdir(path.join(root, 'narration-work')), []);
 }
 
+test('P2 narration synthesis attaches audio without replacing authored paragraphs with spoken text', async t => {
+  const calls = [];
+  const f = await fixture(t, { synthesize: async args => {
+    calls.push(args); await writeFile(args.outputPath, wav()); return { duration: 1 };
+  } });
+  const authored = '\n  A\r\n\r B \n\n';
+  const episode = f.store.updateEpisode(f.episode.id, { scenes: f.episode.scenes.map((scene, index) =>
+    index === 0 ? { ...scene, narration: authored } : scene) }, 1);
+  const job = await f.queue.start(episode.id, { ...f.request, expectedVersion: episode.version });
+  await settle(f.queue);
+  const result = f.store.get('narrationJobs', job.id);
+  assert.equal(result.status, 'completed');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].text.trim(), authored.trim(), 'the provider may synthesize normalized spoken text');
+  const updated = f.store.get('episodes', episode.id);
+  assert.equal(updated.version, 3);
+  assert.equal(updated.scenes[0].audioUrl, f.store.list('uploads')[0].url);
+  assert.deepEqual({ saved: updated.scenes[0].narration,
+    history: f.store.history(episode.id)[0].snapshot.scenes[0].narration },
+  { saved: authored, history: authored }, 'generated audio must preserve authored narration in the episode and history');
+});
+
+test('P2 narration synthesis preserves exact scene text fallback while trimming only provider speech', async t => {
+  const calls = [];
+  const f = await fixture(t, { synthesize: async args => {
+    calls.push(args); await writeFile(args.outputPath, wav()); return { duration: 1 };
+  } });
+  const authored = '\n  Fallback\r\n\r copy \n\n';
+  const episode = f.store.updateEpisode(f.episode.id, { scenes: f.episode.scenes.map((scene, index) =>
+    index === 0 ? { ...scene, narration: '', text: authored } : scene) }, 1);
+  const job = await f.queue.start(episode.id, { ...f.request, expectedVersion: episode.version });
+  await settle(f.queue);
+  assert.equal(f.store.get('narrationJobs', job.id).status, 'completed');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].text, authored.trim());
+  const saved = f.store.get('episodes', episode.id).scenes[0];
+  assert.equal(saved.text, authored);
+  assert.equal(saved.narration, authored);
+  assert.equal(f.store.history(episode.id)[0].snapshot.scenes[0].narration, authored);
+});
+
 test('narration applies versioned audio atomically, extends duration and preserves unselected scenes', async t => {
   const calls = [];
   const f = await fixture(t, { synthesize: async args => { calls.push(args); await writeFile(args.outputPath, wav(3.25)); return { duration: 3.25 }; } });
@@ -56,7 +97,8 @@ test('narration applies versioned audio atomically, extends duration and preserv
   assert.equal(result.status, 'completed'); assert.equal(result.progress, 100); assert.equal(result.resultVersion, 2);
   assert.equal(updated.version, 2); assert.equal(updated.scenes[0].duration, 3.5);
   assert.equal(calls[0].text, 'Explicit narration'); assert.equal(calls[0].voice, 'Fixture Korean');
-  assert.deepEqual(updated.scenes[1], f.episode.scenes[1]);
+  assert.deepEqual(updated.scenes[1], { ...f.episode.scenes[1],
+    composition: { media: { x: 0, y: 0, width: 1, height: 1 }, title: { x: .08, y: .32, width: .84, height: .16 }, body: { x: .08, y: .5, width: .84, height: .26 } } });
   const [upload] = f.store.list('uploads');
   assert.equal(updated.scenes[0].audioUrl, upload.url); assert.equal(upload.generated, true);
   assert.equal((await readFile(path.join(f.root, 'uploads', upload.filename))).toString('ascii', 0, 4), 'RIFF');

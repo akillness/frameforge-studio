@@ -1,6 +1,7 @@
 import { createWorkflowEditor } from './workflow.js';
 import {episodeChanges,changesHtml,historyReason} from './history.js';
 import { createWorkspaceLayout, createOperationalWorkspace } from './workspace.js';
+import { defaultComposition, fitText, applyCompositionDrag, finalizeCompositionDrag, nudgeCompositionLayer, updateCompositionInput, syncCompositionInputs, previewFontSize } from './composition.js';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -16,6 +17,9 @@ let view = 'overview';
 let channelId = null;
 let episode = null;
 let sceneIndex = 0;
+let compositionMode = false;
+let selectedCompositionLayer = 'title';
+let compositionDrag = null;
 let selectedSlotId = null;
 let pendingSlotUploadId = null;
 let activePlatformSessionId = null;
@@ -36,7 +40,7 @@ const mutationForms = new Set(['modal-form','chat-form','trend-form','trend-sett
 function applyAdminControls() {
   for (const control of document.querySelectorAll('[data-action],[data-wf-action],input,select,textarea,form button[type="submit"]')) {
     const mutation = control.dataset.action ? !readActions.has(control.dataset.action) : control.dataset.wfAction ? !readWorkflowActions.has(control.dataset.wfAction) :
-      Boolean(control.matches('[data-scene],[data-slot-field],[data-slot-style],[data-episode],[data-wf-config],[data-wf-field],[data-wf-coordinate],[data-review-notes],#wf-name,#wf-add-type,#media-file,#audio-file') || mutationForms.has(control.closest('form')?.id));
+      Boolean(control.matches('[data-scene],[data-slot-field],[data-slot-style],[data-composition-field],[data-episode],[data-wf-config],[data-wf-field],[data-wf-coordinate],[data-review-notes],#wf-name,#wf-add-type,#media-file,#audio-file') || mutationForms.has(control.closest('form')?.id));
     if (!mutation) continue;
     control.dataset.adminOnly = 'true';
     control.setAttribute('aria-description','관리자 전용 · Admin only');
@@ -81,12 +85,35 @@ const workflowEditor = createWorkflowEditor({
 const workspaceLayout = createWorkspaceLayout({toast});
 const operations = createOperationalWorkspace({getData:()=>state, api, refresh, toast});
 
+function restoreToast(node = $('#toast')) {
+  if (node.matches(':popover-open')) node.hidePopover();
+  node.removeAttribute('popover');
+  document.body.insertBefore(node, $('#app'));
+}
+
+function presentToast(node = $('#toast')) {
+  const dialog = document.activeElement?.closest('dialog:modal') || [...document.querySelectorAll('dialog:modal')].at(-1);
+  if (node.matches(':popover-open')) node.hidePopover();
+  if (dialog && node.classList.contains('visible')) {
+    dialog.insertBefore(node, dialog.querySelector('.workspace-dialog-body') || dialog.firstChild);
+    dialog.scrollTop = 0;
+    // A save can replace the inspector before the old dialog's close event arrives.
+    dialog.addEventListener('close', () => { if (node.parentElement === dialog) presentToast(node); }, {once:true});
+  } else restoreToast(node);
+}
+
+// A dialog can open after feedback was shown; presenting it must not restart its timer.
+new MutationObserver(records => {
+  if ($('#toast')?.classList.contains('visible') && records.some(({target}) => target.matches('dialog[open]'))) presentToast();
+}).observe(document.body,{subtree:true,attributes:true,attributeFilter:['open']});
+
 function toast(message, error = false) {
   const node = $('#toast');
   node.textContent = message;
   node.className = `visible${error ? ' error' : ''}`;
+  presentToast(node);
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { node.className = ''; }, error ? 9000 : 4500);
+  toastTimer = setTimeout(() => { node.className = ''; restoreToast(node); }, error ? 9000 : 4500);
 }
 
 async function api(path, options = {}) {
@@ -225,7 +252,10 @@ function applyNarrationResult(job, latest) {
   // Do not replace focused fields or the whole editor during background polling.
   if (view === 'studio') {
     const inspector = $('.inspector .panel-body');
-    if (inspector && !inspector.contains(document.activeElement)) inspector.innerHTML = inspectorHtml(currentScene());
+    if (inspector && !inspector.contains(document.activeElement)) {
+      inspector.innerHTML = inspectorHtml(currentScene());
+      restoreInspectorValues(inspector);
+    }
     const status = $('#save-status');
     if (status) status.textContent = dirty ? '저장되지 않은 변경 · 음성 결과 반영됨' : `버전 ${episode.version} · 저장됨`;
     if ($('#scenes')) $('#scenes').innerHTML = sceneCards();
@@ -248,6 +278,7 @@ function commandsHtml() {
 }
 
 function showLogin() {
+  restoreToast();
   workspaceLayout.beforeRender(false);
   $('#app').innerHTML = `<main class="panel login"><div class="brand"><span class="brandmark">F</span> FRAMEFORGE</div><h1>나의 제작실에 입장</h1><p>개인 스튜디오의 접근 토큰을 입력해 주세요. 인증 후 채널과 제작 기록에 접근할 수 있습니다.</p><form id="login-form"><label>접근 토큰<input name="token" type="password" autocomplete="current-password" required></label><button class="primary">스튜디오 열기 →</button><p class="hint" id="login-error" role="alert"></p></form></main>`;
   $('#login-form').addEventListener('submit', async event => {
@@ -279,6 +310,7 @@ function sceneBinItems() {
 }
 
 function render() {
+  restoreToast();
   workspaceLayout.beforeRender();
   const channel = activeChannel();
   $('#app').innerHTML = `<div class="shell"><aside class="sidebar" aria-label="워크스페이스 탐색">
@@ -289,7 +321,7 @@ function render() {
   </aside><div class="workspace"><header class="topbar"><div class="breadcrumb">${esc(platformNames[channel?.platform?.toLowerCase()] || channel?.platform || '워크스페이스')} <span aria-hidden="true"> / </span><strong>${esc(channel?.name || '채널 없음')}</strong><span aria-hidden="true"> / </span>${esc(views.find(([key])=>key===view)?.[2] || '')}</div><div class="row"><span class="badge" data-testid="session-capability"><span class="connection-label">${canMutate()?'관리자 · 변경 권한':authenticated?'읽기 전용 · 변경은 관리자 전용':'API 확인 필요'}</span></span><button class="small quiet" data-action="view" data-view="settings">연결 관리 ↗</button></div></header>
     <nav class="nav task-nav" aria-label="제작 작업 공간">${views.map(([key,icon,label]) => `<button data-action="view" data-view="${key}" class="${view===key?'active':''}" ${view===key?'aria-current="page"':''} title="${label}"><span class="nav-icon" aria-hidden="true">${icon}</span><span class="nav-label">${label}</span></button>`).join('')}</nav>
     <main class="main" id="main" tabindex="-1">${view==='overview'?operations.html():workspaceLayout.html(renderView(), view)}</main></div></div>`;
-  if (view === 'studio') updatePreview();
+  if (view === 'studio') { restoreInspectorValues(); updatePreview(); }
   if (view === 'workflow') workflowEditor.mount();
   workspaceLayout.mount();
   if (view === 'overview') operations.mount();
@@ -386,9 +418,9 @@ function slotBuilderHtml(scene) {
         <label>레이어 순서 (Z-Index)<input type="number" data-slot-field="zIndex" min="0" max="100" step="1" value="${active.zIndex}"></label>
         <label>배지 태그<input data-slot-style="badge" maxlength="40" value="${esc(active.style?.badge || '')}" placeholder="예: NEWS, CC, AI"></label>
       </div>
-      <label>슬롯 표시 텍스트 / 자막<textarea data-slot-field="text" rows="2" maxlength="2000" placeholder="이 레이아웃 모듈에 표시할 텍스트 또는 자막">${esc(active.text || '')}</textarea></label>
-      ${active.role === 'html-overlay' || active.html ? `<label>Pencil HTML 오버레이 마크업<textarea data-slot-field="html" rows="2" maxlength="4000" placeholder="<div class='pencil-card'>...</div>">${esc(active.html || '')}</textarea></label>` : ''}
-      ${active.role === 'image-gen' || active.role === 'video-bg' ? `<label>연출·생성 프롬프트 (Higgsfield 연동)<textarea data-slot-field="prompt" rows="2" maxlength="4000" placeholder="시나리오 기반 이미지·영상 연출 프롬프트">${esc(active.prompt || '')}</textarea></label>` : ''}
+      <label>슬롯 표시 텍스트 / 자막<textarea data-slot-field="text" rows="2" maxlength="2000" placeholder="이 레이아웃 모듈에 표시할 텍스트 또는 자막"></textarea></label>
+      ${active.role === 'html-overlay' || active.html ? `<label>Pencil HTML 오버레이 마크업<textarea data-slot-field="html" rows="2" maxlength="4000" placeholder="<div class='pencil-card'>...</div>"></textarea></label>` : ''}
+      ${active.role === 'image-gen' || active.role === 'video-bg' ? `<label>연출·생성 프롬프트 (Higgsfield 연동)<textarea data-slot-field="prompt" rows="2" maxlength="4000" placeholder="시나리오 기반 이미지·영상 연출 프롬프트"></textarea></label>` : ''}
       <div class="two-cols">
         <label>배경색<input type="color" class="color-input" data-slot-style="backgroundColor" value="${safeColor(active.style?.backgroundColor || '#1e293b')}"></label>
         <label>글자색<input type="color" class="color-input" data-slot-style="textColor" value="${safeTextColor(active.style?.textColor || '#ffffff')}"></label>
@@ -484,7 +516,7 @@ function studioView() {
   html += `<div class="episode-strip" aria-label="에피소드">${episodes.map((item,index) => `<button class="episode-tab ${episode?.id === item.id ? 'selected' : ''}" data-action="episode" data-id="${esc(item.id)}"><span>EP ${String(index + 1).padStart(2,'0')} · ${esc(statusNames[item.status] || item.status)}</span><strong>${esc(item.title)}</strong></button>`).join('')}<button class="episode-tab" data-action="new-episode"><span>새 에피소드</span><strong>＋ 에피소드 만들기</strong></button></div>`;
   if (!episode) return html + `<div class="panel empty"><div class="empty-mark">✳</div><h2>에피소드를 만드세요</h2><p>채널을 선택한 뒤 장면 편집과 MP4 내보내기를 시작하세요.</p><button class="primary" data-action="${channelId ? 'new-episode' : 'new-channel'}">${channelId ? '에피소드 만들기' : '채널 만들기'}</button></div>`;
   const scene = currentScene();
-  html += `<div class="editor-grid"><div><div class="monitor-deck"><aside class="panel project-bin" aria-label="프로젝트 장면 목록"><div class="panel-header"><h3>프로젝트</h3><span class="badge">${episode.scenes.length}</span></div><div class="source-heading"><span class="eyebrow">PROJECT BIN</span><strong>${esc(episode.title)}</strong></div><div class="project-bin-list" id="project-bin-list">${sceneBinItems()}</div><p class="source-note">장면 선택은 미리보기와 편집 패널에 함께 반영됩니다.</p></aside><section class="panel program-monitor"><div class="panel-header"><div class="row"><span class="eyebrow">PROGRAM MONITOR</span><span class="badge">${esc(episode.format)}</span></div><span id="save-status" class="${dirty ? 'unsaved' : 'hint'}">${dirty ? '저장되지 않은 변경' : `버전 ${episode.version} · 저장됨`}</span></div><div class="preview-stage"><span class="stage-tag">LIVE CANVAS / ${esc(episode.category?.toUpperCase() || 'STUDIO')}</span><div id="preview" class="preview" data-format="${esc(episode.format)}" aria-label="현재 장면 미리보기"></div></div><div class="transport"><span class="time" id="play-time">${time(episode.scenes.slice(0,sceneIndex).reduce((sum,s) => sum + s.duration,0))} / ${time(duration())}</span><div class="row"><button class="icon-btn quiet" data-action="prev" aria-label="이전 장면">‹</button><button class="icon-btn primary" data-action="play" aria-label="${playing ? '미리보기 정지' : '미리보기 재생'}">${playing ? 'Ⅱ' : '▶'}</button><button class="icon-btn quiet" data-action="next" aria-label="다음 장면">›</button></div><span class="hint">${sceneIndex + 1} / ${episode.scenes.length} 장면</span></div></section></div>
+  html += `<div class="editor-grid"><div><div class="monitor-deck"><aside class="panel project-bin" aria-label="프로젝트 장면 목록"><div class="panel-header"><h3>프로젝트</h3><span class="badge">${episode.scenes.length}</span></div><div class="source-heading"><span class="eyebrow">PROJECT BIN</span><strong>${esc(episode.title)}</strong></div><div class="project-bin-list" id="project-bin-list">${sceneBinItems()}</div><p class="source-note">장면 선택은 미리보기와 편집 패널에 함께 반영됩니다.</p></aside><section class="panel program-monitor"><div class="panel-header"><div class="row"><span class="eyebrow">PROGRAM MONITOR</span><span class="badge">${esc(episode.format)}</span></div><span id="save-status" class="${dirty ? 'unsaved' : 'hint'}">${dirty ? '저장되지 않은 변경' : `버전 ${episode.version} · 저장됨`}</span></div>${scene.slots?.length ? '' : `<div class="composition-toolbar" role="toolbar" aria-label="화면 구성 편집 도구"><button class="small ${compositionMode?'primary':''}" data-action="composition-mode" aria-pressed="${compositionMode}">${compositionMode?'편집 완료':'화면 구성 편집'}</button><span class="hint">${compositionMode?'캔버스에서 레이어를 이동·크기 조절하세요':'프레임을 직접 배치하려면 편집을 시작하세요'}</span></div>`}<div class="preview-stage"><span class="stage-tag">LIVE CANVAS / ${esc(episode.category?.toUpperCase() || 'STUDIO')}</span><div id="preview" class="preview" data-format="${esc(episode.format)}" aria-label="현재 장면 미리보기"></div></div><div class="transport"><span class="time" id="play-time">${time(episode.scenes.slice(0,sceneIndex).reduce((sum,s) => sum + s.duration,0))} / ${time(duration())}</span><div class="row"><button class="icon-btn quiet" data-action="prev" aria-label="이전 장면">‹</button><button class="icon-btn primary" data-action="play" aria-label="${playing ? '미리보기 정지' : '미리보기 재생'}">${playing ? 'Ⅱ' : '▶'}</button><button class="icon-btn quiet" data-action="next" aria-label="다음 장면">›</button></div><span class="hint">${sceneIndex + 1} / ${episode.scenes.length} 장면</span></div></section></div>
     <section class="panel timeline"><div class="panel-header"><div><span class="eyebrow">SEQUENCE</span><h3>장면 타임라인</h3></div><span class="hint" id="total-duration">총 ${duration()}초</span></div><div class="timeline-body"><div class="ruler"><span>00:00</span><span>V1 · 장면 순서 / A · 첨부 오디오</span><span>${time(duration())}</span></div><div class="scenes" id="scenes">${sceneCards()}</div><div class="row between timeline-actions"><button class="small quiet" data-action="add-scene">＋ 장면 추가</button><div class="row"><button class="small quiet" data-action="save-template">템플릿으로 저장</button><button class="small quiet" data-action="view" data-view="templates">템플릿 불러오기 ↗</button></div></div></div></section>
     <section class="panel section-spacer"><div class="panel-header"><h3>내보내기 작업</h3><span class="hint">FFmpeg · MP4</span></div><div id="jobs">${jobsHtml()}</div></section>
     ${platformBrowserHtml()}</div>
@@ -492,8 +524,48 @@ function studioView() {
   return html;
 }
 
+// Assign values after parsing: HTML textarea contents discard an initial LF.
+function restoreInspectorValues(root = document) {
+  for (const field of root.querySelectorAll('textarea[data-scene], textarea[data-episode], textarea[data-slot-field]')) {
+    const source = field.dataset.scene ? currentScene() : field.dataset.episode ? episode : currentSlot();
+    const key = field.dataset.scene || field.dataset.episode || field.dataset.slotField;
+    field.value = source?.[key] ?? '';
+  }
+}
+
 function inspectorHtml(scene) {
-  return `<details><summary class="hint" style="cursor:pointer;margin-bottom:13px">에피소드 설정 · ${esc(episode.title)}</summary><label>에피소드 제목<input data-episode="title" value="${esc(episode.title)}" maxlength="200"></label><label>소재 / 주제<textarea data-episode="topic">${esc(episode.topic)}</textarea></label><div class="two-cols"><label>화면 비율<select data-episode="format">${['9:16','16:9','1:1'].map(format => `<option ${episode.format === format ? 'selected' : ''}>${format}</option>`).join('')}</select></label><label>제작 상태<select data-episode="status">${['draft','review','ready'].map(status => `<option value="${status}" ${episode.status === status ? 'selected' : ''}>${statusNames[status]}</option>`).join('')}</select></label></div><label>제작 메모<textarea data-episode="notes">${esc(episode.notes)}</textarea></label></details><label>장면 이름<input data-scene="title" value="${esc(scene.title)}" maxlength="120"></label><label>화면 텍스트<textarea data-scene="text" rows="3" placeholder="이 장면에 보여줄 문장을 입력하세요">${esc(scene.text)}</textarea></label><div class="two-cols"><label>길이 (초)<input type="number" data-scene="duration" min="0.5" max="120" step="0.5" value="${scene.duration}"></label><label>배경 색상<input type="color" class="color-input" data-scene="background" value="${safeColor(scene.background)}"></label></div><label>텍스트·장면 레이아웃<select data-scene="layout"><option value="center" ${scene.layout === 'center' ? 'selected' : ''}>중앙 정렬</option><option value="lower-third" ${scene.layout === 'lower-third' ? 'selected' : ''}>하단 자막</option><option value="split" ${scene.layout === 'split' ? 'selected' : ''}>상하 분할</option><option value="top-image-mid-video" ${scene.layout === 'top-image-mid-video' ? 'selected' : ''}>상단 이미지·텍스트 + 중단 배경영상·자막</option><option value="premiere-3tier" ${scene.layout === 'premiere-3tier' ? 'selected' : ''}>프리미어 3단 (뉴스 배너 + 이미지 + 영상·자막)</option><option value="custom" ${scene.layout === 'custom' ? 'selected' : ''}>사용자 지정 다중 슬롯</option></select></label>${slotBuilderHtml(scene)}<label>내레이션 원고<textarea data-scene="narration" rows="2" placeholder="장면별 음성 제작용 원고">${esc(scene.narration)}</textarea></label><p class="hint">원고를 입력한 다음 아래 내레이션 패널에서 실제 음성을 생성하세요. 생성하거나 첨부한 오디오가 MP4에 반영됩니다.</p><div class="row"><button class="small" data-action="upload">↑ 이미지 / 영상</button>${scene.assetUrl ? '<button class="small quiet" data-action="remove-media">소스 제거</button>' : '<span class="hint">로컬 파일</span>'}</div>${audioInspectorHtml(scene)}<div class="row between" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><div class="row"><button class="icon-btn quiet" data-action="move-left" aria-label="장면 앞으로 이동">←</button><button class="icon-btn quiet" data-action="move-right" aria-label="장면 뒤로 이동">→</button><button class="small quiet" data-action="duplicate-scene">복제</button></div><button class="small quiet danger" data-action="delete-scene">삭제</button></div>`;
+  return `<details><summary class="hint" style="cursor:pointer;margin-bottom:13px">에피소드 설정 · ${esc(episode.title)}</summary><label>에피소드 제목<textarea data-episode="title" rows="2" maxlength="200"></textarea></label><label>소재 / 주제<textarea data-episode="topic"></textarea></label><div class="two-cols"><label>화면 비율<select data-episode="format">${['9:16','16:9','1:1'].map(format => `<option ${episode.format === format ? 'selected' : ''}>${format}</option>`).join('')}</select></label><label>제작 상태<select data-episode="status">${['draft','review','ready'].map(status => `<option value="${status}" ${episode.status === status ? 'selected' : ''}>${statusNames[status]}</option>`).join('')}</select></label></div><label>제작 메모<textarea data-episode="notes"></textarea></label></details><label>장면 이름<textarea data-scene="title" rows="2" maxlength="120"></textarea></label><label>화면 텍스트<textarea data-scene="text" rows="3" placeholder="이 장면에 보여줄 문장을 입력하세요"></textarea></label><div class="two-cols"><label>길이 (초)<input type="number" data-scene="duration" min="0.5" max="120" step="0.5" value="${scene.duration}"></label><label>배경 색상<input type="color" class="color-input" data-scene="background" value="${safeColor(scene.background)}"></label></div><label>텍스트·장면 레이아웃<select data-scene="layout"><option value="center" ${scene.layout === 'center' ? 'selected' : ''}>중앙 정렬</option><option value="lower-third" ${scene.layout === 'lower-third' ? 'selected' : ''}>하단 자막</option><option value="split" ${scene.layout === 'split' ? 'selected' : ''}>상하 분할</option><option value="top-image-mid-video" ${scene.layout === 'top-image-mid-video' ? 'selected' : ''}>상단 이미지·텍스트 + 중단 배경영상·자막</option><option value="premiere-3tier" ${scene.layout === 'premiere-3tier' ? 'selected' : ''}>프리미어 3단 (뉴스 배너 + 이미지 + 영상·자막)</option><option value="custom" ${scene.layout === 'custom' ? 'selected' : ''}>사용자 지정 다중 슬롯</option></select></label>${slotBuilderHtml(scene)}${compositionInspectorHtml(scene)}<label>내레이션 원고<textarea data-scene="narration" rows="2" placeholder="장면별 음성 제작용 원고"></textarea></label><p class="hint">원고를 입력한 다음 아래 내레이션 패널에서 실제 음성을 생성하세요. 생성하거나 첨부한 오디오가 MP4에 반영됩니다.</p><div class="row"><button class="small" data-action="upload">↑ 이미지 / 영상</button>${scene.assetUrl ? '<button class="small quiet" data-action="remove-media">소스 제거</button>' : '<span class="hint">로컬 파일</span>'}</div>${audioInspectorHtml(scene)}<div class="row between" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><div class="row"><button class="icon-btn quiet" data-action="move-left" aria-label="장면 앞으로 이동">←</button><button class="icon-btn quiet" data-action="move-right" aria-label="장면 뒤로 이동">→</button><button class="small quiet" data-action="duplicate-scene">복제</button></div><button class="small quiet danger" data-action="delete-scene">삭제</button></div>`;
+}
+
+function compositionInspectorHtml(scene) {
+  if (scene.slots?.length) return '<p class="hint">다중 슬롯의 배치는 위 슬롯 속성에서 편집하세요.</p>';
+  const geometry = scene.composition || defaultComposition(scene.layout);
+  if (selectedCompositionLayer === 'media' && !scene.assetUrl) selectedCompositionLayer = 'title';
+  const layer = ['media','title','body'].includes(selectedCompositionLayer) ? selectedCompositionLayer : 'title';
+  const box = geometry[layer];
+  const names = {media:'미디어',title:'제목',body:'본문'};
+  return `<section class="composition-inspector" aria-label="화면 구성 속성"><div class="row between"><strong>레이어</strong><button class="small quiet" data-action="composition-reset">기본 배치</button></div><div class="composition-layer-list" role="group" aria-label="편집할 화면 레이어">${['media','title','body'].map(key => `<button class="small ${layer===key?'selected':''}" data-action="composition-layer" data-layer="${key}" aria-pressed="${layer===key}" ${key==='media'&&!scene.assetUrl?'disabled':''}>${names[key]}</button>`).join('')}</div><p class="hint">${compositionMode?'캔버스에서 드래그하거나 좌표를 입력해 배치하세요.':'편집 모드를 켜면 캔버스에서 직접 이동·크기 조절할 수 있습니다.'}</p><div class="composition-geometry">${[['x','X'],['y','Y'],['width','너비'],['height','높이']].map(([key,label]) => `<label>${label} (%)<input type="number" data-composition-field="${key}" min="${key==='width'||key==='height'?2:0}" max="100" step="0.1" value="${Number((box[key]*100).toFixed(1))}" aria-label="${names[layer]} ${label} 비율"></label>`).join('')}</div></section>`;
+}
+
+// Selection changes only controls and outlines, so active media and its clock survive.
+function selectCompositionLayer(key) {
+  if (!['media','title','body'].includes(key) || (key === 'media' && !currentScene()?.assetUrl)) return;
+  selectedCompositionLayer = key;
+  for (const element of document.querySelectorAll('#preview [data-composition-layer]')) {
+    const selected = element.dataset.compositionLayer === key;
+    element.classList.toggle('selected', compositionMode && selected);
+    element.setAttribute('aria-pressed', String(selected));
+    for (const handle of element.querySelectorAll('[data-composition-handle]')) handle.remove();
+    if (compositionMode && selected) for (const corner of ['nw','ne','sw','se']) {
+      const handle=document.createElement('span');
+      handle.className=`composition-handle ${corner}`;
+      handle.dataset.compositionHandle=corner;
+      handle.setAttribute('aria-hidden','true');
+      element.append(handle);
+    }
+  }
+  const inspector=$('.composition-inspector');
+  if (inspector && currentScene()) inspector.outerHTML=compositionInspectorHtml(currentScene());
 }
 
 function updatePreview() {
@@ -533,7 +605,24 @@ function updatePreview() {
     }).join('');
     preview.innerHTML = `${media}<div class="preview-slots-layer">${slotsHtml}</div><div class="preview-footer"><span>FRAMEFORGE · MULTI-SLOT</span><span>${String(sceneIndex + 1).padStart(2,'0')}</span></div>`;
   } else {
-    preview.innerHTML = `${media}<div class="preview-copy ${['center','lower-third','split'].includes(scene.layout) ? scene.layout : 'center'}"><span class="scene-overline">${esc(scene.title || 'YOUR NEXT STORY')}</span><div class="scene-text">${esc(scene.text || '여기에 이야기를 담아보세요')}</div></div><div class="preview-footer"><span>FRAMEFORGE</span><span>${String(sceneIndex + 1).padStart(2,'0')}</span></div>`;
+    const geometry = scene.composition || defaultComposition(scene.layout);
+    const [canvasWidth,canvasHeight] = episode.format === '16:9' ? [1920,1080] : episode.format === '1:1' ? [1080,1080] : [1080,1920];
+    const boxStyle = box => `left:${box.x*100}%;top:${box.y*100}%;width:${box.width*100}%;height:${box.height*100}%;`;
+    const handles = key => compositionMode && selectedCompositionLayer === key ? `<span class="composition-handle nw" data-composition-handle="nw" aria-hidden="true"></span><span class="composition-handle ne" data-composition-handle="ne" aria-hidden="true"></span><span class="composition-handle sw" data-composition-handle="sw" aria-hidden="true"></span><span class="composition-handle se" data-composition-handle="se" aria-hidden="true"></span>` : '';
+    const layer = (key, content, extra = '') => {
+      const box = geometry[key], selected = selectedCompositionLayer === key;
+      return `<div class="composition-layer composition-${key} ${compositionMode?'is-editing':''} ${selected&&compositionMode?'selected':''}" data-composition-layer="${key}" ${compositionMode?`data-action="composition-select" data-layer="${key}"`: ''} style="${boxStyle(box)}${extra}" ${compositionMode?'role="button"':''} aria-label="${key==='media'?'미디어':key==='title'?'제목 레이어':'본문 레이어'}" aria-pressed="${selected}" tabindex="${compositionMode?'0':'-1'}">${content}${handles(key)}</div>`;
+    };
+    let layers = '';
+    if (scene.assetUrl) {
+      const media = scene.kind === 'video' ? `<video src="${safeUrl(scene.assetUrl)}" muted playsinline ${playing ? 'autoplay' : ''} loop></video>` : `<img src="${safeUrl(scene.assetUrl)}" alt="장면에 업로드한 이미지" draggable="false">`;
+      layers += layer('media',media);
+    }
+    const title = fitText(scene.title || 'YOUR NEXT STORY',geometry.title,canvasWidth,canvasHeight,'title');
+    const body = fitText(scene.text || '여기에 이야기를 담아보세요',geometry.body,canvasWidth,canvasHeight,'body');
+    layers += layer('title',esc(title.text),`font-size:${previewFontSize(title,canvasWidth)};`);
+    layers += layer('body',esc(body.text),`font-size:${previewFontSize(body,canvasWidth)};`);
+    preview.innerHTML = `${layers}<div class="preview-footer"><span>FRAMEFORGE</span><span>${String(sceneIndex + 1).padStart(2,'0')}</span></div>`;
   }
   const video = $('video',preview);
   if (video && Number(scene.trimStart) > 0) video.addEventListener('loadedmetadata', () => { video.currentTime = Math.min(Number(scene.trimStart), Math.max(0,video.duration - 0.01)); }, {once:true});
@@ -624,15 +713,18 @@ function editGraphNode(targetId) {
   const node=state.graph.nodes.find(item=>item.id===targetId);
   if (!node?.editable || !node.edit) throw new Error(node?.readOnlyReason || '읽기 전용 노드입니다.');
   const fields=node.edit.fields || [];
-  const body=`<p class="hint">관리자 전용 · 원본 ${esc(node.type)} 기록을 수정합니다. 충돌이 발생하면 입력은 유지됩니다.</p>${fields.includes('label')?`<label>이름 / 제목<input name="label" required maxlength="${node.type==='channel'?160:200}" value="${esc(node.label)}"></label>`:''}${fields.includes('topic')?`<label>소재 / 주제<textarea name="topic" required>${esc(node.edit.topic)}</textarea></label>`:''}${fields.includes('channelId')?`<label>소속 채널<select name="channelId" required>${state.channels.map(channel=>`<option value="${esc(channel.id)}" ${channel.id===node.edit.channelId?'selected':''}>${esc(channel.name)}</option>`).join('')}</select></label>`:''}`;
+  const body=`<p class="hint">관리자 전용 · 원본 ${esc(node.type)} 기록을 수정합니다. 충돌이 발생하면 입력은 유지됩니다.</p>${fields.includes('label')?`<label>이름 / 제목${node.type==='episode'?`<textarea name="label" required maxlength="200">\n${esc(node.label)}</textarea>`:`<input name="label" required maxlength="160" value="${esc(node.label)}">`}</label>`:''}${fields.includes('topic')?`<label>소재 / 주제<textarea name="topic" required maxlength="500">\n${esc(node.edit.topic)}</textarea></label>`:''}${fields.includes('channelId')?`<label>소속 채널<select name="channelId" required>${state.channels.map(channel=>`<option value="${esc(channel.id)}" ${channel.id===node.edit.channelId?'selected':''}>${esc(channel.name)}</option>`).join('')}</select></label>`:''}`;
   openModal('지식 원본 편집',body,async data=>{
     guardGraphEdit();
-    const payload=Object.fromEntries(fields.filter(field=>field in data).map(field=>[field,data[field]]));
+    const payload=Object.fromEntries(fields.filter(field=>field in data && (node.type!=='episode' || data[field]!==initialData[field])).map(field=>[field,data[field]]));
+    if (!Object.keys(payload).length) return;
     if (node.type==='episode') payload.expectedVersion=node.edit.expectedVersion;
     else payload.expectedRecord=node.edit.expectedRecord;
     await api(`/api/knowledge/nodes/${encodeURIComponent(node.id)}`,{method:'PUT',body:JSON.stringify(payload)});
     await refreshAfterGraphEdit();
   },'원본에 저장');
+  // Compare browser-normalized values so untouched multiline text is never resubmitted.
+  const initialData=Object.fromEntries(new FormData($('#modal-form')));
 }
 function editGraphEdge(index) {
   guardGraphEdit();
@@ -651,17 +743,18 @@ function settingsView() {
   return heading('연결 상태', '외부 도구의 설정과 인증 상태를 확인합니다.') + `<div class="source-note">Studio는 로컬 규칙 기반 어시스턴트입니다. Codex · JEO · JEOPI · Hermes는 호스트 브리지가 연결되어야 실행됩니다. 채널 등록은 플랫폼 계정 인증이나 자동 업로드 연결을 의미하지 않습니다.</div><div class="status-grid">${entries.map(([name,raw]) => { const value = typeof raw === 'object' && raw !== null ? raw : {status:String(raw)}; const verified = value.available === true && value.authenticated !== false && ![value.status, value.authentication, value.authenticated].includes('configured'); const configured = value.configured === true || value.authentication === 'configured' || value.authenticated === 'configured' || value.status === 'configured'; const label = verified ? '사용 가능' : configured ? '설정됨 · 확인 필요' : esc(value.status || '연결 확인 필요'); const tone = verified ? 'lime' : configured ? '' : 'coral'; const detail = value.detail || value.message || value.reason || value.description || (verified ? '서버에서 사용 가능 상태를 확인했습니다.' : configured ? '설정은 있지만 실제 사용 가능 여부를 확인하지 못했습니다.' : '서버 환경 설정 또는 인증이 필요합니다.'); return `<article class="panel integration"><div class="row between"><h3>${esc(name)}</h3><span class="badge ${tone}">${label}</span></div><p>${esc(detail)}</p>${value.url ? `<a href="${safeUrl(value.url)}" target="_blank" rel="noopener noreferrer">연결 열기 ↗</a>` : ''}</article>`; }).join('')}</div><section class="panel section-spacer"><div class="panel-header"><h2>등록된 채널</h2><button class="small" data-action="new-channel">＋ 채널 추가</button></div>${state.channels.map(channel => `<div class="data-row"><div><h3>${esc(channel.name)}</h3><p>${esc(channel.platform)} · ${esc(channel.accountEmail || '계정 미연결')}<br>${channel.externalId ? `채널 ID: ${esc(channel.externalId)}` : '플랫폼 채널 ID 미등록'}</p></div><span class="badge">${esc(categoryNames[channel.category] || channel.category)}</span></div>`).join('')}</section><div class="row section-spacer"><button data-action="refresh-integrations">연결 상태 확인</button><a href="/api/health" target="_blank" rel="noopener noreferrer">서비스 상태 보기 ↗</a></div>`;
 }
 
-function markDirty() {
+function recordEdit() {
   editRevision += 1;
   dirty = true;
-  const status = $('#save-status');
-  if (status) { status.textContent = '저장되지 않은 변경'; status.className = 'unsaved'; }
+  updateSaveStatus();
+}
+function markDirty() {
+  recordEdit();
   updatePreview();
   if ($('#scenes')) $('#scenes').innerHTML = sceneCards();
   if ($('#project-bin-list')) $('#project-bin-list').innerHTML = sceneBinItems();
   if ($('.source-heading strong')) $('.source-heading strong').textContent = episode.title;
   if ($('#total-duration')) $('#total-duration').textContent = `총 ${duration()}초`;
-  updateSaveStatus();
 }
 async function save(quiet = false) {
   if (!episode || !dirty) return;
@@ -745,6 +838,16 @@ async function loadHistory() {
 
 async function handleAction(button) {
   const action = button.dataset.action;
+  if (action === 'composition-mode') { if (currentScene()?.slots?.length) return; compositionMode = !compositionMode; render(); if (compositionMode) $(`#preview [data-composition-layer="${selectedCompositionLayer}"]`)?.focus({preventScroll:true}); return; }
+  if (action === 'composition-layer' || action === 'composition-select') {
+    if (action === 'composition-select' && !compositionMode) return;
+    const layer=button.dataset.layer;
+    selectCompositionLayer(layer);
+    if (action==='composition-layer') $(`.composition-inspector [data-action="composition-layer"][data-layer="${layer}"]`)?.focus({preventScroll:true});
+    else if (action==='composition-select') $(`#preview [data-composition-layer="${selectedCompositionLayer}"]`)?.focus({preventScroll:true});
+    return;
+  }
+  if (action === 'composition-reset') { const scene = currentScene(); if (scene) { scene.composition = defaultComposition(scene.layout); markDirty(); render(); } return; }
   if (action === 'edit-graph-node') { editGraphNode(button.dataset.id); return; }
   if (action === 'edit-graph-edge') { editGraphEdge(Number(button.dataset.index)); return; }
   if (action === 'ops-open' || action === 'ops-history') {
@@ -998,11 +1101,27 @@ document.addEventListener('input', event => {
     markDirty();
     return;
   }
-  if (target.dataset.scene && currentScene()) {
+  if (target.dataset.compositionField && currentScene()) {
+    const key = target.dataset.compositionField, scene = currentScene(), layer = selectedCompositionLayer;
+    const fields=[...document.querySelectorAll('[data-composition-field]')];
+    if (!updateCompositionInput(scene,layer,key,target.value,fields,target)) return;
+    markDirty();
+  } else if (target.dataset.scene && currentScene()) {
     if (['duration','trimStart','audioVolume'].includes(target.dataset.scene)) { if (!target.checkValidity() || target.value === '') return; currentScene()[target.dataset.scene] = Number(target.value); }
     else currentScene()[target.dataset.scene] = target.value;
-    markDirty();
+    if (target.dataset.scene === 'layout') { currentScene().composition = defaultComposition(currentScene().layout); selectedCompositionLayer='title'; markDirty(); render(); $('[data-scene="layout"]')?.focus({preventScroll:true}); }
+    else markDirty();
   } else if (target.dataset.episode && episode) { episode[target.dataset.episode] = target.value; markDirty(); }
+});
+
+document.addEventListener('change',event=>{
+  const target=event.target;
+  if (!target.dataset.compositionField || !currentScene()) return;
+  const scene=currentScene(),layer=selectedCompositionLayer,fields=[...document.querySelectorAll('[data-composition-field]')];
+  if (!updateCompositionInput(scene,layer,target.dataset.compositionField,target.value,fields)) { syncCompositionInputs(scene,layer,fields); return; }
+  syncCompositionInputs(scene,layer,fields);
+  markDirty();
+  updatePreview();
 });
 
 document.addEventListener('submit', async event => {
@@ -1166,6 +1285,66 @@ $('#audio-file').addEventListener('change', async event => {
   finally { event.target.value = ''; }
 });
 
+document.addEventListener('pointerdown', event => {
+  if (!compositionMode || busy || !canMutate() || event.button !== 0) return;
+  const target = event.target.closest?.('[data-composition-layer]');
+  if (!target) return;
+  const key = target.dataset.compositionLayer, scene = currentScene(), frame = $('#preview')?.getBoundingClientRect();
+  if (!scene || !frame?.width || !frame?.height || !['media','title','body'].includes(key)) return;
+  const previousSelection=selectedCompositionLayer;
+  selectedCompositionLayer = key;
+  scene.composition ||= defaultComposition(scene.layout);
+  compositionDrag = {pointerId:event.pointerId,sceneId:scene.id,key,handle:event.target.closest('[data-composition-handle]')?.dataset.compositionHandle || '',startX:event.clientX,startY:event.clientY,frameWidth:frame.width,frameHeight:frame.height,start:{...scene.composition[key]},moved:false};
+  if (previousSelection !== key) selectCompositionLayer(key);
+  event.preventDefault();
+});
+
+document.addEventListener('pointermove', event => {
+  const drag = compositionDrag;
+  if (!drag || drag.pointerId !== event.pointerId || !compositionMode) return;
+  const dx = (event.clientX-drag.startX)/drag.frameWidth, dy = (event.clientY-drag.startY)/drag.frameHeight;
+  const scene = currentScene();
+  const box=applyCompositionDrag(scene,drag,dx,dy,recordEdit);
+  if (!box) { finalizeCompositionDrag(drag,markDirty); compositionDrag=null; return; }
+  const element = $(`#preview [data-composition-layer="${drag.key}"]`);
+  if (element) { element.style.left=`${box.x*100}%`; element.style.top=`${box.y*100}%`; element.style.width=`${box.width*100}%`; element.style.height=`${box.height*100}%`; }
+  for (const field of document.querySelectorAll('[data-composition-field]')) {
+    const fieldKey=field.dataset.compositionField;
+    if (['x','y','width','height'].includes(fieldKey)) field.value=String(Number((box[fieldKey]*100).toFixed(1)));
+  }
+  event.preventDefault();
+});
+
+function finishCompositionDrag(event) {
+  if (!compositionDrag || (event?.pointerId !== undefined && compositionDrag.pointerId !== event.pointerId)) return;
+  finalizeCompositionDrag(compositionDrag,markDirty);
+  compositionDrag=null;
+}
+document.addEventListener('pointerup',finishCompositionDrag);
+document.addEventListener('pointercancel',finishCompositionDrag);
+window.addEventListener('blur',()=>finishCompositionDrag());
+
+document.addEventListener('keydown', event => {
+  if (!compositionMode || event.altKey || event.ctrlKey || event.metaKey) return;
+  const element=event.target.closest?.('[data-composition-layer]'), key=element?.dataset.compositionLayer;
+  if (!element || !['media','title','body'].includes(key)) return;
+  if (event.key === 'Enter' || event.key === ' ') {
+    selectCompositionLayer(key);
+    $(`#preview [data-composition-layer="${key}"]`)?.focus({preventScroll:true});
+    event.preventDefault();
+    return;
+  }
+  if (!canMutate() || !['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return;
+  const scene=currentScene();
+  if (!scene) return;
+  const step=event.shiftKey?0.05:0.01, box=scene.composition?.[key] || defaultComposition(scene.layout)[key];
+  const patch=event.key==='ArrowLeft'?{x:box.x-step}:event.key==='ArrowRight'?{x:box.x+step}:event.key==='ArrowUp'?{y:box.y-step}:{y:box.y+step};
+  selectedCompositionLayer=key;
+  nudgeCompositionLayer(scene,key,patch,()=>{markDirty();render();});
+  $(`#preview [data-composition-layer="${key}"]`)?.focus({preventScroll:true});
+  event.preventDefault();
+});
+
 window.addEventListener('beforeunload', event => { if (dirty || workflowEditor.hasChanges()) { event.preventDefault(); event.returnValue = ''; } });
 document.addEventListener('keydown', async event => { if ((event.ctrlKey || event.metaKey) && event.key === 's') { event.preventDefault(); try { if (view === 'workflow') await workflowEditor.save(); else await save(); render(); } catch (error) { toast(error.message,true); } } });
 
@@ -1188,6 +1367,6 @@ setInterval(async () => {
 },2500);
 
 try { await refresh(); render(); }
-catch (error) { if (error.status !== 401) { $('#app').innerHTML = `<main class="panel login"><h1>스튜디오에 연결할 수 없습니다</h1><p>${esc(error.message)}</p><button data-action="reload">다시 연결</button></main>`; } }
+catch (error) { if (error.status !== 401) { restoreToast(); $('#app').innerHTML = `<main class="panel login"><h1>스튜디오에 연결할 수 없습니다</h1><p>${esc(error.message)}</p><button data-action="reload">다시 연결</button></main>`; } }
 
 setInterval(() => { if (authenticated && view==='overview' && !busy) operations.reload(true); },30000);

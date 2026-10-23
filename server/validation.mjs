@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { defaultComposition } from '../public/composition.js';
 
 export class HttpError extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -9,16 +10,16 @@ export function object(value) {
   return value;
 }
 
-export function text(value, name, max = 500, fallback) {
+export function text(value, name, max = 500, fallback, preserveWhitespace = false) {
   if (value === undefined && fallback !== undefined) return fallback;
   if (typeof value !== 'string' || !value.trim() || value.length > max || /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(value)) {
     throw new HttpError(400, `${name} must be nonempty text (maximum ${max} characters)`);
   }
-  return value.trim();
+  return preserveWhitespace ? value : value.trim();
 }
 
-export function optionalText(value, name, max = 5000) {
-  return value === undefined || value === '' ? '' : text(value, name, max);
+export function optionalText(value, name, max = 5000, preserveWhitespace = false) {
+  return value === undefined || value === '' ? '' : text(value, name, max, undefined, preserveWhitespace);
 }
 
 export function choice(value, values, name, fallback) {
@@ -39,6 +40,20 @@ export const formats = ['9:16', '16:9', '1:1'];
 export const layouts = ['center', 'lower-third', 'split', 'top-image-mid-video', 'premiere-3tier', 'custom'];
 export const slotRoles = ['image-gen', 'video-bg', 'text-overlay', 'subtitle-layer', 'html-overlay'];
 export const slotDataBindings = ['scene.imagePrompt', 'scene.videoPrompt', 'scene.title', 'scene.text', 'scene.narration', 'trend.keyword', 'news.headline', 'custom'];
+
+export function composition(value, layout = 'center') {
+  if (value === undefined) return defaultComposition(layout);
+  object(value);
+  const layers = ['media', 'title', 'body'];
+  if (Object.keys(value).length !== layers.length || Object.keys(value).some(key => !layers.includes(key))) throw new HttpError(400, 'Composition requires only media, title and body');
+  return Object.fromEntries(layers.map(layer => {
+    const box = object(value[layer]), fields = ['x', 'y', 'width', 'height'];
+    if (Object.keys(box).length !== fields.length || Object.keys(box).some(key => !fields.includes(key))) throw new HttpError(400, `Invalid ${layer} composition fields`);
+    const result = Object.fromEntries(fields.map(key => [key, boundedNumber(box[key], `${layer}.${key}`, key === 'x' || key === 'y' ? 0 : .02, 1)]));
+    if (result.x + result.width > 1 + Number.EPSILON * 8 || result.y + result.height > 1 + Number.EPSILON * 8) throw new HttpError(400, `${layer} composition must remain inside the canvas`);
+    return [layer, result];
+  }));
+}
 
 function boundedNumber(value, name, min, max, fallback) {
   const selected = value === undefined ? fallback : value;
@@ -86,9 +101,9 @@ export function sceneSlots(value) {
     const w = boundedNumber(slot.w, 'slot w', 5, 100, 100);
     const h = boundedNumber(slot.h, 'slot h', 5, 100, 30);
     const zIndex = Math.round(boundedNumber(slot.zIndex, 'slot zIndex', 0, 100, index + 1));
-    const slotText = optionalText(slot.text, 'slot text', 2000);
-    const html = optionalText(slot.html, 'slot html', 4000);
-    const prompt = optionalText(slot.prompt, 'slot prompt', 4000);
+    const slotText = optionalText(slot.text, 'slot text', 2000, true);
+    const html = optionalText(slot.html, 'slot html', 4000, true);
+    const prompt = optionalText(slot.prompt, 'slot prompt', 4000, true);
     const model = optionalText(slot.model, 'slot model', 160);
     const assetUrl = optionalText(slot.assetUrl, 'slot assetUrl', 200);
     if (assetUrl && !/^\/api\/uploads\/[a-f0-9-]{36}\.(?:png|jpe?g|webp|gif|mp4|webm|mov|mp3|wav|ogg)$/i.test(assetUrl)) {
@@ -230,17 +245,18 @@ export function scenes(value) {
     const validatedSlots = sceneSlots(scene.slots);
     return {
       id,
-      title: text(scene.title, 'scene title', 160, '장면'),
-      text: optionalText(scene.text, 'scene text', 2000),
+      title: text(scene.title, 'scene title', 160, '장면', true),
+      text: optionalText(scene.text, 'scene text', 2000, true),
       duration: scene.duration,
       background: scene.background,
       kind,
       layout,
+      composition: composition(scene.composition, layout),
       ...(assetUrl ? { assetUrl } : {}),
       ...(audioUrl ? { audioUrl } : {}),
       trimStart,
       audioVolume,
-      narration: optionalText(scene.narration, 'narration', 4000),
+      narration: optionalText(scene.narration, 'narration', 4000, true),
       ...(Array.isArray(validatedSlots) && validatedSlots.length ? { slots: validatedSlots } : {}),
     };
   });
@@ -251,8 +267,8 @@ export function scenes(value) {
 export function episodePatch(body) {
   object(body);
   const patch = {};
-  for (const [key, max] of [['title', 200], ['topic', 500]]) if (key in body) patch[key] = text(body[key], key, max);
-  if ('notes' in body) patch.notes = optionalText(body.notes, 'notes', 20000);
+  for (const [key, max] of [['title', 200], ['topic', 500]]) if (key in body) patch[key] = text(body[key], key, max, undefined, true);
+  if ('notes' in body) patch.notes = optionalText(body.notes, 'notes', 20000, true);
   if ('status' in body) patch.status = choice(body.status, ['draft', 'review', 'ready'], 'status');
   if ('format' in body) patch.format = choice(body.format, formats, 'format');
   if ('scenes' in body) patch.scenes = scenes(body.scenes);

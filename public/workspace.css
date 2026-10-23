@@ -201,7 +201,7 @@
 @container workspace-content (max-width: 500px) {
   .right-column, .two-cols, .narration-panel .two-cols, .wf-run-nodes, .wf-review-actions { grid-template-columns: minmax(0, 1fr); }
   .wf-review-actions { display: grid; width: 100%; }
-  .page-heading h1 { font-size: 23px; }
+  .page-heading h1 { font-size: 23px; overflow-wrap: normal; word-break: keep-all; }
   .page-heading > .row { width: 100%; gap: 8px; }
   .page-heading > .row > button { flex: 1 1 auto; }
   .panel-header { align-items: flex-start; }
@@ -420,6 +420,14 @@ input, select, textarea { border-color: var(--line-strong); }
   .ops-integrations { grid-template-columns: minmax(0,1fr); }
   .ops-job { flex-direction: column; }
   #ops-config { padding: 20px; }
+}
+@media (max-width: 500px) {
+  .sidebar .platform-browser { display: grid; grid-template-columns: minmax(0, 1fr); max-height: none; overflow: visible; }
+  .sidebar .channel-copy { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+  .episode-strip, .scenes { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .episode-tab, .scene-card { min-width: 0; max-width: none; }
+  .episode-tab strong { white-space: normal; overflow-wrap: anywhere; }
+  .scene-clip-header, .scene-meta { flex-wrap: wrap; }
 }
 @media (prefers-reduced-motion: reduce) { *, *:before, *:after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }

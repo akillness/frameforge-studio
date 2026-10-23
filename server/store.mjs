@@ -505,8 +505,8 @@ export class Store {
     }
     if (!Number.isSafeInteger(body.expectedVersion) || body.expectedVersion < 1) throw new HttpError(400, 'expectedVersion is required');
     const patch = {};
-    if ('label' in body) patch.title = text(body.label, 'label', 200);
-    if ('topic' in body) patch.topic = text(body.topic, 'topic', 500);
+    if ('label' in body) patch.title = text(body.label, 'label', 200, undefined, true);
+    if ('topic' in body) patch.topic = text(body.topic, 'topic', 500, undefined, true);
     if ('channelId' in body) {
       patch.channelId = text(body.channelId, 'channelId', 100);
       if (!this.list('channels').some((channel) => channel.id === patch.channelId)) throw new HttpError(400, 'Unknown target channel');

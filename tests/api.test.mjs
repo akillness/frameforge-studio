@@ -8,6 +8,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { createApp, requireAdmin } from '../server/app.mjs';
 import { Store, starterScene } from '../server/store.mjs';
 import { scenes } from '../server/validation.mjs';
+import { runInNewContext } from 'node:vm';
 
 const exportProjection = graph => ({
   nodes: graph.nodes.map(({ editable, edit, readOnlyReason, ...node }) => node),
@@ -266,6 +267,87 @@ test('graph relationship edits update only canonical episode channel and topic w
   assert.deepEqual(JSON.parse(await readFile(join(f.dataDir, 'knowledge', 'graph.json'), 'utf8')), exportProjection(topicEdit.graph));
   assert.equal((await readdir(join(f.dataDir, 'knowledge', 'atoms'))).includes(`${sourceTopic.id}.md`), false);
   assert.equal((await (await f.request(`/api/episodes/${original.id}/history`)).json()).length, 3);
+});
+
+test('graph episode text edits preserve exact whitespace and paragraph boundaries in storage and exports', async (t) => {
+  const f = await fixture(t);
+  for (const [field, canonical, value] of [
+    ['label', 'title', ' \tAuthored title\n\nSecond paragraph\r\nLast line \t '],
+    ['topic', 'topic', ' \tAuthored topic\r\n\r\nSecond paragraph\nLast line \t '],
+  ]) await t.test(field, async () => {
+    const original = await episode(f);
+    const response = await f.request(`/api/knowledge/nodes/${original.id}`, 'PUT', { [field]: value, expectedVersion: original.version });
+    assert.equal(response.status, 200);
+    const { record, graph } = await response.json();
+    assert.equal(record[canonical], value);
+    assert.equal(record[canonical === 'title' ? 'topic' : 'title'], original[canonical === 'title' ? 'topic' : 'title']);
+    const state = await (await f.request('/api/state')).json();
+    assert.deepEqual(state.episodes.find(item => item.id === original.id), record);
+    const history = await (await f.request(`/api/episodes/${original.id}/history`)).json();
+    assert.deepEqual(history[0].snapshot, record);
+    assert.deepEqual(history.at(-1).snapshot, original);
+    const exported = JSON.parse(await readFile(join(f.dataDir, 'knowledge', 'graph.json'), 'utf8'));
+    assert.deepEqual(exported, exportProjection(graph));
+    const node = graph.nodes.find(item => field === 'label' ? item.id === original.id : item.type === 'topic' && item.label === value);
+    assert.equal(node.label, value);
+    const atom = await readFile(join(f.dataDir, 'knowledge', 'atoms', `${node.id}.md`), 'utf8');
+    assert.ok(atom.includes(`title: ${JSON.stringify(value)}\n`));
+    const exportBefore = await readFile(join(f.dataDir, 'knowledge', 'graph.json'), 'utf8');
+    for (const invalid of [null, 123, ' \t\r\n ', 'x'.repeat(field === 'label' ? 201 : 501), '\u0000bad']) {
+      assert.equal((await f.request(`/api/knowledge/nodes/${original.id}`, 'PUT', { [field]: invalid, expectedVersion: record.version })).status, 400);
+    }
+    assert.equal((await f.request(`/api/knowledge/nodes/${original.id}`, 'PUT', { [field]: 'Stale', expectedVersion: original.version })).status, 409);
+    assert.equal(await readFile(join(f.dataDir, 'knowledge', 'graph.json'), 'utf8'), exportBefore);
+    assert.equal((await (await f.request(`/api/episodes/${original.id}/history`)).json()).length, 2);
+  });
+});
+
+test('channel-only graph edge and episode form edits preserve authored title and topic exactly', async (t) => {
+  const f = await fixture(t);
+  const state = await (await f.request('/api/state')).json();
+  const title = ' \tAuthored title\r\n\r\nSecond paragraph \t ';
+  const topic = '\n \tAuthored topic\r\n\r\nSecond paragraph \t \n';
+  const original = await (await f.request('/api/episodes', 'POST', { channelId: state.channels[0].id, title, topic })).json();
+  assert.equal(original.title, title);
+  assert.equal(original.topic, topic);
+  const channel = await (await f.request('/api/channels', 'POST', { name: 'Exact text target', category: 'information', platform: 'YouTube' })).json();
+  const edgeResponse = await f.request('/api/knowledge/edges', 'PUT', { source: original.id, target: original.channelId, relation: 'belongs_to', newTarget: channel.id, expectedVersion: original.version });
+  assert.equal(edgeResponse.status, 200);
+  const edgeEdit = await edgeResponse.json();
+  assert.deepEqual(edgeEdit.record, { ...original, channelId: channel.id, version: 2, updatedAt: edgeEdit.record.updatedAt });
+
+  // Browsers normalize CRLF to LF; unchanged controls must not become text patches.
+  const source = await readFile(new URL('../public/app.js', import.meta.url), 'utf8');
+  const editGraphNode = source.slice(source.indexOf('function editGraphNode('), source.indexOf('function editGraphEdge('));
+  const initial = { label: title.replace(/\r\n/g, '\n'), topic: topic.replace(/\r\n/g, '\n'), channelId: channel.id };
+  let handler, markup, submitted;
+  const context = {
+    state: { channels: [...state.channels, channel], graph: edgeEdit.graph },
+    guardGraphEdit() {}, esc: value => String(value), $: () => ({}),
+    FormData: class { constructor() { return Object.entries(initial); } },
+    openModal(_title, body, callback) { markup = body; handler = callback; },
+    async api(path, options) {
+      submitted = JSON.parse(options.body);
+      const response = await f.request(path, options.method, submitted);
+      assert.equal(response.status, 200);
+    },
+    async refreshAfterGraphEdit() {},
+  };
+  runInNewContext(`${editGraphNode}\neditGraphNode(${JSON.stringify(original.id)});`, context);
+  await handler({ ...initial, channelId: original.channelId });
+  assert.deepEqual(submitted, { channelId: original.channelId, expectedVersion: 2 });
+  assert.match(markup, /<textarea name="label"/);
+  const saved = (await (await f.request('/api/state')).json()).episodes.find(item => item.id === original.id);
+  assert.deepEqual(saved, { ...original, version: 3, updatedAt: saved.updatedAt });
+  const history = await (await f.request(`/api/episodes/${original.id}/history`)).json();
+  assert.equal(history.length, 3);
+  for (const entry of history) {
+    assert.equal(entry.snapshot.title, title);
+    assert.equal(entry.snapshot.topic, topic);
+  }
+  const exported = JSON.parse(await readFile(join(f.dataDir, 'knowledge', 'graph.json'), 'utf8'));
+  assert.equal(exported.nodes.find(node => node.id === original.id).label, title);
+  assert.ok(exported.nodes.some(node => node.type === 'topic' && node.label === topic));
 });
 
 test('invalid and read-only graph node or relation edits reject without source, history or export mutation', async (t) => {

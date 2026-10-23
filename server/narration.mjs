@@ -135,7 +135,7 @@ export class NarrationQueue {
     if (!Number.isInteger(rate) || rate < -10 || rate > 10) throw new HttpError(400, 'Speech rate must be an integer from -10 to 10');
     const ids = body.sceneIds ?? episode.scenes.map(scene => scene.id);
     if (!Array.isArray(ids) || !ids.length || ids.length > 60 || new Set(ids).size !== ids.length || ids.some(id => typeof id !== 'string' || !episode.scenes.some(scene => scene.id === id))) throw new HttpError(400, 'Choose existing unique scenes');
-    const selected = episode.scenes.filter(scene => ids.includes(scene.id)).map(scene => ({ ...scene, speech: text(scene.narration || scene.text, 'narration', 4000) }));
+    const selected = episode.scenes.filter(scene => ids.includes(scene.id)).map(scene => ({ ...scene, speech: text(scene.narration || scene.text, 'narration', 4000, undefined, true) }));
     if (this.closed) throw new HttpError(503, 'Service is stopping');
     if (this.pendingEpisodes.has(id) || this.store.list('narrationJobs').some(job => job.episodeId === id && active(job))) throw new HttpError(409, 'Narration is already active for this episode');
     if (this.pendingEpisodes.size + this.store.list('narrationJobs').filter(active).length >= 5) throw new HttpError(429, 'Narration queue is full');
@@ -171,7 +171,7 @@ export class NarrationQueue {
         if (this.closed) return;
         const id = randomUUID(), filename = `${id}.wav`, outputPath = path.join(uploadRoot, filename);
         files.push(outputPath);
-        const { duration } = await this.synthesize({ text: scene.speech, voice: job.voice, rate: job.rate, outputPath, workDir: work });
+        const { duration } = await this.synthesize({ text: scene.speech.trim(), voice: job.voice, rate: job.rate, outputPath, workDir: work });
         if (this.closed) return;
         if (!Number.isFinite(duration) || duration <= 0 || duration > 119.7) throw new HttpError(400, 'Generated narration is too long');
         const info = await stat(outputPath);

@@ -3,6 +3,8 @@ import path from 'node:path';
 import { createReadStream } from 'node:fs';
 import { randomUUID, createHash } from 'node:crypto';
 import { execute } from './process.mjs';
+import { composition } from './validation.mjs';
+import { fitText } from '../public/composition.js';
 
 export const dimensions = { '9:16': [1080, 1920], '16:9': [1920, 1080], '1:1': [1080, 1080] };
 const MEDIA_FORMATS = {
@@ -11,6 +13,12 @@ const MEDIA_FORMATS = {
   '.webp': 'webp_pipe', '.gif': 'gif',
   '.mp3': 'mp3', '.wav': 'wav', '.ogg': 'ogg',
 };
+
+function escapeAssText(text) {
+  // libass does not escape backslashes by doubling them: \\N still breaks a line.
+  // A zero-advance WORD JOINER prevents command recognition after a literal slash.
+  return text.replace(/\\/g, '\\\u2060').replace(/[{}]/g, '\\$&').replace(/\n/g, '\\N');
+}
 
 // A contained filename can still disguise a playlist referencing files outside uploads.
 // Apply to every untrusted input, including the audio probe; never permit playlist demuxers.
@@ -21,12 +29,51 @@ export function localMediaInputOptions(filename) {
 }
 
 function subtitleText(text, width) {
-  const cleaned = String(text || '').replace(/[{}\\]/g, '').replace(/\r/g, '');
-  return cleaned.split('\n').flatMap(line => {
-    const chars = Array.from(line), rows = [];
-    while (chars.length) rows.push(chars.splice(0, width).join(''));
-    return rows.length ? rows : [''];
-  }).join('\\N');
+  const lf=String.fromCharCode(10),cr=String.fromCharCode(13);
+  const cleaned=String(text||'').split(cr+lf).join(lf).split(cr).join(lf);
+  const wrapped=cleaned.split(lf).flatMap(line=>{
+    const chars=Array.from(line),rows=[];
+    while(chars.length) rows.push(chars.splice(0,width).join(''));
+    return rows.length?rows:[''];
+  }).join(lf);
+  return escapeAssText(wrapped);
+}
+
+export function buildCompositionMediaFilter(scene, w, h) {
+  if (!Number.isInteger(w) || !Number.isInteger(h) || w < 2 || h < 2) throw new Error('Invalid composition canvas');
+  if (typeof scene.background !== 'string' || !/^#[\da-f]{6}$/i.test(scene.background)) throw new Error('Invalid scene background');
+  const box = composition(scene.composition, scene.layout).media;
+  const alignEven = value => Math.max(2, Math.round(value / 2) * 2);
+  const mw = Math.min(w - (w % 2), alignEven(w * box.width)), mh = Math.min(h - (h % 2), alignEven(h * box.height));
+  const alignOffset = value => Math.max(0, Math.floor(value / 2) * 2);
+  const x = Math.min(w - mw, alignOffset(w * box.x));
+  const y = Math.min(h - mh, alignOffset(h * box.y));
+  return `scale=${mw}:${mh}:force_original_aspect_ratio=decrease,pad=${mw}:${mh}:(ow-iw)/2:(oh-ih)/2:color=${scene.background},pad=${w}:${h}:${x}:${y}:color=${scene.background}`;
+}
+
+export function buildSceneMediaFilter(scene, w, h) {
+  const hasSlots = Array.isArray(scene.slots) && scene.slots.length > 0;
+  if (scene.assetUrl && !hasSlots) return buildCompositionMediaFilter(scene, w, h);
+  if (scene.layout === 'split' && scene.assetUrl) {
+    return `scale=${w}:${Math.round(h / 2)}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:0:color=${scene.background}`;
+  }
+  return `scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:color=${scene.background}`;
+}
+
+export function buildCompositionAss(scene, w, h) {
+  if (!Number.isInteger(w) || !Number.isInteger(h) || w < 2 || h < 2) throw new Error('Invalid composition canvas');
+  const layout = composition(scene.composition, scene.layout);
+  const font = process.platform === 'win32' ? 'Malgun Gothic' : 'Noto Sans CJK KR';
+  const dialogues = [
+    ['title', scene.title, 'title'],
+    ['body', scene.text, 'body'],
+  ].filter(([, value]) => String(value || '').length).map(([layer, value, fitLayer]) => {
+    const box = layout[layer], fitted = fitText(value, box, w, h, fitLayer);
+    const x = Math.round((box.x + box.width / 2) * w), y = Math.round((box.y + box.height / 2) * h);
+    const text = escapeAssText(fitted.text);
+    return `Dialogue: 0,0:00:00.00,0:10:00.00,Default,,0,0,0,,{\\an5\\pos(${x},${y})\\fs${fitted.fontSize}\\b1\\bord3\\shad2\\q2}${text}`;
+  }).join('\n');
+  return `[Script Info]\nScriptType: v4.00+\nPlayResX: ${w}\nPlayResY: ${h}\nWrapStyle: 0\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,${font},48,&H00FFFFFF,&H000000FF,&H00101010,&H90000000,-1,0,0,0,100,100,0,0,1,3,2,5,0,0,0,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n${dialogues}${dialogues ? '\n' : ''}`;
 }
 
 function hexToAssColor(hex = '#ffffff', alpha = 0) {
@@ -41,9 +88,7 @@ function stripHtmlTags(html = '') {
   return String(html || '')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/(div|p|h[1-6]|li)>/gi, '\n')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/[ \t]+/g, ' ')
-    .trim();
+    .replace(/<[^>]+>/g, '');
 }
 
 export function buildSceneCompositionPlan(scene, w, h) {
@@ -57,7 +102,7 @@ export function buildSceneCompositionPlan(scene, w, h) {
   const dialogues = [];
   const globalDialogues = [];
   const slotDialogues = new Map();
-  if (!slots.length || (scene.text && !slots.some((slot) => ['subtitle-layer', 'text-overlay'].includes(slot.role) && slot.text))) {
+  if (slots.length && scene.text && !slots.some((slot) => ['subtitle-layer', 'text-overlay'].includes(slot.role) && slot.text)) {
     globalDialogues.push(`Dialogue: 0,0:00:00.00,0:10:00.00,Default,,0,0,0,,${subtitleText(scene.text, w > h ? 34 : 17)}`);
   }
 
@@ -77,7 +122,7 @@ export function buildSceneCompositionPlan(scene, w, h) {
 
     const copySource = slot.text || (slot.html ? stripHtmlTags(slot.html) : '') || (slot.dataBinding === 'scene.title' ? scene.title : slot.dataBinding === 'scene.narration' ? (scene.narration || scene.text) : slot.dataBinding === 'scene.text' ? scene.text : '');
     const badgePrefix = slot.style?.badge ? `[${slot.style.badge}] ` : '';
-    const combinedText = `${badgePrefix}${copySource || ''}`.trim();
+    const combinedText = `${badgePrefix}${copySource || ''}`;
     if (combinedText) {
       const charCols = Math.max(8, Math.round((sw / w) * (w > h ? 36 : 18)));
       const slotAlign = slot.style?.align === 'left' ? 4 : slot.style?.align === 'right' ? 6 : 5;
@@ -105,7 +150,7 @@ export function buildSceneCompositionPlan(scene, w, h) {
   dialogues.unshift(...globalDialogues);
   const makeAss = (events) => `[Script Info]\nScriptType: v4.00\nPlayResX: ${w}\nPlayResY: ${h}\nWrapStyle: 0\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n${styles.join('\n')}\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n${events.join('\n')}\n`;
   const slotAss = Object.fromEntries([...slotDialogues.entries()].map(([index, dialogue]) => [index, makeAss([dialogue])]));
-  return { ass: makeAss(dialogues), globalAss: globalDialogues.length ? makeAss(globalDialogues) : '', slotAss, slotBoxes: slotBoxes.map((box) => slotAss[box.index] ? { ...box, textAss: slotAss[box.index] } : box), hasSlots: slots.length > 0 };
+  return { ass: slots.length ? makeAss(dialogues) : buildCompositionAss(scene, w, h), globalAss: globalDialogues.length ? makeAss(globalDialogues) : '', slotAss, slotBoxes: slotBoxes.map((box) => slotAss[box.index] ? { ...box, textAss: slotAss[box.index] } : box), hasSlots: slots.length > 0 };
 }
 
 async function resolveVerifiedUpload(root, assetUrl) {
@@ -159,9 +204,7 @@ export async function renderEpisode(episode, { dataDir, onProgress = () => {} })
         });
       }
 
-      const base = scene.layout === 'split' && scene.assetUrl
-        ? `scale=${w}:${Math.round(h / 2)}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:0:color=${scene.background}`
-        : `scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:color=${scene.background}`;
+      const base = buildSceneMediaFilter(scene, w, h);
 
       let audioInput = ['-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo'];
       const audioInputIndex = 1 + slotInputs.length;
