@@ -23,7 +23,7 @@ const integrations = {
 
 async function fixture(t, options = {}) {
   const dataDir = await mkdtemp(join(tmpdir(), 'frameforge-api-'));
-  let server = createApp({ dataDir, integrations, ...options });
+  let server = createApp({ dataDir, loginToken: '', publicOrigin: '', integrations, ...options });
   const start = async () => { await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve)); return `http://127.0.0.1:${server.address().port}`; };
   let base = await start();
   const close = () => new Promise((resolve) => { server.close(resolve); server.closeAllConnections(); });
@@ -36,7 +36,7 @@ async function fixture(t, options = {}) {
       const request = http.get(base + path, { headers }, (response) => { response.resume(); resolve(response.statusCode); });
       request.on('error', reject);
     }),
-    restart: async () => { await close(); server = createApp({ dataDir, integrations, ...options }); base = await start(); },
+    restart: async () => { await close(); server = createApp({ dataDir, loginToken: '', publicOrigin: '', integrations, ...options }); base = await start(); },
   };
 }
 
@@ -146,6 +146,7 @@ test('every dashboard mutation is authenticated before dispatch and client role 
     ['POST', '/api/episodes/fixture/render'], ['POST', '/api/episodes/fixture/narration'], ['POST', '/api/episodes/fixture/restore'],
     ['POST', '/api/workflows'], ['PUT', '/api/workflows/fixture'], ['POST', '/api/workflows/fixture/run'],
     ['POST', '/api/workflows/fixture/restore'], ['POST', '/api/workflows/fixture/runs/run/cancel'], ['POST', '/api/workflows/fixture/runs/run/review'],
+    ['POST', '/api/workflows/fixture/copies'],
     ['POST', '/api/generation/estimate'], ['POST', '/api/episodes/fixture/generations'],
     ['POST', '/api/generations/fixture/apply'], ['POST', '/api/generations/fixture/recover'], ['POST', '/api/generations/fixture/normalize'],
     ['POST', '/api/trends/settings'], ['PUT', '/api/trends/settings'], ['POST', '/api/trends/select'],

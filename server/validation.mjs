@@ -46,6 +46,69 @@ function boundedNumber(value, name, min, max, fallback) {
   return selected;
 }
 
+function sourceEvidence(value) {
+  const visit = (item, depth) => {
+    if (depth > 4) throw new HttpError(400, 'Source evidence is too deeply nested');
+    if (item === null || typeof item === 'boolean') return item;
+    if (typeof item === 'number' && Number.isFinite(item)) return item;
+    if (typeof item === 'string') return item === '' ? '' : text(item, 'source evidence', 4000);
+    if (Array.isArray(item)) {
+      if (item.length > 64) throw new HttpError(400, 'Too many source evidence entries');
+      return item.map((entry) => visit(entry, depth + 1));
+    }
+    object(item);
+    const entries = Object.entries(item);
+    if (entries.length > 64) throw new HttpError(400, 'Too many source evidence fields');
+    return Object.fromEntries(entries.map(([key, entry]) => {
+      text(key, 'source evidence key', 120);
+      if (['__proto__', 'constructor', 'prototype'].includes(key)) throw new HttpError(400, 'Invalid source evidence key');
+      return [key, visit(entry, depth + 1)];
+    }));
+  };
+  const result = visit(value, 0);
+  if (Buffer.byteLength(JSON.stringify(result)) > 16000) throw new HttpError(400, 'Source evidence exceeds 16000 bytes');
+  return result;
+}
+
+/** Optional provenance is editable evidence, not an implicit rights clearance. */
+export function sceneSource(value) {
+  if (value === undefined) return undefined;
+  const source = object(value);
+  const allowed = ['origin', 'sourceUrl', 'licenseId', 'attribution', 'retrievedAt', 'sha256', 'useAs', 'generationJobId', 'evidence'];
+  if (Object.keys(source).some((key) => !allowed.includes(key))) throw new HttpError(400, 'Unknown media source field');
+  const result = {
+    origin: choice(source.origin, ['own', 'third-party', 'generated'], 'source origin'),
+    useAs: choice(source.useAs, ['evidence', 'illustration'], 'source useAs'),
+  };
+  if (result.origin === 'generated' && result.useAs !== 'illustration') throw new HttpError(400, 'Generated visuals cannot be factual event evidence');
+  if (source.sourceUrl !== undefined) result.sourceUrl = source.sourceUrl === '' ? '' : url(source.sourceUrl);
+  for (const [key, max] of [['licenseId', 160], ['attribution', 4000]]) {
+    if (source[key] !== undefined) result[key] = optionalText(source[key], `source ${key}`, max);
+  }
+  if (source.retrievedAt !== undefined) {
+    const timestamp = text(source.retrievedAt, 'source retrievedAt', 80);
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(timestamp) || !Number.isFinite(Date.parse(timestamp))) throw new HttpError(400, 'Invalid source retrievedAt');
+    result.retrievedAt = timestamp;
+  }
+  if (source.sha256 !== undefined) {
+    if (typeof source.sha256 !== 'string' || !/^[a-f0-9]{64}$/i.test(source.sha256)) throw new HttpError(400, 'Invalid source sha256');
+    result.sha256 = source.sha256;
+  }
+  if (source.generationJobId !== undefined) {
+    result.generationJobId = text(source.generationJobId, 'source generationJobId', 80);
+    if (!/^[a-zA-Z0-9_-]+$/.test(result.generationJobId)) throw new HttpError(400, 'Invalid source generationJobId');
+  }
+  if (source.evidence !== undefined) result.evidence = sourceEvidence(source.evidence);
+  return result;
+}
+
+function mediaTrim(value, start = 0) {
+  if (value === undefined) return undefined;
+  const end = boundedNumber(value, 'trimEnd', 0, 36000);
+  if (end <= start) throw new HttpError(400, 'trimEnd must be after trimStart');
+  return end;
+}
+
 function validateSlotStyle(raw) {
   if (raw === undefined || raw === null) return undefined;
   const style = object(raw);
@@ -96,6 +159,9 @@ export function sceneSlots(value) {
     }
     const mediaKind = choice(slot.mediaKind, ['none', 'image', 'video'], 'slot mediaKind', assetUrl ? (/\.(?:mp4|webm|mov)$/i.test(assetUrl) ? 'video' : 'image') : 'none');
     const style = validateSlotStyle(slot.style);
+    const source = sceneSource(slot.source);
+    const trimStart = slot.trimStart === undefined ? undefined : boundedNumber(slot.trimStart, 'slot trimStart', 0, 36000);
+    const trimEnd = mediaTrim(slot.trimEnd, trimStart ?? 0);
     return {
       id,
       name,
@@ -112,6 +178,10 @@ export function sceneSlots(value) {
       ...(model ? { model } : {}),
       ...(assetUrl ? { assetUrl, mediaKind } : mediaKind !== 'none' ? { mediaKind } : {}),
       ...(style ? { style } : {}),
+      ...(source ? { source } : {}),
+      ...(slot.evidence !== undefined ? { evidence: sourceEvidence(slot.evidence) } : {}),
+      ...(trimStart !== undefined ? { trimStart } : {}),
+      ...(trimEnd !== undefined ? { trimEnd } : {}),
     };
   });
 }
@@ -223,6 +293,8 @@ export function scenes(value) {
     const audioUrl = optionalText(scene.audioUrl, 'audioUrl', 200);
     if (audioUrl && !/^\/api\/uploads\/[a-f0-9-]{36}\.(?:mp3|wav|ogg)$/i.test(audioUrl)) throw new HttpError(400, 'Scene audio must be a local uploaded audio file');
     const trimStart = boundedNumber(scene.trimStart, 'trimStart', 0, 36000, 0);
+    const trimEnd = mediaTrim(scene.trimEnd, trimStart);
+    const source = sceneSource(scene.source);
     const audioVolume = boundedNumber(scene.audioVolume, 'audioVolume', 0, 2, 1);
     const kind = choice(scene.kind, ['title', 'video', 'image'], 'scene kind', 'title');
     if (kind !== 'title' && !assetUrl) throw new HttpError(400, `${kind} scenes require an uploaded asset`);
@@ -239,6 +311,9 @@ export function scenes(value) {
       ...(assetUrl ? { assetUrl } : {}),
       ...(audioUrl ? { audioUrl } : {}),
       trimStart,
+      ...(trimEnd !== undefined ? { trimEnd } : {}),
+      ...(source ? { source } : {}),
+      ...(scene.evidence !== undefined ? { evidence: sourceEvidence(scene.evidence) } : {}),
       audioVolume,
       narration: optionalText(scene.narration, 'narration', 4000),
       ...(Array.isArray(validatedSlots) && validatedSlots.length ? { slots: validatedSlots } : {}),

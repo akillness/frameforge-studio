@@ -1,13 +1,20 @@
 import { DatabaseSync } from 'node:sqlite';
-import { mkdirSync, writeFileSync, renameSync, existsSync, unlinkSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { mkdirSync, writeFileSync, renameSync, existsSync, unlinkSync, readdirSync, lstatSync, realpathSync, openSync, fstatSync, readSync, closeSync, constants } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
 import { HttpError, object, text, scenes as validateScenes } from './validation.mjs';
+import { resolvePrerequisite } from './graph.mjs';
 
 const DEFAULT_TREND_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_TREND_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
 const DEFAULT_TREND_MAX_CONCURRENCY = 2;
 const MIN_TREND_RETENTION_MS = DEFAULT_TREND_RETENTION_MS;
+
+/** Physical tables (beyond the generic `entities` table) whose JSON `data` column may embed a
+ * reference to an upload's id/url/filename. Schema creation and pruneTrendRetention's reference
+ * scan both read from this single list, so a new side table with media references registers for
+ * pruning protection in exactly one place. */
+export const REFERENCE_BEARING_TABLES = ['history', 'workflow_history', 'workflow_reviews', 'workflow_node_reviews'];
 const now = () => new Date().toISOString();
 const recordToken = (record) => createHash('sha256').update(JSON.stringify(record)).digest('hex');
 const trendDate = (value, fallback = now()) => {
@@ -36,6 +43,31 @@ function validateGenerationUploads(id, uploads) {
   }
 }
 
+function verifyGenerationFile(dataDir, upload) {
+  let fd;
+  try {
+    if (!/^[a-f0-9-]{36}$/.test(upload.id || '') || !new RegExp(`^${upload.id}\\.(png|jpg|webp|mp4|mov)$`).test(upload.filename || '') || upload.url !== `/api/uploads/${upload.filename}` || !/^[a-f0-9]{64}$/.test(upload.sha256 || '') || !Number.isSafeInteger(upload.size) || upload.size < 1 || upload.size > 100 * 1024 * 1024) throw new Error('Invalid generated file identity');
+    const root = resolve(dataDir, 'uploads');
+    if (lstatSync(root).isSymbolicLink() || realpathSync(root) !== root) throw new Error('Redirected upload directory');
+    const file = join(root, upload.filename), before = lstatSync(file);
+    const sameFile = (info) => info.isFile() && ['dev', 'ino', 'size', 'mtimeMs', 'ctimeMs'].every((key) => info[key] === before[key]);
+    if (!before.isFile() || before.isSymbolicLink() || before.size !== upload.size || realpathSync(file) !== file) throw new Error('Invalid generated file');
+    fd = openSync(file, constants.O_RDONLY | (constants.O_NOFOLLOW || 0) | (constants.O_NONBLOCK || 0));
+    if (!sameFile(fstatSync(fd))) throw new Error('Generated file changed while opening');
+    const hash = createHash('sha256'), buffer = Buffer.allocUnsafe(64 * 1024);
+    let total = 0, bytes;
+    while ((bytes = readSync(fd, buffer, 0, Math.min(buffer.length, upload.size - total + 1), null))) {
+      total += bytes;
+      if (total > upload.size) throw new Error('Generated file exceeds registered size');
+      hash.update(buffer.subarray(0, bytes));
+    }
+    const after = lstatSync(file);
+    if (total !== upload.size || !sameFile(fstatSync(fd)) || !sameFile(after) || after.isSymbolicLink() || realpathSync(root) !== root || realpathSync(file) !== file || hash.digest('hex') !== upload.sha256) throw new Error('Generated file bytes changed');
+  } catch {
+    throw new HttpError(409, 'Generation output file is missing, changed or not a contained regular file');
+  } finally { if (fd !== undefined) closeSync(fd); }
+}
+
 export class Store {
   constructor(dataDir) {
     this.dataDir = dataDir;
@@ -47,6 +79,8 @@ export class Store {
       CREATE INDEX IF NOT EXISTS history_episode ON history(episode_id,version);
       CREATE TABLE IF NOT EXISTS workflow_history (id INTEGER PRIMARY KEY AUTOINCREMENT, workflow_id TEXT NOT NULL, version INTEGER NOT NULL, data TEXT NOT NULL, UNIQUE(workflow_id,version));
       CREATE TABLE IF NOT EXISTS workflow_reviews (id TEXT PRIMARY KEY, run_id TEXT NOT NULL UNIQUE, data TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS workflow_node_reviews (id TEXT PRIMARY KEY, run_id TEXT NOT NULL, review_node_id TEXT NOT NULL, data TEXT NOT NULL, UNIQUE(run_id,review_node_id));
+      CREATE INDEX IF NOT EXISTS workflow_node_reviews_run ON workflow_node_reviews(run_id);
       CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
       CREATE INDEX IF NOT EXISTS entities_trend_captured ON entities(kind, json_extract(data, '$.capturedAt'));
       CREATE INDEX IF NOT EXISTS entities_trend_runs ON entities(kind, json_extract(data, '$.startedAt'));`); 
@@ -231,7 +265,7 @@ export class Store {
     for (const row of this.db.prepare("SELECT data FROM entities WHERE kind NOT IN ('uploads', 'events')").iterate()) {
       if (needles.some((needle) => row.data.includes(needle))) return true;
     }
-    for (const table of ['history', 'workflow_history', 'workflow_reviews']) {
+    for (const table of REFERENCE_BEARING_TABLES) {
       for (const row of this.db.prepare(`SELECT data FROM ${table}`).iterate()) if (needles.some((needle) => row.data.includes(needle))) return true;
     }
     return false;
@@ -393,23 +427,29 @@ export class Store {
       if (previous.version !== expectedVersion) throw new HttpError(409, `Episode changed: current version is ${previous.version}. Reload before applying generation.`);
       const currentScene = previous.scenes.find((scene) => scene.id === sceneId);
       if (!currentScene) throw new HttpError(409, 'The generation target scene no longer exists');
-      const output = job.outputs[0], upload = this.get('uploads', output.uploadId);
-      if (upload.generationJobId !== id || upload.url !== output.url || upload.sha256 !== output.sha256 || !['image', 'video'].includes(upload.kind)) throw new HttpError(409, 'Generation output identity does not match its imported upload');
+      const output = job.outputs?.[0];
+      if (!output) throw new HttpError(409, 'Generation has no completed output to apply');
+      const upload = this.get('uploads', output.uploadId);
+      if (upload.id !== output.uploadId || upload.generationJobId !== id || upload.url !== output.url || upload.sha256 !== output.sha256 || upload.size !== output.size || upload.type !== output.type || upload.kind !== output.kind || !['image', 'video'].includes(upload.kind)) throw new HttpError(409, 'Generation output identity does not match its imported upload');
+      verifyGenerationFile(this.dataDir, upload);
       const targetSlotId = slotId || job.slotId;
       const targetSlot = targetSlotId ? currentScene.slots?.find((slot) => slot.id === targetSlotId) : undefined;
       if (targetSlotId && !targetSlot) throw new HttpError(409, 'The generation target slot no longer exists');
       if (targetSlot && ((upload.kind === 'image' && targetSlot.role !== 'image-gen') || (upload.kind === 'video' && targetSlot.role !== 'video-bg'))) throw new HttpError(409, 'Generation output media kind does not match the target slot role');
+      const source = { origin: 'generated', sha256: upload.sha256, generationJobId: id, useAs: 'illustration' };
       const scenes = validateScenes(previous.scenes.map((scene) => {
         if (scene.id !== sceneId) return scene;
         if (targetSlot) {
-          const updatedSlots = scene.slots.map((slot) => slot.id === targetSlot.id ? { ...slot, assetUrl: upload.url, mediaKind: upload.kind } : slot);
+          const updatedSlots = scene.slots.map((slot) => slot.id === targetSlot.id ? { ...slot, assetUrl: upload.url, mediaKind: upload.kind, source, trimStart: 0, trimEnd: undefined } : slot);
           return { ...scene, slots: updatedSlots };
         }
         return {
           ...scene,
           kind: upload.kind,
           assetUrl: upload.url,
+          source,
           trimStart: 0,
+          trimEnd: undefined,
           ...(upload.kind === 'video' ? { duration: Math.max(0.5, Math.min(120, upload.duration)) } : {}),
         };
       }));
@@ -439,6 +479,7 @@ export class Store {
     try {
       const previous = this.get('workflows', id);
       if (expectedVersion !== undefined && previous.version !== expectedVersion) throw new HttpError(409, `Workflow changed: current version is ${previous.version}. Reload before saving.`);
+      for (const field of ['episodeId', 'channelId', 'templateId', 'templateVersion']) if (field in patch && patch[field] !== previous[field]) throw new HttpError(400, `${field} is immutable once a workflow is owned by a project`);
       next = { ...previous, ...patch, version: previous.version + 1, updatedAt: now() };
       this.save('workflows', next);
       this.workflowSnapshot(next, reason);
@@ -448,38 +489,99 @@ export class Store {
     return next;
   }
 
-  reviewCandidate(workflowId, runId, expectedEpisodeVersion) {
-    const run = this.get('workflowRuns', runId);
-    if (run.workflowId !== workflowId) throw new HttpError(404, 'Workflow run not found');
-    if (run.status !== 'awaiting_review' || run.review) throw new HttpError(409, 'Only an unreviewed awaiting_review run can receive a decision');
-    const episode = this.get('episodes', run.episodeId);
-    if (expectedEpisodeVersion !== run.episodeVersion || episode.version !== run.episodeVersion) throw new HttpError(409, 'Episode changed since this render. Render the current version before review.');
-    const render = run.nodeRuns.find((node) => node.type === 'render');
-    const reviewNode = run.nodeRuns.find((node) => node.type === 'review');
-    if (render?.status !== 'completed' || !render.output?.jobId || !render.output?.outputUrl || reviewNode?.status !== 'awaiting_review') throw new HttpError(409, 'Run has no completed render candidate awaiting review');
-    const job = this.get('jobs', render.output.jobId);
-    if (job.status !== 'completed' || job.episodeId !== episode.id || job.episodeVersion !== run.episodeVersion || job.outputUrl !== render.output.outputUrl || (render.output.episodeVersion !== undefined && render.output.episodeVersion !== run.episodeVersion)) throw new HttpError(409, 'Render candidate does not match the episode version');
-    return { run, job, render };
+  createWorkflowCopy({ templateId, channelId, episodeId, expectedTemplateVersion } = {}) {
+    const templateIdValue = text(templateId, 'templateId', 80);
+    const channelIdValue = text(channelId, 'channelId', 80);
+    const episodeIdValue = text(episodeId, 'episodeId', 80);
+    if (!Number.isInteger(expectedTemplateVersion) || expectedTemplateVersion < 1) throw new HttpError(400, 'createWorkflowCopy requires a positive expectedTemplateVersion');
+    this.db.exec('BEGIN IMMEDIATE');
+    let next;
+    try {
+      const template = this.get('workflows', templateIdValue);
+      if (template.version !== expectedTemplateVersion) throw new HttpError(409, `Template changed: current version is ${template.version}. Reload before copying.`);
+      const channel = this.get('channels', channelIdValue);
+      const episode = this.get('episodes', episodeIdValue);
+      if (episode.channelId !== channel.id) throw new HttpError(400, 'episodeId does not belong to channelId');
+      const nodes = template.nodes.map((node) => ({ ...node, config: node.type === 'publish' ? { ...node.config, channelId: channel.id } : { ...node.config } }));
+      const edges = template.edges.map((edge) => ({ ...edge }));
+      next = entity({ name: template.name, nodes, edges, version: 1, sample: false, episodeId: episode.id, channelId: channel.id, templateId: template.id, templateVersion: template.version });
+      this.save('workflows', next);
+      this.workflowSnapshot(next, `copied-from-template:${template.id}@${template.version}`);
+      this.record('workflows.copied', { entityId: next.id, templateId: template.id, templateVersion: template.version, episodeId: episode.id, channelId: channel.id });
+      this.db.exec('COMMIT');
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+    return next;
   }
 
-  commitWorkflowReview(workflowId, runId, { decision, notes, expectedEpisodeVersion, jobId, outputUrl, sha256 }) {
+  reviewCandidate(workflowId, runId, reviewNodeId, expectedEpisodeVersion) {
+    const run = this.get('workflowRuns', runId);
+    if (run.workflowId !== workflowId) throw new HttpError(404, 'Workflow run not found');
+    if (['failed', 'cancelled'].includes(run.status)) throw new HttpError(409, 'Workflow run is terminal and cannot receive review decisions');
+    const reviewNode = run.nodeRuns.find((node) => node.nodeId === reviewNodeId);
+    if (!reviewNode || reviewNode.type !== 'review') throw new HttpError(404, 'Unknown workflow review node');
+    if (reviewNode.status !== 'awaiting_review') throw new HttpError(409, 'This review node already has a decision or is not ready for review');
+    const episode = this.get('episodes', run.episodeId);
+    if (expectedEpisodeVersion !== run.episodeVersion || episode.version !== run.episodeVersion) throw new HttpError(409, 'Episode changed since this render. Render the current version before review.');
+    const snapshot = run.workflowSnapshot;
+    if (!Array.isArray(snapshot?.nodes) || !Array.isArray(snapshot?.edges)) throw new HttpError(409, 'Workflow run has no recorded graph snapshot');
+    const renderNode = resolvePrerequisite(snapshot.nodes, snapshot.edges, reviewNodeId, 'render');
+    const render = run.nodeRuns.find((node) => node.nodeId === renderNode.id);
+    if (render?.status !== 'completed' || !render.output?.jobId || !render.output?.outputUrl) throw new HttpError(409, 'Run has no completed render candidate awaiting review');
+    const job = this.get('jobs', render.output.jobId);
+    if (job.status !== 'completed' || job.episodeId !== episode.id || job.episodeVersion !== run.episodeVersion || job.outputUrl !== render.output.outputUrl || (render.output.episodeVersion !== undefined && render.output.episodeVersion !== run.episodeVersion)) throw new HttpError(409, 'Render candidate does not match the episode version');
+    return { run, job, render, reviewNode };
+  }
+
+  commitWorkflowReview(workflowId, runId, reviewNodeId, { decision, notes, expectedEpisodeVersion, jobId, outputUrl, sha256 } = {}) {
     if (!['approved', 'changes_requested'].includes(decision) || typeof notes !== 'string' || notes.length > 10000 || !Number.isInteger(expectedEpisodeVersion) || expectedEpisodeVersion < 1 || !/^[a-f0-9]{64}$/.test(sha256)) throw new HttpError(400, 'Invalid review decision');
     this.db.exec('BEGIN IMMEDIATE');
     let next;
     try {
-      const { run, job, render } = this.reviewCandidate(workflowId, runId, expectedEpisodeVersion);
+      const { run, job, render, reviewNode } = this.reviewCandidate(workflowId, runId, reviewNodeId, expectedEpisodeVersion);
       if (job.id !== jobId || job.outputUrl !== outputUrl || (job.sha256 && job.sha256 !== sha256) || (render.output.sha256 && render.output.sha256 !== sha256)) throw new HttpError(409, 'Rendered artifact changed during review');
-      const review = { id: randomUUID(), decision, notes, reviewedAt: now(), workflowId, workflowVersion: run.workflowVersion, runId, episodeId: run.episodeId, episodeVersion: run.episodeVersion, jobId, outputUrl, sha256 };
-      this.db.prepare('INSERT INTO workflow_reviews(id,run_id,data) VALUES (?,?,?)').run(review.id, runId, JSON.stringify(review));
-      next = { ...run, status: decision, review, updatedAt: review.reviewedAt, nodeRuns: run.nodeRuns.map((node) => node.type === 'review' ? { ...node, status: decision, reviewedAt: review.reviewedAt, review, output: { ...node.output, review } } : node) };
+      const review = { id: randomUUID(), decision, notes, reviewedAt: now(), workflowId, workflowVersion: run.workflowVersion, runId, reviewNodeId, episodeId: run.episodeId, episodeVersion: run.episodeVersion, jobId, outputUrl, sha256 };
+      this.db.prepare('INSERT INTO workflow_node_reviews(id,run_id,review_node_id,data) VALUES (?,?,?,?)').run(review.id, runId, reviewNodeId, JSON.stringify(review));
+      const nodeRuns = run.nodeRuns.map((node) => node.nodeId === reviewNodeId ? { ...node, status: decision, reviewedAt: review.reviewedAt, review, output: { ...node.output, review } } : node);
+      const activeReviews = nodeRuns.filter((node) => node.type === 'review' && node.status !== 'skipped');
+      const status = activeReviews.some((node) => node.status === 'awaiting_review') ? 'awaiting_review' : activeReviews.some((node) => node.status === 'changes_requested') ? 'changes_requested' : 'approved';
+      next = { ...run, status, reviews: { ...(run.reviews || {}), [reviewNodeId]: review }, updatedAt: review.reviewedAt, nodeRuns };
       this.save('workflowRuns', next);
-      this.record('workflow.reviewed', { entityId: workflowId, runId, review });
+      this.record('workflow.reviewed', { entityId: workflowId, runId, reviewNodeId, review });
       this.db.exec('COMMIT');
     } catch (error) { this.db.exec('ROLLBACK'); throw error; }
     return next;
   }
 
   workflowReviews(runId) { return this.db.prepare('SELECT data FROM workflow_reviews WHERE run_id=? ORDER BY rowid').all(runId).map((row) => JSON.parse(row.data)); }
+
+  workflowNodeReviews(runId) {
+    const run = this.get('workflowRuns', runId);
+    const rows = this.db.prepare('SELECT review_node_id, data FROM workflow_node_reviews WHERE run_id=? ORDER BY rowid').all(runId);
+    if (rows.length) return rows.map((row) => JSON.parse(row.data));
+    const legacyRow = this.db.prepare('SELECT data FROM workflow_reviews WHERE run_id=?').get(runId);
+    if (!legacyRow) return [];
+    const legacyReviewNodes = (run.nodeRuns || []).filter((node) => node.type === 'review');
+    if (legacyReviewNodes.length !== 1) return [];
+    return [{ ...JSON.parse(legacyRow.data), reviewNodeId: legacyReviewNodes[0].nodeId }];
+  }
+
+  setChannelExternalId(channelId, externalId, expectedUpdatedAt) {
+    const idValue = text(channelId, 'channelId', 80);
+    if (typeof externalId !== 'string' || !/^UC[A-Za-z0-9_-]{22}$/.test(externalId)) throw new HttpError(400, 'externalId must be a known YouTube channel ID');
+    if (typeof expectedUpdatedAt !== 'string' || !Number.isFinite(Date.parse(expectedUpdatedAt))) throw new HttpError(400, 'setChannelExternalId requires a valid expectedUpdatedAt');
+    this.db.exec('BEGIN IMMEDIATE');
+    let next;
+    try {
+      const previous = this.get('channels', idValue);
+      if (previous.updatedAt !== expectedUpdatedAt) throw new HttpError(409, `Channel changed: current updatedAt is ${previous.updatedAt}. Reload before saving.`);
+      next = { ...previous, externalId, updatedAt: now() };
+      this.save('channels', next);
+      this.record('channels.externalIdSet', { entityId: idValue, externalId });
+      this.db.exec('COMMIT');
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+    this.exportKnowledge();
+    return next;
+  }
 
   editKnowledgeNode(id, body) {
     object(body);

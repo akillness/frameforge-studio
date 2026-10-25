@@ -1,0 +1,53 @@
+{
+  "role": "OAuth, publication and media-integrity security reviewer",
+  "findings": [
+    {
+      "severity": "high",
+      "file": "server/publication.mjs",
+      "line": 195,
+      "problem": "Final revalidation can accept stale project state. _manifest snapshots records before asynchronous asset/export checks and never rereads them afterward. Its fingerprint can therefore match the approval even when the episode changed during validation, allowing the public update.",
+      "reproduction": "Approve episode version 1. Pause _export during the final _fetch beforeSend revalidation, save episode version 2 through the existing episode-update route, then release _export. An in-memory probe using the real _manifest/_revalidate/_fetch methods confirmed that the injected public-update transport was invoked despite current version 2.",
+      "correction": "After the last asynchronous check, reread and compare all approval-bound record identities, versions and rights/provenance against the validated snapshot immediately before dispatch. Reject intervening changes with 409. Add a regression that edits the episode while final export validation is pending."
+    },
+    {
+      "severity": "medium",
+      "file": "server/publication.mjs",
+      "line": 231,
+      "problem": "Approval invalidation prevents reconciliation of an already-known remote video. resume rejects before scheduling readback, and _drive repeats the same gate at line 470. An uncertain public transition consequently becomes unrecoverable through the supported reconciliation path after an episode/workflow edit.",
+      "reproduction": "Let a public update have an uncertain result with videoId persisted, then edit the episode before resuming. Revalidation rejects the stale approval, so no videos.list readback occurs. An in-memory control-flow probe confirmed zero readback attempts and resume returning 409.",
+      "correction": "Permit read-only reconciliation of the persisted session/video identity independently of approval freshness. Report observed visibility alongside stale-approval status; require current approval before any further upload or visibility-changing effect."
+    },
+    {
+      "severity": "medium",
+      "file": "server/publication.mjs",
+      "line": 112,
+      "problem": "Resumable identities share one encrypted read-modify-write document, but privateQueue serializes only one service instance. Concurrent instances can overwrite each other's saved session URLs, losing the recovery identity that must be retained before transferring bytes.",
+      "reproduction": "Run two PublicationService instances against the same store, as anticipated by _upload's cross-process claim handling. Concurrently persist sessions for different intents. Both can read the previous document before either writes; the last write removes the other entry. An in-memory probe of the real _private method retained only intent-b.",
+      "correction": "Persist each intent's encrypted recovery state in a separate private-runtime record, or protect the entire shared-document transaction with cross-process locking/CAS. Add a concurrent-instance persistence regression."
+    }
+  ],
+  "scope": {
+    "contract": ".mex/context/decisions.md PW-01–PW-07 and canonical publication contract",
+    "interfaces": "artifacts/production-workspace-implementation/plan.json",
+    "protocolEvidence": "artifacts/production-workspace-implementation/protocols.json",
+    "reviewed": [
+      "server/youtube-oauth.mjs",
+      "server/private-runtime.mjs",
+      "server/publication.mjs",
+      "server/candidates.mjs",
+      "Relevant server/app.mjs and server/platform-session.mjs paths",
+      "Relevant server/media-sources.mjs guards and actual fixture tests"
+    ],
+    "verification": "Read-only source review and isolated in-memory probes; no filesystem writes or network calls. Harness 1.5.0 integrity verification passed.",
+    "jev": "Selected jeopi profile reports disabled; routing/review prerequisite unavailable. No enablement or reconfiguration.",
+    "mediaSources": "Concurrent repair acknowledged; no established provisional finding reported.",
+    "boundary": "This review is neither approval nor live-provider proof."
+  },
+  "notExecuted": [
+    "File edits, Git commands, subdelegation or report persistence",
+    "Reads of .env, credential files, operational data or other agents' private files",
+    "Network/provider calls, port 4310 or private HTTPS access",
+    "Google authorization, media upload, paid generation, publication or deployment",
+    "Formatters, linters or filesystem-writing/project-wide test suites"
+  ]
+}

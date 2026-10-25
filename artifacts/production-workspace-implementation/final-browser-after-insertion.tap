@@ -1,0 +1,78 @@
+TAP version 13
+# (node:23904) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: two channels own independent copied graphs, histories and versions with no execution on copy
+ok 1 - two channels own independent copied graphs, histories and versions with no execution on copy
+  ---
+  duration_ms: 2641.7975
+  type: 'test'
+  ...
+# Subtest: A/B and every stage preserve hidden episode and graph drafts, beforeunload and original stale 409 base
+ok 2 - A/B and every stage preserve hidden episode and graph drafts, beforeunload and original stale 409 base
+  ---
+  duration_ms: 21442.0569
+  type: 'test'
+  ...
+# Subtest: 128-node/256-edge owned canvas fits, pans, inspects and saves the last node without overflow
+ok 3 - 128-node/256-edge owned canvas fits, pans, inspects and saves the last node without overflow
+  ---
+  duration_ms: 20567.6508
+  type: 'test'
+  ...
+# Subtest: real Commons video/still import, rights, attach and original card retain story without generation
+ok 4 - real Commons video/still import, rights, attach and original card retain story without generation
+  ---
+  duration_ms: 19867.0566
+  type: 'test'
+  ...
+# Subtest: unknown media origin, audience and disclosure are initially unanswered; source and delivery reflow
+ok 5 - unknown media origin, audience and disclosure are initially unanswered; source and delivery reflow
+  ---
+  duration_ms: 13665.2237
+  type: 'test'
+  ...
+# Subtest: real FFmpeg render and exact review precede server manifest preview and fixture Google public readback
+ok 6 - real FFmpeg render and exact review precede server manifest preview and fixture Google public readback
+  ---
+  duration_ms: 24111.8862
+  type: 'test'
+  ...
+# Subtest: whole-candidate consent displays every generate node and exact costs, and disclosure changes invalidate the quote without spending
+ok 7 - whole-candidate consent displays every generate node and exact costs, and disclosure changes invalidate the quote without spending
+  ---
+  duration_ms: 19196.6579
+  type: 'test'
+  ...
+# Subtest: both repeated render/review branches use real FFmpeg jobs and require independent exact-node approvals
+ok 8 - both repeated render/review branches use real FFmpeg jobs and require independent exact-node approvals
+  ---
+  duration_ms: 7387.9779
+  type: 'test'
+  ...
+# Subtest: all ten roles prepare and quote through the UI while publish stays outside both execution selections
+ok 9 - all ten roles prepare and quote through the UI while publish stays outside both execution selections
+  ---
+  duration_ms: 19383.9013
+  type: 'test'
+  ...
+# Subtest: source-only whole execution excludes publish and stops at the real local review checkpoint
+ok 10 - source-only whole execution excludes publish and stops at the real local review checkpoint
+  ---
+  duration_ms: 13435.1299
+  type: 'test'
+  ...
+# Subtest: sequential reviewed producers enable the next render in the UI while publish requires its nearest approved review
+ok 11 - sequential reviewed producers enable the next render in the UI while publish requires its nearest approved review
+  ---
+  duration_ms: 26136.7839
+  type: 'test'
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 11
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 190610.218

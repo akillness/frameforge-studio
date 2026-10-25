@@ -1,5 +1,5 @@
 {
-  "observedAt": "2026-10-18T10:18:18.885396+00:00",
+  "observedAt": "2026-10-25T09:33:24.433Z",
   "mexVersion": "0.8.3",
   "setup": {
     "command": "mex setup --cli (Codex choice 6)",
@@ -10,42 +10,46 @@
   },
   "graphRebuild": {
     "state": "succeeded",
-    "filesIndexed": 70,
-    "nodesCreated": 1735,
-    "edgesCreated": 5331,
-    "command": "mex graph rebuild --json",
-    "observedAt": "2026-10-18T10:17:49.888Z",
+    "filesIndexed": 133,
+    "nodesCreated": 4923,
+    "edgesCreated": 15622,
+    "command": "mex graph refresh --json",
+    "observedAt": "2026-10-25T09:18:04.854Z",
     "parseHealth": {
-      "total": 70,
-      "ok": 70,
+      "total": 133,
+      "ok": 133,
       "partial": 0,
       "failed": 0,
       "failedPaths": [],
       "failedPathsTruncated": false
     },
-    "receipt": "artifacts/mex-higgsfield-rebuild.json"
+    "receipt": "artifacts/production-workspace-implementation/mex-refresh-final.json"
   },
   "check": {
     "command": "mex check",
+    "exitCode": 0,
     "driftScore": 100,
     "errors": 0,
     "warnings": 0,
-    "filesChecked": 15,
+    "filesChecked": 16,
     "graphFreshAtCheck": true,
     "sourceChanges": 0,
-    "receipt": ".mex/check-receipt.txt",
-    "observedAt": "2026-10-18T10:18:18.885396+00:00",
-    "currentHead": "e0689f66d5bd0c3ad394e8cd935b1c1627178e5a",
-    "indexedHead": "e0689f66d5bd0c3ad394e8cd935b1c1627178e5a"
+    "receipt": "artifacts/production-workspace-implementation/mex-check-final.txt"
   },
   "knowledgeCheck": {
     "command": "python .mex/verify-knowledge.py",
-    "exitCode": 0,
-    "wikiPages": 9,
-    "okfAtoms": 7,
+    "exitCode": 1,
+    "ok": false,
+    "wikiPages": 312,
+    "okfAtoms": 100,
     "agentContracts": 5,
     "immutableSources": 1,
-    "errors": []
+    "errorCount": 1663,
+    "errors": [
+      "Full vault validation failed with 1663 diagnostics; see the exact linked result. The initial1705-diagnostic audit remains separate."
+    ],
+    "receipt": "artifacts/production-workspace-implementation/knowledge-final.json",
+    "boundary": "No deleted/excluded history or weakened validator; runtime acceptance is separate."
   },
   "harnessUpstreamValidator": {
     "exitCode": 1,
@@ -57,7 +61,7 @@
     "Comparative production quality benchmark",
     "Persistent automatic team runtime activation"
   ],
-  "sharingBoundary": "Authored context is in working tree; graph databases remain checkout-local and ignored.",
+  "sharingBoundary": "Canonical source, documentation and verification records are working-tree changes; databases/caches remain checkout-local. No commit, push, deployment or external sharing performed.",
   "harnessVersioning": {
     "observedAt": "2026-10-18T09:51:24.784Z",
     "currentVersion": "1.4.0",
@@ -423,5 +427,110 @@
     "privateTailscaleBrowserVerified": true,
     "publication": "Source/runtime receipts predate Git publication; follow-up user authorized a scoped commit and push",
     "fullWikiValidation": "Not passing; see scoped diagnostics, not a green claim"
+  },
+  "previousReceiptBeforeProductionWorkspace": {
+    "observedAt": "2026-10-18T10:18:18.885396+00:00",
+    "graphRebuild": {
+      "state": "succeeded",
+      "filesIndexed": 70,
+      "nodesCreated": 1735,
+      "edgesCreated": 5331,
+      "command": "mex graph rebuild --json",
+      "observedAt": "2026-10-18T10:17:49.888Z",
+      "parseHealth": {
+        "total": 70,
+        "ok": 70,
+        "partial": 0,
+        "failed": 0,
+        "failedPaths": [],
+        "failedPathsTruncated": false
+      },
+      "receipt": "artifacts/mex-higgsfield-rebuild.json"
+    },
+    "check": {
+      "command": "mex check",
+      "driftScore": 100,
+      "errors": 0,
+      "warnings": 0,
+      "filesChecked": 15,
+      "graphFreshAtCheck": true,
+      "sourceChanges": 0,
+      "receipt": ".mex/check-receipt.txt",
+      "observedAt": "2026-10-18T10:18:18.885396+00:00",
+      "currentHead": "e0689f66d5bd0c3ad394e8cd935b1c1627178e5a",
+      "indexedHead": "e0689f66d5bd0c3ad394e8cd935b1c1627178e5a"
+    },
+    "knowledgeCheck": {
+      "command": "python .mex/verify-knowledge.py",
+      "exitCode": 0,
+      "wikiPages": 9,
+      "okfAtoms": 7,
+      "agentContracts": 5,
+      "immutableSources": 1,
+      "errors": []
+    }
+  },
+  "latestProductionWorkspace": {
+    "status": "PW-01-through-PW-07-verified-in-isolated-execution",
+    "criteria": [
+      {
+        "id": "PW-01",
+        "status": "verified-isolated-execution"
+      },
+      {
+        "id": "PW-02",
+        "status": "verified-isolated-execution"
+      },
+      {
+        "id": "PW-03",
+        "status": "verified-isolated-execution"
+      },
+      {
+        "id": "PW-04",
+        "status": "verified-isolated-execution"
+      },
+      {
+        "id": "PW-05",
+        "status": "verified-isolated-execution"
+      },
+      {
+        "id": "PW-06",
+        "status": "verified-isolated-execution"
+      },
+      {
+        "id": "PW-07",
+        "status": "verified-isolated-execution"
+      }
+    ],
+    "backend": {
+      "passed": 181,
+      "failed": 0
+    },
+    "legacyLinux": {
+      "passed": 47,
+      "failed": 0
+    },
+    "legacyWindows": {
+      "passed": 46,
+      "failed": 1,
+      "limitation": "EPERM creating file symlink; Linux proof is not Windows proof."
+    },
+    "browser": {
+      "passed": 11,
+      "failed": 0,
+      "screenshots": 40,
+      "externalRequests": 0,
+      "pageErrors": 0
+    },
+    "syntaxModules": 89,
+    "harness": "1.6.0",
+    "harnessSha256": "65af70f95e9942cfdaac98008679f4c66b6ee62c8b866c7ef143856fbb8798d4",
+    "graphify": {
+      "nodes": 3181,
+      "edges": 7171,
+      "sourceFiles": 412,
+      "mode": "native deterministic code extraction; semantic enrichment not run"
+    },
+    "receipt": "artifacts/production-workspace-implementation/verification.json"
   }
 }

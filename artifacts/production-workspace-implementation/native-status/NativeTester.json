@@ -1,0 +1,441 @@
+{
+  "role": "NativeTester",
+  "status": "module-ready-with-verified-integration-failures",
+  "updatedAt": "2026-10-25T07:59:25.443837+00:00",
+  "exports": {
+    "scripts/production-workspace-browser-smoke.mjs": [
+      "runProductionWorkspaceBrowserSmoke() -> Promise<{code,signal,receipt}>"
+    ]
+  },
+  "importVerified": {
+    "syntaxFilesPassed": 13,
+    "exports": [
+      "runProductionWorkspaceBrowserSmoke"
+    ],
+    "exitCode": 0,
+    "syntaxCommands": [
+      "node --check tests/production-publication.test.mjs",
+      "node --check tests/production-generation-plan.test.mjs",
+      "node --check tests/production-workflow-graph.test.mjs",
+      "node --check tests/workflows.test.mjs",
+      "node --check tests/production-workspace-api.test.mjs",
+      "node --check tests/production-workspace-ui.test.mjs",
+      "node --check tests/production-local-guards.test.mjs",
+      "node --check tests/production-media-credits.test.mjs",
+      "node --check tests/production-workspace-journey.test.mjs",
+      "node --check tests/production-source-media.test.mjs",
+      "node --check tests/reviews.test.mjs",
+      "node --check tests/generation-integration.test.mjs",
+      "node --check scripts/production-workspace-browser-smoke.mjs"
+    ],
+    "importOperation": "await import('./scripts/production-workspace-browser-smoke.mjs'); Object.keys(module)"
+  },
+  "productionFilesChanged": [],
+  "changedFiles": [
+    "tests/production-publication.test.mjs",
+    "tests/production-generation-plan.test.mjs",
+    "tests/production-workflow-graph.test.mjs",
+    "tests/workflows.test.mjs",
+    "tests/production-workspace-api.test.mjs",
+    "tests/production-workspace-ui.test.mjs",
+    "tests/production-local-guards.test.mjs",
+    "tests/production-media-credits.test.mjs",
+    "tests/production-workspace-journey.test.mjs",
+    "tests/production-source-media.test.mjs",
+    "tests/reviews.test.mjs",
+    "tests/generation-integration.test.mjs",
+    "scripts/production-workspace-browser-smoke.mjs",
+    "artifacts/production-workspace-implementation/native-status/NativeTester.json",
+    "artifacts/production-workspace-implementation/journey-receipt.json",
+    "artifacts/production-workspace-implementation/journey-browser-final.tap",
+    "artifacts/production-workspace-implementation/journey-completion.tap",
+    "artifacts/production-workspace-implementation/journey-credit-pixels.json",
+    "artifacts/production-workspace-implementation/journey-credit-verification.tap",
+    "artifacts/production-workspace-implementation/journey-engine-final.tap",
+    "artifacts/production-workspace-implementation/journey-final-browser.tap",
+    "artifacts/production-workspace-implementation/journey-focused-final.tap",
+    "artifacts/production-workspace-implementation/journey-focused.tap",
+    "artifacts/production-workspace-implementation/journey-http-graph-final.tap",
+    "artifacts/production-workspace-implementation/journey-integration-final.tap",
+    "artifacts/production-workspace-implementation/journey-legacy-verification.tap",
+    "artifacts/production-workspace-implementation/journey-local-final.tap",
+    "artifacts/production-workspace-implementation/journey-source.tap",
+    "artifacts/production-workspace-implementation/journey-verification.tap",
+    "artifacts/production-workspace-implementation/journey-evidence/A-1024.png",
+    "artifacts/production-workspace-implementation/journey-evidence/A-1600.png",
+    "artifacts/production-workspace-implementation/journey-evidence/A-320.png",
+    "artifacts/production-workspace-implementation/journey-evidence/A-375.png",
+    "artifacts/production-workspace-implementation/journey-evidence/B-1024.png",
+    "artifacts/production-workspace-implementation/journey-evidence/B-1600.png",
+    "artifacts/production-workspace-implementation/journey-evidence/B-320.png",
+    "artifacts/production-workspace-implementation/journey-evidence/B-375.png",
+    "artifacts/production-workspace-implementation/journey-evidence/B-large-1024.png",
+    "artifacts/production-workspace-implementation/journey-evidence/B-large-1600.png",
+    "artifacts/production-workspace-implementation/journey-evidence/B-large-320.png",
+    "artifacts/production-workspace-implementation/journey-evidence/B-large-375.png",
+    "artifacts/production-workspace-implementation/journey-evidence/delivery-1024.png",
+    "artifacts/production-workspace-implementation/journey-evidence/delivery-1600.png",
+    "artifacts/production-workspace-implementation/journey-evidence/delivery-320.png",
+    "artifacts/production-workspace-implementation/journey-evidence/delivery-375.png",
+    "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-1024.png",
+    "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-1600.png",
+    "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-320.png",
+    "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-375.png",
+    "artifacts/production-workspace-implementation/journey-evidence/generation-consent-1024.png",
+    "artifacts/production-workspace-implementation/journey-evidence/generation-consent-1600.png",
+    "artifacts/production-workspace-implementation/journey-evidence/generation-consent-320.png",
+    "artifacts/production-workspace-implementation/journey-evidence/generation-consent-375.png",
+    "artifacts/production-workspace-implementation/journey-evidence/source-1024.png",
+    "artifacts/production-workspace-implementation/journey-evidence/source-1600.png",
+    "artifacts/production-workspace-implementation/journey-evidence/source-320.png",
+    "artifacts/production-workspace-implementation/journey-evidence/source-375.png",
+    "artifacts/production-workspace-implementation/journey-evidence/source-initial-1024.png",
+    "artifacts/production-workspace-implementation/journey-evidence/source-initial-1600.png",
+    "artifacts/production-workspace-implementation/journey-evidence/source-initial-320.png",
+    "artifacts/production-workspace-implementation/journey-evidence/source-initial-375.png"
+  ],
+  "verification": [
+    {
+      "command": "rtk proxy node --test tests/production-publication.test.mjs tests/production-generation-plan.test.mjs tests/production-workflow-graph.test.mjs tests/workflows.test.mjs tests/production-workspace-api.test.mjs tests/production-workspace-ui.test.mjs tests/production-local-guards.test.mjs tests/production-media-credits.test.mjs tests/production-workspace-journey.test.mjs",
+      "stdoutLog": "artifacts/production-workspace-implementation/journey-focused.tap",
+      "counts": {
+        "tests": 129,
+        "pass": 106,
+        "fail": 23,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "exitCode": 1
+    },
+    {
+      "command": "rtk proxy node --test tests/production-publication.test.mjs tests/production-generation-plan.test.mjs tests/production-workflow-graph.test.mjs tests/workflows.test.mjs tests/production-workspace-api.test.mjs tests/production-workspace-ui.test.mjs tests/production-local-guards.test.mjs tests/production-media-credits.test.mjs tests/production-workspace-journey.test.mjs",
+      "stdoutLog": "artifacts/production-workspace-implementation/journey-focused-final.tap",
+      "counts": {
+        "tests": 129,
+        "pass": 115,
+        "fail": 14,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "exitCode": 1
+    },
+    {
+      "command": "rtk proxy node --test tests/production-source-media.test.mjs",
+      "stdoutLog": "artifacts/production-workspace-implementation/journey-source.tap",
+      "counts": {
+        "tests": 30,
+        "pass": 30,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "exitCode": 0
+    },
+    {
+      "command": "rtk proxy node --test tests/production-media-credits.test.mjs",
+      "stdoutLog": "artifacts/production-workspace-implementation/journey-credit-verification.tap",
+      "counts": {
+        "tests": 2,
+        "pass": 2,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "exitCode": 0
+    },
+    {
+      "command": "rtk proxy node --test tests/production-publication.test.mjs tests/production-generation-plan.test.mjs tests/production-workflow-graph.test.mjs tests/workflows.test.mjs tests/production-workspace-api.test.mjs tests/production-workspace-ui.test.mjs tests/production-local-guards.test.mjs tests/production-media-credits.test.mjs tests/production-workspace-journey.test.mjs tests/production-source-media.test.mjs",
+      "stdoutLog": "artifacts/production-workspace-implementation/journey-verification.tap",
+      "counts": {
+        "tests": 160,
+        "pass": 146,
+        "fail": 14,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "exitCode": 1
+    },
+    {
+      "command": "rtk proxy node --test tests/reviews.test.mjs tests/generation-integration.test.mjs",
+      "stdoutLog": "artifacts/production-workspace-implementation/journey-legacy-verification.tap",
+      "counts": {
+        "tests": 13,
+        "pass": 12,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "exitCode": 1
+    },
+    {
+      "command": "rtk proxy node --test tests/reviews.test.mjs tests/generation-integration.test.mjs tests/workflows.test.mjs tests/production-workspace-api.test.mjs",
+      "stdoutLog": "artifacts/production-workspace-implementation/journey-integration-final.tap",
+      "counts": {
+        "tests": 63,
+        "pass": 55,
+        "fail": 8,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "exitCode": 1
+    },
+    {
+      "command": "rtk proxy node --test tests/production-workspace-api.test.mjs tests/production-workflow-graph.test.mjs",
+      "stdoutLog": "artifacts/production-workspace-implementation/journey-http-graph-final.tap",
+      "counts": {
+        "tests": 42,
+        "pass": 40,
+        "fail": 2,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "exitCode": 1
+    },
+    {
+      "command": "rtk proxy node --test tests/production-workspace-journey.test.mjs tests/production-workspace-ui.test.mjs",
+      "stdoutLog": "artifacts/production-workspace-implementation/journey-browser-final.tap",
+      "counts": {
+        "tests": 15,
+        "pass": 14,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "exitCode": 1
+    },
+    {
+      "command": "rtk proxy node --test tests/workflows.test.mjs tests/generation-integration.test.mjs tests/production-local-guards.test.mjs tests/production-workflow-graph.test.mjs",
+      "stdoutLog": "artifacts/production-workspace-implementation/journey-engine-final.tap",
+      "counts": {
+        "tests": 44,
+        "pass": 34,
+        "fail": 10,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "exitCode": 1
+    },
+    {
+      "command": "rtk proxy node --test tests/production-workspace-journey.test.mjs",
+      "stdoutLog": "artifacts/production-workspace-implementation/journey-completion.tap",
+      "counts": {
+        "tests": 8,
+        "pass": 7,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "exitCode": 1
+    },
+    {
+      "command": "rtk proxy node --test tests/production-local-guards.test.mjs",
+      "stdoutLog": "artifacts/production-workspace-implementation/journey-local-final.tap",
+      "counts": {
+        "tests": 4,
+        "pass": 3,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "exitCode": 1
+    },
+    {
+      "command": "rtk proxy node --test tests/production-workspace-journey.test.mjs",
+      "stdoutLog": "artifacts/production-workspace-implementation/journey-final-browser.tap",
+      "counts": {
+        "tests": 8,
+        "pass": 7,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "exitCode": 1
+    }
+  ],
+  "earlierRunsWithoutSavedTap": [
+    {
+      "command": "rtk proxy node --test tests/production-workspace-journey.test.mjs tests/production-media-credits.test.mjs",
+      "tests": 8,
+      "passed": 4,
+      "failed": 4,
+      "skipped": 0
+    },
+    {
+      "command": "rtk proxy node --test tests/production-publication.test.mjs tests/production-local-guards.test.mjs tests/production-workspace-journey.test.mjs",
+      "tests": 45,
+      "passed": 38,
+      "failed": 7,
+      "skipped": 0
+    }
+  ],
+  "latestPerTestCounts": {
+    "tests": 175,
+    "passed": 164,
+    "failed": 11,
+    "skipped": 0
+  },
+  "countsBoundary": "Latest result for each uniquely named test across explicit scoped runs; not a claim that one 175-test invocation passed.",
+  "latestFailures": [
+    {
+      "name": "same-length local generated-byte tampering rejects apply before episode, source, job-applied state or history changes",
+      "status": "failed",
+      "log": "artifacts/production-workspace-implementation/journey-local-final.tap",
+      "error": "'Missing expected exception.'"
+    },
+    {
+      "name": "parallel render->review branches each bind to their own edge-connected render, not the first node of that type",
+      "status": "failed",
+      "log": "artifacts/production-workspace-implementation/journey-engine-final.tap",
+      "error": "'review-2 lost its connected render output: {\"nodeId\":\"review-2\",\"type\":\"review\",\"status\":\"awaiting_review\"}'"
+    },
+    {
+      "name": "a sequential repeated producer chain (render1->review1->render2->review2) binds review2 to its nearest render, not an earlier reused producer",
+      "status": "failed",
+      "log": "artifacts/production-workspace-implementation/journey-engine-final.tap",
+      "error": "'review-2 lost its nearest producer output: {\"nodeId\":\"review-2\",\"type\":\"review\",\"status\":\"awaiting_review\"}'"
+    },
+    {
+      "name": "whole-candidate consent displays every generate node and exact costs, and disclosure changes invalidate the quote without spending",
+      "status": "failed",
+      "log": "artifacts/production-workspace-implementation/journey-final-browser.tap",
+      "error": "|-\r\n    changing disclosure invalidates the displayed plan\r\n    \r\n    1 !== 0"
+    },
+    {
+      "name": "resuming a generation workflow reuses the completed generation output without another provider request",
+      "status": "failed",
+      "log": "artifacts/production-workspace-implementation/journey-engine-final.tap",
+      "error": "|-\r\n    Expected values to be strictly equal:\r\n    + actual - expected\r\n    \r\n    + 'failed'\r\n    - 'awaiting_review'"
+    },
+    {
+      "name": "completed generation resume with missing generationJobId rejects before another provider request",
+      "status": "failed",
+      "log": "artifacts/production-workspace-implementation/journey-engine-final.tap",
+      "error": "|-\r\n    Expected values to be strictly equal:\r\n    + actual - expected\r\n    \r\n    + 'failed'\r\n    - 'awaiting_review'"
+    },
+    {
+      "name": "cancellation during generation submission preserves the job for resume without a second provider request",
+      "status": "failed",
+      "log": "artifacts/production-workspace-implementation/journey-engine-final.tap",
+      "error": "|-\r\n    Expected values to be strictly equal:\r\n    + actual - expected\r\n    \r\n    + 'failed'\r\n    - 'awaiting_review'"
+    },
+    {
+      "name": "generation requestId lineage recovers after workflow output persistence fails",
+      "status": "failed",
+      "log": "artifacts/production-workspace-implementation/journey-engine-final.tap",
+      "error": "|-\r\n    Expected values to be strictly equal:\r\n    + actual - expected\r\n    \r\n    + 'failed'\r\n    - 'awaiting_review'"
+    },
+    {
+      "name": "cancelled queued generation resume inherits pending provider job without resubmitting",
+      "status": "failed",
+      "log": "artifacts/production-workspace-implementation/journey-engine-final.tap",
+      "error": "|-\r\n    Expected values to be strictly equal:\r\n    + actual - expected\r\n    \r\n    + 'failed'\r\n    - 'awaiting_review'"
+    },
+    {
+      "name": "completed generation resume rejects storyboard rerun before episode mutation",
+      "status": "failed",
+      "log": "artifacts/production-workspace-implementation/journey-engine-final.tap",
+      "error": "|-\r\n    Expected values to be strictly equal:\r\n    + actual - expected\r\n    \r\n    + 'failed'\r\n    - 'awaiting_review'"
+    },
+    {
+      "name": "workflow generation consent precedes edits; completed asset applies with versioned provenance",
+      "status": "failed",
+      "log": "artifacts/production-workspace-implementation/journey-engine-final.tap",
+      "error": "|-\r\n    {\"id\":\"ca16e2be-8f83-4542-b29d-c1a14d5eac0f\",\"createdAt\":\"2026-10-25T07:52:30.197Z\",\"updatedAt\":\"2026-10-25T07:52:30.415Z\",\"workflowId\":\"3e33a2e7-dbae-443d-9aba-5fdbda90e8f9\",\"workflowVersion\":1,\"workflowSnapshot\":{\"id\":\"3e33a2e7-dbae-443d-9aba-5fdbda90e8f9\",\"createdAt\":\"2026-10-25T07:52:29.987Z\",\"updatedAt\":\"2026-10-25T07:52:29.987Z\",\"name\":\"기본 제작 DAG · 트렌드에서 검토까지\",\"nodes\":[{\"id\":\"script\",\"type\":\"script\",\"x\":600,\"y\":180,\"config\":{\"agent\":\"studio\",\"prompt\":\"출처가 확인된 내용으로 한국어 영상 스토리보드를 구성하세요.\"}},{\"id\":\"storyboard\",\"type\":\"storyboard\",\"x\":860,\"y\":180,\"config\":{}},{\"id\":\"render\",\"type\":\"render\",\"x\":1120,\"y\":180,\"config\":{}},{\"id\":\"review\",\"type\":\"review\",\"x\":1380,\"y\":180,\"config\":{}},{\"id\":\"generate\",\"type\":\"generate\",\"x\":600,\"y\":200,\"config\":{\"model\":\"fixture\",\"prompt\":\"Fixture visual\",\"sceneIndex\":0,\"params\":{}}}],\"edges\":[{\"id\":\"a\",\"source\":\"script\",\"target\":\"storyboard\"},{\"id\":\"b\",\"source\":\"storyboard\",\"target\":\"generate\"},{\"id\":\"c\",\"source\":\"generate\",\"target\":\"render\"},{\"id\":\"d\",\"source\":\"render\",\"target\":\"review\"}],\"version\":1,\"sample\":false,\"episodeId\":\"8635eed8-2a55-4f93-b7de-69ee36c6bf02\",\"channelId\":\"30268ec4-7312-4590-b85e-6243d63c9ebc\",\"templateId\":\"173ccd64-3f2c-46a3-8a9f-ec46414fa666\",\"templateVersion\":1},\"episodeId\":\"8635eed8-2a55-4f93-b7de-69ee36c6bf02\",\"episodeVersion\":3,\"episodeSnapshot\":{\"id\":\"8635eed8-2a55-4f93-b7de-69ee36c6bf02\",\"createdAt\":\"2026-10-25T07:52:29.926Z\",\"updatedAt\":\"2026-10-25T07:52:30.038Z\",\"channelId\":\"30268ec4-7312-4590-b85e-6243d63c9ebc\",\"title\":\"Generation fixture\",\"topic\":\"Safe API test\",\"category\":\"information\",\"status\":\"draft\""
+    }
+  ],
+  "journey": {
+    "command": "rtk proxy node --test tests/production-workspace-journey.test.mjs",
+    "counts": {
+      "passed": 7,
+      "failed": 1
+    },
+    "receipt": "artifacts/production-workspace-implementation/journey-receipt.json",
+    "screenshots": 32,
+    "screenshotHashesVerified": true,
+    "widths": [
+      1600,
+      1024,
+      375,
+      320
+    ],
+    "externalBrowserRequests": 0,
+    "pageErrors": 0,
+    "successfulScenarios": [
+      "two channels own independent copied graphs, histories and versions with no execution on copy",
+      "A/B and every stage preserve hidden episode and graph drafts, beforeunload and original stale 409 base",
+      "128-node/256-edge owned canvas fits, pans, inspects and saves the last node without overflow",
+      "real Commons video/still import, rights, attach and original card retain story without generation",
+      "unknown media origin, audience and disclosure are initially unanswered; source and delivery reflow",
+      "real FFmpeg render and exact review precede server manifest preview and fixture Google public readback",
+      "both repeated render/review branches use real FFmpeg jobs and require independent exact-node approvals"
+    ]
+  },
+  "decodedCredits": {
+    "command": "node --test tests/production-media-credits.test.mjs",
+    "format": "decoded rgb24 1080x1920 at 0.4s",
+    "sameLengthAttributions": [
+      "ALICE AMBER",
+      "BRUNO BROWN"
+    ],
+    "decodedFrameSha256": [
+      "8c5d3d0d65d4f2ef42c7710e30f8407e5adb3cf7baacbd8268103aa36075c06f",
+      "af1b34615e3573a00cbef43b9c97998637b54646646155496da5692c9f7a8a10"
+    ],
+    "changedGlyphPixels": 4695,
+    "brightPixels": 4400,
+    "glyphDifferenceBounds": {
+      "minX": 32,
+      "maxX": 540,
+      "minY": 1796,
+      "maxY": 1824
+    },
+    "verifiedAt": "2026-10-25T07:58:59.080Z"
+  },
+  "unresolvedPrerequisites": [
+    {
+      "owner": "NativeSchema",
+      "tests": 1,
+      "detail": "Same-length generated-file byte tampering remains accepted by GenerationQueue.apply; expected409 before any episode/job/source/history mutation."
+    },
+    {
+      "owner": "NativeEngine",
+      "tests": 2,
+      "detail": "Parallel and sequential repeated-role tests find review-2 awaiting_review without output.render. Both assertions remain strong and report exact missing outputs. Real FFmpeg two-branch independent approval journey passes separately."
+    },
+    {
+      "owner": "NativeMedia/Main integration",
+      "tests": 7,
+      "detail": "Actual generated source/hash/job is applied, but the render step then fails: Media requires explicit rights clearance bound to the current upload hash. Six old recovery invariants and one bridge/HTTP integration path remain blocked downstream. No rights record was fabricated to make them pass."
+    },
+    {
+      "owner": "NativeCanvas",
+      "tests": 1,
+      "detail": "All selected generation nodes, exact inputs/costs and server fingerprint display in the real browser. After disclosure changes, the old fingerprint remains in the dialog (count1 instead of0); complete invalidation scenario remains red."
+    }
+  ],
+  "resolvedPrerequisites": [
+    "All frozen HTTP routes now compose. Owned-copy, configured positive OAuth and explicit rights-clearance fixture setup migrated without relaxing production gates.",
+    "Source rights/history tests30/30; publication service including all appended credits and final-description overflow passes in the scoped evidence.",
+    "Credited real FFmpeg -> exact review -> server manifest preview -> preview invalidation/reprepare -> private fixture upload -> exact public readback journey passed. No Google consent/browser navigation occurred."
+  ],
+  "securityBoundary": "Only tests, the isolated browser runner and explicitly shared journey/status artifacts changed. Temp SQLite plus ephemeral loopback ports; real browser/app/Store/FFmpeg; synthetic external transport only. No production port4310, private HTTPS/data/.env/credentials, real provider/consent/spend/upload/deploy, Git, installers, formatters, linters, project-wide suites or subdelegation.",
+  "jev": {
+    "profile": "frameforge-codex",
+    "active": false,
+    "used": false
+  },
+  "sharingBoundary": "Shared working-tree contract artifact. No commit or push."
+}

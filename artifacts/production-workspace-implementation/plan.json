@@ -1,0 +1,230 @@
+{
+  "schema": "frameforge-approved-workspace-plan/v1",
+  "frozenAt": "2026-10-25T06:14:52.910Z",
+  "contract": {
+    "path": ".mex/context/decisions.md",
+    "sha256": "f6f38029643377900f3e2e7375b969844f3cebb9926c85f652213c18bcf3e152",
+    "criteria": [
+      "PW-01",
+      "PW-02",
+      "PW-03",
+      "PW-04",
+      "PW-05",
+      "PW-06",
+      "PW-07"
+    ]
+  },
+  "design": {
+    "default": "studio",
+    "alternative": "workflow",
+    "implementation": "Reuse existing API-backed modules; no prototype fixture/markup promotion or second framework",
+    "navigation": "Zero writes. Full episode drafts with original base version, dirty/revision/scene/slot selection; graph drafts keyed by workflow ID. Preserve inactive dirty drafts and beforeunload protection; explicit saves retain409 conflicts."
+  },
+  "graph": {
+    "owner": "EngineImplementation",
+    "files": [
+      "server/graph.mjs",
+      "server/candidates.mjs",
+      "server/workflows.mjs"
+    ],
+    "exports": {
+      "graph.mjs": [
+        "topologicalOrder(nodes,edges): nodeId[] with stable lexical ID ties",
+        "ancestors(edges,nodeId): Set",
+        "descendants(edges,nodeId): Set",
+        "resolvePrerequisite(nodes,edges,nodeId,type): traverse all incoming paths through intermediate roles, stop each path at its nearest node of requested type; exactly one boundary ID required,409 missing/ambiguous",
+        "resolveOptional(nodes,edges,nodeId,type): same nearest-boundary traversal; zero=null,one=node,>one409",
+        "canonicalJson(value)",
+        "candidateFingerprint(manifest)"
+      ],
+      "candidates.mjs": [
+        "candidateManifest(store,episode,workflow,options={}): full normalized scenes/source/rights/assets/hashes/trims and workflow/selection/disclosure/publication metadata",
+        "verifyCandidateAssets(store,manifest): async actual registered-local asset hash and rights verification"
+      ]
+    },
+    "rules": [
+      "128 nodes /256 edges; keep1MiB body; unique IDs/edges/endpoints, self/cycle/connectivity checks; same-type edges can be acyclic",
+      "Exact NODE IDs only selectedStages/startStage; no type fallback; literal ID render valid",
+      "Topological execution and selected downstream reachability from explicit start",
+      "Transitive incoming-path boundary resolution, not direct parents or first matching type: stop each path at nearest requested producer. Required storyboard/script/render/review unique at that boundary; optional news/trend absent is valid; parallel candidates remain ambiguous. Repeated same-role chains bind the nearest producer, so render1-review1-render2-review2 binds review2 to render2. Render aggregates all relevant upstream generate outputs. Use the same resolver for structural prerequisite validation and runtime.",
+      "Per-review-node outputs and matching render; no first-role lookup anywhere; selected review aggregate determines run state",
+      "Persist original generation job intent before submission; reuse per node/scene after cancel/restart/resume and never reapply/resubmit blindly",
+      "Owned workflow only for selected project; no different episode/channel or first-channel fallback"
+    ]
+  },
+  "store": {
+    "owner": "StoreImplementation",
+    "file": "server/store.mjs",
+    "workflowFields": [
+      "episodeId",
+      "channelId",
+      "templateId",
+      "templateVersion"
+    ],
+    "methods": [
+      "createWorkflowCopy({templateId,channelId,episodeId,expectedTemplateVersion}) -> fresh owned workflow v1; preserve node IDs within new workflow identity; only graph/name/config/lineage copied, no operational records",
+      "reviewCandidate(workflowId,runId,reviewNodeId,expectedEpisodeVersion) -> exact transitive render candidate",
+      "commitWorkflowReview(workflowId,runId,reviewNodeId,details) -> only that review node; run.reviews keyed by node ID; NO new run.review alias",
+      "setChannelExternalId(channelId,externalId,expectedUpdatedAt) -> explicit guarded known UC identifier"
+    ],
+    "schema": "Add workflow_node_reviews(id PRIMARY KEY,run_id,review_node_id,data,UNIQUE(run_id,review_node_id)); leave old workflow_reviews rows/table untouched and read-only. Map historical single review only when exactly one legacy review node exists; no guessed ID fallback. New writes only new table.",
+    "rules": [
+      "Validate/persist ownership+template lineage; immutable on project edits",
+      "Explicit template edits make new versions; old project copies never auto-update; divergent import UI is not part of this cutover",
+      "Publish config copied to another channel must rebind to destination, no stale channel override",
+      "Single shared constant for reference-bearing side tables and pruning; include new reviews/approvals/source evidence as applicable; never prune referenced media",
+      "Preserve old episode/workflow/history/review rows and optimistic concurrency; no destructive migration"
+    ]
+  },
+  "engineAPI": {
+    "copy": "WorkflowEngine.copy(templateId,body) -> Store.createWorkflowCopy",
+    "quote": "await WorkflowEngine.quote(workflowId,episodeId,{selectedStages,startStage,resumeRunId,expectedWorkflowVersion,expectedEpisodeVersion,disclosure}) -> persisted generation plan containing full candidate, fingerprint, per-node exact input/cost or explicit unquoted status, aggregate, expiry",
+    "start": "WorkflowEngine.start(workflowId,episodeId,{existing version/selection/resume fields,allowGeneration,generationPlanId,generationFingerprint,acceptUnquotedEstimate,disclosure}); require valid whole-plan consent for selected generation and actual target scene IDs; verify current exact target before each paid call",
+    "review": "await WorkflowEngine.review(workflowId,runId,body) requires body.reviewNodeId; keep existing /review URI with no legacy type-inference route",
+    "publication": "WorkflowEngine constructor gains publication adapter; publish node uses exact connected review/render and preexisting explicit final publication approval, never manufactures approval or uses Studio automation"
+  },
+  "media": {
+    "owner": "MediaImplementation",
+    "files": [
+      "server/media-sources.mjs",
+      "server/validation.mjs",
+      "server/render.mjs"
+    ],
+    "class": "SourceMediaService({store,fetchImpl,userAgent,probe})",
+    "methods": [
+      "search({query,kind,limit}) -> explicit status and Commons items",
+      "importMedia(body) -> re-fetch by Commons page ID, verify supported original/raster/video URL+metadata+human rights acknowledgement, bounded download/probe/hash/register; no arbitrary URL import",
+      "clearRights(uploadId,body) -> explicit owned/third-party/generated rights record (mediaRights entity), no automatic clearance",
+      "attach(episodeId,{sceneId,slotId?,uploadId,expectedVersion,trimStart?,trimEnd?,useAs}) -> versioned current scene update",
+      "card(episodeId,{sceneId,expectedVersion}) -> preserve story/text/evidence/narration and convert to original text-only title card, no image/upload/license fabrication or provider call"
+    ],
+    "sourceFields": [
+      "origin=own|third-party|generated",
+      "sourceUrl",
+      "licenseId",
+      "attribution",
+      "retrievedAt",
+      "sha256",
+      "useAs=evidence|illustration",
+      "generationJobId when generated"
+    ],
+    "rules": [
+      "Validate scene and slot source/evidence roundtrip; third-party asset requires matching rights record and local hash; source-less original title card needs no upload",
+      "Original media hashes and source/license/attribution/trim records remain in versioned episode history; generated/illustrative visuals not factual footage",
+      "Required attributions are rendered legibly and carried into publication description/manifest",
+      "Use exact verified Commons schema/host policy in protocols.json, explicit configurable descriptive contact User-Agent on metadata AND downloads",
+      "403/429 retain blocked/rate-limited + Retry-After state, not no-results; never fallback silently on provider/config failure"
+    ]
+  },
+  "publication": {
+    "owner": "DeliveryImplementation",
+    "files": [
+      "server/youtube-oauth.mjs",
+      "server/publication.mjs",
+      "server/platform-session.mjs"
+    ],
+    "oauth": "YouTubeOAuth({store,fetchImpl,clientId,clientSecret,redirectUri,testing,tokenKey?}); begin(channelId,{sessionId,correlationToken}) -> authUrl/internal cookie data; complete({state,code,error,correlationToken},{isSessionActive}) -> sanitized status; status(channelId), accessToken(channelId), disconnect(channelId)",
+    "oauthRules": [
+      "Require local channel.externalId to be known UC ID BEFORE authorize; callback channels.list mine must match, never set or guess externalId from first result",
+      "One-time short-lived state+PKCE AND independent host-only HttpOnly Lax correlation cookie; preserve normal Strict cookie, verify initiating session still active; consume state including denial, clear cookie and clean redirect",
+      "Tokens/codes/verifiers/resumable URLs never entity/event/history/state/knowledge; encrypted private0600 runtime files only; sanitized scopes/expiry/channel/status to browser",
+      "Request/verify youtube.force-ssl, preserve refresh token when omitted, explicit expiry/reconsent and conditional Testing7-day bound"
+    ],
+    "service": "PublicationService({store,oauth,fetchImpl}); approve(body,{ownerId}) -> final exact manifest approval; publish(approvalId,{ownerId}) -> persisted queued intent; resume(intentId,{ownerId}); state(approvalId); list(episodeId); close()",
+    "body": [
+      "workflowId",
+      "runId",
+      "reviewNodeId",
+      "expectedEpisodeVersion",
+      "title",
+      "description",
+      "categoryId",
+      "tags",
+      "selfDeclaredMadeForKids:boolean explicit",
+      "containsSyntheticMedia:boolean explicit",
+      "disclosureRationale",
+      "rightsAcknowledged:true"
+    ],
+    "rules": [
+      "Final approval binds owner/project/channel/actual output job/hash/scene rights and metadata/audience/disclosure; changes invalidate it",
+      "One approved click drives private resumable insert -> actual readback processing/identity/channel/metadata/status -> same remote ID public update -> public readback; persistent phase/session identity before each effect",
+      "No duplicate insert after failed/uncertain completion; reconcile saved resumable session/known video ID; unknown stays unknown",
+      "Unaudited API project private restriction is explicit provider_blocked/private_restricted state, never false published",
+      "Disable all automated YouTube platform-session attach/click/input/navigation APIs during cutover; keep manual external Studio link and other platform behavior. NO default flag to re-enable unsafe YouTube automation"
+    ]
+  },
+  "http": {
+    "owner": "Main",
+    "file": "server/app.mjs",
+    "dependencies": "new optional mediaOptions/youtubeOptions/publicationOptions and fetch injection only for isolated fixtures; production defaults real adapters",
+    "routes": [
+      "POST /api/workflows/:templateId/copies",
+      "POST /api/workflows/:id/quote",
+      "POST /api/workflows/:id/runs/:runId/review with mandatory reviewNodeId",
+      "GET /api/sources/search?query=&kind=",
+      "POST /api/sources/import",
+      "POST /api/uploads/:uploadId/rights",
+      "POST /api/episodes/:id/source",
+      "POST /api/episodes/:id/card",
+      "PUT /api/channels/:id/youtube with externalId+expectedUpdatedAt",
+      "GET /api/channels/:id/youtube",
+      "POST /api/channels/:id/youtube/authorize",
+      "DELETE /api/channels/:id/youtube",
+      "GET /oauth/youtube/callback (dedicated one-time-state/cookie authenticated exception)",
+      "POST /api/publication/approvals",
+      "POST /api/publication/approvals/:id/publish",
+      "POST /api/publication/intents/:id/resume",
+      "GET /api/publication/approvals/:id",
+      "GET /api/episodes/:id/publications"
+    ],
+    "rules": [
+      "All API writes authenticated/admin/same-origin; only callback exception with full correlation protection",
+      "Do not expose private service internals in /api/state or logs",
+      "Keep existing local upload allowlists/probe+protocol protections and1MiB JSON limit; new import uses same protections"
+    ]
+  },
+  "uiOwners": {
+    "StudioImplementation": [
+      "public/app.js",
+      "public/workspace.css",
+      "public/styles.css"
+    ],
+    "CanvasImplementation": [
+      "public/workflow.js",
+      "public/workflow.css"
+    ],
+    "SourceDeliveryUI": [
+      "public/production-tools.js"
+    ]
+  },
+  "uiContract": {
+    "canvas": "Export bindProject({episodeId,channelId}), hasAnyChanges(), getContext() in existing createWorkflowEditor; load() remains read-only; bind preserves per-workflow drafts and explicit project association. No navigation copy/save; explicit Create project workflow button calls copies. getContext returns {episodeId,channelId,workflowId,workflowVersion,selectedNodeId,reviewNodeId,runId}.",
+    "tools": "createProductionTools({api,getEpisode,getWorkflowContext,refresh,onEpisodeUpdated,toast,canMutate}) -> {html({mode:source|delivery}),mount(),destroy()}; Main Studio owner imports/mounts it in existing production context, no second global state. Source/Delivery author owns only new production-tools.js.",
+    "modes": "Semantic A/B controls (data-action=view data-view=studio|workflow acceptable), selected context visible; existing task views remain same context; source/rights/review/delivery use actual service state, not fixtures; generated consent renders all selected node inputs/costs/disclosure and server plan fingerprint"
+  },
+  "evidence": {
+    "required": [
+      "Valid Tester RED before production implementation for each seam",
+      "InitialGraph+fullPipelineGraph preserve optional absent news behavior",
+      "Parallel render/review branches with second approval and branch2 start/resume",
+      "Two-project/two-channel copies and conflict-safe draft navigation",
+      "Commons UA,403/429,no arbitrary URL/uncleared thumbnail, source card/no paid-call and real credited raster/video render",
+      "Exact multi-generation plan invalidation/recovery and no double apply",
+      "OAuth strict/Lax binding, channel mismatch, token bytes absent state/export, private/public field and recovery fixtures",
+      "Current real app browser all requested stages at desktop/mobile, existing premiere+ops runners",
+      "Final syntax, scoped/new tests then required integration suite, actual FFmpeg render, immutable new harness semantic contract+verify"
+    ],
+    "notAuthorized": [
+      "real consent",
+      "paid generation",
+      "live upload/publication",
+      "deployment",
+      "Git mutation"
+    ]
+  },
+  "notes": [
+    "No extra client draft wrapper module; use native Maps and existing history utilities",
+    "No destructive review migration, run.review alias, unique-type shorthand, optional-context required error, first-channel fallback or prototype promotion",
+    "Canonical existing PW contract remains SSOT; this is derived executable interface plan, not an A-grade Ouroboros seed claim"
+  ]
+}

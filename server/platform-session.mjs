@@ -21,6 +21,21 @@ const MAX_SELECTOR = 500;
 const MAX_INPUT = 20_000;
 const PROFILE_ROOT = 'platform-profiles';
 
+function isYouTubeUrl(value) {
+  try {
+    const hostname = new URL(value).hostname.toLowerCase();
+    return hostname === 'youtube.com' || hostname.endsWith('.youtube.com') || hostname === 'youtu.be' || hostname.endsWith('.youtu.be');
+  } catch { return false; }
+}
+
+function isYouTubeSession(session) {
+  return String(session.platform).toLowerCase() === 'youtube' || isYouTubeUrl(session.url);
+}
+
+function automatedYouTubeDisabled() {
+  return httpError(409, 'YouTube browser automation is disabled. Use channel-bound OAuth publication or open YouTube Studio manually.');
+}
+
 function httpError(status, message) {
   const error = new HttpError(status, message);
   error.statusCode = status;
@@ -98,6 +113,7 @@ export class PlatformSessionManager {
   }
 
   async launchRuntime(session) {
+    if (isYouTubeSession(session)) throw automatedYouTubeDisabled();
     let module;
     try { module = await this.loadBrowserModule(); } catch (error) { throw browserUnavailable(error); }
     const profileRoot = path.join(this.store.dataDir, PROFILE_ROOT);
@@ -118,6 +134,8 @@ export class PlatformSessionManager {
     let context;
     try {
       context = await module.chromium.launchPersistentContext(profileDir, launchOptions);
+      // Other platform sessions cannot bypass the cutover by redirecting to YouTube.
+      await context.route?.('**/*', (route) => isYouTubeUrl(route.request().url()) ? route.abort('blockedbyclient') : route.continue());
       context.setDefaultTimeout?.(ACTION_TIMEOUT);
       const page = context.pages()[0] || await context.newPage();
       page.setDefaultTimeout?.(ACTION_TIMEOUT);
@@ -130,6 +148,7 @@ export class PlatformSessionManager {
   }
 
   async ensureRuntime(session) {
+    if (isYouTubeSession(session)) throw automatedYouTubeDisabled();
     if (this.closed) throw httpError(503, 'Platform session manager is stopping');
     if (session.status === 'closed') throw httpError(409, 'Platform browser session is closed');
     let runtime = this.livePages.get(session.id);
@@ -237,10 +256,12 @@ export class PlatformSessionManager {
     const body = object(raw);
     const channelId = optionalText(body.channelId, 'channelId', 80);
     const episodeId = optionalText(body.episodeId, 'episodeId', 80);
-    const channel = channelId ? this.store.get('channels', channelId) : this.store.list('channels')[0] || null;
     const episode = episodeId ? this.store.get('episodes', episodeId) : null;
+    const channel = channelId ? this.store.get('channels', channelId) : episode?.channelId ? this.store.get('channels', episode.channelId) : null;
+    if (episode && channel && episode.channelId !== channel.id) throw httpError(409, 'Platform session channel does not own this episode');
     const platform = choice(String(body.platform || channel?.platform || 'youtube').toLowerCase(), ['youtube', 'tiktok', 'instagram', 'other'], 'platform', 'youtube');
-    const targetUrl = body.url ? validateUrl(body.url) : PLATFORM_URLS[platform] || PLATFORM_URLS.youtube;
+    const targetUrl = platform === 'youtube' ? PLATFORM_URLS.youtube : body.url ? validateUrl(body.url) : PLATFORM_URLS[platform] || PLATFORM_URLS.youtube;
+    if (platform !== 'youtube' && isYouTubeUrl(targetUrl)) throw automatedYouTubeDisabled();
     const visibility = choice(body.visibility, VISIBILITIES, 'visibility', 'private');
     const sessionId = randomUUID();
     let stagedExport = null;
@@ -287,6 +308,14 @@ export class PlatformSessionManager {
       createdAt: now,
       updatedAt: now,
     };
+    if (platform === 'youtube') {
+      session.mode = 'manual-external';
+      session.manualUrl = PLATFORM_URLS.youtube;
+      session.logs = [`[${now}] Manual YouTube Studio link ready; automated controls are disabled`];
+      this.store.save('platformSessions', session);
+      this.store.record('platform.session.opened', { entityId: session.id, channelId: session.channelId, platform, url: session.url });
+      return session;
+    }
     let runtime;
     try { runtime = await this.launchRuntime(session); } catch (error) { throw browserUnavailable(error); }
     try {
@@ -339,8 +368,32 @@ export class PlatformSessionManager {
         return next;
       }
       if (session.status === 'closed') throw httpError(409, 'Platform browser session is closed');
+      if (isYouTubeSession(session) && action !== 'update-metadata') throw automatedYouTubeDisabled();
+      if (action === 'navigate' && isYouTubeUrl(body.url)) throw automatedYouTubeDisabled();
+      if (action === 'update-metadata') {
+        next.metadata = {
+          title: body.title !== undefined ? text(body.title, 'title', 200) : next.metadata?.title || '제목 없음',
+          description: body.description !== undefined ? optionalText(body.description, 'description', 5000) : next.metadata?.description || '',
+          visibility: body.visibility !== undefined ? choice(body.visibility, VISIBILITIES, 'visibility') : next.metadata?.visibility || 'private',
+        };
+        if (body.channelId) {
+          const channel = this.store.get('channels', text(body.channelId, 'channelId', 80));
+          const platform = String(channel.platform || next.platform || 'youtube').toLowerCase();
+          if ((platform === 'youtube') !== isYouTubeSession(session)) throw httpError(409, 'Open a new session to change platforms');
+          next.channelId = channel.id;
+          next.channelName = channel.name;
+          next.channelExternalId = channel.externalId || '';
+          next.accountEmail = channel.accountEmail || '';
+          next.platform = platform;
+        }
+        next.logs.push(`[${now}] Updated metadata fields`);
+        next.logs = next.logs.slice(-20);
+        this.store.save('platformSessions', next);
+        return next;
+      }
       const runtime = await this.ensureRuntime(session);
       const page = runtime.page;
+      if (isYouTubeUrl(page.url())) throw automatedYouTubeDisabled();
       try {
         if (action === 'navigate') {
           const target = validateUrl(body.url);
@@ -380,21 +433,6 @@ export class PlatformSessionManager {
           next.uploadProgress = 0;
           next.review = this.findReview(unchanged);
           next.logs.push(`[${now}] Verified server export attached to the platform file input: ${unchanged.filename}`);
-        } else if (action === 'update-metadata') {
-          next.metadata = {
-            title: body.title !== undefined ? text(body.title, 'title', 200) : next.metadata?.title || '제목 없음',
-            description: body.description !== undefined ? optionalText(body.description, 'description', 5000) : next.metadata?.description || '',
-            visibility: body.visibility !== undefined ? choice(body.visibility, VISIBILITIES, 'visibility') : next.metadata?.visibility || 'private',
-          };
-          if (body.channelId) {
-            const channel = this.store.get('channels', text(body.channelId, 'channelId', 80));
-            next.channelId = channel.id;
-            next.channelName = channel.name;
-            next.channelExternalId = channel.externalId || '';
-            next.accountEmail = channel.accountEmail || '';
-            next.platform = String(channel.platform || next.platform || 'youtube').toLowerCase();
-          }
-          next.logs.push(`[${now}] Updated metadata fields`);
         } else if (action === 'upload') {
           throw httpError(409, 'File attachment is separate from publication; use an explicit platform click action after human review');
         } else if (action === 'refresh') {

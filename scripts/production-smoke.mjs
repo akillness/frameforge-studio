@@ -37,7 +37,10 @@ assert.equal(narrated.status, 'completed', narrated.error);
 episode = state.episodes.find(item => item.id === episode.id);
 assert.ok(episode.scenes[0].audioUrl && episode.scenes[0].duration > .5);
 const nodes = ['script', 'storyboard', 'render', 'review'].map((type, i) => ({ id: type, type, x: 50 + (i % 2) * 300, y: 70 + Math.floor(i / 2) * 240, config: type === 'script' ? { agent: 'existing', prompt: '' } : {} }));
-const workflow = await api('/api/workflows', 'POST', { name: '음성 제작본 · 최종 검토', nodes, edges: nodes.slice(1).map((node, i) => ({ id: `edge-${i}`, source: nodes[i].id, target: node.id })) });
+const template = await api('/api/workflows', 'POST', { name: '음성 제작본 · 최종 검토', nodes, edges: nodes.slice(1).map((node, i) => ({ id: `edge-${i}`, source: nodes[i].id, target: node.id })) });
+const workflow = await api(`/api/workflows/${template.id}/copies`, 'POST', { channelId: channel.id, episodeId: episode.id, expectedTemplateVersion: template.version });
+const renderNodeId = workflow.nodes.find(item => item.type === 'render').id;
+const reviewNodeId = workflow.nodes.find(item => item.type === 'review').id;
 let run = await api(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: episode.id });
 for (let attempt = 0; attempt < 180; attempt++) {
   run = (await api(`/api/workflows/${workflow.id}/runs`)).find(item => item.id === run.id);
@@ -45,7 +48,7 @@ for (let attempt = 0; attempt < 180; attempt++) {
   await pause(1000);
 }
 assert.equal(run.status, 'awaiting_review', run.error);
-const render = run.nodeRuns.find(item => item.type === 'render').output;
+const render = run.nodeRuns.find(item => item.nodeId === renderNodeId).output;
 const download = await fetch(base + render.outputUrl, { headers: { cookie } });
 assert.ok(download.ok);
 const bytes = Buffer.from(await download.arrayBuffer());
@@ -61,11 +64,12 @@ assert.ok(probe.streams.some(item => item.codec_type === 'audio'));
 const volume = await execute('ffmpeg', ['-hide_banner', '-i', file, '-vn', '-af', 'volumedetect', '-f', 'null', '-']);
 const meanVolume = Number(volume.stderr.match(/mean_volume:\s*(-?[\d.]+) dB/)?.[1]);
 assert.ok(Number.isFinite(meanVolume) && meanVolume > -70, 'Actual audible narration must be present');
-const reviewed = await api(`/api/workflows/${workflow.id}/runs/${run.id}/review`, 'POST', { decision: 'approved', notes: '자동 실동작 테스트용 후보: 한국어 음성·영상 스트림·파일 해시 검증. 실제 채널 공개 승인이 아닙니다.', expectedEpisodeVersion: run.episodeVersion });
+const reviewed = await api(`/api/workflows/${workflow.id}/runs/${run.id}/review`, 'POST', { reviewNodeId, decision: 'approved', notes: '자동 실동작 테스트용 후보: 한국어 음성·영상 스트림·파일 해시 검증. 실제 채널 공개 승인이 아닙니다.', expectedEpisodeVersion: run.episodeVersion });
 assert.equal(reviewed.status, 'approved');
-assert.equal(reviewed.review.sha256, sha256);
+assert.equal(reviewed.review, undefined, 'the legacy singular run.review alias must never reappear on the new per-node review contract');
+assert.equal(reviewed.reviews[reviewNodeId].sha256, sha256);
 const persisted = (await api(`/api/workflows/${workflow.id}/runs`)).find(item => item.id === run.id);
-assert.equal(persisted.review.sha256, sha256);
+assert.equal(persisted.reviews[reviewNodeId].sha256, sha256);
 const result = { verifiedAt: new Date().toISOString(), base, provider: voices.provider, transport: voices.transport || 'native', voice: voice.id, episodeId: episode.id, workflowId: workflow.id, runId: run.id, narrationJobId: job.id, narrationVersion: narrated.resultVersion, renderVersion: run.episodeVersion, width: 1080, height: 1920, duration: Number(probe.format.duration), meanVolumeDb: meanVolume, sha256, savedEditPreserved: true, reviewPersisted: true, reviewMeaning: 'Automated test decision, not owner acceptance or publication' };
 await mkdir(path.dirname(receiptPath), { recursive: true });
 await writeFile(receiptPath, JSON.stringify(result, null, 2));

@@ -1,0 +1,135 @@
+{
+  "schema": "frameforge-windows-fixture-repair/v1",
+  "role": "NativeWindowsFixtureFinal",
+  "status": "blocked_by_host_file_symlink_prerequisite",
+  "repairComplete": false,
+  "changedFiles": [
+    "tests/platform-session.test.mjs",
+    "artifacts/production-workspace-implementation/windows-fixture-repair.json"
+  ],
+  "changes": [
+    "Register boundary-fixture teardown before any fallible filesystem setup so EPERM cannot leak the Store or temporary directory.",
+    "Run all original non-symlink boundary assertions before creating the symlink; retain every original assertion without skips or weaker predicates.",
+    "Explicitly request a file symlink and verify lstat reports a symbolic link, stat follows to a regular file, realpath resolves outside exports to the intended target, and reading follows to the exact outside bytes. These fixture-proof assertions remain pending on this host."
+  ],
+  "environment": {
+    "platform": "win32",
+    "node": "v22.23.3",
+    "database": "new Store in mkdtemp for every fixture",
+    "http": "real HTTP fixtures listen on port 0 at 127.0.0.1",
+    "applicationServer": "Not instantiated by this test file; loginToken/publicOrigin options are not applicable. No production application instance or port is used.",
+    "browser": "installed Playwright and real Chromium; other-platform forms are disposable loopback fixtures"
+  },
+  "commands": [
+    {
+      "command": "node --test tests/platform-session.test.mjs",
+      "phase": "original reproduction",
+      "exitCode": 1,
+      "tests": 5,
+      "passed": 4,
+      "failed": 1,
+      "skipped": 0,
+      "cancelled": 0,
+      "todo": 0,
+      "durationMs": 12594.9361,
+      "failure": {
+        "test": "server export verification rejects traversal, symlinks, and empty artifacts",
+        "location": "tests/platform-session.test.mjs:156:3",
+        "code": "EPERM",
+        "message": "EPERM: operation not permitted, symlink 'C:\\Users\\bangg\\AppData\\Local\\Temp\\frameforge-platform-boundaries-iSOHXm\\outside.mp4' -> 'C:\\Users\\bangg\\AppData\\Local\\Temp\\frameforge-platform-boundaries-iSOHXm\\exports\\link.mp4'"
+      }
+    },
+    {
+      "command": "node --test tests/platform-session.test.mjs",
+      "phase": "intermediate teardown and fixture-proof change",
+      "exitCode": 1,
+      "tests": 5,
+      "passed": 4,
+      "failed": 1,
+      "skipped": 0,
+      "cancelled": 0,
+      "todo": 0,
+      "durationMs": 6924.9144,
+      "failure": {
+        "location": "tests/platform-session.test.mjs:159:3",
+        "code": "EPERM",
+        "operation": "symlink outside.mp4 to exports/link.mp4"
+      }
+    },
+    {
+      "command": "node --test tests/platform-session.test.mjs",
+      "phase": "final source with non-symlink assertions first",
+      "exitCode": 1,
+      "tests": 5,
+      "passed": 4,
+      "failed": 1,
+      "skipped": 0,
+      "cancelled": 0,
+      "todo": 0,
+      "durationMs": 20415.0342,
+      "failure": {
+        "test": "server export verification rejects traversal, symlinks, and empty artifacts",
+        "location": "tests/platform-session.test.mjs:173:3",
+        "code": "EPERM",
+        "message": "EPERM: operation not permitted, symlink 'C:\\Users\\bangg\\AppData\\Local\\Temp\\frameforge-platform-boundaries-5nJl7Q\\outside.mp4' -> 'C:\\Users\\bangg\\AppData\\Local\\Temp\\frameforge-platform-boundaries-5nJl7Q\\exports\\link.mp4'"
+      }
+    },
+    {
+      "command": "node --check tests/platform-session.test.mjs",
+      "executions": 3,
+      "exitCodes": [0, 0, 0],
+      "filesCheckedPerExecution": 1
+    },
+    {
+      "command": "node C:/Users/bangg/.agents/jev/jev-harness.mjs --profile frameforge-codex status",
+      "exitCode": 1,
+      "result": "active=false, enabled=false, ready=null; no routing or review invoked"
+    },
+    {
+      "command": "wsl --list --running --quiet",
+      "exitCode": 1,
+      "result": "Wsl/EnumerateDistros/Service/E_ACCESSDENIED; no accessible running Linux distribution established"
+    },
+    {
+      "command": "docker version --format '{{json .Server}}'",
+      "exitCode": 1,
+      "result": "null; permission denied while trying to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine"
+    },
+    {
+      "command": "docker image ls --format '{{.Repository}}:{{.Tag}} {{.ID}}'",
+      "exitCode": 1,
+      "result": "permission denied while trying to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine; no images or containers accessed"
+    }
+  ],
+  "junctionExperiment": {
+    "command": "@'\nimport { mkdtemp, mkdir, writeFile, symlink, lstat, stat, realpath, readFile, rm } from 'node:fs/promises';\nimport { tmpdir } from 'node:os';\nimport path from 'node:path';\nconst dir = await mkdtemp(path.join(tmpdir(), 'frameforge-junction-probe-'));\ntry {\n  const outside = path.join(dir, 'outside.mp4');\n  const link = path.join(dir, 'link.mp4');\n  await writeFile(outside, 'real outside export bytes');\n  try {\n    await symlink(outside, link, 'junction');\n    const info = await lstat(link);\n    console.log(JSON.stringify({junctionToFile: {symbolicLink: info.isSymbolicLink(), file: info.isFile(), directory: info.isDirectory(), resolved: await realpath(link), targetIsFile: (await stat(link)).isFile(), bytes: String(await readFile(link))}}));\n  } catch (error) {\n    console.log(JSON.stringify({junctionToFile: {code: error.code, message: error.message}}));\n  }\n} finally { await rm(dir, {recursive: true, force: true}); }\n'@ | node --input-type=module",
+    "exitCode": 0,
+    "result": "A junction targeting outside.mp4 could be created but realpath(link.mp4) failed ENOENT. It was not a readable file link and was removed in finally.",
+    "adopted": false,
+    "reason": "A directory junction has a directory target. Substituting it for this file link could reject an unreadable/non-file artifact even without proving protection against a readable outside regular file. No equivalent portable file-link fixture was established."
+  },
+  "securityInvariant": {
+    "required": "Reject traversal and readable file symlinks escaping exports; reject empty, mismatched job/episode/version and hash-changed exports; accept exact registered local bytes. No attachment alone may create a publication record.",
+    "source": "server/platform-session.mjs:200 verifyServerExport",
+    "guard": "lstat must describe a regular non-symbolic file, realpath dirname must equal canonical exportRoot, then open/fstat and SHA-256 verify the actual bytes against the completed job.",
+    "verifiedOnFinalRun": [
+      "Traversal rejected with 400.",
+      "Empty regular file rejected with 409.",
+      "Wrong job, episode and episode version rejected with 409.",
+      "Correct registered file returned the independently calculated SHA-256.",
+      "The separate staged-hash-change test rejected modified bytes with 409 before publication; real loopback browser attachment remained not_attempted."
+    ],
+    "unverified": "The escaping-file-symlink rejection assertion was not reached because host fs.symlink returned EPERM. Do not claim the source link-containment guard was exercised or this test file passed.",
+    "originalAssertionsPreserved": true,
+    "appLogicMocked": false
+  },
+  "cleanup": {
+    "intermediateFailedFixtureRemovedByTeardown": true,
+    "originalReproductionFixture": "The original early EPERM bypassed its late teardown. Removed only that exact mkdtemp directory after confirming it was an immediate child of tmpdir with the expected fixture basename.",
+    "finalFailedFixtureRemovedByTeardown": true
+  },
+  "remainingPrerequisites": [
+    "An already-authorized execution host that can create and follow a real regular-file symlink, or an already-accessible supported Linux runtime containing the existing test/browser dependencies. Neither is accessible to this session. No elevation, permission/settings change, runtime activation, installation or download was attempted."
+  ],
+  "evidenceBoundary": "Scoped fixture hardening only. No production source, harness promotion, provider connection, upload/publication, credentials, private runtime data, Git operation, project-wide suite, formatter or linter was touched. Main must retain the migration failure and rerun this file on a capable host before treating its gate as passed."
+}

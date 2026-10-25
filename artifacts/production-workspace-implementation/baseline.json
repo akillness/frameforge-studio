@@ -1,0 +1,45 @@
+{
+  "schema": "frameforge-workspace-baseline/v1",
+  "observedAt": "2026-10-25T06:02:34.260Z",
+  "authority": ".mex/context/decisions.md#PW-01–PW-07",
+  "approvedModes": [
+    "studio",
+    "workflow"
+  ],
+  "files": {
+    "public/app.js": "9c316403193a0a374cb209f8882a7da0bbf7e01a7433ca0328c9562679e83d53",
+    "public/workflow.js": "23d4ab8e66e2c8254bfa9dbeec76458e466f76de1bc5d1e6cc73b56c5ef22782",
+    "public/workspace.js": "d6e28b496af8bfad6c47e160fbc58d0dab0eba4ce2c66d9299615c99933569c4",
+    "public/workspace-state.js": "22f68d61849891d055870252e849f3b7bb14eb073a5e7a348a61529d63ddb29e",
+    "public/history.js": "b9f52a9c52c684ac6acb1c8657eb259709c7ef534858d1d1f5d842047f2c9399",
+    "public/index.html": "e301043995666a477105d624dd1bf46f88616026ca93efbdf94660067f248840",
+    "public/styles.css": "5dd5d838628f3a514a9a54effad2bd61a0e55bf5f36d9b5402fe2848b6f44a6e",
+    "public/workflow.css": "89ce72e99992c6fa1f36cf647df2e22870c4e8a8783e84d3800fbc3d17eabc90",
+    "public/workspace.css": "7697eca01724b4fc791076293b166b18b7309323e7b84a9ff4c4111cbc0816cc",
+    "server/app.mjs": "e763a41048ed126222648870f64a633fd086ecbaa588dc6bd37a0effbaee1e58",
+    "server/store.mjs": "19b50021a56d99f25fc09fb83180d5c88badba62b149f1de8376f093999da33e",
+    "server/workflows.mjs": "7ab9ca3ddb6b3cb175be5c816f69cfffbaea0719db0c1b232b1c4cf3388ccb61",
+    "server/generations.mjs": "d809c529c3ef996a9d3cb2626c74f2997a623be1bfe675fb2e44ed3e14d9c07b",
+    "server/validation.mjs": "6865979c3d965c1b782e56664ea07c351c5e919ddf05055f74395be4d4913f87",
+    "server/render.mjs": "9a3e1c564493ff7901a004a8c352e51aa6c35b4afc1dac90e56cf310adfc338a",
+    "server/platform-session.mjs": "ed3bbfc302a865f2749dd5f50f0f95add9076e418cb57b684bae0f089c8f00b8",
+    "server/integrations.mjs": "9f5de7db4c5bb9d4734fd9e1db280edc78499b7c300ea8b14d6cb4a1faa6dad8",
+    "harness/versions/1.5.0/bundle.json": "ac413ffe5680de3f07c18957fea6b3f539f28bdf8cde1243a63024c31e210a6d"
+  },
+  "automaticWorkflow": {
+    "jobId": "job_2fcb39587c40",
+    "sessionId": "auto_53b2fabc193e",
+    "state": "terminal_failed_before_seed_or_execution",
+    "reason": "configured Codex CLI model unsupported",
+    "resumed": false
+  },
+  "authorization": {
+    "code": true,
+    "paidGeneration": false,
+    "accountConsent": false,
+    "upload": false,
+    "publication": false,
+    "deployment": false,
+    "gitMutation": false
+  }
+}

@@ -12,6 +12,9 @@ import { NarrationQueue, createSpeechProvider } from './narration.mjs';
 import { GenerationQueue } from './generations.mjs';
 import { createGenerationProvider } from './generation-provider.mjs';
 import { PlatformSessionManager } from './platform-session.mjs';
+import { SourceMediaService } from './media-sources.mjs';
+import { YouTubeOAuth, YOUTUBE_OAUTH_COOKIE_NAME, YOUTUBE_OAUTH_CALLBACK_PATH, YOUTUBE_OAUTH_STATE_TTL_SECONDS } from './youtube-oauth.mjs';
+import { PublicationService } from './publication.mjs';
 
 const PUBLIC_DIR = fileURLToPath(new URL('../public/', import.meta.url));
 const MAX_JSON = 1024 * 1024;
@@ -104,7 +107,7 @@ async function generationCall(operation) {
 }
 
 /** Dependency overrides are for local tests; production imports actual adapters. */
-export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), loginToken = process.env.LOGIN_TOKEN || '', publicOrigin = process.env.PUBLIC_ORIGIN, integrations, renderer, speech, generation, generationOptions, platformSessions: injectedPlatformSessions, platformSessionOptions } = {}) {
+export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), loginToken = process.env.LOGIN_TOKEN || '', publicOrigin = process.env.PUBLIC_ORIGIN, integrations, renderer, speech, generation, generationOptions, platformSessions: injectedPlatformSessions, platformSessionOptions, mediaOptions, youtubeOptions, publicationOptions } = {}) {
   if (loginToken && (typeof loginToken !== 'string' || loginToken.length < 16)) throw new Error('LOGIN_TOKEN must contain at least 16 characters');
   if (publicOrigin) {
     const parsed = new URL(publicOrigin);
@@ -143,8 +146,10 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
 
   function enqueueRender(episode, waitForCompletion = false) {
     if (store.list('jobs').filter((job) => ['queued', 'running'].includes(job.status)).length >= 10) throw new HttpError(429, 'Render queue is full');
+    // Freeze the actual branch input before the queued renderer can yield or mutate it.
+    episode = structuredClone(episode);
     validateAssets(scenes(episode.scenes));
-    const job = store.create('jobs', { episodeId: episode.id, episodeVersion: episode.version, status: 'queued', progress: 0 });
+    const job = store.create('jobs', { episodeId: episode.id, episodeVersion: episode.version, sceneSnapshot: structuredClone(episode.scenes), status: 'queued', progress: 0 });
     const completion = waitForCompletion ? new Promise((resolve, reject) => queue.push({ job, episode, resolve, reject })) : undefined;
     if (!waitForCompletion) queue.push({ job, episode });
     setImmediate(processQueue);
@@ -160,6 +165,24 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     if (!session || session.expiresAt < Date.now()) { sessions.delete(key); return { authenticated: false, role: null, canMutate: false }; }
     return { authenticated: true, role: session.role, canMutate: session.role === 'admin' };
   }
+
+  function oauthSessionId(request) {
+    if (!loginToken) return 'local-development-admin';
+    const token = (request.headers.cookie || '').split(';').map((part) => part.trim()).find((part) => part.startsWith('frameforge_session='))?.slice(19);
+    return token ? digest(token).toString('hex') : '';
+  }
+
+  function oauthSessionActive(id) {
+    if (!loginToken) return id === 'local-development-admin';
+    const session = sessions.get(id);
+    return Boolean(session && session.role === 'admin' && session.expiresAt > Date.now());
+  }
+
+  function youtubeCookie(request, value, maxAge = YOUTUBE_OAUTH_STATE_TTL_SECONDS) {
+    const secure = request.socket.encrypted || publicOrigin?.startsWith('https:');
+    return `${YOUTUBE_OAUTH_COOKIE_NAME}=${value}; HttpOnly; SameSite=Lax; Path=${YOUTUBE_OAUTH_CALLBACK_PATH}; Max-Age=${maxAge}${secure ? '; Secure' : ''}`;
+  }
+
 
   function login(request, response, body) {
     const address = request.socket.remoteAddress;
@@ -202,15 +225,17 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
         if (!audio.type.startsWith('audio/')) throw new HttpError(400, 'Scene audio requires an audio media upload');
       }
     }
+    media.validateAssets(sceneList);
     return sceneList;
   }
   const trendCollector = new TrendCollector({
     store,
-    fetchTrends: async () => (await adapter()).fetchTrends(),
+    fetchTrends: async (query) => query === undefined ? (await adapter()).fetchTrends() : (await adapter()).fetchTrends(query),
   });
 
   async function refreshTrends(options = {}) {
-    return trendCollector.runNow({ force: options.force !== false });
+    const request = typeof options === 'string' ? { query: options } : options;
+    return trendCollector.runNow({ force: request.force !== false, query: request.query ? text(request.query, 'Trend query', 300) : undefined });
   }
 
   function trendWindow(requestUrl, { defaultLimit = 50, maxLimit = 100 } = {}) {
@@ -246,10 +271,13 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     };
   }
 
+  const media = new SourceMediaService({ store, userAgent: process.env.MEDIA_USER_AGENT, ...mediaOptions });
+  const youtube = new YouTubeOAuth({ store, clientId: process.env.YOUTUBE_CLIENT_ID, clientSecret: process.env.YOUTUBE_CLIENT_SECRET, redirectUri: process.env.YOUTUBE_REDIRECT_URI || (publicOrigin ? `${publicOrigin}${YOUTUBE_OAUTH_CALLBACK_PATH}` : ''), testing: process.env.YOUTUBE_OAUTH_TESTING === 'true', ...youtubeOptions });
+  const publication = new PublicationService({ store, oauth: youtube, ...publicationOptions });
   const generationProvider = generation || createGenerationProvider();
   const generations = new GenerationQueue({ store, provider: generationProvider, ...generationOptions });
   const platformSessions = injectedPlatformSessions || new PlatformSessionManager({ store, ...(platformSessionOptions || {}) });
-  const workflows = new WorkflowEngine({ store, fetchTrends: refreshTrends, runAgent: async (...args) => (await adapter()).runAgent(...args), render: (episode) => enqueueRender(episode, true), validateAssets, generations, platformSessions });
+  const workflows = new WorkflowEngine({ store, fetchTrends: refreshTrends, runAgent: async (...args) => (await adapter()).runAgent(...args), render: (episode) => enqueueRender(episode, true), validateAssets, generations, platformSessions, publication });
   const speechProvider = speech || createSpeechProvider();
   const narration = new NarrationQueue({ store, ...speechProvider });
   trendCollector.start();
@@ -265,6 +293,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     const path = join(store.dataDir, 'uploads', filename);
     const file = await open(path, 'wx', 0o600);
     let size = 0;
+    const hash = createHash('sha256');
     try {
       for await (const chunk of request) {
         size += chunk.length;
@@ -275,11 +304,12 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
           if (!bytesWritten) throw new Error('Upload write made no progress');
           offset += bytesWritten;
         }
+        hash.update(chunk);
       }
       if (!size) throw new HttpError(400, 'Empty upload');
     } catch (error) { await file.close(); await unlink(path).catch(() => {}); throw error; }
     await file.close();
-    const saved = store.save('uploads', { ...item, filename, size, url: `/api/uploads/${filename}` });
+    const saved = store.save('uploads', { ...item, filename, size, sha256: hash.digest('hex'), url: `/api/uploads/${filename}` });
     store.record('uploads.created', { entityId: saved.id, name, size });
     return saved;
   }
@@ -297,6 +327,22 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       let hostname;
       try { hostname = new URL(`http://${request.headers.host}`).hostname; } catch { throw new HttpError(400, 'Invalid Host header'); }
       if (!['localhost', '127.0.0.1', '[::1]'].includes(hostname)) throw new HttpError(403, 'Unauthenticated development access requires a loopback Host');
+    }
+    if (request.method === 'GET' && path === YOUTUBE_OAUTH_CALLBACK_PATH) {
+      response.setHeader('Cache-Control', 'no-store');
+      response.setHeader('Referrer-Policy', 'no-referrer');
+      response.setHeader('Set-Cookie', youtubeCookie(request, '', 0));
+      let connected = false;
+      try {
+        if (['state', 'code', 'error'].some((key) => requestUrl.searchParams.getAll(key).length > 1)) throw new HttpError(400, 'Ambiguous OAuth callback');
+        const correlationToken = (request.headers.cookie || '').split(';').map((part) => part.trim()).find((part) => part.startsWith(`${YOUTUBE_OAUTH_COOKIE_NAME}=`))?.slice(YOUTUBE_OAUTH_COOKIE_NAME.length + 1);
+        const result = await youtube.complete({ state: requestUrl.searchParams.get('state'), code: requestUrl.searchParams.get('code'), error: requestUrl.searchParams.get('error'), correlationToken }, { isSessionActive: oauthSessionActive });
+        connected = result?.connected === true && result.status === 'connected';
+      } catch {
+        console.error('YouTube authorization callback failed; authorization was not accepted');
+      }
+      response.writeHead(303, { Location: `/?youtube=${connected ? 'connected' : 'failed'}` });
+      return response.end();
     }
     assertSameOrigin(request, publicOrigin);
     if (request.method === 'GET' && path === '/api/health') return json(response, 200, { status: 'ok', service: 'frameforge-studio', authRequired: Boolean(loginToken), storage: 'sqlite', version: '1.0.0' });
@@ -328,6 +374,23 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       const { nodes, edges } = store.knowledge();
       return json(response, 200, { ...state, session, ...trendState(), integrations: await integrationStatus(), graph: { nodes, edges } });
     }
+    if (request.method === 'GET' && path === '/api/uploads') {
+      const uploads = store.list('uploads').map(({ id, name, type, kind, url, size, sha256, width, height, duration, createdAt, updatedAt }) => ({ id, name, type, kind, url, size, sha256, width, height, duration, createdAt, updatedAt }));
+      return json(response, 200, uploads);
+    }
+    const uploadRights = /^\/api\/uploads\/([^/]+)\/rights$/.exec(path);
+    if (request.method === 'GET' && uploadRights) {
+      store.get('uploads', uploadRights[1]);
+      return json(response, 200, store.list('mediaRights').filter((rights) => rights.uploadId === uploadRights[1]));
+    }
+    if (request.method === 'GET' && path === '/api/sources/search') return json(response, 200, await media.search({ query: requestUrl.searchParams.get('query'), kind: requestUrl.searchParams.get('kind') || undefined, limit: requestUrl.searchParams.has('limit') ? Number(requestUrl.searchParams.get('limit')) : undefined }));
+    const youtubeChannel = /^\/api\/channels\/([^/]+)\/youtube$/.exec(path);
+    if (request.method === 'GET' && youtubeChannel) return json(response, 200, await youtube.status(decodeURIComponent(youtubeChannel[1])));
+    if (request.method === 'DELETE' && youtubeChannel) return json(response, 200, await youtube.disconnect(decodeURIComponent(youtubeChannel[1])));
+    const publicationApproval = /^\/api\/publication\/approvals\/([^/]+)$/.exec(path);
+    if (request.method === 'GET' && publicationApproval) return json(response, 200, await publication.state(decodeURIComponent(publicationApproval[1])));
+    const episodePublications = /^\/api\/episodes\/([^/]+)\/publications$/.exec(path);
+    if (request.method === 'GET' && episodePublications) return json(response, 200, await publication.list(decodeURIComponent(episodePublications[1])));
     const platformScreenshot = /^\/api\/platform-sessions\/([^/]+)\/screenshot$/.exec(path);
     if (request.method === 'GET' && platformScreenshot) {
       const image = await platformSessions.screenshot(decodeURIComponent(platformScreenshot[1]));
@@ -377,6 +440,26 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     }
     if (['POST', 'PUT'].includes(request.method) && path.startsWith('/api/')) {
       const body = await readJson(request);
+      if (request.method === 'POST' && path === '/api/publication/approvals') return json(response, 201, await publication.approve(body, { ownerId: 'admin' }));
+      const publicationPublish = /^\/api\/publication\/approvals\/([^/]+)\/publish$/.exec(path);
+      if (request.method === 'POST' && publicationPublish) return json(response, 202, await publication.publish(decodeURIComponent(publicationPublish[1]), { ownerId: 'admin' }));
+      const publicationResume = /^\/api\/publication\/intents\/([^/]+)\/resume$/.exec(path);
+      if (request.method === 'POST' && publicationResume) return json(response, 202, await publication.resume(decodeURIComponent(publicationResume[1]), { ownerId: 'admin' }));
+      const workflowQuote = /^\/api\/workflows\/([^/]+)\/quote$/.exec(path);
+      if (request.method === 'POST' && workflowQuote) return json(response, 200, await workflows.quote(decodeURIComponent(workflowQuote[1]), body.episodeId, body));
+      if (request.method === 'POST' && path === '/api/sources/import') return json(response, 201, await media.importMedia(body));
+      if (request.method === 'POST' && uploadRights) return json(response, 201, await media.clearRights(decodeURIComponent(uploadRights[1]), body));
+      const episodeSource = /^\/api\/episodes\/([^/]+)\/(source|card)$/.exec(path);
+      if (request.method === 'POST' && episodeSource) return json(response, 200, await media[episodeSource[2] === 'source' ? 'attach' : 'card'](decodeURIComponent(episodeSource[1]), body));
+      if (request.method === 'PUT' && youtubeChannel) return json(response, 200, store.setChannelExternalId(decodeURIComponent(youtubeChannel[1]), body.externalId, body.expectedUpdatedAt));
+      const youtubeAuthorize = /^\/api\/channels\/([^/]+)\/youtube\/authorize$/.exec(path);
+      if (request.method === 'POST' && youtubeAuthorize) {
+        const correlationToken = randomBytes(32).toString('hex');
+        const result = await youtube.begin(decodeURIComponent(youtubeAuthorize[1]), { sessionId: oauthSessionId(request), correlationToken });
+        return json(response, 200, { authUrl: result.authUrl }, { 'Set-Cookie': youtubeCookie(request, correlationToken), 'Cache-Control': 'no-store' });
+      }
+      const workflowCopy = /^\/api\/workflows\/([^/]+)\/copies$/.exec(path);
+      if (request.method === 'POST' && workflowCopy) return json(response, 201, workflows.copy(decodeURIComponent(workflowCopy[1]), body));
       const knowledgeNode = /^\/api\/knowledge\/nodes\/([a-zA-Z0-9_-]+)$/.exec(path);
       if (request.method === 'PUT' && knowledgeNode) return json(response, 200, { record: store.editKnowledgeNode(knowledgeNode[1], body), graph: store.knowledge() });
       if (request.method === 'PUT' && path === '/api/knowledge/edges') return json(response, 200, { record: store.editKnowledgeEdge(body), graph: store.knowledge() });
@@ -432,7 +515,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       const workflowRoute = /^\/api\/workflows\/([^/]+)(?:\/(run)|\/runs\/([^/]+)\/(cancel))?$/.exec(path);
       if (workflowRoute) {
         if (request.method === 'PUT' && !workflowRoute[2] && !workflowRoute[3]) return json(response, 200, workflows.update(workflowRoute[1], body));
-        if (request.method === 'POST' && workflowRoute[2]) return json(response, 202, workflows.start(workflowRoute[1], body.episodeId, { allowGeneration: body.allowGeneration, selectedStages: body.selectedStages, startStage: body.startStage, resumeRunId: body.resumeRunId, expectedWorkflowVersion: body.expectedWorkflowVersion, expectedEpisodeVersion: body.expectedEpisodeVersion }));
+        if (request.method === 'POST' && workflowRoute[2]) return json(response, 202, await workflows.start(workflowRoute[1], body.episodeId, { allowGeneration: body.allowGeneration, selectedStages: body.selectedStages, startStage: body.startStage, resumeRunId: body.resumeRunId, expectedWorkflowVersion: body.expectedWorkflowVersion, expectedEpisodeVersion: body.expectedEpisodeVersion, generationPlanId: body.generationPlanId, generationFingerprint: body.generationFingerprint, acceptUnquotedEstimate: body.acceptUnquotedEstimate, disclosure: body.disclosure }));
         if (request.method === 'POST' && workflowRoute[4]) return json(response, 200, workflows.cancel(workflowRoute[1], workflowRoute[3]));
       }
       if (request.method === 'POST' && path === '/api/channels') {
@@ -509,7 +592,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
   });
   server.requestTimeout = 120_000;
   server.headersTimeout = 15_000;
-  server.on('close', () => { closing = true; trendCollector.close(); narration.close(); generations.close(); workflows.close(); platformSessions.close(); store.close(); });
+  server.on('close', () => { closing = true; trendCollector.close(); narration.close(); generations.close(); workflows.close(); publication.close(); platformSessions.close(); store.close(); });
   return server;
 }
 

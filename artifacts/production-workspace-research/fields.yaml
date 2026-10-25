@@ -1,0 +1,76 @@
+topic: Unified reusable channel-video production workspace UI
+language: English
+contract: >-
+  Write a flat JSON object with exactly the defined top-level fields plus the reserved uncertain array.
+  Every research field must contain observed_facts, source_urls, frameforge_implications and limitations.
+  Separate documented facts from design inference. Cite official URLs for factual claims and preserve
+  inherited historical baseline evidence as historical. Not applicable is an acceptable explicit result;
+  unknown or unverifiable claims must contain [uncertain] and be listed in uncertain. Do not invent
+  publication dates, accessibility compliance, licensing permission, quota numbers or observed UI behavior.
+field_categories:
+  - category: Evidence metadata
+    fields:
+      - name: item_name
+        description: Exact comparison object name from the approved outline.
+        detail_level: brief
+        required: true
+      - name: observed_at
+        description: Research observation date in ISO 8601; distinguish it from source publication/update dates.
+        detail_level: brief
+        required: true
+      - name: sources
+        description: >-
+          List official sources with URL, title, publisher, publication/update date if actually stated,
+          accessed date, evidence role and historical/current boundary. Include no guessed dates.
+        detail_level: detailed
+        required: true
+  - category: Approved comparison dimensions
+    fields:
+      - name: project_context
+        description: >-
+          Project, production, asset, sequence, workflow and output identities; continuity of selection and
+          saved context across surfaces; shared versus copied definitions. Give concrete documented behavior.
+        detail_level: detailed
+        required: true
+      - name: node_execution
+        description: >-
+          Node roles, typed inputs/outputs, dependencies, status/error inspection, saved execution evidence,
+          cancellation, partial retry/reuse and limits. Mark not applicable for products without a relevant graph.
+        detail_level: detailed
+        required: true
+      - name: footage_provenance
+        description: >-
+          Search/discovery, supported download/import path, source URL, machine-readable rights information,
+          attribution, derivatives/redistribution restrictions, retrieval evidence and media identity.
+          Public visibility, authentic origin and reuse permission are distinct.
+        detail_level: detailed
+        required: true
+      - name: editing_workspace
+        description: >-
+          Documented source bin, monitor, timeline, inspector, graph and result composition; context switching,
+          navigation, stable selections and how to expose a complete production within one workspace.
+        detail_level: detailed
+        required: true
+      - name: template_channel_reuse
+        description: >-
+          Reusable definitions versus production instances; pinned/copy/live-linked versions, exposed parameters,
+          branding defaults and target/channel/credential isolation. State when video-channel semantics are not applicable.
+        detail_level: detailed
+        required: true
+      - name: approval_delivery
+        description: >-
+          Exact version/artifact approval, invalidation after edits, delivery/upload/publication distinctions,
+          explicit destination and visibility, permission checks and post-action read-back. For YouTube verify
+          actual current privacyStatus, OAuth and quota contracts from official docs, not assumed defaults.
+        detail_level: detailed
+        required: true
+      - name: accessibility_responsiveness
+        description: >-
+          Documented keyboard navigation, focus/selection feedback and screen-size/workspace adaptation.
+          Do not claim WCAG compliance, mobile behavior or runtime testing from documentation alone.
+        detail_level: moderate
+        required: true
+uncertainty_policy: >-
+  Add the reserved top-level uncertain array listing the names of fields with [uncertain] values.
+  The coverage validator checks presence only; full field coverage is not proof of factual correctness,
+  UI usability, provider connectivity, license clearance or successful channel upload.

@@ -1,4 +1,34 @@
 /* Personal working-window chrome; content keeps the studio's existing visual tokens. */
+.project-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+  margin-bottom: 18px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+}
+.project-navigation > * { min-width: 0; max-width: 100%; }
+.project-context { display: grid; gap: 2px; flex: 1 1 200px; }
+.project-context strong { overflow-wrap: anywhere; }
+.project-modes, .project-sections { display: flex; flex-wrap: wrap; gap: 6px; }
+.project-navigation label { margin: 0; flex: 1 1 180px; }
+.project-navigation select { margin: 4px 0 0; width: 100%; min-width: 0; max-width: 100%; }
+.project-sections { flex-basis: 100%; }
+.project-modes [aria-pressed="true"] { box-shadow: inset 0 -3px 0 var(--primary-hover); }
+.production-tools-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.production-tools-grid > * { min-width: 0; }
+.production-tools-draft { grid-column: 1 / -1; margin-bottom: 0; }
+@container workspace-shell (max-width: 1100px) {
+  .production-tools-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 700px) {
+  .project-modes { flex-basis: 100%; }
+  .project-modes button { flex: 1 1 120px; }
+  .production-tools-grid { grid-template-columns: minmax(0, 1fr); }
+}
 .personal-workspace {
   container: workspace-shell / inline-size;
   min-width: 0;

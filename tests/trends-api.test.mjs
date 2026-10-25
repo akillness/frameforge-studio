@@ -17,6 +17,7 @@ async function fixture(t, { fetchTrends = baseIntegrations.fetchTrends } = {}) {
   const dataDir = await mkdtemp(join(tmpdir(), 'frameforge-trends-api-'));
   let server = createApp({
     dataDir,
+    loginToken: '',
     integrations: { ...baseIntegrations, fetchTrends },
   });
   let base;
@@ -44,7 +45,7 @@ async function fixture(t, { fetchTrends = baseIntegrations.fetchTrends } = {}) {
     }),
     restart: async () => {
       await stop();
-      server = createApp({ dataDir, integrations: { ...baseIntegrations, fetchTrends } });
+      server = createApp({ dataDir, loginToken: '', integrations: { ...baseIntegrations, fetchTrends } });
       await start();
     },
   };

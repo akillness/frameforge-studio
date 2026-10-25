@@ -1,0 +1,135 @@
+{
+  "schema": "frameforge-real-journey/v2",
+  "command": "node --test tests/production-workspace-journey.test.mjs",
+  "startedAt": "2026-10-25T08:31:19.546Z",
+  "scenarios": [
+    {
+      "name": "real FFmpeg render and exact review precede server manifest preview and fixture Google public readback",
+      "criteria": [
+        "PW-03",
+        "PW-04",
+        "PW-05",
+        "PW-07"
+      ],
+      "status": "passed"
+    }
+  ],
+  "screenshots": [
+    {
+      "name": "delivery-preview",
+      "width": 1600,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-1600.png",
+      "sha256": "1fd405ededaf4a5e3d64077fccd96ff2cea92f386447a562903b48da65cf1ac5",
+      "geometry": {
+        "client": 1600,
+        "scroll": 1600,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "delivery-preview",
+      "width": 1024,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-1024.png",
+      "sha256": "f976f04af6411df624eb840054c716fc65047478d5c1c2ff685cf1551fc019b2",
+      "geometry": {
+        "client": 1024,
+        "scroll": 1024,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "delivery-preview",
+      "width": 375,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-375.png",
+      "sha256": "a0dafb6f030b4c4189e0d8795002f656be6e567548963939b39286c6b63566a6",
+      "geometry": {
+        "client": 375,
+        "scroll": 375,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "delivery-preview",
+      "width": 320,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-320.png",
+      "sha256": "d7247ef0990e965dfefedf3d1b3a884bc3cfc98f76f82ce586293872c848ed3b",
+      "geometry": {
+        "client": 320,
+        "scroll": 320,
+        "reducedMotion": true
+      }
+    }
+  ],
+  "network": [
+    {
+      "base": "http://127.0.0.1:59533",
+      "writes": [
+        {
+          "method": "POST",
+          "path": "/api/publication/approvals",
+          "body": "{\"workflowId\":\"7d756f47-f295-4529-a522-1f4037dc356c\",\"runId\":\"b6306c9d-4d4f-435b-affd-378f37208661\",\"reviewNodeId\":\"review\",\"expectedEpisodeVersion\":4,\"title\":\"Fixture approved title\",\"description\":\"Fixture final description\",\"categoryId\":\"25\",\"tags\":[],\"selfDeclaredMadeForKids\":false,\"containsSyntheticMedia\":false,\"disclosureRationale\":\"Original factual cards, no realistic synthetic evidence\",\"rightsAcknowledged\":true}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/publication/approvals",
+          "body": "{\"workflowId\":\"7d756f47-f295-4529-a522-1f4037dc356c\",\"runId\":\"b6306c9d-4d4f-435b-affd-378f37208661\",\"reviewNodeId\":\"review\",\"expectedEpisodeVersion\":4,\"title\":\"Fixture approved title\",\"description\":\"Fixture final description\",\"categoryId\":\"25\",\"tags\":[],\"selfDeclaredMadeForKids\":false,\"containsSyntheticMedia\":false,\"disclosureRationale\":\"Original factual cards, no realistic synthetic evidence\",\"rightsAcknowledged\":true}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/publication/approvals/6541206f-acde-432d-86c3-73644dfac35b/publish",
+          "body": "{}"
+        }
+      ],
+      "external": [],
+      "errors": []
+    }
+  ],
+  "boundary": "Temporary SQLite, ephemeral loopback HTTP, actual public app; fixture-only external transport. No live consent, credentials, generation or publication.",
+  "finishedAt": "2026-10-25T08:31:34.784Z",
+  "counts": {
+    "expected": 11,
+    "executed": 1,
+    "passed": 1,
+    "failed": 0
+  },
+  "fullJourney": false,
+  "verdict": "FOCUSED_ONLY",
+  "sources": [
+    {
+      "path": "public/app.js",
+      "sha256": "ebe8b752846de062b15819c215b3bad0d61b33584f95ae6ca105a6621c359bc5"
+    },
+    {
+      "path": "public/workflow.js",
+      "sha256": "0ea6319232d51118cc2159a8a4b7ed2d0f0395b631ecd8deac46c78ca8f7d209"
+    },
+    {
+      "path": "public/production-tools.js",
+      "sha256": "2b495ecb55b00584b5fa8dd8d6d6ad0721c08db4abacb04cca4c922d5809f4d4"
+    },
+    {
+      "path": "public/styles.css",
+      "sha256": "25e9be09c24abd7a8a12b3889724d19a525936d41e6609e26f0c4a377a772d49"
+    },
+    {
+      "path": "public/workspace.css",
+      "sha256": "cc6b3d1197f422df27f2aeb58c6cf7495de8b9c161c1f052b1edc0909475401f"
+    },
+    {
+      "path": "server/app.mjs",
+      "sha256": "e3d69648cc3f6f7083d3c7a91e891457d874320d0d1fb8ce2f9fc03c09703958"
+    },
+    {
+      "path": "server/publication.mjs",
+      "sha256": "3666427a226d7ec52b98a083c83999a38158527aece98dea103746d7e892f827"
+    },
+    {
+      "path": "server/media-sources.mjs",
+      "sha256": "c67789ea91b376aaadfc3457a34f9662dac5f8d9dd97fbaf835056b713ea4056"
+    },
+    {
+      "path": "tests/production-workspace-journey.test.mjs",
+      "sha256": "2d12729803b1587e4ce6828ce09c9984822bb9938437b82c0024bd5fb3a49b3f"
+    }
+  ]
+}

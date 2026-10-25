@@ -1,0 +1,50 @@
+{
+  "schema": "frameforge-delivery-self-evaluation/v1",
+  "mode": "Main self-assessment; not an independent completion verdict",
+  "summary": "4.4/5: approved implementation is verified in isolated execution; native Windows symlink and historical vault limitations remain explicit.",
+  "scores": [
+    {
+      "axis": "accuracy",
+      "score": 5,
+      "evidence": "Exact final backend181/181, isolated Linux47/47, browser11/11, 40 screenshot hashes, nine browser source hashes, actual render hash and harness1.6 integrity match retained tool receipts."
+    },
+    {
+      "axis": "completeness",
+      "score": 4,
+      "evidence": "All seven approved criteria have runtime artifacts; native Windows file-symlink creation remains EPERM and is not falsely labeled passed.",
+      "improvement": "Execute the same unchanged file-symlink assertions on an explicitly authorized capable Windows host before claiming that native Windows branch."
+    },
+    {
+      "axis": "clarity",
+      "score": 4,
+      "evidence": "Primary receipt separates scoped code acceptance, Linux recovery, native Windows failure, full-vault diagnostics and live-operation authority; long raw command history is retained separately.",
+      "improvement": "Keep the Korean delivery summary short and put platform-specific results in one table, linking the detailed receipts."
+    },
+    {
+      "axis": "actionability",
+      "score": 5,
+      "evidence": "Final source fingerprints, exact executable/argv/environment, pinned Linux image, full unchanged test assertions, selected immutable bundle and reproducible browser command are recorded."
+    },
+    {
+      "axis": "conciseness",
+      "score": 4,
+      "evidence": "Diagnostic history is necessarily large, but the primary receipt and final summary avoid reproducing all failed attempts.",
+      "improvement": "Use the primary verification and journey links rather than pasting logs or repeating implementation details."
+    }
+  ],
+  "overall": 4.4,
+  "criticalIssues": [],
+  "selfCheck": "The user can check every reported result in the retained artifacts. Completion is local approved implementation, not deployed service, real provider success, owner video acceptance or a clean historical wiki.",
+  "topImprovements": [
+    "Preserve the native Windows EPERM boundary; Linux success is not Windows success.",
+    "Keep the failed full-vault gate and inactive Jev status visible.",
+    "Link exact receipts instead of expanding lengthy histories in the user report."
+  ],
+  "verdict": "Deliver scoped implementation with explicit verification and authority boundaries",
+  "independentEvaluatorAttempt": {
+    "defaultRoute": "failed: no Anthropic API key",
+    "recoveredModelHelper": "emitted a message but no terminal result/handle was recoverable after detached cell return",
+    "configurationChanged": false,
+    "claim": "No successful independent evaluator verdict is claimed."
+  }
+}

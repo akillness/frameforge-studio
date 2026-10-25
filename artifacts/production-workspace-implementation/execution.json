@@ -1,0 +1,313 @@
+{
+  "schema": "frameforge-workspace-execution/v1",
+  "observedAt": "2026-10-25T07:22:27.087Z",
+  "status": "completed-approved-scoped-implementation",
+  "contract": ".mex/context/decisions.md",
+  "plan": "artifacts/production-workspace-implementation/plan.json",
+  "redGates": [
+    {
+      "reportedBy": "GraphRedTests",
+      "command": "node --test tests/production-workflow-graph.test.mjs",
+      "result": {
+        "total": 15,
+        "passed": 7,
+        "failed": 8
+      },
+      "valid": true,
+      "fixtureAuth": "explicit loginToken empty",
+      "scope": "repeated-role DAG and exact node/branch identity; later same-chain and ambiguity cases included"
+    },
+    {
+      "reportedBy": "WorkspaceRedTests",
+      "command": "node --test tests/production-workspace-ui.test.mjs",
+      "result": {
+        "total": 6,
+        "passed": 2,
+        "failed": 4
+      },
+      "valid": true,
+      "scope": "real Chromium tempDB, no-save mode/project navigation and current target; existing stale-save and active-draft unload anchors retained"
+    },
+    {
+      "reportedBy": "HttpContractTests",
+      "command": "node --test tests/production-workspace-api.test.mjs",
+      "result": "copy endpoint404 after valid201 fixture setup",
+      "valid": true
+    },
+    {
+      "reportedBy": "StoreContractTests",
+      "command": "node --test tests/production-project-store.test.mjs",
+      "result": "missing intended Store.createWorkflowCopy behavior",
+      "valid": true
+    },
+    {
+      "reportedBy": "EngineContractTests",
+      "command": "node --test tests/production-generation-plan.test.mjs",
+      "result": "intended new candidates module missing",
+      "kind": "compile_time_red"
+    },
+    {
+      "reportedBy": "DeliveryContractTests",
+      "command": "node --test tests/production-publication.test.mjs",
+      "result": "intended new youtube-oauth module missing",
+      "kind": "compile_time_red"
+    }
+  ],
+  "materialFailures": [
+    {
+      "kind": "automatic_workflow",
+      "sessionId": "auto_53b2fabc193e",
+      "jobId": "job_2fcb39587c40",
+      "state": "terminal_failed_before_seed_or_execution",
+      "reason": "unsupported configured Codex CLI model",
+      "resumed": false
+    },
+    {
+      "kind": "premature_http_composition",
+      "effect": "temporarily broke createApp imports while service modules were absent",
+      "correction": "reverted imports and service wiring; no stubs; workers notified invalid window",
+      "recoveryProbe": {
+        "runtime": "real Node22",
+        "exitCode": 0,
+        "stdout": "APP_IMPORT_OK\n",
+        "warningRetained": true
+      }
+    },
+    {
+      "kind": "unsupported_probe_runtime",
+      "effect": "node_repl intentionally lacks process global, so it could not import the app",
+      "correction": "used real Node process in eval without invoking createApp or starting server"
+    },
+    {
+      "kind": "delegation_provider_route",
+      "failures": [
+        {
+          "route": "executor default",
+          "observed": "404 unavailable configured Sonnet model",
+          "codeExecuted": false
+        },
+        {
+          "route": "default task recovery",
+          "observed": "429 provider rate limit",
+          "codeExecuted": false
+        },
+        {
+          "route": "eval agent explicit model",
+          "observed": "wrapper failed without underlying diagnostic",
+          "codeExecuted": false
+        }
+      ],
+      "recovery": {
+        "route": "native codex exec preserving trusted user config",
+        "model": "gpt-6.1-sol",
+        "probe": {
+          "sandbox": "read-only",
+          "workspaceContentSent": false,
+          "exitCode": 0,
+          "response": "READY"
+        },
+        "implementationSandbox": "workspace-write",
+        "bypassFlags": false,
+        "workers": [
+          {
+            "id": "NativeCandidate",
+            "pid": 31164,
+            "files": [
+              "server/candidates.mjs",
+              "artifacts/production-workspace-implementation/native-status/NativeCandidate.json"
+            ],
+            "status": "running"
+          },
+          {
+            "id": "NativeMedia",
+            "pid": 36000,
+            "files": [
+              "server/media-sources.mjs",
+              "artifacts/production-workspace-implementation/native-status/NativeMedia.json"
+            ],
+            "status": "running"
+          },
+          {
+            "id": "NativeSchema",
+            "pid": 19620,
+            "files": [
+              "server/validation.mjs",
+              "server/render.mjs",
+              "server/media-credits.mjs",
+              "server/store.mjs",
+              "artifacts/production-workspace-implementation/native-status/NativeSchema.json"
+            ],
+            "status": "running"
+          },
+          {
+            "id": "NativeOAuth",
+            "pid": 40696,
+            "files": [
+              "server/youtube-oauth.mjs",
+              "server/private-runtime.mjs",
+              "server/platform-session.mjs",
+              "artifacts/production-workspace-implementation/native-status/NativeOAuth.json"
+            ],
+            "status": "running"
+          },
+          {
+            "id": "NativePublication",
+            "pid": 11328,
+            "files": [
+              "server/publication.mjs",
+              "artifacts/production-workspace-implementation/native-status/NativePublication.json"
+            ],
+            "status": "running"
+          },
+          {
+            "id": "NativeEngine",
+            "pid": 17860,
+            "files": [
+              "server/workflows.mjs",
+              "artifacts/production-workspace-implementation/native-status/NativeEngine.json"
+            ],
+            "status": "running"
+          },
+          {
+            "id": "NativeCanvas",
+            "pid": 42096,
+            "files": [
+              "public/workflow.js",
+              "artifacts/production-workspace-implementation/native-status/NativeCanvas.json"
+            ],
+            "status": "running"
+          },
+          {
+            "id": "NativeStudio",
+            "pid": 8720,
+            "files": [
+              "public/app.js",
+              "public/styles.css",
+              "public/workspace.css",
+              "artifacts/production-workspace-implementation/native-status/NativeStudio.json"
+            ],
+            "status": "running"
+          },
+          {
+            "id": "NativeSourceTools",
+            "pid": 44980,
+            "files": [
+              "public/production-tools.js",
+              "artifacts/production-workspace-implementation/native-status/NativeSourceTools.json"
+            ],
+            "status": "running"
+          },
+          {
+            "id": "NativeTester",
+            "pid": 43328,
+            "files": [
+              "tests/*.test.mjs",
+              "scripts/production-workspace-browser-smoke.mjs",
+              "artifacts/production-workspace-implementation/journey-receipt.json",
+              "artifacts/production-workspace-implementation/native-status/NativeTester.json",
+              "artifacts/production-workspace-implementation/journey-*"
+            ],
+            "status": "running"
+          }
+        ],
+        "sharedContract": "artifacts/production-workspace-implementation/native-contract.json"
+      }
+    }
+  ],
+  "safety": {
+    "operationalDataRead": false,
+    "productionServerStarted": false,
+    "production4310Access": false,
+    "realOAuthConsent": false,
+    "paidGeneration": false,
+    "liveMediaDownload": false,
+    "liveUploadOrPublication": false,
+    "deployment": false,
+    "gitMutation": false,
+    "isolatedTestsOnly": true
+  },
+  "completion": "No PW criterion or implementation completion is claimed from the RED tests or module-import probe.",
+  "greenComponentGates": [
+    {
+      "reportedBy": "StoreImplementation and StoreContractTests",
+      "command": "node --test tests/production-project-store.test.mjs",
+      "result": {
+        "passed": 21,
+        "failed": 0,
+        "skipped": 0
+      },
+      "scope": "Store only, not finalUI integration"
+    },
+    {
+      "executedBy": "Main",
+      "command": "node --test tests/api.test.mjs",
+      "environments": [
+        "inherited",
+        "LOGIN_TOKEN/PUBLIC_ORIGIN/MEDIA_USER_AGENT explicitly empty"
+      ],
+      "result": {
+        "passed": 18,
+        "failed": 0,
+        "skipped": 0
+      },
+      "scope": "existingAPI after fixture isolation"
+    },
+    {
+      "executedBy": "Main",
+      "command": "node --test --test-name-pattern=\"^(copy|GET on the copies)\" tests/production-workspace-api.test.mjs",
+      "result": {
+        "passed": 6,
+        "failed": 0,
+        "skipped": 0
+      },
+      "scope": "owned copy HTTP routes only"
+    }
+  ],
+  "requiredCorrections": [
+    "Missing Media UA disables only network search/import, not constructors or local security validation",
+    "MP4 local decoder support verified; Commons unverified policy distinct from OGV local unsupported",
+    "Required attribution must reach rendered pixels AND server-fingerprinted outbound description",
+    "Unknown origin/audience/disclosure never preselected",
+    "Server manifest including credits is previewed before final explicitpublish",
+    "Synchronous WorkflowEngine.start retained; physical checks awaited before external effects"
+  ],
+  "previousStatusBeforeFinalVerification": "implementation_in_progress",
+  "completedAt": "2026-10-25T09:29:31.453Z",
+  "verification": "artifacts/production-workspace-implementation/verification.json",
+  "finalAcceptance": [
+    {
+      "id": "PW-01",
+      "status": "verified-isolated-execution"
+    },
+    {
+      "id": "PW-02",
+      "status": "verified-isolated-execution"
+    },
+    {
+      "id": "PW-03",
+      "status": "verified-isolated-execution"
+    },
+    {
+      "id": "PW-04",
+      "status": "verified-isolated-execution"
+    },
+    {
+      "id": "PW-05",
+      "status": "verified-isolated-execution"
+    },
+    {
+      "id": "PW-06",
+      "status": "verified-isolated-execution"
+    },
+    {
+      "id": "PW-07",
+      "status": "verified-isolated-execution"
+    }
+  ],
+  "remainingVerificationGaps": [
+    "Native Windows real file-symlink containment could not execute because the OS denies creating its fixture. The exact same assertions pass on Linux; no Windows equivalent claim.",
+    "Live Google OAuth consent, paid generation, actual upload/publication and deployment were outside authority and were not exercised.",
+    "Full historical wiki lint remains failed with 1663 diagnostics in the final recorded command; the earlier1705-diagnostic audit is retained separately.",
+    "POSIX0600 enforcement and forced-process-crash behavior were not fully exercised by the Windows private-runtime tests."
+  ]
+}

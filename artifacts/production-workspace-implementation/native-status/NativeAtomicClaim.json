@@ -1,0 +1,57 @@
+{
+  "role": "NativeAtomicClaim",
+  "status": "module-ready-focused-tests-passed",
+  "changedFiles": [
+    "server/private-runtime.mjs",
+    "artifacts/production-workspace-implementation/native-status/NativeAtomicClaim.json"
+  ],
+  "exports": {
+    "server/private-runtime.mjs": [
+      "new PrivateRuntime({dataDir,tokenKey?})",
+      "read(name,fallback=null)",
+      "write(name,value)",
+      "remove(name)",
+      "consume(name) -> decoded value for one winner, null for concurrent losers"
+    ]
+  },
+  "importVerified": true,
+  "syntaxVerified": true,
+  "sourceSha256": "afb582a18130330707e034e213832514a7e6644a175358ce4553b7ef06d1b814",
+  "ownership": {
+    "priorOwner": "NativeOAuth",
+    "priorPid": 40696,
+    "exitVerified": true,
+    "method": "Get-Process and Python psutil.pid_exists",
+    "currentLauncherPid": 46544,
+    "currentLauncherVerifiedByProcessAncestry": true
+  },
+  "implementation": [
+    "A deterministic namespace.claimed file is created exclusively with wx and mode0600 before reading ciphertext.",
+    "Only the exclusive claimant can decode and delete the source record; claim existence returns null to ordinary losing consumers.",
+    "Claim is flushed before decoding and removed only after known source deletion or known absence; uncertain failures retain it without automatic recovery.",
+    "Encryption, namespace AAD, strict names, lazy key initialization and atomic key publication are preserved."
+  ],
+  "verification": [
+    {"command":"node --test --test-name-pattern='private runtime concurrent one-use' tests/production-local-guards.test.mjs","phase":"before-edit","exitCode":1,"tests":1,"pass":0,"fail":1,"reason":"Two losing threads returned503 storage-corruption errors"},
+    {"command":"node --check server/private-runtime.mjs","exitCode":0},
+    {"command":"node --input-type=module -e \"const {PrivateRuntime}=await import('./server/private-runtime.mjs'); console.log(JSON.stringify({module:'server/private-runtime.mjs',export:typeof PrivateRuntime,methods:['read','write','remove','consume'].map(name=>({name,type:typeof PrivateRuntime.prototype[name]}))}));\"","exitCode":0},
+    {"command":"node --test --test-name-pattern='private runtime concurrent one-use' tests/production-local-guards.test.mjs","phase":"after-edit","exitCode":0,"tests":1,"pass":1,"fail":0,"skipped":0},
+    {"command":"node scripts/version-harness.mjs verify","exitCode":0,"selectedImmutableVersion":"1.5.0","bundleSha256":"ac413ffe5680de3f07c18957fea6b3f539f28bdf8cde1243a63024c31e210a6d"},
+    {"command":"node --test tests/production-local-guards.test.mjs tests/production-publication.test.mjs","exitCode":0,"tests":52,"pass":52,"fail":0,"cancelled":0,"skipped":0,"localGuards":9,"publication":43},
+    {"command":"node --test --test-name-pattern=\"private runtime concurrent\" tests/production-local-guards.test.mjs","execution":"30 sequential child_process.spawnSync invocations of the existing unchanged tests, each with a30000ms timeout","runs":30,"testsPerRun":2,"tests":60,"pass":60,"fail":0,"skipped":0,"everyExitCode":0,"coverage":["Concurrent lazy key initialization and all four separate records remain usable","Four simultaneous consumers return exactly one original state and three nulls; subsequent consume/read are null; no tmp/claimed leftovers"]}
+  ],
+  "testEnvironment": {"LOGIN_TOKEN":"","PUBLIC_ORIGIN":"","MEDIA_USER_AGENT":"","appConstructed":false,"fixtures":"Temporary Store databases and fake external transport; no HTTP listener or provider traffic"},
+  "jev": {"profile":"frameforge-codex","active":false,"used":false},
+  "boundaries": {"testFilesChanged":false,"subdelegation":false,"providerCalls":0,"productionAccess":false,"gitCommands":false},
+  "diagnosticFailures": [
+    {"command":"Get-CimInstance Win32_Process","result":"Windows denied process inspection; resolved ownership using recorded PID40696 with Get-Process and psutil, plus current launcher ancestry"},
+    {"command":"PowerShell initial foreach pipeline ownership check","result":"Parser rejected an ungrouped foreach pipeline; corrected using an intermediate array before verification"},
+    {"command":"rg --files including .codex","result":"No project-local .codex directory; relevant ownership records found in artifacts/production-workspace-implementation/execution.json and supervisor-recovery.json"},
+    {"command":"Get-Content harness/versions/1.5.0/.claude/agents/editor.md","result":"Path absent; loaded actual production-editor.md from that selected bundle"},
+    {"command":"node --input-type=module -e \"import {readFileSync,createHash} from 'node:fs';\"","exitCode":1,"result":"Verification command imported createHash from the wrong built-in module; corrected to node:crypto below; no source or test failure"}
+  ],
+  "pending": [],
+  "unresolvedPrerequisites": [],
+  "verificationGaps": ["Existing independent concurrency guard uses worker threads; no new cross-process or forced-crash tests authored by this role", "Crash retention is verified by source inspection, not process termination or power-loss injection", "Windows cannot prove POSIX0600 enforcement; existing POSIX mode assertions are platform-conditional"],
+  "sharingBoundary": "Explicit shared contract artifact in the working tree; no commit, push or external sharing performed."
+}

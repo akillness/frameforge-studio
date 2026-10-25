@@ -1,0 +1,67 @@
+{
+  "role": "TypeScript/JavaScript correctness reviewer",
+  "findings": [
+    {
+      "severity": "P1",
+      "file": "server/workflows.mjs",
+      "line": 790,
+      "problem": "Layout consumes the mutable episode instead of its connected storyboard output, allowing a sibling branch's scenes into the wrong production branch. Quote preparation repeats this at line 634.",
+      "reproduction": "Connect two distinct script/storyboard branches and order their IDs so both storyboards execute before branch A's layout. A memory-only execution confirmed that layout A and its render contained storyboard B's scene IDs and text.",
+      "correction": "Build layout inputs from the uniquely resolved connected storyboard output. Apply the same rule during quote preparation."
+    },
+    {
+      "severity": "P1",
+      "file": "server/workflows.mjs",
+      "line": 249,
+      "problem": "Render-only resume resolves storyboard/layout prerequisites without adding their outputs to requiredReuse. renderCandidate then silently falls back to episode.scenes at line 657.",
+      "reproduction": "Finish a branched run whose saved episode contains branch B while branch A retains distinct storyboard/layout outputs. Resume only render A. The memory-only probe returned reusedOutputs=[] and rendered the current episode instead of the connected branch output.",
+      "correction": "Reuse the resolved scene-producing dependencies during render resume. When a connected producer lacks valid output, reject execution instead of substituting the current episode."
+    },
+    {
+      "severity": "P2",
+      "file": "server/workflows.mjs",
+      "line": 807,
+      "problem": "Each generation input fingerprints the entire target scene, including sibling slots. Applying one approved slot invalidates another independently approved slot in that scene.",
+      "reproduction": "Quote two generate nodes targeting different image slots in the same scene, then execute both. A memory-only adapter confirmed gen-a completed, gen-b failed with 'The approved node input changed', and render was skipped.",
+      "correction": "Validate against an expected candidate advanced only by previously approved results, or isolate target-slot inputs while preserving relevant shared-scene guards. Retain each node's original job identity."
+    },
+    {
+      "severity": "P2",
+      "file": "public/workflow.js",
+      "line": 555,
+      "problem": "Whole-workflow generation selection includes publish. The engine rejects publish alongside generation/render/review at server/workflows.mjs:262, preventing the full-pipeline UI from obtaining a quote.",
+      "reproduction": "Use the full-pipeline recipe, prepare its source stages, then request the whole-candidate quote. generationSelection includes publish on both initial and resumed paths. The authoritative full-pipeline test explicitly excludes publish at tests/production-generation-plan.test.mjs:539.",
+      "correction": "Exclude publish from preparation/generation execution selections and expose it separately after the required approvals."
+    },
+    {
+      "severity": "P2",
+      "file": "public/workflow.js",
+      "line": 698,
+      "problem": "Stage readiness requires every ancestor to have completed/succeeded/reused status. An approved review ancestor therefore blocks valid downstream execution.",
+      "reproduction": "Use render-1 → review-1 → render-2, finish and approve review-1, then select render-2. Evaluating the actual stageInfo function returned blocked with review-1 listed as missing. The sequential repeated-producer API scenario is supported by tests/production-workflow-graph.test.mjs:386.",
+      "correction": "Match readiness to the server's connected prerequisite and reusable-evidence semantics, including valid reviewed states, while preserving publish's explicit approval requirements."
+    }
+  ],
+  "scope": {
+    "contract": "MEX decisions PW-01–PW-07, frozen plan.json interfaces, and supplied protocols.json",
+    "files": [
+      "server/workflows.mjs",
+      "server/graph.mjs",
+      "server/candidates.mjs",
+      "server/store.mjs",
+      "public/app.js",
+      "public/workflow.js",
+      "public/production-tools.js"
+    ],
+    "verification": "Necessary functions and relevant production tests inspected; bounded memory-only probes executed. No files edited.",
+    "jev": "Required jeopi status checked: disabled. No routing, review, enablement, or reconfiguration performed.",
+    "boundary": "This report is neither approval nor live-provider proof."
+  },
+  "notExecuted": [
+    "Real test suites, formatters, linters, and project-wide checks",
+    "Git commands or subdelegation",
+    "Credential, .env, runtime data, or other agents' private-file access",
+    "Port 4310 or private HTTPS access",
+    "Provider calls, paid generation, Google authorization, uploads, publication, deployment, or external transmission"
+  ]
+}

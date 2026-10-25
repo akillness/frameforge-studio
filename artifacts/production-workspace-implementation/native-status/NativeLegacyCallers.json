@@ -1,0 +1,216 @@
+{
+  "schema": "frameforge-native-module-status/v1",
+  "role": "NativeLegacyCallers",
+  "status": "caller_migrations_ready_with_two_unresolved_verification_failures",
+  "updatedAt": "2026-10-25T08:59:07.289Z",
+  "moduleReady": true,
+  "exportedSignatures": [],
+  "exportBoundary": "Test-only role; no public production exports. All five changed test modules loaded through actual Node test imports.",
+  "changedFiles": [
+    "tests/white-studio.test.mjs",
+    "tests/white-studio-versions.test.mjs",
+    "tests/platform-session.test.mjs",
+    "tests/layout-pipeline-session.test.mjs",
+    "tests/api.test.mjs",
+    "artifacts/production-workspace-implementation/native-status/NativeLegacyCallers.json"
+  ],
+  "inspectedUnchangedFiles": [
+    "tests/workflow-ui-regressions.test.mjs",
+    "tests/workspace-layout.test.mjs",
+    "tests/workflows.test.mjs",
+    "tests/reviews.test.mjs",
+    "tests/generation-integration.test.mjs"
+  ],
+  "changes": [
+    "Replace one-generate-role prohibition with repeated-role identity and explicit-anchor rewiring assertions; retain duplicate ID, bounds, cycles and ambiguous render rejection.",
+    "Use real Store/API project-owned workflow copies in editor/version fixtures; preserve version guards and shared template graph.",
+    "Bind existing generation fixture to the selected scene; preserve complete owned graph and require no model search when opening.",
+    "Keep real local Chromium interaction/hash tests on explicit non-YouTube loopback sessions; add manual YouTube handoff and blocked-controls checks.",
+    "Prepare source/layout output before exact candidate quote and generation-only resume; preserve exact review node/output lineage and local publication staging without a browser.",
+    "Retain unique-stage prepending regression as a separate failing test; explicit node-ID integration edges allow remaining migrations to be exercised.",
+    "Set explicit empty publicOrigin in API/version fixtures, including API restart; retain intentional isolated authentication-token overrides."
+  ],
+  "cleanEnvironmentCommand": "Get-ChildItem Env: | Where-Object { $_.Name -match '^(HF_|HIGGSFIELD_|GOOGLE_|YOUTUBE_|AGENT_BRIDGE|HOST_AGENT|MEDIA_USER_AGENT|JEV_|CODEX_API|OPENAI_API|ANTHROPIC_API|DATA_DIR|LOGIN_TOKEN|PUBLIC_ORIGIN)' } | ForEach-Object { Remove-Item -LiteralPath ('Env:' + $_.Name) }; $env:LOGIN_TOKEN=''; $env:PUBLIC_ORIGIN=''; ",
+  "testCommands": [
+    {
+      "command": "Get-ChildItem Env: | Where-Object { $_.Name -match '^(HF_|HIGGSFIELD_|GOOGLE_|YOUTUBE_|AGENT_BRIDGE|HOST_AGENT|MEDIA_USER_AGENT|JEV_|CODEX_API|OPENAI_API|ANTHROPIC_API|DATA_DIR|LOGIN_TOKEN|PUBLIC_ORIGIN)' } | ForEach-Object { Remove-Item -LiteralPath ('Env:' + $_.Name) }; $env:LOGIN_TOKEN=''; $env:PUBLIC_ORIGIN=''; rtk proxy node --test --test-reporter=tap tests/white-studio.test.mjs tests/white-studio-versions.test.mjs tests/platform-session.test.mjs tests/layout-pipeline-session.test.mjs tests/workflow-ui-regressions.test.mjs",
+      "tests": 32,
+      "pass": 18,
+      "fail": 14,
+      "exitCode": 1,
+      "phase": "initial diagnostic; includes five unchanged workflow-ui regressions, all passing"
+    },
+    {
+      "command": "Get-ChildItem Env: | Where-Object { $_.Name -match '^(HF_|HIGGSFIELD_|GOOGLE_|YOUTUBE_|AGENT_BRIDGE|HOST_AGENT|MEDIA_USER_AGENT|JEV_|CODEX_API|OPENAI_API|ANTHROPIC_API|DATA_DIR|LOGIN_TOKEN|PUBLIC_ORIGIN)' } | ForEach-Object { Remove-Item -LiteralPath ('Env:' + $_.Name) }; $env:LOGIN_TOKEN=''; $env:PUBLIC_ORIGIN=''; rtk proxy node --test --test-reporter=tap tests/white-studio.test.mjs tests/white-studio-versions.test.mjs tests/platform-session.test.mjs tests/layout-pipeline-session.test.mjs tests/api.test.mjs",
+      "tests": 46,
+      "pass": 40,
+      "fail": 6,
+      "exitCode": 1,
+      "phase": "migration iteration; four new editor fixtures lacked topic, plus two retained blockers"
+    },
+    {
+      "command": "Get-ChildItem Env: | Where-Object { $_.Name -match '^(HF_|HIGGSFIELD_|GOOGLE_|YOUTUBE_|AGENT_BRIDGE|HOST_AGENT|MEDIA_USER_AGENT|JEV_|CODEX_API|OPENAI_API|ANTHROPIC_API|DATA_DIR|LOGIN_TOKEN|PUBLIC_ORIGIN)' } | ForEach-Object { Remove-Item -LiteralPath ('Env:' + $_.Name) }; $env:LOGIN_TOKEN=''; $env:PUBLIC_ORIGIN=''; rtk proxy node --test --test-reporter=tap tests/white-studio.test.mjs",
+      "tests": 12,
+      "pass": 10,
+      "fail": 2,
+      "exitCode": 1,
+      "phase": "existing-node fixtures targeted a different scene; corrected fixture target"
+    },
+    {
+      "command": "Get-ChildItem Env: | Where-Object { $_.Name -match '^(HF_|HIGGSFIELD_|GOOGLE_|YOUTUBE_|AGENT_BRIDGE|HOST_AGENT|MEDIA_USER_AGENT|JEV_|CODEX_API|OPENAI_API|ANTHROPIC_API|DATA_DIR|LOGIN_TOKEN|PUBLIC_ORIGIN)' } | ForEach-Object { Remove-Item -LiteralPath ('Env:' + $_.Name) }; $env:LOGIN_TOKEN=''; $env:PUBLIC_ORIGIN=''; rtk proxy node --test --test-reporter=tap tests/white-studio.test.mjs tests/layout-pipeline-session.test.mjs",
+      "tests": 17,
+      "pass": 15,
+      "fail": 2,
+      "exitCode": 1,
+      "phase": "white-studio passes; insertion regression retained; generation requires prior script preparation"
+    },
+    {
+      "command": "Get-ChildItem Env: | Where-Object { $_.Name -match '^(HF_|HIGGSFIELD_|GOOGLE_|YOUTUBE_|AGENT_BRIDGE|HOST_AGENT|MEDIA_USER_AGENT|JEV_|CODEX_API|OPENAI_API|ANTHROPIC_API|DATA_DIR|LOGIN_TOKEN|PUBLIC_ORIGIN)' } | ForEach-Object { Remove-Item -LiteralPath ('Env:' + $_.Name) }; $env:LOGIN_TOKEN=''; $env:PUBLIC_ORIGIN=''; rtk proxy node --test --test-reporter=tap --test-name-pattern='full 10-stage workflow' tests/layout-pipeline-session.test.mjs",
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "exitCode": 1,
+      "phase": "source preparation failed on inherited Google News RSS default; migrated fixture to stored trend_news evidence"
+    },
+    {
+      "command": "Get-ChildItem Env: | Where-Object { $_.Name -match '^(HF_|HIGGSFIELD_|GOOGLE_|YOUTUBE_|AGENT_BRIDGE|HOST_AGENT|MEDIA_USER_AGENT|JEV_|CODEX_API|OPENAI_API|ANTHROPIC_API|DATA_DIR|LOGIN_TOKEN|PUBLIC_ORIGIN)' } | ForEach-Object { Remove-Item -LiteralPath ('Env:' + $_.Name) }; $env:LOGIN_TOKEN=''; $env:PUBLIC_ORIGIN=''; rtk proxy node --test --test-reporter=tap --test-name-pattern='full 10-stage workflow' tests/layout-pipeline-session.test.mjs",
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "exitCode": 1,
+      "phase": "news completed in preparation, skipped in generation-only resume; moved completion assertion to preparation"
+    },
+    {
+      "command": "Get-ChildItem Env: | Where-Object { $_.Name -match '^(HF_|HIGGSFIELD_|GOOGLE_|YOUTUBE_|AGENT_BRIDGE|HOST_AGENT|MEDIA_USER_AGENT|JEV_|CODEX_API|OPENAI_API|ANTHROPIC_API|DATA_DIR|LOGIN_TOKEN|PUBLIC_ORIGIN)' } | ForEach-Object { Remove-Item -LiteralPath ('Env:' + $_.Name) }; $env:LOGIN_TOKEN=''; $env:PUBLIC_ORIGIN=''; rtk proxy node --test --test-reporter=tap --test-name-pattern='full 10-stage workflow' tests/layout-pipeline-session.test.mjs",
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "exitCode": 1,
+      "phase": "409 rejection retained; updated approved-candidate wording"
+    },
+    {
+      "command": "Get-ChildItem Env: | Where-Object { $_.Name -match '^(HF_|HIGGSFIELD_|GOOGLE_|YOUTUBE_|AGENT_BRIDGE|HOST_AGENT|MEDIA_USER_AGENT|JEV_|CODEX_API|OPENAI_API|ANTHROPIC_API|DATA_DIR|LOGIN_TOKEN|PUBLIC_ORIGIN)' } | ForEach-Object { Remove-Item -LiteralPath ('Env:' + $_.Name) }; $env:LOGIN_TOKEN=''; $env:PUBLIC_ORIGIN=''; rtk proxy node --test --test-reporter=tap --test-name-pattern='full 10-stage workflow' tests/layout-pipeline-session.test.mjs",
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "exitCode": 1,
+      "phase": "legacy publish polling omitted aggregate approved terminal status and timed out"
+    },
+    {
+      "command": "Get-ChildItem Env: | Where-Object { $_.Name -match '^(HF_|HIGGSFIELD_|GOOGLE_|YOUTUBE_|AGENT_BRIDGE|HOST_AGENT|MEDIA_USER_AGENT|JEV_|CODEX_API|OPENAI_API|ANTHROPIC_API|DATA_DIR|LOGIN_TOKEN|PUBLIC_ORIGIN)' } | ForEach-Object { Remove-Item -LiteralPath ('Env:' + $_.Name) }; $env:LOGIN_TOKEN=''; $env:PUBLIC_ORIGIN=''; rtk proxy node --test --test-reporter=tap --test-name-pattern='full 10-stage workflow' tests/layout-pipeline-session.test.mjs",
+      "tests": 1,
+      "pass": 0,
+      "fail": 1,
+      "exitCode": 1,
+      "phase": "inherited approval is in exact review node output, not a newly committed run review map"
+    },
+    {
+      "command": "Get-ChildItem Env: | Where-Object { $_.Name -match '^(HF_|HIGGSFIELD_|GOOGLE_|YOUTUBE_|AGENT_BRIDGE|HOST_AGENT|MEDIA_USER_AGENT|JEV_|CODEX_API|OPENAI_API|ANTHROPIC_API|DATA_DIR|LOGIN_TOKEN|PUBLIC_ORIGIN)' } | ForEach-Object { Remove-Item -LiteralPath ('Env:' + $_.Name) }; $env:LOGIN_TOKEN=''; $env:PUBLIC_ORIGIN=''; rtk proxy node --test --test-reporter=tap --test-name-pattern='full 10-stage workflow' tests/layout-pipeline-session.test.mjs",
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "exitCode": 0,
+      "phase": "full migrated pipeline passes"
+    },
+    {
+      "command": "Get-ChildItem Env: | Where-Object { $_.Name -match '^(HF_|HIGGSFIELD_|GOOGLE_|YOUTUBE_|AGENT_BRIDGE|HOST_AGENT|MEDIA_USER_AGENT|JEV_|CODEX_API|OPENAI_API|ANTHROPIC_API|DATA_DIR|LOGIN_TOKEN|PUBLIC_ORIGIN)' } | ForEach-Object { Remove-Item -LiteralPath ('Env:' + $_.Name) }; $env:LOGIN_TOKEN=''; $env:PUBLIC_ORIGIN=''; rtk proxy node --test --test-reporter=spec tests/white-studio.test.mjs tests/white-studio-versions.test.mjs tests/platform-session.test.mjs tests/layout-pipeline-session.test.mjs tests/api.test.mjs",
+      "tests": 47,
+      "pass": 45,
+      "fail": 2,
+      "skipped": 0,
+      "cancelled": 0,
+      "exitCode": 1,
+      "phase": "final verification"
+    }
+  ],
+  "finalVerification": {
+    "tests": 47,
+    "pass": 45,
+    "fail": 2,
+    "skipped": 0,
+    "cancelled": 0,
+    "perFile": {
+      "tests/api.test.mjs": {
+        "tests": 18,
+        "pass": 18,
+        "fail": 0
+      },
+      "tests/white-studio-versions.test.mjs": {
+        "tests": 7,
+        "pass": 7,
+        "fail": 0
+      },
+      "tests/white-studio.test.mjs": {
+        "tests": 12,
+        "pass": 12,
+        "fail": 0
+      },
+      "tests/layout-pipeline-session.test.mjs": {
+        "tests": 5,
+        "pass": 4,
+        "fail": 1
+      },
+      "tests/platform-session.test.mjs": {
+        "tests": 5,
+        "pass": 4,
+        "fail": 1
+      }
+    }
+  },
+  "syntax": {
+    "commands": [
+      "rtk proxy node --check tests/white-studio.test.mjs",
+      "rtk proxy node --check tests/white-studio-versions.test.mjs",
+      "rtk proxy node --check tests/platform-session.test.mjs",
+      "rtk proxy node --check tests/layout-pipeline-session.test.mjs",
+      "rtk proxy node --check tests/api.test.mjs"
+    ],
+    "pass": 5,
+    "fail": 0
+  },
+  "harness": {
+    "command": "rtk proxy node scripts/version-harness.mjs verify",
+    "ok": true,
+    "currentVersion": "1.5.0"
+  },
+  "jev": {
+    "command": "rtk proxy node C:/Users/bangg/.agents/jev/jev-harness.mjs --profile frameforge-codex status",
+    "profile": "frameforge-codex",
+    "active": false,
+    "enabled": false,
+    "used": false
+  },
+  "mex": {
+    "command": "mex logging --json",
+    "ok": true,
+    "mode": "significant",
+    "writes": "None; shared status is the explicitly authorized checkout-only contract artifact."
+  },
+  "unresolvedPrerequisites": [
+    {
+      "kind": "production_regression",
+      "test": "tests/layout-pipeline-session.test.mjs:129",
+      "source": "public/workflow.js:addWorkflowNode",
+      "detail": "Adding unique earliest news stage to script/storyboard/render/review appends it disconnected instead of prepending/wiring news->script. Original unique-stage insertion assertion remains failing; source is outside this role's allowlist."
+    },
+    {
+      "kind": "host_prerequisite",
+      "test": "tests/platform-session.test.mjs:147",
+      "detail": "Windows rejects regular file symlink fixture creation with EPERM at line156 before traversal/hash assertions. No skips, relaxed assertions, permission/config changes or fake filesystem substituted."
+    }
+  ],
+  "remainingCallerContracts": "No identified obsolete assertions remain in the ten listed callers. Full migrated pipeline and repeated-role checks pass. Remaining insertion behavior is a production regression, not an obsolete type-order oracle.",
+  "safety": {
+    "sourceEdits": [],
+    "gitCommands": false,
+    "installers": false,
+    "productionAccess": false,
+    "paidGeneration": false,
+    "oauthConsent": false,
+    "uploadsOrDeploys": false,
+    "credentialsRead": false,
+    "networkObservation": "One intermediate run reached the inherited news default's fetchGoogleNews RSS path and failed source preparation. It was corrected to explicit stored trend_news evidence; final verification uses no external news transport. Successful remote traffic was not established.",
+    "fixtures": "Temporary DBs and ephemeral loopback ports; explicit empty loginToken/publicOrigin defaults with intentional test-only auth token overrides preserved."
+  },
+  "sharingBoundary": "Checkout-only working tree artifact; nothing committed, pushed or externally shared."
+}

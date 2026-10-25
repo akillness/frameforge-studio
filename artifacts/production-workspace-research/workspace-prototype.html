@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'none'; img-src 'none'; font-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>FrameForge · workspace-prototype · 디자인 후보</title>
+  <link rel="stylesheet" href="workspace-prototype.css">
+  <script src="workspace-prototype.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#workspace">작업 영역으로 이동</a>
+  <div class="shell">
+    <aside class="sidebar" aria-label="프로토타입 프로젝트 문맥">
+      <div class="brand"><span class="brandmark" aria-hidden="true">F</span><span>FRAME<small>PRODUCTION WORKSPACE</small></span></div>
+      <span class="eyebrow">DESIGN SANDBOX</span>
+      <details class="channel-group" open>
+        <summary>YouTube <span class="muted">채널 문맥</span></summary>
+        <div class="channel"><span class="channel-avatar" aria-hidden="true">확</span><div><strong>확인해봄</strong><small>목표 채널 · 계정 미연결</small></div></div>
+      </details>
+      <div class="rail-section"><span class="eyebrow">현재 제작 프로젝트</span><strong>AI 뉴스 쇼츠</strong><p>한 프로젝트 → 한 영상<br>주제 선정부터 공개 게시까지</p><span class="rail-selected">프로덕션 작업 공간</span></div>
+      <div class="rail-section"><span class="eyebrow">워크플로 소유권</span><p>재사용 템플릿의<br>프로젝트 전용 편집 사본</p><small>다른 프로젝트·공유 원본과 분리.<br>여기서는 사본 생성·저장 안 함.</small></div>
+      <div class="rail-footer"><strong>읽기 전용 디자인 후보</strong><p>탐색과 선택만 가능합니다.<br>실제 앱과 연결되지 않습니다.</p><code>workspace-prototype.html</code></div>
+    </aside>
+    <div class="workspace-shell">
+      <header class="topbar"><div class="breadcrumb">확인해봄 <span aria-hidden="true">/</span> AI 뉴스 쇼츠 <span aria-hidden="true">/</span> <strong>디자인 후보</strong></div><span class="badge">로컬 UI · 메모리 내 선택</span></header>
+      <main id="workspace" tabindex="-1">
+        <div class="project-heading"><div><div class="eyebrow">WORKSPACE PROTOTYPE · THROWAWAY DESIGN ARTIFACT</div><h1>한 영상, 하나의 작업 공간<span class="heading-mark">디자인 후보</span></h1><p>확인해봄 · AI 뉴스 · YouTube Shorts · 45초 · 훅 / 뉴스 1·2·3 / 마무리</p></div><button type="button" class="primary review-trigger">최종 승인 항목 검토 <span aria-hidden="true">↗</span></button></div>
+        <div class="boundary"><span class="boundary-symbol" aria-hidden="true">i</span><p><strong>서버 저장·외부 실행 없음.</strong> 실제 뉴스·소스 영상·렌더 결과가 없는 레이아웃 예시입니다. 선택만 동기화되며, 생성·승인·업로드는 실행하지 않습니다.</p></div>
+        <div class="candidate-heading"><div><span id="candidate-letter" class="candidate-letter">A</span><div><h2 id="candidate-title">편집 중심</h2><p id="candidate-description">미디어와 컷의 관계를 먼저 보고, 전체 제작 경로를 함께 확인합니다.</p></div></div><span class="text-label">동일 브리프 · 서로 다른 배치</span></div>
+        <div id="candidate"></div>
+        <noscript><p class="boundary">로컬 선택과 후보 전환에는 JavaScript가 필요합니다. 이 페이지는 외부 실행을 하지 않는 디자인 후보입니다.</p></noscript>
+        <footer class="artifact-footer">설계 비교용 · 작업 이력·실행 상태·완료율을 나타내지 않음 · 새로고침 시 선택 초기화, 후보 배치는 URL로 유지</footer>
+      </main>
+    </div>
+  </div>
+  <nav class="variant-switcher" aria-label="레이아웃 디자인 후보 전환">
+    <button type="button" id="previous-variant" class="arrow" aria-label="이전 디자인 후보">←</button>
+    <div class="variant-options"><button type="button" data-variant="A" aria-pressed="true"><b>A</b><span>편집</span></button><button type="button" data-variant="B" aria-pressed="false"><b>B</b><span>노드</span></button><button type="button" data-variant="C" aria-pressed="false"><b>C</b><span>스토리보드</span></button></div>
+    <button type="button" id="next-variant" class="arrow" aria-label="다음 디자인 후보">→</button>
+    <span class="key-hint">← → 전환</span>
+  </nav>
+  <p id="announcement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+  <dialog id="approval-dialog" aria-labelledby="approval-title" aria-describedby="approval-description">
+    <div class="dialog-heading"><div><span class="eyebrow">FINAL CANDIDATE REVIEW · DESIGN ONLY</span><h2 id="approval-title">공개 전, 하나의 최종 승인</h2></div><button type="button" id="close-review" aria-label="최종 승인 검토 닫기">닫기</button></div>
+    <p id="approval-description">최종 승인은 장면별 생성 동의와 별개입니다. 아래 항목이 정확한 하나의 출력에 묶여야 합니다. 이 프로토타입에서는 어느 항목도 운영 검증되지 않았습니다.</p>
+    <dl class="approval-fields">
+      <div><dt>대상 채널 / 소유자</dt><dd>확인해봄은 의도한 채널명일 뿐입니다. OAuth 계정·채널 ID·소유 권한 미검증.</dd></div>
+      <div><dt>정확한 출력</dt><dd>45초 Shorts 브리프만 존재. 프로젝트/에피소드 버전, 렌더 작업, 파일 및 SHA-256 없음.</dd></div>
+      <div><dt>소스 / 이용 권리</dt><dd>영상·이미지 미첨부. 실제 소스 URL·라이선스·출처 표기·취득 시각·파일 해시·사용 구간 미검증.</dd></div>
+      <div><dt>제목 / 설명 / 메타데이터</dt><dd>실제 게시 제목·설명·출처 표기 및 관련 메타데이터 미확정·미검증.</dd></div>
+      <div><dt>시청 대상</dt><dd>아동용 여부 미결정·미검증. selfDeclaredMadeForKids에 바인딩 필요.</dd></div>
+      <div><dt>AI 사용 공개</dt><dd>사람의 정책 검토 및 공개 여부 결정 없음. containsSyntheticMedia에 바인딩 필요. 단순 제작 보조만으로 자동 결정하지 않음.</dd></div>
+      <div><dt>최종 공개 범위</dt><dd>사용자 확인 방향은 최종 승인 직후 public. 현재 원격 영상 ID·처리 상태·공개 상태 미검증.</dd></div>
+    </dl>
+    <div class="delivery-contract"><strong>구현되어야 할 공식 OAuth/API 경로</strong><ol><li>채널에 바인딩된 OAuth 및 insert/read/update 권한 확인</li><li>정확한 승인 후보를 비공개 업로드</li><li>동일 영상의 채널·메타데이터·시청 대상·AI 공개·처리 완료 읽기 확인</li><li>승인 입력을 재확인한 뒤 동일 영상 public 변경</li><li>영상 ID·채널·공개 상태·시청 대상·AI 공개 재조회</li></ol><p>모호한 결과는 같은 영상 ID로 확인하며 새 업로드로 재시도하지 않습니다. Studio 자동화는 연결하지 않습니다.</p></div>
+    <p id="publication-blocked" class="blocked"><strong>공개 게시 불가.</strong> OAuth/API 구현과 정확한 후보 증거가 연결되지 않았습니다. 이 창은 항목을 보여줄 뿐, 승인 기록이나 게시 성공을 만들지 않습니다.</p>
+    <div class="dialog-actions"><button type="button" id="back-to-workspace">작업 공간으로 돌아가기</button><button type="button" class="primary" disabled aria-describedby="publication-blocked">승인 및 공개 게시 · 연결 안 됨</button></div>
+  </dialog>
+</body>
+</html>

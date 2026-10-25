@@ -1,0 +1,106 @@
+{
+  "observed_at": "2026-10-24",
+  "validation_command": "python C:/Users/bangg/.agents/skills/deep-research/scripts/validate_json.py -f artifacts/production-workspace-research/fields.yaml -j artifacts/production-workspace-research/results/premiere_pro.json artifacts/production-workspace-research/results/resolve_fusion.json artifacts/production-workspace-research/results/n8n.json artifacts/production-workspace-research/results/frame_io.json artifacts/production-workspace-research/results/youtube_upload.json artifacts/production-workspace-research/results/licensed_footage.json --quiet",
+  "validation_result": {
+    "exit_code": 0,
+    "passed": 6,
+    "total": 6,
+    "coverage_percent": 100.0
+  },
+  "additional_checks": "All seven comparison dimensions have observed_facts, source_urls, frameforge_implications and limitations; all source-entry records have HTTP(S) URLs; uncertainty names reference real fields.",
+  "results": [
+    {
+      "item": "Adobe Premiere Pro",
+      "path": "results/premiere_pro.json",
+      "sha256": "206911b23bcd25b18f55967de9324fdeb5eacfaadc40455b808c963429478050",
+      "required_fields_covered": 10,
+      "required_fields_defined": 10,
+      "source_entries": 30,
+      "uncertain_fields": [
+        "project_context",
+        "footage_provenance",
+        "editing_workspace",
+        "template_channel_reuse",
+        "approval_delivery",
+        "accessibility_responsiveness"
+      ]
+    },
+    {
+      "item": "DaVinci Resolve and Fusion",
+      "path": "results/resolve_fusion.json",
+      "sha256": "598dccbcb12e2e8fcac326f18a87a7197731d42f50e3600d916022245568e950",
+      "required_fields_covered": 10,
+      "required_fields_defined": 10,
+      "source_entries": 10,
+      "uncertain_fields": [
+        "sources",
+        "project_context",
+        "node_execution",
+        "footage_provenance",
+        "editing_workspace",
+        "template_channel_reuse",
+        "approval_delivery",
+        "accessibility_responsiveness"
+      ]
+    },
+    {
+      "item": "n8n",
+      "path": "results/n8n.json",
+      "sha256": "ac3d97d0fff98ba745c2d48b75eea1674d36378994ee297dcd6d08fbb76c552b",
+      "required_fields_covered": 10,
+      "required_fields_defined": 10,
+      "source_entries": 21,
+      "uncertain_fields": [
+        "sources",
+        "template_channel_reuse",
+        "approval_delivery",
+        "accessibility_responsiveness"
+      ]
+    },
+    {
+      "item": "Frame.io",
+      "path": "results/frame_io.json",
+      "sha256": "0cc546318b874e72af5d1f86e28126ce0a711e15e1a6b5fb37b92e8e9f9c250f",
+      "required_fields_covered": 10,
+      "required_fields_defined": 10,
+      "source_entries": 23,
+      "uncertain_fields": [
+        "project_context",
+        "footage_provenance",
+        "template_channel_reuse",
+        "approval_delivery",
+        "accessibility_responsiveness"
+      ]
+    },
+    {
+      "item": "YouTube upload API and Studio",
+      "path": "results/youtube_upload.json",
+      "sha256": "0787fbadb9ae33b52e9c20f0bb5239c90b296ad27075ca6345eaa81db50a1649",
+      "required_fields_covered": 10,
+      "required_fields_defined": 10,
+      "source_entries": 18,
+      "uncertain_fields": [
+        "node_execution",
+        "approval_delivery",
+        "accessibility_responsiveness"
+      ]
+    },
+    {
+      "item": "Downloadable and licensed factual footage sources",
+      "path": "results/licensed_footage.json",
+      "sha256": "0250d6926ba834987c9ebd80df7b3cf994d72b56f3180398f4b48294d0fe6157",
+      "required_fields_covered": 10,
+      "required_fields_defined": 10,
+      "source_entries": 13,
+      "uncertain_fields": [
+        "project_context",
+        "node_execution",
+        "footage_provenance",
+        "template_channel_reuse",
+        "approval_delivery",
+        "accessibility_responsiveness"
+      ]
+    }
+  ],
+  "evidence_boundary": "Coverage and source structure are verified. They do not establish every factual claim, runtime usability, provider connectivity, rights clearance or publication."
+}

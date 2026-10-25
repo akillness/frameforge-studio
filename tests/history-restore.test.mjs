@@ -8,7 +8,7 @@ import { createApp } from '../server/app.mjs';
 
 async function setup(t) {
   const dataDir = await mkdtemp(path.join(tmpdir(), 'frameforge-restore-'));
-  const server = createApp({ dataDir });
+  const server = createApp({ dataDir, loginToken: '' });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   t.after(async () => {
     await new Promise((resolve) => { server.close(resolve); server.closeAllConnections(); });

@@ -1,0 +1,459 @@
+{
+  "status": "module-ready-complete",
+  "changedFiles": [
+    "tests/production-branch-regressions.test.mjs",
+    "tests/production-publication.test.mjs",
+    "tests/production-local-guards.test.mjs",
+    "tests/production-workspace-journey.test.mjs",
+    "artifacts/production-workspace-implementation/native-status/NativeTesterFinal.json",
+    "artifacts/production-workspace-implementation/journey-final-backend-clean.tap",
+    "artifacts/production-workspace-implementation/journey-final-branches-fourth.tap",
+    "artifacts/production-workspace-implementation/journey-final-branches-second.tap",
+    "artifacts/production-workspace-implementation/journey-final-branches-third.tap",
+    "artifacts/production-workspace-implementation/journey-final-browser-first.tap",
+    "artifacts/production-workspace-implementation/journey-final-browser-second.tap",
+    "artifacts/production-workspace-implementation/journey-final-last-edits.tap",
+    "artifacts/production-workspace-implementation/journey-final-targeted-first.tap",
+    "artifacts/production-workspace-implementation/journey-receipt.json",
+    "artifacts/production-workspace-implementation/journey-final-browser-first-receipt.json",
+    "artifacts/production-workspace-implementation/journey-evidence/B-1600.png",
+    "artifacts/production-workspace-implementation/journey-evidence/B-1024.png",
+    "artifacts/production-workspace-implementation/journey-evidence/B-375.png",
+    "artifacts/production-workspace-implementation/journey-evidence/B-320.png",
+    "artifacts/production-workspace-implementation/journey-evidence/A-1600.png",
+    "artifacts/production-workspace-implementation/journey-evidence/A-1024.png",
+    "artifacts/production-workspace-implementation/journey-evidence/A-375.png",
+    "artifacts/production-workspace-implementation/journey-evidence/A-320.png",
+    "artifacts/production-workspace-implementation/journey-evidence/B-large-1600.png",
+    "artifacts/production-workspace-implementation/journey-evidence/B-large-1024.png",
+    "artifacts/production-workspace-implementation/journey-evidence/B-large-375.png",
+    "artifacts/production-workspace-implementation/journey-evidence/B-large-320.png",
+    "artifacts/production-workspace-implementation/journey-evidence/source-initial-1600.png",
+    "artifacts/production-workspace-implementation/journey-evidence/source-initial-1024.png",
+    "artifacts/production-workspace-implementation/journey-evidence/source-initial-375.png",
+    "artifacts/production-workspace-implementation/journey-evidence/source-initial-320.png",
+    "artifacts/production-workspace-implementation/journey-evidence/source-1600.png",
+    "artifacts/production-workspace-implementation/journey-evidence/source-1024.png",
+    "artifacts/production-workspace-implementation/journey-evidence/source-375.png",
+    "artifacts/production-workspace-implementation/journey-evidence/source-320.png",
+    "artifacts/production-workspace-implementation/journey-evidence/delivery-1600.png",
+    "artifacts/production-workspace-implementation/journey-evidence/delivery-1024.png",
+    "artifacts/production-workspace-implementation/journey-evidence/delivery-375.png",
+    "artifacts/production-workspace-implementation/journey-evidence/delivery-320.png",
+    "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-1600.png",
+    "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-1024.png",
+    "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-375.png",
+    "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-320.png",
+    "artifacts/production-workspace-implementation/journey-evidence/generation-consent-1600.png",
+    "artifacts/production-workspace-implementation/journey-evidence/generation-consent-1024.png",
+    "artifacts/production-workspace-implementation/journey-evidence/generation-consent-375.png",
+    "artifacts/production-workspace-implementation/journey-evidence/generation-consent-320.png",
+    "artifacts/production-workspace-implementation/journey-evidence/ten-role-quote-1600.png",
+    "artifacts/production-workspace-implementation/journey-evidence/ten-role-quote-1024.png",
+    "artifacts/production-workspace-implementation/journey-evidence/ten-role-quote-375.png",
+    "artifacts/production-workspace-implementation/journey-evidence/ten-role-quote-320.png",
+    "artifacts/production-workspace-implementation/journey-evidence/sequential-readiness-1600.png",
+    "artifacts/production-workspace-implementation/journey-evidence/sequential-readiness-1024.png",
+    "artifacts/production-workspace-implementation/journey-evidence/sequential-readiness-375.png",
+    "artifacts/production-workspace-implementation/journey-evidence/sequential-readiness-320.png",
+    "artifacts/production-workspace-implementation/journey-final-verification.json"
+  ],
+  "syntaxChecks": [
+    {
+      "command": "node --check tests/production-branch-regressions.test.mjs",
+      "exitCode": 0,
+      "stderr": ""
+    },
+    {
+      "command": "node --check tests/production-publication.test.mjs",
+      "exitCode": 0,
+      "stderr": ""
+    },
+    {
+      "command": "node --check tests/production-local-guards.test.mjs",
+      "exitCode": 0,
+      "stderr": ""
+    },
+    {
+      "command": "node --check tests/production-workspace-journey.test.mjs",
+      "exitCode": 0,
+      "stderr": ""
+    }
+  ],
+  "results": [
+    {
+      "log": "artifacts/production-workspace-implementation/journey-final-backend-clean.tap",
+      "tests": 154,
+      "pass": 153,
+      "fail": 1,
+      "skipped": 0
+    },
+    {
+      "log": "artifacts/production-workspace-implementation/journey-final-branches-fourth.tap",
+      "tests": 5,
+      "pass": 5,
+      "fail": 0,
+      "skipped": 0
+    },
+    {
+      "log": "artifacts/production-workspace-implementation/journey-final-branches-second.tap",
+      "tests": 3,
+      "pass": 2,
+      "fail": 1,
+      "skipped": 0
+    },
+    {
+      "log": "artifacts/production-workspace-implementation/journey-final-branches-third.tap",
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "skipped": 0
+    },
+    {
+      "log": "artifacts/production-workspace-implementation/journey-final-browser-first.tap",
+      "tests": 11,
+      "pass": 10,
+      "fail": 1,
+      "skipped": 0
+    },
+    {
+      "log": "artifacts/production-workspace-implementation/journey-final-browser-second.tap",
+      "tests": 11,
+      "pass": 11,
+      "fail": 0,
+      "skipped": 0
+    },
+    {
+      "log": "artifacts/production-workspace-implementation/journey-final-last-edits.tap",
+      "tests": 15,
+      "pass": 15,
+      "fail": 0,
+      "skipped": 0
+    },
+    {
+      "log": "artifacts/production-workspace-implementation/journey-final-targeted-first.tap",
+      "tests": 49,
+      "pass": 46,
+      "fail": 3,
+      "skipped": 0
+    }
+  ],
+  "effectiveBackend": {
+    "tests": 154,
+    "pass": 154,
+    "fail": 0,
+    "skipped": 0,
+    "evidence": [
+      "journey-final-backend-clean.tap:153/154; one older generated-render fixture omitted actual input snapshot",
+      "journey-final-last-edits.tap:15/15; all six final branch tests plus all nine local guards, including the repaired generated-render fixture"
+    ],
+    "scope": "Results combined only for unchanged passing tests and the two subsequently edited test files; no project-wide suite."
+  },
+  "fullBrowser": {
+    "command": "node scripts/production-workspace-browser-smoke.mjs",
+    "nestedCommand": "node --test tests/production-workspace-journey.test.mjs",
+    "tests": 11,
+    "pass": 11,
+    "fail": 0,
+    "skipped": 0,
+    "screenshots": 40,
+    "sha256Verified": true,
+    "widths": [
+      1600,
+      1024,
+      375,
+      320
+    ],
+    "externalBrowserRequests": 0,
+    "pageErrors": 0,
+    "sourceHashesCurrent": true,
+    "receipt": "artifacts/production-workspace-implementation/journey-receipt.json"
+  },
+  "hashes": [
+    {
+      "path": "public/app.js",
+      "sha256": "ebe8b752846de062b15819c215b3bad0d61b33584f95ae6ca105a6621c359bc5"
+    },
+    {
+      "path": "public/workflow.js",
+      "sha256": "0ea6319232d51118cc2159a8a4b7ed2d0f0395b631ecd8deac46c78ca8f7d209"
+    },
+    {
+      "path": "public/production-tools.js",
+      "sha256": "2b495ecb55b00584b5fa8dd8d6d6ad0721c08db4abacb04cca4c922d5809f4d4"
+    },
+    {
+      "path": "public/styles.css",
+      "sha256": "25e9be09c24abd7a8a12b3889724d19a525936d41e6609e26f0c4a377a772d49"
+    },
+    {
+      "path": "public/workspace.css",
+      "sha256": "cc6b3d1197f422df27f2aeb58c6cf7495de8b9c161c1f052b1edc0909475401f"
+    },
+    {
+      "path": "server/app.mjs",
+      "sha256": "e3d69648cc3f6f7083d3c7a91e891457d874320d0d1fb8ce2f9fc03c09703958"
+    },
+    {
+      "path": "server/publication.mjs",
+      "sha256": "3666427a226d7ec52b98a083c83999a38158527aece98dea103746d7e892f827"
+    },
+    {
+      "path": "server/media-sources.mjs",
+      "sha256": "c67789ea91b376aaadfc3457a34f9662dac5f8d9dd97fbaf835056b713ea4056"
+    },
+    {
+      "path": "tests/production-workspace-journey.test.mjs",
+      "sha256": "2d12729803b1587e4ce6828ce09c9984822bb9938437b82c0024bd5fb3a49b3f"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/B-1600.png",
+      "sha256": "b3369b779e9b01cd4c8d1dafa6cb467faf36063a90dd7f4044f9cb1ca3b4e93f"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/B-1024.png",
+      "sha256": "a21d3ae1cd887bbbfd7b74536d5edcc3c900343113c52781b5ac0f8969349779"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/B-375.png",
+      "sha256": "aa2ff2e5c9503f869f806f4034b91c2f1a2811fe52f65069bbb41622c1f052fb"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/B-320.png",
+      "sha256": "639fa54c48fb233fbe0d076a9afa9a388046bef04487a31f25e63fd6da97ba33"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/A-1600.png",
+      "sha256": "e42dcba607afb77dceee8163f9fd77cd2447e00f18406b5a8f0e2a95f2eaf956"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/A-1024.png",
+      "sha256": "4c62d6c7422b20e20d17064cdaef811858554b6b3c574a450d1751b99a8d9bdb"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/A-375.png",
+      "sha256": "9d1d9798998f6464058d90f8b412c45028b8b1e35feea0655781220eb1819c85"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/A-320.png",
+      "sha256": "7ec4fbd83a488513903f8f2c398ca5fbedba0fcc5a739d1211bafc717b66f316"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/B-large-1600.png",
+      "sha256": "60f60c1e4cbbefffbc4e430b9c47e866d03f869f0229b276a516332abe2f9378"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/B-large-1024.png",
+      "sha256": "eefaa392f1014a5c0272dc9f5e353814943771d017601edf65638aa677214e61"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/B-large-375.png",
+      "sha256": "8e7aa9ba32922288c7e795b5b2aa7a1fc94bed68380c94bbe85da10991b5b777"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/B-large-320.png",
+      "sha256": "b5c3695538d0808a158161d9b647904233b6dd55a01c05eebb93ca1af8aad404"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/source-initial-1600.png",
+      "sha256": "e4f62baba09012a3e459f1bd7d5ce26edb6f649c1ee342c813e6ea74d7dfdef9"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/source-initial-1024.png",
+      "sha256": "929e973885b0200754c275503349db1254e9099f2e92cb0964a849fd2e03f2a6"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/source-initial-375.png",
+      "sha256": "8cd350112b7dd4266dc64aa1dea3a81d5297f202f99314f5884229bd92ab34c8"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/source-initial-320.png",
+      "sha256": "9ff65d5532647615855cd40459f9c51d85d0e217146562612ded9b032ed4c34d"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/source-1600.png",
+      "sha256": "1540a608a7a7f3fc51059191aee9f17f8a58b18c2394596dca16933d2c5cae2e"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/source-1024.png",
+      "sha256": "7f93e95c847156fc4bd11be7a9a5553a0bc1bce4830987d3460551af5015d7ff"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/source-375.png",
+      "sha256": "162ae4f6ea8d3070e87bcf90796426810e4e08d4fe6b027327fa18e6cbc2c128"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/source-320.png",
+      "sha256": "e022fb2df585567105a812d654b21804f03f10e7f79f043de80f8a8e09e8edf2"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-1600.png",
+      "sha256": "a4be953d752178eb1fc37e4bfde421b06717ad88ece10a320e9a2f1834c70c8a"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-1024.png",
+      "sha256": "636def8fca68321a229b33c7852c9a0b4e345acc9c51d1c3a855618c051044a9"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-375.png",
+      "sha256": "ede1e0968aed9e2f2ff950781dffd2a6c0c9256c5758a857cfcca71fd18a54ed"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-320.png",
+      "sha256": "d08985eea070b1cca18a215afa6981d10d04306912d70a69eadf86ef388d6a85"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-1600.png",
+      "sha256": "baf988f79c9d1a0cc94bba2ff4a74ee12e9e69923b2c1cfd6d7b128a6cf78c29"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-1024.png",
+      "sha256": "e5d30f8003675e4a162aaf87143b415cc56c4212f4adc5d1af52dd609df547af"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-375.png",
+      "sha256": "3a9d5c5a1cd3f21eb23b91113cfb581c1c11189e4e7e2afdfca6a744db2073b7"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-320.png",
+      "sha256": "85631f4902716af1c42f2c15c0f92b559094d82b1bd9c887565070fe2512abac"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/generation-consent-1600.png",
+      "sha256": "32d6f8132e9747b0bc2996d9b8f50780a11045d30f7000341d0a29c395fa7750"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/generation-consent-1024.png",
+      "sha256": "0af1558505d5749336cd2ccffe6d6f497ba45a0a844a3e345b9f83111df4f204"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/generation-consent-375.png",
+      "sha256": "c3cb7835aba503d0a606ed8c226502a86b71bb22901c940a8574993f5269e776"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/generation-consent-320.png",
+      "sha256": "5548421758594f21e2fc05a5cddddf510df5f4c510f2b1924afd17fd96ecf3ca"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/ten-role-quote-1600.png",
+      "sha256": "71f4b991157f9c5eb76fab29bf51c2f4f88f1f05f628eabf395a02d359a12f6e"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/ten-role-quote-1024.png",
+      "sha256": "988a93c38cbc0d456d5d3a8217494ef045bce8070f024d242545ba9c0a3dcfe7"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/ten-role-quote-375.png",
+      "sha256": "1c473abc375500878f8948f2daae141bf0a290483914105bc76227ee0ae32f99"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/ten-role-quote-320.png",
+      "sha256": "99190f391b8e4d32e67887e08aaf5327d15c01e980020572020d016d81c806fc"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/sequential-readiness-1600.png",
+      "sha256": "8caf117fed74742224705e3d2294f102110abc26a463c284d3348cd93365833e"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/sequential-readiness-1024.png",
+      "sha256": "abac19115e81e08d9d67ca727b76c9eac90b519b6a5b2adef13a62d041f0efbf"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/sequential-readiness-375.png",
+      "sha256": "b466daa8fc74b59453d653da348a0528f88db826dcdfc278014f8b1e4a0f9c5c"
+    },
+    {
+      "path": "artifacts/production-workspace-implementation/journey-evidence/sequential-readiness-320.png",
+      "sha256": "d347257fa9ba021a658aea7cb4eb4ccbfd4007018f83ca532fd2d27bb27290ec"
+    }
+  ],
+  "unresolvedPrerequisites": [],
+  "commands": [
+    {
+      "fail": 3,
+      "pass": 46,
+      "log": "journey-final-targeted-first.tap",
+      "command": "node --test tests/production-branch-regressions.test.mjs tests/production-publication.test.mjs",
+      "failures": [
+        "new graph fixture lacked shared root (2)",
+        "new CLI estimate fixture lacked recognized cost/currency (1)"
+      ],
+      "tests": 49,
+      "skipped": 0
+    },
+    {
+      "fail": 1,
+      "pass": 2,
+      "log": "journey-final-branches-second.tap",
+      "command": "node --test tests/production-branch-regressions.test.mjs",
+      "failures": [
+        "new fixture used a hyphenated CLI model ID; fixed to fixture_image"
+      ],
+      "tests": 3,
+      "skipped": 0
+    },
+    {
+      "fail": 0,
+      "pass": 3,
+      "log": "journey-final-branches-third.tap",
+      "command": "node --test tests/production-branch-regressions.test.mjs",
+      "tests": 3,
+      "skipped": 0
+    },
+    {
+      "fail": 1,
+      "pass": 10,
+      "log": "journey-final-browser-first.tap",
+      "command": "node scripts/production-workspace-browser-smoke.mjs",
+      "failures": [
+        "new estimate fixture omitted required usd field; corrected without weakening assertions"
+      ],
+      "tests": 11,
+      "skipped": 0
+    },
+    {
+      "fail": 0,
+      "pass": 5,
+      "log": "journey-final-branches-fourth.tap",
+      "command": "node --test tests/production-branch-regressions.test.mjs",
+      "tests": 5,
+      "skipped": 0
+    },
+    {
+      "pageErrors": 0,
+      "externalBrowserRequests": 0,
+      "pass": 11,
+      "command": "node scripts/production-workspace-browser-smoke.mjs",
+      "skipped": 0,
+      "tests": 11,
+      "fail": 0,
+      "screenshots": 40,
+      "log": "journey-final-browser-second.tap"
+    },
+    {
+      "fail": 1,
+      "pass": 153,
+      "log": "journey-final-backend-clean.tap",
+      "command": "clean-env node --test tests/production-branch-regressions.test.mjs tests/production-publication.test.mjs tests/production-local-guards.test.mjs tests/production-source-media.test.mjs tests/production-workflow-graph.test.mjs tests/production-generation-plan.test.mjs tests/production-project-store.test.mjs tests/production-media-credits.test.mjs tests/trend-collector.test.mjs",
+      "failures": [
+        "generated local real-render fixture lacked newly required job/output sceneSnapshot; snapshot of actual pre-render input now retained"
+      ],
+      "tests": 154,
+      "skipped": 0
+    },
+    {
+      "command": "node --test tests/production-branch-regressions.test.mjs tests/production-local-guards.test.mjs",
+      "environment": "Same clean OS/media-path allowlist; LOGIN_TOKEN, PUBLIC_ORIGIN and MEDIA_USER_AGENT explicitly empty",
+      "tests": 15,
+      "pass": 15,
+      "fail": 0,
+      "skipped": 0,
+      "log": "journey-final-last-edits.tap"
+    }
+  ],
+  "moduleImportProbe": {
+    "command": "node --input-type=module -e \"import('./scripts/production-workspace-browser-smoke.mjs').then(m => console.log(typeof m.runProductionWorkspaceBrowserSmoke))\"",
+    "exitCode": 0,
+    "stdout": "function"
+  }
+}

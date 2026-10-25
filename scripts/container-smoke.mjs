@@ -112,11 +112,13 @@ export async function runContainerSmoke({ stage = 'render', baseUrl = process.en
     const media = await download(base, cookie, finished.outputUrl);
     const dimensions = await probeVideo(media.bytes, finished.outputUrl, probeMode);
     const types = ['script', 'storyboard', 'render', 'review'];
-    const workflow = await api('/api/workflows', 'POST', {
+    const template = await api('/api/workflows', 'POST', {
       name: `CI saved edit review ${marker}`,
       nodes: types.map((type, index) => ({ id: type, type, x: 50 + index * 250, y: 100, config: type === 'script' ? { agent: 'existing', prompt: '' } : {} })),
       edges: types.slice(1).map((type, index) => ({ id: `edge-${index}`, source: types[index], target: type })),
     });
+    const workflow = await api(`/api/workflows/${template.id}/copies`, 'POST', { channelId: channel.id, episodeId: episode.id, expectedTemplateVersion: template.version });
+    const reviewNodeId = workflow.nodes.find((node) => node.type === 'review').id;
     let run = await api(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: episode.id });
     const reviewDeadline = Date.now() + 180_000;
     while (Date.now() < reviewDeadline) {
@@ -126,14 +128,15 @@ export async function runContainerSmoke({ stage = 'render', baseUrl = process.en
       await delay(1000);
     }
     assert.equal(run.status, 'awaiting_review');
-    const reviewed = await api(`/api/workflows/${workflow.id}/runs/${run.id}/review`, 'POST', { decision: 'approved', notes: 'Automated CI candidate validation; not owner acceptance or publication.', expectedEpisodeVersion: run.episodeVersion });
+    const reviewed = await api(`/api/workflows/${workflow.id}/runs/${run.id}/review`, 'POST', { reviewNodeId, decision: 'approved', notes: 'Automated CI candidate validation; not owner acceptance or publication.', expectedEpisodeVersion: run.episodeVersion });
     assert.equal(reviewed.status, 'approved');
-    const reviewedMedia = await download(base, cookie, reviewed.review.outputUrl);
-    assert.equal(reviewed.review.sha256, reviewedMedia.sha256);
+    assert.equal(reviewed.review, undefined, 'the legacy singular run.review alias must never reappear on the new per-node review contract');
+    const reviewedMedia = await download(base, cookie, reviewed.reviews[reviewNodeId].outputUrl);
+    assert.equal(reviewed.reviews[reviewNodeId].sha256, reviewedMedia.sha256);
     episode = (await api('/api/state')).episodes.find(item => item.id === episode.id);
     const history = await api(`/api/episodes/${episode.id}/history`);
     assert.ok(history.some((item) => item.version === episode.version && item.snapshot.notes === marker), 'Edited snapshot was not persisted');
-    receipt = { schema: 'frameforge-container-smoke/v1', verifiedAt: new Date().toISOString(), probeMode, stage: 'rendered', marker, episodeId: episode.id, episodeVersion: episode.version, title: episode.title, jobId: job.id, outputUrl: finished.outputUrl, downloadBytes: media.bytes.length, sha256: media.sha256, ...dimensions, historySnapshots: history.length, authenticatedState: true, authenticatedExport: true, persistenceVerified: false, workflowId: workflow.id, workflowRunId: run.id, reviewSha256: reviewed.review.sha256, savedEditReview: true };
+    receipt = { schema: 'frameforge-container-smoke/v1', verifiedAt: new Date().toISOString(), probeMode, stage: 'rendered', marker, episodeId: episode.id, episodeVersion: episode.version, title: episode.title, jobId: job.id, outputUrl: finished.outputUrl, downloadBytes: media.bytes.length, sha256: media.sha256, ...dimensions, historySnapshots: history.length, authenticatedState: true, authenticatedExport: true, persistenceVerified: false, workflowId: workflow.id, workflowRunId: run.id, reviewNodeId, reviewSha256: reviewed.reviews[reviewNodeId].sha256, savedEditReview: true };
   } else {
     const existing = JSON.parse(await readFile(artifactPath, 'utf8'));
     assert.equal(existing.schema, 'frameforge-container-smoke/v1', 'Invalid smoke receipt');
@@ -152,9 +155,10 @@ export async function runContainerSmoke({ stage = 'render', baseUrl = process.en
     assert.equal(history.length, existing.historySnapshots);
     const reviewed = state.workflowRuns.find(item => item.id === existing.workflowRunId);
     assert.equal(reviewed?.status, 'approved', 'Review decision did not survive restart');
-    assert.equal(reviewed.review.sha256, existing.reviewSha256);
-    const reviewedMedia = await download(base, cookie, reviewed.review.outputUrl);
-    assert.equal(reviewedMedia.sha256, reviewed.review.sha256, 'Reviewed candidate changed after restart');
+    assert.equal(reviewed.review, undefined, 'the legacy singular run.review alias must never reappear on the new per-node review contract');
+    assert.equal(reviewed.reviews[existing.reviewNodeId].sha256, existing.reviewSha256);
+    const reviewedMedia = await download(base, cookie, reviewed.reviews[existing.reviewNodeId].outputUrl);
+    assert.equal(reviewedMedia.sha256, reviewed.reviews[existing.reviewNodeId].sha256, 'Reviewed candidate changed after restart');
     receipt = { ...existing, stage: 'persistence-verified', persistenceVerified: true, restartVerifiedAt: new Date().toISOString() };
   }
   await api('/api/logout', 'POST', {});

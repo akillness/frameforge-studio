@@ -1,0 +1,119 @@
+# Production harness
+
+## Editing history and Higgsfield generation
+
+Version 1.4.0 adds readable episode/workflow comparisons, new-version restoration and per-node settings/results/history. Restoring requires the current expectedVersion and preserves every previous snapshot. Draft undo/redo is distinct from persisted versions.
+
+Version 1.5.0 aligns the executable graph contract with the current engine: ten stage types including `news`, `layout` and `publish`, 1–10 nodes, 0–45 forward edges, node labels/notes, selected-stage runs with resume and reuse guards, and the approved-review-gated publish staging contract.
+
+The optional `generate` stage runs after storyboard and before render. It uses the selected Higgsfield transport's real model schema; default graphs omit paid generation. The run requires explicit `allowGeneration:true`. Persist the client requestId, provider request ID, model, output hash and resulting episode version. Never recreate an uncertain submission. Recover polling/import failures against the existing provider ID; validate local media before explicit version-bound application. If the episode changed, retain generated output for later apply.
+
+Official remote MCP OAuth, Developer API credentials and the logged-in official CLI are distinct. The project MCP uses the authenticated studio API to retain production lineage. Check [connection evidence](higgsfield-integration.md); configured endpoints are not verified provider authentication. No credentials belong in role prompts, graphs, snapshots or Git.
+
+FrameForge uses a supervisor-led pipeline with independent review. Editable file-based roles live in `.claude/agents/`; production consumers first resolve `harness/manifest.json` and read the selected immutable bundle. Codex, jeo and jeopi can read the same contracts through the root `AGENTS.md`. These files define reusable work contracts. They do not prove that every runtime or external provider is connected. See [versioning and rollback](harness-versioning.md).
+
+```mermaid
+flowchart LR
+  B[Channel + episode brief] --> S[Supervisor]
+  S --> R[Researcher]
+  R --> D[Director]
+  D --> E[Editor]
+  E --> Q[Independent reviewer]
+  Q -->|revise| D
+  Q -->|verified artifact| H[Episode history]
+  H --> K[OKF knowledge atoms]
+```
+
+## Roles and handoffs
+
+| Role | Owns | Required output |
+|---|---|---|
+| Supervisor | Scope, dependencies, version conflict resolution | Run manifest and summary |
+| Researcher | Trend and creator evidence | Source URL, observed time, claim, uncertainty, visual reference notes |
+| Director | Original treatment and editable template | Scenes, durations, layout, narration and source bindings |
+| Editor | Validated scene changes and local render | New episode version, render receipt and artifact hash |
+| Reviewer | Independent content and technical acceptance | Pass/fail findings tied to exact version and artifact |
+
+Each run uses an absolute `<repo>/_workspace/<run-id>/` path resolved by the supervisor. Inputs include `channelId`, `episodeId`, `expectedVersion`, requested format, scope and available source IDs. Preserve `tasks.json`, per-role outputs, `conflicts.md` when needed and `run-summary.md`. These operational files may contain personal information; keep them out of public Git history.
+
+Research can fan out by source only when each agent has a separate output path. Direction depends on completed research; editing depends on direction; review depends on the exact rendered candidate. An editor cannot approve its own render. On conflict, re-read the episode version and merge deliberately; never overwrite a newer version. On a timeout, report the existing job ID before considering a retry. Missing factual, rights or final-render evidence prevents a verified completion claim.
+
+## Runtime boundary
+
+The web chat submits bounded requests through `server/integrations.mjs` to the host bridge. The service validates patches before updating SQLite history. A CLI executable on PATH is availability evidence only; provider authentication and a successful invocation are separate checks. The built-in studio assistant is a deterministic helper, not an LLM. Publishing and channel creation remain separate authenticated platform operations.
+
+## Executable production graph
+
+`server/workflows.mjs` implements a bounded typed DAG for the visual node workspace. It has ten stage types: `trend`, `news`, `research`, `script`, `storyboard`, `layout`, `generate`, `render`, `review` and `publish`. Each stage type appears at most once. The engine accepts 1–10 nodes and 0–45 forward edges, so a single-node graph is valid, and rejects cycles, backward edges, duplicate IDs and disconnected nodes. Edges must follow the stage order above; they may only point from an earlier stage type to a later one. A node id must not shadow a different stage type, and a node may carry a label (≤80) and notes (≤2000). Graph structure also enforces: a `layout` node must depend on `storyboard` and feed `render`; a `generate` node must depend on `storyboard` and feed `render`; a `publish` node requires `render`, `review` and every other node connected to the publish output; when `publish` is absent and `review` is present, every other node must reach the review output. This is FrameForge's production graph, not a loader for arbitrary ComfyUI model workflows.
+
+| Stage | Actual responsibility and configuration |
+|---|---|
+| Trend | Fetch source-backed keyword observations; `query` ≤200; empty results fail the node |
+| News | Compile source-backed articles from Google News RSS and/or saved trend keywords; `query` ≤200, `keywords` ≤400 (comma separated), `maxArticles` 1–20 (default 5), `source` `google_news`\|`trend_news`\|`all` (default `all`); no verified articles fails the node |
+| Research | Gather saved references belonging to the episode channel and upstream outputs; `limit` 1–50 |
+| Script | Invoke a configured agent or use the deterministic `studio` helper; preserve authored scenes/audio with `existing`; `{agent,prompt}` with `prompt` ≤12000 |
+| Storyboard | Require a completed script prerequisite, validate scenes and write a version-bound episode update; no configuration |
+| Layout | Apply slot presets and write a version-bound episode update; `preset` `top-image-mid-video`\|`premiere-3tier`\|`split`\|`custom` (default `top-image-mid-video`), `topSlotRole` `image-gen`\|`text-overlay`\|`html-overlay`, `midSlotRole` `video-bg`\|`image-gen`, boolean `enableSubtitles`, `enableHtmlOverlay`, `autoPrompts` |
+| Generate | Paid Higgsfield generation using the selected transport's real model schema; `model` (required), `prompt` ≤4000, `sceneIndex` 0–59, `slotId`, `targetMode` `scene`\|`slot`\|`all-slots` (slot mode requires `slotId`), `params` of at most 30 primitive, finite keys totals ≤16000 JSON characters |
+| Render | Execute the local rendering adapter and retain its result; no configuration |
+| Review | Produce an `awaiting_review` checkpoint; persist a subsequent owner decision against the exact version, job and SHA-256; `instructions` ≤2000 |
+| Publish | Stage the approved render for a channel; requires a completed hashed render and an approved review whose jobId, outputUrl and SHA-256 match it; `channelId`, `platform` `youtube`\|`tiktok`\|`instagram`\|`other`, `visibility` `private`\|`unlisted`\|`public`, `autoAttachExport`, `titleTemplate` ≤200 |
+
+Runs are partial by selection. `selectedStages` lists 1–N stage ids or types without duplicates; `startStage` must belong to the selection and no selected stage may come before it. `resumeRunId` references a terminal run of the same workflow version, episode and episode version; its completed outputs are reused instead of recomputed, and unselected prerequisites are reused automatically. Hard prerequisites apply at run time: a selected `storyboard` requires `script`, `layout` and `generate` require `storyboard`, `review` requires `render` and `publish` requires `review`. Paid-replay guards reject rerunning `storyboard` while reusing a completed `generate` stage, and completed generation without a provider job identity must be recovered before retry. Publish resume must not rerun `storyboard`, `layout`, `generate` or `render`; it requires an approved human review from a terminal run that matches the render artifact being published. A selection containing `generate` additionally requires explicit `allowGeneration:true` on the run request; stale `expectedWorkflowVersion` or `expectedEpisodeVersion` values are rejected with 409.
+
+Each execution saves a workflow/version snapshot, episode/version snapshot and per-node states and outputs. The implementation orders validated dependencies deterministically. It allows at most four active runs and one active workflow per episode. A server restart marks interrupted runs failed. Cancellation prevents later stages; an already-running provider or render process may finish. The review node does not perform human visual review or publish to a channel. The independent reviewer role or owner must inspect the candidate afterward. The publish node opens a platform browser session when platform sessions are configured, or records a `staged` upload-queue entry otherwise; it explicitly performs no public posting itself.
+
+The file-based harness defines responsibilities around this executable graph. Graph nodes do not automatically launch every specialist role; agent selection is an explicit script-node configuration. Runtime API and end-to-end test receipts determine which graph paths have actually been exercised.
+
+The authenticated service exposes `GET/POST /api/workflows`, `PUT /api/workflows/:id` with `expectedVersion`, `POST /api/episodes/:id/restore` and `POST /api/workflows/:id/restore` with `{version,expectedVersion}`, `POST /api/workflows/:id/run` with `episodeId` plus optional `selectedStages`, `startStage`, `resumeRunId`, `expectedWorkflowVersion`, `expectedEpisodeVersion` and `allowGeneration`, `GET /api/workflows/:id/runs`, `GET /api/workflows/:id/history`, `POST /api/workflows/:id/runs/:runId/cancel` and `POST /api/workflows/:id/runs/:runId/review`. A node is `{id,type,x,y,config}` with optional `label` and `notes`, and an edge is `{id,source,target}`. Per-stage configuration fields are listed in the table above and strictly validated; unknown fields are rejected. Script agents are `existing`, `studio`, `codex`, `jeo`, `jeopi` and `hermes`; `existing` is workflow-only. Runtime adapter implementations may evolve, so inspect the live route contract and current tests before adding a new node type.
+
+## Saved editing and native narration
+
+Use the workflow script agent `existing` for a rerender of authored scenes. It validates and preserves the saved episode snapshot, including captions, layout, durations, trim offsets, narration text, audio URLs and volume. The storyboard stage still creates a new versioned snapshot. Generative script modes may replace scenes and therefore are unsuitable for a preservation-only rerender. Trend and research stages remain optional when rendering already prepared material.
+
+`GET /api/speech/voices` reports the selected provider's current availability and installed Windows SAPI voices. A Windows service can synthesize locally. Linux Docker uses `SPEECH_PROVIDER=host-bridge` to reach the token-authenticated Windows bridge; the Linux image does not contain SAPI. Select an available voice rather than assuming a named voice exists on every machine. A configured endpoint alone does not prove availability: check connectivity, credentials and the returned voice list. Uploaded audio remains usable on either platform.
+
+The bridge accepts only bounded `{text,voice,rate}` input and returns raw `audio/wav` bytes. Requests cannot choose host input/output paths. The container enforces a 50 MiB response limit, WAV signature and probed duration before attaching generated audio to its own data directory. Authentication, unavailable voices, busy synthesis, invalid audio and timeouts produce explicit failures; they never become successful narration jobs. Compose uses `HOST_AGENT_BRIDGE_URL` for its bridge override so a Windows-only loopback URL in the host's `.env` cannot silently replace the container route.
+
+After saving the draft, submit `POST /api/episodes/:id/narration` with `{voice,expectedVersion,sceneIds?,rate?}`. The selected scenes use their `narration` text, falling back to scene `text`. The persisted job appears in `narrationJobs`; completion records its `resultVersion` and audio URLs. Generated WAV metadata, selected scene audio attachments, draft status, duration extensions and one episode-history snapshot commit atomically. A concurrent episode edit rejects the stale attachment and removes uncommitted generated files. A server restart marks interrupted jobs failed. Reload the resulting version and inspect the audio before running an `existing` workflow.
+
+## Exact-candidate review
+
+The review checkpoint alone is not acceptance. After inspecting the rendered video and audio, the authenticated owner or explicitly authorized supervisor submits `{decision:'approved'|'changes_requested',notes,expectedEpisodeVersion}` to `/api/workflows/:id/runs/:runId/review`. The read-only reviewer role supplies findings through the supervisor; it does not mutate the candidate or silently provide owner approval.
+
+The service accepts a decision only for an unreviewed `awaiting_review` run whose rendered version equals both the submitted version and the current episode version. It checks the completed render job, safely reads the contained export and verifies its SHA-256. Older completed renders without a stored hash receive a computed hash during verification. Missing, changed or mismatched artifacts fail review. Version/status/job checks are repeated in the SQLite transaction before the decision, audit record and event are committed.
+
+The run and review node become `approved` or `changes_requested`. `run.review` retains decision, notes, reviewed time, workflow/run identity, exact episode version, job ID, output URL and SHA-256. One decision is allowed per run. Later edits require a new render/run and review; the old receipt remains historical evidence. No review decision uploads or publishes content.
+
+The 2026-10-18 `artifacts/production-smoke.json` receipt records an actual installed Korean SAPI voice, a 1080×1920 H.264/AAC output lasting 4.821333 seconds, mean volume −24 dB, preserved saved editing and a persisted hash-bound review on Windows. `artifacts/docker-production-smoke.json` separately records the staged Linux container using the authenticated host speech bridge: 1080×1920, 4.821333 seconds, mean volume −24.1 dB and a persisted exact-output review. `artifacts/local-container-smoke.json` verifies container render/review persistence after restart. These automated decisions test storage and binding; they are not owner acceptance, creative-quality judgments, publication or proof of production URL cutover.
+
+## Container migration and recovery
+
+Keep the original service data and history intact. `scripts/snapshot-data.mjs` opens SQLite read-only and uses SQLite backup or `VACUUM INTO` to capture committed state consistently, including WAL contents. It never constructs the application Store. Select an explicit snapshot root and an entirely new destination outside the live data directory. The utility copies referenced uploads/exports, verifies hashes and writes a completion marker only after integrity checks succeed. Its manifest retains entity IDs, episode/workflow versions, history/review counts and database/media hashes. Missing historical media or hash discrepancies fail the snapshot; do not silently discard those records.
+
+Import with `scripts/import-snapshot.mjs` from a read-only snapshot mount into an existing empty dedicated data volume. The importer verifies the completion marker, plain-file paths, all declared hashes and database integrity, counts, IDs, versions and media references. It refuses overwrites and applies explicit UID/GID ownership when requested for the non-root service. Failure preserves partial output for diagnosis; use another empty volume after resolving the cause. Never reset the live database, prune unrelated volumes or delete the original data as a migration shortcut.
+
+Before switching the production URL, compare imported IDs and versions with the snapshot, inspect episode/workflow histories and exact review/export hashes, exercise container speech and rendering, then restart the container and verify persisted state. A healthy Docker engine, a successful import or a staging smoke test alone is insufficient cutover evidence. Retain the original data and routing recovery path until the new service is verified through its actual URL. Record source snapshot identity, target volume, commands and results without credentials or private media.
+
+## Durable memory
+
+- `llm-wiki/index.md`: human-readable project knowledge; immutable source excerpts under `raw/` and OKF v0.1 atoms under `wiki/`.
+- `.mex/ROUTER.md`: task-specific code context, populated architecture notes and a real CLI graph/check receipt.
+- `.graphify/GRAPH_REPORT.md`: structural graph provenance and limitations; `.graphify/graph.html` is a navigable export.
+- Application data has its own episode history and generated knowledge export. Build-time code graphs are not the live channel database.
+
+Run the validation commands recorded in `.mex/verification.json` and `.graphify/verification.json` after source changes. Review whether a claim has become stale, not only whether a link still exists. Never store tokens, signed media URLs, browser storage or private source footage in these tracked knowledge layers.
+
+## Acceptance scenarios
+
+1. A sourced information episode retains each factual claim's source and observation time through edits.
+2. A fictional drama episode labels fiction and keeps original scene direction separate from creator references.
+3. Two editors start from the same version: the second stale write is rejected and reconciled.
+4. A failed render stays failed in history and is never described as published.
+5. A reviewer can trace the exact output hash to the episode version and input sources.
+6. Narration generation either attaches all selected scene audio at the expected version or leaves the draft unchanged.
+7. An `existing` rerender preserves authored scene/audio edits, and a stale or duplicate review cannot approve a different candidate.
+8. Container narration returns verified WAV bytes from an authenticated available host voice or records an explicit failure without attaching partial audio.
+9. A snapshot/import migration preserves exact identities, versions, history and reviewed media hashes; nonempty targets and invalid snapshots are rejected, and restart verification precedes a cutover claim.
+
+These are harness contracts. Runtime tests and verification receipts establish which scenarios have actually been exercised.

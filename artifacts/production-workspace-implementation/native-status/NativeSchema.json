@@ -1,0 +1,44 @@
+{
+  "role": "NativeSchema",
+  "status": "module_ready_with_source_history_contract_failure",
+  "files": ["server/validation.mjs", "server/render.mjs", "server/media-credits.mjs", "server/store.mjs", "artifacts/production-workspace-implementation/native-status/NativeSchema.json"],
+  "exports": {
+    "server/media-credits.mjs": ["requiredMediaCredits(sceneList) -> stable deduplicated newline string"],
+    "server/validation.mjs": ["sceneSource(value)", "scenes(value)", "sceneSlots(value)"],
+    "server/store.mjs": ["Store.applyGeneration(id, expectedVersion, sceneId, slotId)"],
+    "server/render.mjs": ["renderEpisode(episode, {dataDir, onProgress})", "buildSceneCompositionPlan(scene, w, h)", "localMediaInputOptions(filename)", "dimensions"]
+  },
+  "sourceSchema": {
+    "placement": ["scene.source", "scene.slots[].source"],
+    "required": {"origin": ["own", "third-party", "generated"], "useAs": ["evidence", "illustration"]},
+    "optional": {"sourceUrl": "HTTP(S), no userinfo, maximum 2000 characters", "licenseId": "maximum 160 characters", "attribution": "maximum 4000 characters", "retrievedAt": "ISO timestamp", "sha256": "64 hex characters", "generationJobId": "portable identifier, maximum 80 characters", "evidence": "JSON: maximum depth 4, 64 entries per container, 16000 bytes"},
+    "trim": "scene and slot trimStart/trimEnd, 0..36000, trimEnd > trimStart",
+    "clearance": "No schema-level implicit license or rights clearance; generated source must use illustration",
+    "evidencePlacement": ["scene.evidence", "scene.slots[].evidence", "scene.source.evidence", "scene.slots[].source.evidence"]
+  },
+  "implementation": {
+    "credits": "Stable deduplicated scene/slot attribution | licenseId | sourceUrl lines, no fabricated values; 28px white glyphs on opaque black reserved band, explicit Unicode wrapping, full composition fit above band so captions cannot overlap. Overflow above 45% frame height fails explicitly, never truncates or extends scene duration. Textfile with expansion=none prevents text interpretation; Windows uses the existing local malgun.ttf without changing Fontconfig.",
+    "generation": "Only applyGeneration changed in Store. Target scene or slot gets source={origin:'generated',sha256:upload.sha256,generationJobId:id,useAs:'illustration'}, resets old source trims, retains old snapshots and existing transactional apply behavior; no inferred license/attribution/URL/rights record.",
+    "trim": "Optional scene/slot trimEnd is preserved and clips local video input; existing timeline duration, audio padding, layout, standalone demuxer and local-file protocol boundaries remain.",
+    "formats": "No format expansion. Actual existing GIF demux+stream_loop emitted the same alternating two frame hashes twice; real GIF render also succeeded."
+  },
+  "verification": {
+    "harness": {"command": "node scripts/version-harness.mjs verify", "exitCode": 0, "version": "1.5.0", "boundary": "Existing immutable bundle integrity only"},
+    "syntax": {"commands": ["node --check server/validation.mjs", "node --check server/render.mjs", "node --check server/media-credits.mjs", "node --check server/store.mjs"], "passed": 4, "failed": 0},
+    "import": {"command": "node --input-type=module -e \"const modules=await Promise.all(['validation','render','media-credits','store'].map(name=>import('./server/'+name+'.mjs'))); console.log(JSON.stringify(modules.map(module=>Object.keys(module))));\"", "exitCode": 0},
+    "finalFocusedTests": {"command": "node --test tests/production-media-credits.test.mjs tests/render-security.test.mjs tests/render.test.mjs tests/generations.test.mjs tests/production-project-store.test.mjs", "exitCode": 0, "tests": 49, "passed": 49, "failed": 0, "skipped": 0, "durationMs": 22593.9332, "storeCopyReviewCount": 21},
+    "layoutTests": {"command": "node --test --test-name-pattern='scene layout preset|FFmpeg multi-layer|FFmpeg preserves' tests/layout-pipeline-session.test.mjs", "exitCode": 0, "tests": 3, "passed": 3, "failed": 0, "skipped": 0},
+    "sourceIntegration": {"command": "node --test tests/production-source-media.test.mjs", "exitCode": 1, "tests": 29, "passed": 28, "failed": 1, "skipped": 0, "failure": "Test 23, tests/production-source-media.test.mjs:485: v2.scenes[0] throws Cannot read properties of undefined (reading '0'). Existing Store.history returns versioned records with v2.snapshot.scenes, not v2.scenes."},
+    "resolvedInitialFailure": {"command": "node --test tests/production-media-credits.test.mjs tests/render-security.test.mjs", "tests": 5, "passed": 4, "failed": 1, "cause": "Windows drawtext invoked missing Fontconfig configuration", "resolution": "Explicit local font file; independent decoded-credit pixel test rerun 2/2 and final combined run 49/49"},
+    "gifDiagnostic": {"command": "ffmpeg -v error -protocol_whitelist file -format_whitelist gif -stream_loop -1 -i <temp>/animation.gif -t 2 -f framemd5 -", "fixtureCommand": "ffmpeg -v error -f lavfi -i testsrc=size=64x64:rate=2:duration=1 -loop 0 <temp>/animation.gif", "frameHashes": ["c7d9261c601fecbed1ef1059cdaafbef", "f4c87d8ecd89ac25f54584b219cfbdc2", "c7d9261c601fecbed1ef1059cdaafbef", "f4c87d8ecd89ac25f54584b219cfbdc2"], "temporaryFilesRemoved": true},
+    "mex": {"loggingMode": "significant", "impact": "Source-drift reported; graph not refreshed outside allowlist"},
+    "notRun": ["formatters", "linters", "project-wide suites", "HTTP/server/browser tests", "production smoke scripts", "provider calls", "Git commands"]
+  },
+  "unresolvedPrerequisites": [
+    {"owner": "Main/Store contract owner", "detail": "Reconcile authoritative source-media historyEntry.scenes expectation with existing historyEntry.snapshot.scenes. This role's Store scope is explicitly applyGeneration only; no history API refactor, duplicate snapshot aliases or test edits made."},
+    {"owner": "NativeTester", "detail": "The available independent decoded-credit test covers real glyph changes and the pure helper. Additional dedicated source-schema bounds, scene/slot roundtrip, replaced third-party provenance and credit overflow/caption geometry assertions were not present in the inspected test files; no tests authored by NativeSchema."}
+  ],
+  "dependencies": ["NativeMedia module landed and imported sceneSource successfully; source integration ran against the real module"],
+  "jev": {"profile": "frameforge-codex", "active": false, "used": false},
+  "sharingBoundary": "Shared working-tree contract artifact; no commit/push performed"
+}

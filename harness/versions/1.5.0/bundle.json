@@ -1,0 +1,47 @@
+{
+  "schema": "frameforge-harness-bundle/v1",
+  "version": "1.5.0",
+  "createdAt": "2026-10-22T00:15:06.050Z",
+  "files": [
+    {
+      "path": ".claude/agents/production-director.md",
+      "bytes": 1206,
+      "sha256": "fe31ca4cdf922903b6ad18b2dc50515019b781bfd5858acf3f68022a5505e536"
+    },
+    {
+      "path": ".claude/agents/production-editor.md",
+      "bytes": 4200,
+      "sha256": "0d5dbf533923d851e5622620ae9614fe737e8f6035c2c7414118c0d7158d278d"
+    },
+    {
+      "path": ".claude/agents/production-researcher.md",
+      "bytes": 1296,
+      "sha256": "bcc220f32ea258ac3e7e241178a656e272e26d7269d28aff18c813ee4d38065f"
+    },
+    {
+      "path": ".claude/agents/production-reviewer.md",
+      "bytes": 2706,
+      "sha256": "cfed779f796170bb116d9e90cd4bbe449ee425c912e989ebb1910313adaddd6e"
+    },
+    {
+      "path": ".claude/agents/production-supervisor.md",
+      "bytes": 2360,
+      "sha256": "ad9f898b412d6415a6b46c984b503714ff12d96e4285b1a3a604a3f404d4fd92"
+    },
+    {
+      "path": ".claude/skills/production-orchestrator/SKILL.md",
+      "bytes": 6557,
+      "sha256": "e61c99031ced84d121899627266fa711b44f881828448b843ba70dbca6c7fdd0"
+    },
+    {
+      "path": "docs/harness-versioning.md",
+      "bytes": 3669,
+      "sha256": "ad877f6683aa93389010769cf75bcb61c5c89398e92d252aa5a16ee5b1b7e2db"
+    },
+    {
+      "path": "docs/harness.md",
+      "bytes": 19084,
+      "sha256": "568df021cf0ce142b93a6e7e4d332ea064438db86c699e74dae6bfaf5084ad9e"
+    }
+  ]
+}

@@ -23,14 +23,14 @@ async function setup(t, overrides = {}) {
     return { filename, outputUrl: `/api/exports/${filename}` };
   };
   let server, base;
-  const start = async () => { server = createApp({ dataDir, integrations: baseIntegrations, renderer, ...overrides }); await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve)); base = `http://127.0.0.1:${server.address().port}`; };
+  const start = async () => { server = createApp({ dataDir, loginToken: '', publicOrigin: '', integrations: baseIntegrations, renderer, ...overrides }); await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve)); base = `http://127.0.0.1:${server.address().port}`; };
   const stop = () => new Promise((resolve) => { server.close(resolve); server.closeAllConnections(); });
   await start();
   t.after(async () => { await stop(); await rm(dataDir, { recursive: true, force: true }); });
   const request = (url, method = 'GET', body) => fetch(base + url, { method, ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}) });
   const state = await (await request('/api/state')).json();
   const episode = await (await request('/api/episodes', 'POST', { channelId: state.channels[0].id, title: 'DAG 제작', topic: '출처 검토' })).json();
-  return { request, episode, workflow: state.workflows[0], dataDir, renderCount: () => renderCount, restart: async () => { await stop(); await start(); } };
+  return { request, episode, workflow: await createOwnedWorkflow({ request, episode }, state.workflows[0]), dataDir, renderCount: () => renderCount, restart: async () => { await stop(); await start(); } };
 }
 
 async function waitRun(fixture, id, statuses = ['awaiting_review', 'failed', 'cancelled']) {
@@ -56,6 +56,7 @@ function partialWorkflow() {
 
 function generationWorkflow() {
   const workflow = partialWorkflow();
+  workflow.nodes = workflow.nodes.map(node => node.type === 'script' ? { ...node, config: { agent: 'existing' } } : node);
   workflow.nodes.push({ id: 'generate', type: 'generate', x: 600, y: 180, config: { model: 'fixture', prompt: 'Fixture visual', params: {}, sceneIndex: 0 } });
   workflow.edges = [
     { id: 'edge-script-storyboard', source: 'script', target: 'storyboard' },
@@ -102,7 +103,7 @@ test('storyboard-only workflow rejects a selected storyboard without a script pr
       { id: 'edge-render-review', source: 'render', target: 'review' },
     ],
   };
-  const created = await (await f.request('/api/workflows', 'POST', workflow)).json();
+  const created = await createOwnedWorkflow(f, await (await f.request('/api/workflows', 'POST', workflow)).json());
   const response = await f.request(`/api/workflows/${created.id}/run`, 'POST', {
     episodeId: f.episode.id,
     selectedStages: ['storyboard'],
@@ -142,12 +143,13 @@ test('resumeRunId reruns selected downstream stages with reused prerequisites an
   assert.notDeepEqual(secondRender.output, firstRender.output);
   assert.equal(secondReview.status, 'awaiting_review');
   assert.deepEqual(secondReview.output.render, secondRender.output);
-  const reviewResponse = await f.request(`/api/workflows/${f.workflow.id}/runs/${second.id}/review`, 'POST', { decision: 'approved', notes: 'Approve the second render candidate.', expectedEpisodeVersion: second.episodeVersion });
+  const reviewResponse = await f.request(`/api/workflows/${f.workflow.id}/runs/${second.id}/review`, 'POST', { reviewNodeId: secondReview.nodeId, decision: 'approved', notes: 'Approve the second render candidate.', expectedEpisodeVersion: second.episodeVersion });
   assert.equal(reviewResponse.status, 200);
   const reviewed = await reviewResponse.json();
   assert.equal(reviewed.status, 'approved');
-  assert.equal(reviewed.review.jobId, secondRender.output.jobId);
-  assert.equal(reviewed.review.outputUrl, secondRender.output.outputUrl);
+  assert.equal(reviewed.review, undefined, 'the legacy singular run.review alias must never reappear on the new per-node review contract');
+  assert.equal(reviewed.reviews[secondReview.nodeId].jobId, secondRender.output.jobId);
+  assert.equal(reviewed.reviews[secondReview.nodeId].outputUrl, secondRender.output.outputUrl);
 });
 
 test('script-only resume skips all omitted descendants and completes without a review candidate', async (t) => {
@@ -177,16 +179,16 @@ test('resuming a generation workflow reuses the completed generation output with
     status: async () => { throw new Error('unexpected poll'); },
   };
   const f = await setup(t, { generation, generationOptions: { pollIntervalMs: 1, download: async (_url, file) => { await writeFile(file, 'fixture bytes'); return { bytes: 13, contentType: 'image/png' }; }, probe: async () => ({ kind: 'image', width: 64, height: 64 }) } });
-  const workflow = await (await f.request('/api/workflows', 'POST', generationWorkflow())).json();
+  const workflow = await createOwnedWorkflow(f, await (await f.request('/api/workflows', 'POST', generationWorkflow())).json());
   const fixture = { ...f, workflow };
-  const firstResponse = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['script', 'storyboard', 'generate', 'render', 'review'], startStage: 'script' });
+  const firstResponse = await consentedRun(f, workflow.id, { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['script', 'storyboard', 'generate', 'render', 'review'], startStage: 'script' });
   assert.equal(firstResponse.status, 202);
   const first = await waitRun(fixture, (await firstResponse.json()).id);
   assert.equal(first.status, 'awaiting_review');
   assert.equal(createCalls, 1);
   const firstOutput = first.nodeRuns.find((node) => node.type === 'generate').output;
   const firstRender = first.nodeRuns.find((node) => node.type === 'render');
-  const secondResponse = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['generate', 'render', 'review'], startStage: 'generate', resumeRunId: first.id });
+  const secondResponse = await consentedRun(f, workflow.id, { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['generate', 'render', 'review'], startStage: 'generate', resumeRunId: first.id });
   assert.equal(secondResponse.status, 202);
   const second = await waitRun(fixture, (await secondResponse.json()).id);
   assert.equal(second.status, 'awaiting_review');
@@ -215,9 +217,9 @@ test('completed generation resume with missing generationJobId rejects before an
     status: async () => { throw new Error('unexpected poll'); },
   };
   const f = await setup(t, { generation, generationOptions: { pollIntervalMs: 1, download: async (_url, file) => { await writeFile(file, 'fixture bytes'); return { bytes: 13, contentType: 'image/png' }; }, probe: async () => ({ kind: 'image', width: 64, height: 64 }) } });
-  const workflow = await (await f.request('/api/workflows', 'POST', generationWorkflow())).json();
+  const workflow = await createOwnedWorkflow(f, await (await f.request('/api/workflows', 'POST', generationWorkflow())).json());
   const fixture = { ...f, workflow };
-  const firstResponse = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['script', 'storyboard', 'generate', 'render', 'review'], startStage: 'script' });
+  const firstResponse = await consentedRun(f, workflow.id, { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['script', 'storyboard', 'generate', 'render', 'review'], startStage: 'script' });
   assert.equal(firstResponse.status, 202);
   const first = await waitRun(fixture, (await firstResponse.json()).id);
   assert.equal(first.status, 'awaiting_review');
@@ -233,7 +235,7 @@ test('completed generation resume with missing generationJobId rejects before an
   db.prepare('UPDATE entities SET data=? WHERE kind=? AND id=?').run(JSON.stringify(stored), 'workflowRuns', first.id);
   db.close();
 
-  const response = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['generate', 'render', 'review'], startStage: 'generate', resumeRunId: first.id });
+  const response = await consentedRun(f, workflow.id, { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['generate', 'render', 'review'], startStage: 'generate', resumeRunId: first.id });
   assert.equal(response.status, 409);
   assert.match((await response.json()).error, /generation|job|resume|evidence/i);
   assert.equal(createCalls, 1);
@@ -255,9 +257,9 @@ test('cancellation during generation submission preserves the job for resume wit
     status: async () => { throw new Error('unexpected poll'); },
   };
   const f = await setup(t, { generation, generationOptions: { pollIntervalMs: 1, download: async (_url, file) => { await writeFile(file, 'fixture bytes'); return { bytes: 13, contentType: 'image/png' }; }, probe: async () => ({ kind: 'image', width: 64, height: 64 }) } });
-  const workflow = await (await f.request('/api/workflows', 'POST', generationWorkflow())).json();
+  const workflow = await createOwnedWorkflow(f, await (await f.request('/api/workflows', 'POST', generationWorkflow())).json());
   const fixture = { ...f, workflow };
-  const firstResponse = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['script', 'storyboard', 'generate', 'render', 'review'], startStage: 'script' });
+  const firstResponse = await consentedRun(f, workflow.id, { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['script', 'storyboard', 'generate', 'render', 'review'], startStage: 'script' });
   assert.equal(firstResponse.status, 202);
   const firstId = (await firstResponse.json()).id;
   await createCalled;
@@ -268,7 +270,7 @@ test('cancellation during generation submission preserves the job for resume wit
   assert.equal(cancelled.status, 'cancelled');
   const firstOutput = cancelled.nodeRuns.find((node) => node.type === 'generate').output;
   assert.equal(typeof firstOutput.generationJobId, 'string');
-  const secondResponse = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['generate', 'render', 'review'], startStage: 'generate', resumeRunId: firstId });
+  const secondResponse = await consentedRun(f, workflow.id, { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['generate', 'render', 'review'], startStage: 'generate', resumeRunId: firstId });
   assert.equal(secondResponse.status, 202);
   const second = await waitRun(fixture, (await secondResponse.json()).id);
   assert.equal(second.status, 'awaiting_review');
@@ -287,14 +289,14 @@ test('generation requestId lineage recovers after workflow output persistence fa
     status: async () => { throw new Error('unexpected poll'); },
   };
   const f = await setup(t, { generation, generationOptions: { pollIntervalMs: 1, download: async (_url, file) => { await writeFile(file, 'fixture bytes'); return { bytes: 13, contentType: 'image/png' }; }, probe: async () => ({ kind: 'image', width: 64, height: 64 }) } });
-  const workflow = await (await f.request('/api/workflows', 'POST', generationWorkflow())).json();
+  const workflow = await createOwnedWorkflow(f, await (await f.request('/api/workflows', 'POST', generationWorkflow())).json());
   const fixture = { ...f, workflow };
   const db = new DatabaseSync(path.join(f.dataDir, 'studio.sqlite'));
   db.exec(`CREATE TRIGGER workflow_runs_generation_link_failure BEFORE UPDATE ON entities
     WHEN NEW.kind = 'workflowRuns' AND json_extract(NEW.data, '$.status') = 'running' AND instr(NEW.data, '"generationJobId"') > 0
     BEGIN SELECT RAISE(ABORT, 'Injected workflowRuns generation-link persistence failure'); END;`);
   db.close();
-  const firstResponse = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['script', 'storyboard', 'generate', 'render', 'review'], startStage: 'script' });
+  const firstResponse = await consentedRun(f, workflow.id, { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['script', 'storyboard', 'generate', 'render', 'review'], startStage: 'script' });
   assert.equal(firstResponse.status, 202);
   const firstId = (await firstResponse.json()).id;
   const failed = await waitRun(fixture, firstId, ['failed']);
@@ -311,7 +313,7 @@ test('generation requestId lineage recovers after workflow output persistence fa
   const restore = new DatabaseSync(path.join(f.dataDir, 'studio.sqlite'));
   restore.exec('DROP TRIGGER workflow_runs_generation_link_failure');
   restore.close();
-  const resumedResponse = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['generate', 'render', 'review'], startStage: 'generate', resumeRunId: firstId });
+  const resumedResponse = await consentedRun(f, workflow.id, { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['generate', 'render', 'review'], startStage: 'generate', resumeRunId: firstId });
   assert.equal(resumedResponse.status, 202);
   const resumed = await waitRun(fixture, (await resumedResponse.json()).id);
   assert.equal(resumed.status, 'awaiting_review');
@@ -341,9 +343,9 @@ test('cancelled queued generation resume inherits pending provider job without r
     },
   };
   const f = await setup(t, { generation, generationOptions: { pollIntervalMs: 1, download: async (_url, file) => { await writeFile(file, 'fixture bytes'); return { bytes: 13, contentType: 'image/png' }; }, probe: async () => ({ kind: 'image', width: 64, height: 64 }) } });
-  const workflow = await (await f.request('/api/workflows', 'POST', generationWorkflow())).json();
+  const workflow = await createOwnedWorkflow(f, await (await f.request('/api/workflows', 'POST', generationWorkflow())).json());
   const fixture = { ...f, workflow };
-  const firstResponse = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['script', 'storyboard', 'generate', 'render', 'review'], startStage: 'script' });
+  const firstResponse = await consentedRun(f, workflow.id, { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['script', 'storyboard', 'generate', 'render', 'review'], startStage: 'script' });
   assert.equal(firstResponse.status, 202);
   const firstId = (await firstResponse.json()).id;
   await statusStarted;
@@ -382,7 +384,7 @@ test('cancelled queued generation resume inherits pending provider job without r
   db.prepare('UPDATE entities SET data=? WHERE kind=? AND id=?').run(JSON.stringify(storedChild), 'workflowRuns', childId);
   db.close();
 
-  const resumedResponse = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['generate', 'render', 'review'], startStage: 'generate', resumeRunId: childId });
+  const resumedResponse = await consentedRun(f, workflow.id, { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['generate', 'render', 'review'], startStage: 'generate', resumeRunId: childId });
   const resumedBody = await resumedResponse.json();
   assert.equal(resumedResponse.status, 202, JSON.stringify(resumedBody));
   releaseStatus({ requestId: 'fixture-provider', status: 'completed', outputs: [{ url: 'https://images.higgs.ai/fixture.png', type: 'image' }] });
@@ -403,9 +405,9 @@ test('completed generation resume rejects storyboard rerun before episode mutati
     status: async () => { throw new Error('unexpected poll'); },
   };
   const f = await setup(t, { generation, generationOptions: { pollIntervalMs: 1, download: async (_url, file) => { await writeFile(file, 'fixture bytes'); return { bytes: 13, contentType: 'image/png' }; }, probe: async () => ({ kind: 'image', width: 64, height: 64 }) } });
-  const workflow = await (await f.request('/api/workflows', 'POST', generationWorkflow())).json();
+  const workflow = await createOwnedWorkflow(f, await (await f.request('/api/workflows', 'POST', generationWorkflow())).json());
   const fixture = { ...f, workflow };
-  const firstResponse = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['script', 'storyboard', 'generate', 'render', 'review'], startStage: 'script' });
+  const firstResponse = await consentedRun(f, workflow.id, { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['script', 'storyboard', 'generate', 'render', 'review'], startStage: 'script' });
   assert.equal(firstResponse.status, 202);
   const first = await waitRun(fixture, (await firstResponse.json()).id);
   assert.equal(first.status, 'awaiting_review');
@@ -414,13 +416,13 @@ test('completed generation resume rejects storyboard rerun before episode mutati
   const beforeVersion = before.version;
   const beforeScenes = before.scenes;
   const beforeRenders = f.renderCount();
-  const scriptOnlyResponse = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['script'], startStage: 'script', resumeRunId: first.id });
+  const scriptOnlyResponse = await consentedRun(f, workflow.id, { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['script'], startStage: 'script', resumeRunId: first.id });
   assert.equal(scriptOnlyResponse.status, 202);
   const scriptOnly = await waitRun(fixture, (await scriptOnlyResponse.json()).id, ['completed', 'failed', 'cancelled']);
   assert.equal(scriptOnly.status, 'completed');
   const resumeSourceId = scriptOnly.id;
 
-  const response = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['storyboard', 'generate', 'render'], startStage: 'storyboard', resumeRunId: resumeSourceId });
+  const response = await consentedRun(f, workflow.id, { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['storyboard', 'generate', 'render'], startStage: 'storyboard', resumeRunId: resumeSourceId });
   assert.equal(response.status, 409);
   assert.match((await response.json()).error, /storyboard|generated|preserve/i);
   assert.equal(createCalls, 1);
@@ -666,3 +668,16 @@ test('Hermes-selected script stages use the connected agent and expose saved exe
   assert.equal(run.nodeRuns.find(node => node.type === 'script').status, 'completed');
   assert.equal(run.workflowSnapshot.nodes.find(node => node.type === 'script').config.agent, 'hermes');
 });
+
+async function createOwnedWorkflow(f, template) {
+  assert.ok(template.id, 'real template creation succeeds before project copy');
+  const response = await f.request(`/api/workflows/${template.id}/copies`, 'POST', { episodeId: f.episode.id, channelId: f.episode.channelId, expectedTemplateVersion: template.version });
+  assert.equal(response.status, 201); return response.json();
+}
+async function consentedRun(f, workflowId, body) {
+  const disclosure = { containsSyntheticMedia: true, rationale: 'Synthetic fixture illustration; owner reviewed complete candidate' };
+  const response = await f.request(`/api/workflows/${workflowId}/quote`, 'POST', { ...body, disclosure });
+  if (response.status !== 200) return response; // invalid resume is asserted by the original regression
+  const plan = await response.json();
+  return f.request(`/api/workflows/${workflowId}/run`, 'POST', { ...body, disclosure, generationPlanId: plan.id, generationFingerprint: plan.fingerprint, acceptUnquotedEstimate: true });
+}

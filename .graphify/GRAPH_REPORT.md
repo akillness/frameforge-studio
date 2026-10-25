@@ -1,14 +1,21 @@
 # FrameForge structural graph
 
-Native Graphify code extraction: **1463 nodes, 3631 edges**.
+Native Graphify code extraction: **3181 nodes, 7171 edges**.
 
 The installed native CLI can accumulate exact duplicate edge records. This refresh
-normalized 4881 native records to
-3631 whole-record-unique edges, removing
-1250 exact duplicates before HTML
+normalized 11409 native records to
+7171 whole-record-unique edges, removing
+4238 exact duplicates before HTML
 export. Stable sorted-key JSON identifies equality of the entire record; edges
 with different metadata remain separate. graph.json, this report and graph.html
 all derive from the normalized artifact. No duplicate records remain.
+
+Before normalization/export, checkout-local agent state and generated vault metadata
+are removed with their incident or locally sourced edges. This refresh removed
+59 nodes and
+83 edges from these noncanonical
+paths. The exclusion audit is retained in verification.json; canonical source
+relationships with distinct metadata remain intact.
 
 This is a deterministic AST graph, not an LLM semantic graph. Extraction and
 interactive tree export were executed through the installed Graphify CLI.

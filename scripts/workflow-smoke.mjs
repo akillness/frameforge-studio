@@ -9,9 +9,12 @@ const api = async (route, body, method = 'GET') => {
   const result = await response.json(); if (!response.ok) throw new Error(JSON.stringify(result)); return result;
 };
 const state = await api('/api/state');
-const episode = await api('/api/episodes', { channelId: state.channels.find(c => c.externalId === 'UCJswn08Sz-3-0JTLH56IRVQ').id, title: '노드로 만드는 첫 이야기', topic: '출처를 확인하는 콘텐츠 제작', category: 'information' }, 'POST');
+const channelId = state.channels.find(c => c.externalId === 'UCJswn08Sz-3-0JTLH56IRVQ').id;
+const episode = await api('/api/episodes', { channelId, title: '노드로 만드는 첫 이야기', topic: '출처를 확인하는 콘텐츠 제작', category: 'information' }, 'POST');
 const source = state.workflows[0];
-const workflow = await api('/api/workflows', { name: 'Codex 실제 제작 · 조사부터 MP4까지', nodes: source.nodes.map(n => n.type === 'script' ? { ...n, config: { agent: 'codex', prompt: '한국어 정보 전달 영상. 3개 장면 각각 duration 1초, 총 3초로 테스트용 제작. 화면 문장은 짧게. 미확인 시사 주장을 추가하지 마세요.' } } : n), edges: source.edges }, 'POST');
+const template = await api('/api/workflows', { name: 'Codex 실제 제작 · 조사부터 MP4까지', nodes: source.nodes.map(n => n.type === 'script' ? { ...n, config: { agent: 'codex', prompt: '한국어 정보 전달 영상. 3개 장면 각각 duration 1초, 총 3초로 테스트용 제작. 화면 문장은 짧게. 미확인 시사 주장을 추가하지 마세요.' } } : n), edges: source.edges }, 'POST');
+const workflow = await api(`/api/workflows/${template.id}/copies`, { channelId, episodeId: episode.id, expectedTemplateVersion: template.version }, 'POST');
+const renderNodeId = workflow.nodes.find(n => n.type === 'render').id;
 const start = await api(`/api/workflows/${workflow.id}/run`, { episodeId: episode.id }, 'POST');
 let run;
 for (let i = 0; i < 180; i++) {
@@ -20,7 +23,7 @@ for (let i = 0; i < 180; i++) {
   await new Promise(r => setTimeout(r, 1000));
 }
 await mkdir('artifacts', { recursive: true });
-const output = run.nodeRuns.find(n => n.type === 'render')?.output;
+const output = run.nodeRuns.find(n => n.nodeId === renderNodeId)?.output;
 const result = { verifiedAt: new Date().toISOString(), workflowId: workflow.id, episodeId: episode.id, runId: run.id, status: run.status, nodes: run.nodeRuns.map(n => ({ type: n.type, status: n.status, error: n.error })), output };
 await writeFile(process.env.WORKFLOW_SMOKE_RECEIPT_PATH || 'artifacts/workflow-smoke.json', JSON.stringify(result, null, 2));
 if (run.status !== 'awaiting_review' || !output?.outputUrl) throw new Error(JSON.stringify(result));

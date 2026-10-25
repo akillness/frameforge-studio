@@ -1,0 +1,228 @@
+{
+  "role": "Main",
+  "status": "complete",
+  "actualReadyRoutes": [
+    "POST /api/workflows/:templateId/copies",
+    "GET /api/uploads",
+    "GET|POST /api/uploads/:id/rights",
+    "GET /api/sources/search",
+    "POST /api/sources/import",
+    "POST /api/episodes/:id/source",
+    "POST /api/episodes/:id/card",
+    "GET|PUT|DELETE /api/channels/:id/youtube",
+    "POST /api/channels/:id/youtube/authorize",
+    "GET /oauth/youtube/callback",
+    "POST /api/workflows/:id/quote",
+    "POST /api/publication/approvals",
+    "POST /api/publication/approvals/:id/publish",
+    "POST /api/publication/intents/:id/resume",
+    "GET /api/publication/approvals/:id",
+    "GET /api/episodes/:id/publications"
+  ],
+  "moduleImportProbe": {
+    "exitCode": 0,
+    "stdout": "NATIVE_MODULE_IMPORTS_OK"
+  },
+  "existingApiAfterServiceComposition": {
+    "command": "node --test tests/api.test.mjs",
+    "passed": 18,
+    "failed": 0,
+    "skipped": 0
+  },
+  "focusedNewHttp": {
+    "command": "node --test --test-name-pattern=\"^(copy|GET on the copies|attaching|converting|source |setting a channel|channel YouTube status|authorize is rejected|the OAuth callback|disconnecting)\" tests/production-workspace-api.test.mjs",
+    "passed": 14,
+    "failed": 1,
+    "skipped": 0,
+    "failure": "Observed409 instead of200 on positive attach; fixture posts no rights clearance and the service explicitly requires one bound to the upload hash."
+  },
+  "rawUploadCorrection": "Main added incremental SHA256 over actually-written chunks to POST /api/uploads registration. No automatic origin or clearance. This edit awaits its next verification run.",
+  "fixtureFindings": [
+    "The positive attach HTTP test is named cleared but posts no explicit rights clearance before attach. Production must not guess own origin to satisfy this fixture.",
+    "The positive authorize HTTP test supplies no client configuration but expects200. Production intentionally returns503 when not configured; that positive fixture needs explicit fake clientId/clientSecret/redirectUri. A separate unconfigured failure assertion remains required.",
+    "Correlation cookie uses the narrow exact callback Path=/oauth/youtube/callback; it remains HttpOnly Lax and distinct from normal Strict session cookie."
+  ],
+  "configuration": [
+    "MEDIA_USER_AGENT",
+    "YOUTUBE_CLIENT_ID",
+    "YOUTUBE_CLIENT_SECRET",
+    "YOUTUBE_REDIRECT_URI or PUBLIC_ORIGIN-derived callback",
+    "YOUTUBE_OAUTH_TESTING=true when applicable"
+  ],
+  "boundaries": "No operational data, real provider request, Google consent, paid generation, upload/publication, Git mutation or deployment. All seven PW criteria remain pending final integrated proof.",
+  "newVerification": [
+    {
+      "command": "node --test --test-name-pattern=\"^(uploads use|uploaded scene audio)\" tests/api.test.mjs",
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "scope": "after incremental raw-uploadSHA registration"
+    },
+    {
+      "command": "node --test --test-name-pattern=\"^verifyCandidateAssets\" tests/production-generation-plan.test.mjs",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "scope": "actual on-disk hash and clearance"
+    },
+    {
+      "command": "node --test tests/production-publication.test.mjs",
+      "passed": 36,
+      "failed": 0,
+      "skipped": 0,
+      "scope": "fakeGoogleHTTP only; includesactualoutboundsnippet credits/private-to-public/recovery/OAuth"
+    },
+    {
+      "command": "node --test tests/production-workspace-api.test.mjs",
+      "passed": 25,
+      "failed": 2,
+      "skipped": 0,
+      "failures": [
+        "positivepublicationapproval409, positivequote notok; inspect actualfixtureownership/externalchannel/consent ratherthanrelaxingproduction"
+      ]
+    },
+    {
+      "command": "node --test tests/production-workflow-graph.test.mjs tests/trend-collector.test.mjs tests/production-generation-plan.test.mjs",
+      "passed": 33,
+      "failed": 2,
+      "skipped": 0,
+      "failures": [
+        "graph review tests assert output on intentionallysanitizedrunsummary; detailedrun endpoint retainsoutputs"
+      ],
+      "componentCounts": {
+        "generationPlan": "10/10",
+        "collector": "10/10",
+        "graph": "13/15"
+      }
+    },
+    {
+      "command": "node --test tests/production-workspace-ui.test.mjs",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0,
+      "scope": "realChromium hidden episode/graphstashes, A/Bzero-write, selectedepisode/channel, stale409, beforeunload"
+    }
+  ],
+  "queryCorrection": "Main now preserves exactnodequery through audited TrendCollector. Different activequeries serialize withoutsubstituting anotherquery; samequerycoalesces. Add focuseddifferentquery/concurrency coverage ifnotyetpresent.",
+  "sourceIntegrity": "NativeSourceRepair exclusively owns media-sources.mjs aftercompletedNativeMedia: authenticgeneratedprovenance mustrenderwithoutautohumanlicenseclearance; physicalhash/containment validated; NativeTester ownsregressioncoverage.",
+  "unresolved": [
+    "All sevenPWcriteria still require actualfullbrowserjourney andremainingtests",
+    "Sourcehistorytest mustreadexisting snapshot.scenes, no newhistoryalias",
+    "UI source/credits/finalmanifest preview and128/256actualcanvas mustbeexercised,notmoduleexistence"
+  ],
+  "authoritativeTesterFollowUp": {
+    "latestBackendReceipt": "artifacts/production-workspace-implementation/backend-latest.json",
+    "observed": "148/151, 3failures, no skips; whole API27/27 nowpasses; generation10/10, publication36/36, Store21/21, credits2/2, collector10/10",
+    "fixWithoutWeakening": [
+      "production-source-media.test.mjs:219 local-only no-UA test registers an upload but never writes its physical file. Supply actual contained bytes and matchinghash so localclear/attach/cards exercise real rights; never bypass byte verification.",
+      "production-workflow-graph.test.mjs:306 and386 parallel/sequential review assertions read sanitizedrunlists containing only nodeId/type/status. Fetch actual detailed run (GET /api/workflow-runs/:id) before asserting allconnected outputs, retain both branch and nearest-producer assertions."
+    ],
+    "additionalCoverage": [
+      "TrendCollector different concurrent queries must serialize without substituting query A results for B; same query coalesces; auditrows retain exactquery. Main fixed query forwarding through app to collector.",
+      "Ensure generated apply->physical sourcevalidate->render is covered without fabricating human rights or pretending generated material is factualeventevidence. NativeSourceRepair owns service.",
+      "Cover private runtime corruption/one-use concurrent state if not yet present."
+    ],
+    "noPermissionChange": "No live provider, consent, publication, production data, Git or deployment; test fixture corrections only within your existing ownership"
+  },
+  "disclosureUiCorrection": {
+    "observedFailure": "journey 7/8; disclosure change left the old displayed fingerprint although confirm was disabled",
+    "changedFile": "public/workflow.js",
+    "correction": "refreshDialogConfirmation removes the complete displayed quote/fingerprint/candidate/waiver block and clears per-node cost labels when invalid, without repainting the focused disclosure fields",
+    "verification": "Awaiting full authoritative journey rerun; no success claim yet"
+  },
+  "javascriptReview": "artifacts/production-workspace-implementation/javascript-review.json",
+  "javascriptCorrections": {
+    "engineOwner": "NativeEngineRepair",
+    "uiOwner": "Main",
+    "testOwner": "NativeTesterRepair",
+    "requiredRegressions": [
+      "Distinct script/storyboard sibling branches cannot pollute another layout or its quote",
+      "Render-only resume must use connected sceneproducer evidence, not globallysavedepisode",
+      "Two approved generate nodes targetingdifferent slotsinone scene bothcompleteandretainownstablejobIDs",
+      "Full10typerecipe UIpreparation+generationquote excludespublish, waitsforseparatefinalapproval",
+      "Sequential reviewedproducer UIallows downstreamrender aftervalidreview, preserveexplicitpublishapproval"
+    ],
+    "uiImplemented": {
+      "file": "public/workflow.js",
+      "syntax": "node --check public/workflow.js passed",
+      "details": [
+        "Whole-candidate quote and source-only whole-run selections exclude publish; publication remains separately gated",
+        "Stage readiness accepts server-reusable reviewed/retained node states; publish still requires exactly one nearest connected approved review",
+        "Invalidated disclosure/rationale removes full quote block and stale per-node costs without destroying focused controls"
+      ],
+      "verification": "Needs authoritative expanded browser regression; not claimed passed"
+    }
+  },
+  "branchPublicationRisk": {
+    "status": "CONFIRMED by isolated actual-method probe; P1+P2",
+    "report": "artifacts/production-workspace-implementation/branch-publication-review.json",
+    "fixOwner": "NativeRenderPublication",
+    "testOwner": "NativeTesterFinal",
+    "requiredRegressions": [
+      "Distinct current episode B versus approvedrender A mustverifyactual A bytes/rights andderiveA credits, notB",
+      "Uncleared/tampered A cannot be approved usingcleared B",
+      "Skipped unrelated generationnode withmissing scene/slot cannotblocksource-only Aapproval",
+      "Missing/mismatchedrender scene provenance rejects409; fixturesmustprovideactualrender-inputsnapshots, notfallbacktogloballysavedscenes"
+    ]
+  },
+  "remainingConsumerGate": {
+    "status": "satisfied-by-unchanged-Linux47-case-suite-and-new-harness-integrity",
+    "receipt": "artifacts/production-workspace-implementation/legacy-recovery-verification.json",
+    "harnessReceipt": "artifacts/production-workspace-implementation/harness-after.json",
+    "nativeWindowsLimitationRetained": true
+  },
+  "knowledgeValidation": {
+    "command": "python .mex/verify-knowledge.py",
+    "status": "FAILED",
+    "receipt": "artifacts/production-workspace-implementation/knowledge-audit.json",
+    "errors": 1705,
+    "boundary": "Historical auto-ingest vault and generated cache issues are not silently deleted/reclassified to force a pass. Runtime requirements are verified separately."
+  },
+  "finalStatus": "completed-approved-scoped-implementation",
+  "updatedAt": "2026-10-25T09:29:31.453Z",
+  "finalVerification": {
+    "receipt": "artifacts/production-workspace-implementation/verification.json",
+    "backend": {
+      "passed": 181,
+      "failed": 0
+    },
+    "legacyLinux": {
+      "passed": 47,
+      "failed": 0
+    },
+    "legacyWindows": {
+      "passed": 46,
+      "failed": 1,
+      "reason": "Host file-symlink fixture EPERM; retained, not weakened or claimed passed."
+    },
+    "browser": {
+      "passed": 11,
+      "failed": 0,
+      "screenshots": 40
+    },
+    "syntaxModules": 89,
+    "harness": "1.6.0"
+  },
+  "finalRemainingScopeGates": [],
+  "remainingVerificationGaps": [
+    "Native Windows real file-symlink containment could not execute because the OS denies creating its fixture. The exact same assertions pass on Linux; no Windows equivalent claim.",
+    "Live Google OAuth consent, paid generation, actual upload/publication and deployment were outside authority and were not exercised.",
+    "Full historical wiki lint remains failed with 1663 diagnostics in the final recorded command; the earlier1705-diagnostic audit is retained separately.",
+    "POSIX0600 enforcement and forced-process-crash behavior were not fully exercised by the Windows private-runtime tests."
+  ],
+  "sharingBoundary": "Working-tree artifacts only; no Git publication, deployment or live-provider action.",
+  "previousConsumerGate": {
+    "required": "Migrate every obsolete one-role/type-order/unowned-workflow/per-run-review test and caller without weakening preserved behavior.",
+    "known": "Original NativeCanvas reported tests/white-studio.test.mjs:292 still expects a duplicate role to throw. Its proper new contract is repeated roles with unique IDs allowed and real128/256/cycle/duplicate-ID bounds retained. Check this file before final verification.",
+    "relatedFiles": [
+      "tests/white-studio.test.mjs",
+      "tests/white-studio-versions.test.mjs",
+      "tests/platform-session.test.mjs",
+      "tests/layout-pipeline-session.test.mjs",
+      "tests/workflows.test.mjs",
+      "tests/reviews.test.mjs",
+      "tests/generation-integration.test.mjs"
+    ],
+    "safety": "Do not run live-default smoke scripts. Their invocation data/identity contract changes may be inspected and migrated, never exercised against production."
+  }
+}

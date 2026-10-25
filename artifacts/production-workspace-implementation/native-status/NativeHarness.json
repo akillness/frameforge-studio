@@ -1,0 +1,125 @@
+{
+  "role": "NativeHarness",
+  "status": "module-ready",
+  "scope": "Authoring contracts and workspace guide ready; not full PW completion or a promoted bundle",
+  "files": [
+    "docs/harness.md",
+    "docs/harness-versioning.md",
+    ".claude/agents/production-director.md",
+    ".claude/agents/production-editor.md",
+    ".claude/agents/production-researcher.md",
+    ".claude/agents/production-reviewer.md",
+    ".claude/agents/production-supervisor.md",
+    ".claude/skills/production-orchestrator/SKILL.md",
+    "docs/premiere-workspace.md",
+    "artifacts/production-workspace-implementation/native-status/NativeHarness.json"
+  ],
+  "exports": [],
+  "exportsBoundary": "This role owns Markdown contracts, not executable modules. The documented existing module exports below were actually imported without constructing services or invoking providers.",
+  "importVerified": true,
+  "documentedSignatures": [
+    "graph: topologicalOrder(nodes,edges), resolvePrerequisite(nodes,edges,nodeId,type), resolveOptional(nodes,edges,nodeId,type), canonicalJson(value), candidateFingerprint(manifest)",
+    "candidateManifest(store,episode,workflow,options={}), async verifyCandidateAssets(store,manifest)",
+    "requiredMediaCredits(sceneList)",
+    "SourceMediaService({store,fetchImpl,userAgent,probe}): search, importMedia, clearRights, attach, card, validateAssets",
+    "PrivateRuntime({dataDir,tokenKey?}): read(name,fallback=null), write(name,value), remove(name)",
+    "YouTubeOAuth({store,fetchImpl,clientId,clientSecret,redirectUri,testing,tokenKey?}): begin, complete, status, accessToken, disconnect",
+    "PublicationService({store,oauth,fetchImpl}): approve(body,{ownerId}), publish(approvalId,{ownerId}), resume(intentId,{ownerId}), state(approvalId), list(episodeId), close()",
+    "WorkflowEngine: copy(templateId,body), quote(id,episodeId,options), start(id,episodeId,options), review(workflowId,runId,body)",
+    "createWorkflowEditor: mount, destroy, load, save, html, hasChanges, hasAnyChanges, openGeneration, bindProject({episodeId,channelId}), getContext()"
+  ],
+  "contractUpdates": [
+    "128-node/256-edge connected DAG with repeated supported roles, lexical-tie edge-derived order, nearest incoming-path same-role boundary resolution and missing/ambiguous rejection",
+    "Exact node-ID selections/start/resume, branch-specific render/review receipts and run.reviews with no new run.review alias",
+    "Combined exact-input generation quote, explicit human disclosure, per-node/scene persistent job intents, physical asset revalidation and no-replay recovery; sceneId preferred, sceneIndex legacy retained",
+    "Independent project/channel-owned workflow copies and immutable template lineage, explicit template version updates without propagation",
+    "Verified Commons originals, separate explicit rights, local physical hashes/trims/history, original text-only card fallback and actual scene/slot credits on screen and in final description",
+    "Exact server manifest/credits preview before final owner approval, channel-bound OAuth, encrypted private runtime state, private upload/readback, same-video public update/readback and nonduplicate recovery; Studio manual only",
+    "Studio A default/canvas B within project, no-write navigation, all hidden full draft stashes/original bases, stale-save409 and async matching-clean-draft reconciliation",
+    "Test evidence versus live authority, proposed1.6.0 authoring versus selected1.5.0, Main-only new-bundle promotion after final gates"
+  ],
+  "obsoleteContradictionsRemoved": [
+    "Current engine limited to one node per role and1-10nodes/0-45role-ordered edges (retained only as historical1.5.0 description)",
+    "Stage-type fallback in selectedStages/startStage",
+    "One review per run and shared run.review receipt",
+    "Browser session/queue publish staging treated as the current automated delivery transport",
+    "Generation permission described as allowGeneration alone without the complete exact-input plan/disclosure",
+    "Already-created1.5.0 used as the next promotion example",
+    "Older workspace non-publication limit or historical deployment evidence presented as the new A/B verification"
+  ],
+  "verification": [
+    {
+      "command": "node C:/Users/bangg/.agents/jev/jev-harness.mjs --profile frameforge-codex status",
+      "exitCode": 1,
+      "result": "active:false, enabled:false, ready:null; no routing/review output or profile change"
+    },
+    {
+      "command": "node scripts/version-harness.mjs verify",
+      "exitCode": 0,
+      "observedExecutionsBeforeFinalStatus": 2,
+      "selectedVersion": "1.5.0",
+      "bundleSha256": "ac413ffe5680de3f07c18957fea6b3f539f28bdf8cde1243a63024c31e210a6d",
+      "boundary": "Existing immutable bundle integrity only; not a new promotion or semantic acceptance"
+    },
+    {
+      "command": "node --input-type=module",
+      "transport": "PowerShell single-quoted here-string piped on stdin",
+      "stdin": "import { HARNESS_FILES, verifyCurrent } from './scripts/version-harness.mjs';\nimport { readFileSync } from 'node:fs';\nconst modules = {\n  './server/graph.mjs': ['topologicalOrder','resolvePrerequisite','resolveOptional','canonicalJson','candidateFingerprint'],\n  './server/candidates.mjs': ['candidateManifest','verifyCandidateAssets'],\n  './server/media-credits.mjs': ['requiredMediaCredits'],\n  './server/media-sources.mjs': ['SourceMediaService'],\n  './server/private-runtime.mjs': ['PrivateRuntime'],\n  './server/youtube-oauth.mjs': ['YouTubeOAuth'],\n  './server/publication.mjs': ['PublicationService'],\n  './server/workflows.mjs': ['WorkflowEngine','validateWorkflow'],\n  './public/workflow.js': ['createWorkflowEditor'],\n};\nconst imports = [];\nfor (const [file,names] of Object.entries(modules)) {\n  const module = await import(file);\n  const missing = names.filter(name => typeof module[name] !== 'function');\n  imports.push({file,exports:names,missing});\n  if (missing.length) process.exitCode = 1;\n}\nconst files = [...HARNESS_FILES, 'docs/premiere-workspace.md'];\nconst stale = ['Each stage type appears at most once','stage ids or types','stage IDs or types','Edges must follow the stage order','One decision is allowed per run','The publish node opens a platform browser session'];\nconst docs = files.map(file => {\n  const source = readFileSync(file,'utf8');\n  const frontmatter = source.startsWith('---\\n') || source.startsWith('---\\r\\n');\n  const stalePhrases = stale.filter(phrase => source.includes(phrase));\n  if (stalePhrases.length) process.exitCode = 1;\n  return {file,lines:source.trimEnd().split(/\\r?\\n/).length,frontmatter,stalePhrases};\n});\nconst selected = verifyCurrent(process.cwd());\nconsole.log(JSON.stringify({imports,docs,selectedVersion:selected.pointer.currentVersion,bundleSha256:selected.pointer.bundleSha256,documentCount:docs.length,moduleCount:imports.length,behaviorTestsRun:0},null,2));",
+      "exitCode": 0,
+      "modulesImported": 9,
+      "namedFunctionExportsPresent": 15,
+      "missingExports": 0,
+      "documentsRead": 9,
+      "stalePhraseMatches": 0,
+      "roleAndSkillFrontmattersPresent": 6,
+      "orchestratorLines": 40,
+      "warning": "Node SQLite ExperimentalWarning; no service construction or provider invocation",
+      "boundary": "Import/export and document inventory inspection only; no behavioral tests"
+    }
+  ],
+  "testsRunByThisRole": 0,
+  "testsAuthoredOrChanged": 0,
+  "finalDocumentInspection": {
+    "command": "python -B -",
+    "transport": "PowerShell single-quoted here-string piped on stdin",
+    "stdin": "import json\nfrom pathlib import Path\nstatus_path=Path('artifacts/production-workspace-implementation/native-status/NativeHarness.json')\nstatus=json.loads(status_path.read_text(encoding='utf-8'))\nresults=[]\nfor name in status['files']:\n    p=Path(name)\n    if name.startswith('.claude/'):\n        current=p.read_text(encoding='utf-8').split('---',2)[1]\n        released=(Path('harness/versions/1.5.0')/p).read_text(encoding='utf-8').split('---',2)[1]\n        results.append({'file':name,'frontmatterUnchanged':current==released})\nprint(json.dumps({'statusJsonValid':True,'listedFilesExisting':sum(Path(name).is_file() for name in status['files']),'frontmatters':results,'orchestratorUnder500Lines':len(Path('.claude/skills/production-orchestrator/SKILL.md').read_text(encoding='utf-8').splitlines())<500},indent=2))",
+    "exitCode": 0,
+    "listedFilesExisting": 10,
+    "frontmattersUnchanged": 6,
+    "orchestratorLines": 40,
+    "boundary": "Read-only JSON/document inspection; no behavioral tests or test authoring"
+  },
+  "reportedExternalEvidence": {
+    "source": "Main result supplied in the assignment",
+    "command": "node --test tests/production-workspace-ui.test.mjs",
+    "passed": 7,
+    "failed": 0,
+    "boundary": "Reported A/B browser smoke only; not rerun by NativeHarness or full-journey/live proof"
+  },
+  "nonblockingDiscoveryFailures": [
+    {
+      "command": "Get-Content -Encoding utf8 C:/Users/bangg/.agents/skills/writing-for-agents/SKILL-MECHANICS.md",
+      "failure": "Missing path from an inline pointer",
+      "resolution": "Read the actual references/SKILL-MECHANICS.md path linked by the skill reference section"
+    },
+    {
+      "command": "rg -n '^test\\(|test\\(|loginToken|publicOrigin' tests/production-workspace-ui.test.mjs tests/production-graph.test.mjs tests/production-generation-plan.test.mjs tests/production-publication.test.mjs tests/production-media.test.mjs tests/harness.test.mjs",
+      "failure": "production-graph.test.mjs and production-media.test.mjs do not exist",
+      "resolution": "Actual files are production-workflow-graph.test.mjs and production-source-media.test.mjs; rg --files inventory resolved names"
+    },
+    {
+      "command": "rg -n '^test\\(|^it\\(' tests/production-*.test.mjs",
+      "failure": "Windows literal wildcard path was invalid",
+      "resolution": "rg --files tests -g 'production-*.test.mjs' listed the10 current production test files"
+    }
+  ],
+  "remainingGates": [
+    "Main/NativeTester must finish backend integration and specific independent PW-01-PW-07 acceptance verification, including full isolated source-to-public-readback journey and actual credit rendering",
+    "Main must reconcile the intended end-to-end publication handoff with current WorkflowEngine local publicationStages output; local staging never completes a project",
+    "Main alone must promote a fresh immutable bundle (proposed1.6.0) after stable final gates, then verify that new bundle; no manifest/versions/archive writes were made here",
+    "frameforge-codex Jev is disabled; no Jev result was produced or claimed",
+    "Live account consent, provider availability, paid generation, upload/publication, deployment and Git operations were neither authorized nor exercised"
+  ],
+  "sharingBoundary": "These explicit shared contract artifacts are working-tree changes only. No Git sharing, MEX canonical write or private-session file was created.",
+  "safety": "Only the10 allowlisted paths were written; no application/server source, tests, harness pointer/versions/archive, provider/config/model/hook, production data/ports/.env/credentials, installers or Git operations were touched. No subagents were used."
+}

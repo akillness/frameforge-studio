@@ -1,0 +1,42 @@
+{
+  "role": "NativeCandidate",
+  "status": "module_ready_engine_integration_tests_blocked",
+  "files": ["server/candidates.mjs", "artifacts/production-workspace-implementation/native-status/NativeCandidate.json"],
+  "importsVerified": true,
+  "exports": {
+    "candidateManifest(store,episode,workflow,options={})": "synchronous frameforge-candidate/v1 manifest; selectedStages are exact node IDs; nodes contain nodeId/type/sceneId/optional slotId/storyboardNodeId/model/prompt/params/targetMode/source; scenes are selected generate targets (all scenes when no generate is selected); episode.scenes and assets bind all production media; disclosure defaults to null",
+    "verifyCandidateAssets(store,manifest)": "async; returns the verified manifest or rejects; checks actual contained files, SHA-256, current upload and rights records, human clearance, and completed generation/narration provenance; no network"
+  },
+  "fingerprint": "Use server/graph.mjs candidateFingerprint(manifest); canonicalJson is shared; no independent candidate hash convention",
+  "validation": {
+    "harness": {"command": "node scripts/version-harness.mjs verify", "exitCode": 0, "version": "1.5.0", "semanticUpgradeClaimed": false},
+    "syntax": {"command": "node --check server/candidates.mjs", "exitCode": 0, "executions": 5},
+    "import": {"command": "node --input-type=module -e \"const m = await import('./server/candidates.mjs'); console.log(JSON.stringify(Object.fromEntries(Object.entries(m).map(([key,value])=>[key,typeof value]))))\"", "exitCode": 0, "executions": 3, "exports": {"candidateManifest": "function", "verifyCandidateAssets": "function"}},
+    "focusedTests": {"command": "node --test --test-name-pattern='verifyCandidateAssets' tests/production-generation-plan.test.mjs", "executions": 3, "eachRun": {"exitCode": 0, "tests": 1, "passed": 1, "failed": 0, "skipped": 0}},
+    "integrationTests": {
+      "command": "node --test tests/production-generation-plan.test.mjs",
+      "executions": 3,
+      "latest": {"exitCode": 1, "tests": 10, "passed": 2, "failed": 8, "skipped": 0},
+      "latestFailures": [
+        {"test": 2, "reason": "WorkflowEngine.quote rejects the unowned test workflow with ownership 409 before reaching the asserted disclosure 400 gate; candidate selection and target-scene assertions passed before this point"},
+        {"tests": [3, 4, 6, 7, 8, 9, 10], "reason": "Execution requires a project-owned workflow copy for this exact episode and channel; thrown from server/workflows.mjs assertOwnership, outside NativeCandidate ownership"}
+      ],
+      "earlierObservation": "First run also had 2/10 passes and 8 failures, then from missing quote/start plan guard and single-review connectivity. Other owners subsequently landed engine code; latest evidence supersedes those diagnoses.",
+      "directCandidateEvidence": "Selected generate-node and target-scene assertions, initialGraph without optional news/trend, and full ten-stage graph candidate node-count assertions pass before engine integration gates fail. Dedicated asset test verifies real own/cleared/uncleared/tampered files."
+    }
+  },
+  "prerequisites": [
+    "Engine owner must reconcile quote/start ownership gating with authoritative existing generation-plan tests and rerun all ten tests; this role did not alter engine or tests",
+    "Engine owns exact future script/layout/news input preparation and final submitted prompt alignment with the approved candidate; fullPipeline end-to-end behavior is blocked by the current engine ownership gate",
+    "NativeTester owns additional independent coverage for generated/narration provenance, registry changes during hashing, and symlink rejection; these implemented paths currently have no dedicated independent candidate test"
+  ],
+  "implementation": [
+    "Uses shared scene validation and graph canonicalJson; all selected generation targets bind stable scene/slot IDs and connected storyboard IDs",
+    "Complete episode and workflow snapshots plus all scene/slot/audio assets participate in the graph.candidateFingerprint input, including unselected-scene changes",
+    "Unknown disclosure/origin remain null; no automatic human decision, writes, provider calls or invented credits",
+    "Physical file handles, realpath/lstat containment, streaming SHA-256 and before/after file identity checks; registry and human clearance records rechecked after async I/O",
+    "Generated imagery requires completed job/output/import provenance; narration requires completed matching local narration job; provider download URLs are omitted from job snapshots"
+  ],
+  "jev": {"profile": "frameforge-codex", "active": false, "enabled": false, "used": false},
+  "boundary": "Working-tree shared contract artifact; requires commit/push to share beyond the checkout. No Git command, provider call, deployment, production data access, server startup or test authoring performed. Only the two allowlisted files changed by this role."
+}

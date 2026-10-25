@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "role": "NativeGraphInsertFinal",
+  "status": "module_ready",
+  "changedFiles": [
+    "public/workflow.js",
+    "artifacts/production-workspace-implementation/graph-insertion-repair.json"
+  ],
+  "repair": {
+    "symbol": "addWorkflowNode",
+    "signature": "addWorkflowNode(workflow, type, { id, x, y, label, config, afterNodeId } = {})",
+    "signatureChanged": false,
+    "cause": "Without an inferred predecessor, insertion appended the node and only connected it for a single-node graph. An earliest news stage therefore remained disconnected from script in a multi-node pipeline.",
+    "behavior": "Infer a successor only when every existing role follows the inserted role, the nearest role has exactly one node, and that node has no incoming edge. Insert immediately before that node and connect the new node to it.",
+    "preserved": [
+      "Explicit afterNodeId selection and outgoing-edge rewiring",
+      "Repeated-role node IDs and duplicate identity rejection",
+      "Existing graph and draft immutability",
+      "Edge-based execution and ambiguous prerequisite validation",
+      "128-node and 256-edge limits",
+      "Original independent test assertions"
+    ]
+  },
+  "commands": [
+    {
+      "command": "rtk proxy node --test --test-name-pattern='unique-stage insertion' tests/layout-pipeline-session.test.mjs",
+      "phase": "before_repair",
+      "exitCode": 1,
+      "tests": 1,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0,
+      "failure": "tests/layout-pipeline-session.test.mjs:131: news was last instead of first in the original node-order assertion"
+    },
+    {
+      "command": "rtk proxy node --check public/workflow.js",
+      "phase": "after_repair",
+      "exitCode": 0
+    },
+    {
+      "command": "rtk proxy node --input-type=module -e \"const m=await import('./public/workflow.js'); console.log(JSON.stringify({imported:true,exports:Object.keys(m).sort(),addWorkflowNodeType:typeof m.addWorkflowNode}));\"",
+      "phase": "after_repair",
+      "exitCode": 0,
+      "imported": true,
+      "exports": [
+        "addWorkflowNode",
+        "createWorkflowEditor",
+        "fitWorkflowCanvas",
+        "fullPipelineGraph",
+        "workflowCanvasHintText",
+        "workflowErrors",
+        "workflowRunHistoryHtml"
+      ]
+    },
+    {
+      "command": "rtk proxy node --test tests/layout-pipeline-session.test.mjs tests/white-studio.test.mjs",
+      "phase": "after_repair",
+      "exitCode": 0,
+      "tests": 17,
+      "passed": 17,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "durationMs": 7962.242,
+      "files": {
+        "tests/layout-pipeline-session.test.mjs": { "passed": 5, "failed": 0 },
+        "tests/white-studio.test.mjs": { "passed": 12, "failed": 0 }
+      },
+      "coverage": [
+        "Unique earliest news insertion and full adjacent stage wiring",
+        "Explicit repeated generation node insertion and rewiring",
+        "Duplicate IDs, cycles, ambiguous render boundaries and graph size limits",
+        "Owned project generation drafts and preservation",
+        "Full pipeline, exact-node review and local publication staging",
+        "Actual FFmpeg multilayer rendering, z-order and text alignment"
+      ],
+      "warnings": ["Node ExperimentalWarning: SQLite is an experimental feature"]
+    },
+    {
+      "command": "rtk proxy node scripts/version-harness.mjs verify",
+      "exitCode": 0,
+      "currentVersion": "1.5.0",
+      "promoted": false
+    }
+  ],
+  "sha256": {
+    "public/workflow.js": "bd90b4ad766965f81f3db71b38fb705d067c0e0e48c6bb4c6a3b5fa47238e44c",
+    "tests/layout-pipeline-session.test.mjs": "9f50a2b8e4c4c17b7247c6bfd581c922faba96ab3ef8139759e1a0536ef2d864",
+    "tests/white-studio.test.mjs": "4528a0032751d77885711a95b16aa3e8c313b91e3094941961af9cf07fe57887"
+  },
+  "evidenceBoundaries": {
+    "languageServer": "No LSP/reference tool was available; inspected the exact exported source and scoped addWorkflowNode references in public/ and the two authorized tests. No exported signature changed.",
+    "mex": "Bootstrap read; mex logging --json reported significant. mex impact public/workflow.js reported TARGET_SOURCE_DRIFTED; current source and original tests were used instead of stale graph relationships.",
+    "jev": "rtk proxy node C:/Users/bangg/.agents/jev/jev-harness.mjs --profile frameforge-codex status reported active:false and enabled:false. No routing/review output claimed; no configuration changed.",
+    "fixtureIsolation": "The two test files use temporary Store directories and injected provider transports. No application HTTP server fixture is constructed, so loginToken/publicOrigin and loopback listener configuration are not applicable. Existing tests were not modified.",
+    "scope": "Only the two allowlisted files were changed. No Git, production service, provider, account consent, publication, deployment, installer, configuration or permission actions were performed. No subagents were used."
+  },
+  "remainingPrerequisites": [
+    "Main must rerun the complete 47-case legacy migration verification and resolve any separate failure before promoting harness 1.6; this receipt establishes only the 17 authorized cases.",
+    "MEX/Graphify refresh and a separate native-status/NativeGraphInsertFinal.json write are outside this role's exact two-file allowlist; module-ready evidence is retained in this authorized receipt."
+  ]
+}

@@ -1,0 +1,95 @@
+{
+  "role": "NativePublicationRepair",
+  "status": "module-ready",
+  "changedFiles": [
+    "server/publication.mjs",
+    "artifacts/production-workspace-implementation/native-status/NativePublicationRepair.json"
+  ],
+  "exports": {
+    "PublicationService": {
+      "constructor": "new PublicationService({store,oauth,fetchImpl=fetch})",
+      "approve": "async approve(body,{ownerId}) -> fingerprinted server approval with manifest and request",
+      "publish": "async publish(approvalId,{ownerId}) -> queued durable intent",
+      "resume": "async resume(intentId,{ownerId}) -> current intent; schedules same-identity recovery",
+      "state": "state(approvalId) -> approval or latest intent with manifest",
+      "list": "list(episodeId) -> approvals with intent:null|intent",
+      "close": "close() -> Promise<void>"
+    }
+  },
+  "importsVerified": true,
+  "repairs": [
+    {
+      "finding": 1,
+      "result": "Synchronous snapshot comparison rereads episode, workflow, channel, run/review, render job, candidate assets, rights and provenance after asset/export awaits. A second comparison runs after all beforeSend promises immediately before transport dispatch; intervening edits fail409. The persisted approval itself is also compared. Approval creation, upload chunks and completion retain current-state checks."
+    },
+    {
+      "finding": 2,
+      "result": "Stale approval permits observation of its saved video ID or a zero-byte status query of its saved session. Completed-session queries retain the returned video ID and perform owner readback. Stale recovery performs no insert, media transfer or visibility update and never completes the edited project. State exposes approvalStatus:stale, phase:stale_approval and observed privacyStatus; unavailable observations remain unknown. Owner checks and retry intervals remain enforced."
+    },
+    {
+      "finding": 3,
+      "result": "Each validated local intent ID uses its own publication_<intentId> encrypted PrivateRuntime record. The shared read-modify-write document is removed without a legacy shim. Existing privateQueue shutdown handling, atomic pre-insert claim, session-before-bytes persistence and saved remote identity recovery remain in place. No PrivateRuntime/schema expansion."
+    }
+  ],
+  "verification": [
+    {
+      "command": "node scripts/version-harness.mjs verify",
+      "exitCode": 0,
+      "version": "1.5.0",
+      "boundary": "Immutable bundle integrity only, not semantic proof of the new implementation"
+    },
+    {
+      "command": "node --check server/publication.mjs",
+      "runs": 2,
+      "exitCode": 0
+    },
+    {
+      "command": "node --input-type=module -e \"const m=await import('./server/publication.mjs'); console.log(Object.keys(m));\"",
+      "exitCode": 0,
+      "exports": ["PublicationService"]
+    },
+    {
+      "command": "node --input-type=module -e \"const {PublicationService}=await import('./server/publication.mjs'); console.log(JSON.stringify({exports:['PublicationService'],methods:['approve','publish','resume','state','list','close'].every(name=>typeof PublicationService.prototype[name]==='function')}));\"",
+      "exitCode": 0,
+      "methods": true
+    },
+    {
+      "command": "$env:LOGIN_TOKEN=''; $env:PUBLIC_ORIGIN=''; node --test tests/production-publication.test.mjs",
+      "runs": [
+        { "run": 1, "exitCode": 0, "tests": 42, "passed": 42, "failed": 0, "skipped": 0, "cancelled": 0 },
+        { "run": 2, "exitCode": 0, "tests": 42, "passed": 42, "failed": 0, "skipped": 0, "cancelled": 0 }
+      ],
+      "regressions": [
+        "Final async episode edit prevents public transport",
+        "Final async rights edit prevents public transport",
+        "Final async channel edit prevents public transport",
+        "Stale known video reconciles private through GET only",
+        "Stale known video reconciles public through GET only without current-project completion",
+        "Two concurrent service instances retain both encrypted sessions and recover without reinsertion"
+      ],
+      "isolation": "Real Store/services with temporary SQLite and filesystem fixtures; only external transport faked. No HTTP server or ports started. Empty LOGIN_TOKEN and PUBLIC_ORIGIN explicitly set for test commands; no createApp loginToken/publicOrigin options apply to this service-only suite.",
+      "warnings": ["Node experimental SQLite warning", "Node experimental MockTimers warning"]
+    }
+  ],
+  "bootstrap": {
+    "mex": "AGENTS, ROUTER, architecture, conventions, decisions and pattern index read; logging mode significant; bounded publication timeline empty",
+    "impact": "mex impact server/publication.mjs could not resolve the target because the existing graph is stale and excludes this source. Actual source/tests were read; graph was not refreshed outside the allowlist.",
+    "jev": { "command": "node C:/Users/bangg/.agents/jev/jev-harness.mjs --profile frameforge-codex status", "profile": "frameforge-codex", "active": false, "enabled": false, "used": false, "prerequisite": "Selected profile disabled; not enabled or reconfigured" }
+  },
+  "unresolvedDependencies": [],
+  "verificationGaps": [
+    "Available independent regressions cover stale known videos and concurrent saved-session restart, but not stale session-only308/expired-session branches separately. NativeTesterRepair exclusively owns additional regression authoring.",
+    "Actual Google OAuth, upload, public publication, production HTTP integration and deployment were deliberately not exercised. Main owns integration and reruns."
+  ],
+  "boundaries": {
+    "testFilesChanged": false,
+    "subdelegation": false,
+    "gitCommands": false,
+    "realProviderCalls": false,
+    "productionAccess": false,
+    "credentialsRead": false,
+    "installersOrConfigurationChanges": false,
+    "broadSuitesLintersOrFormatters": false,
+    "sharing": "Shared contract artifact written to the working tree only; no commit, push, deployment or external sharing"
+  }
+}

@@ -1,0 +1,37 @@
+topic: Unified reusable channel-video production workspace UI
+status: approved_for_deep_research
+approved_at: '2026-10-24'
+phase: deep
+source_policy: Current official public documentation; changes from 2025-10-24 through 2026-10-24; older official material only for still-current behavior and labeled as baseline.
+output_policy: No private UI or production records; no installations, credentials, media purchases, paid generation, account actions or actual channel uploads.
+execution:
+  batch_size: 6
+  items_per_agent: 1
+  output_dir: ./results
+  fields_path: ./fields.yaml
+  validator: C:/Users/bangg/.agents/skills/deep-research/scripts/validate_json.py
+items:
+  - name: Adobe Premiere Pro
+    slug: premiere_pro
+    category: Editing workspace and project continuity
+    description: Reuse artifacts/premiere-workspace-research.json (observed 2026-10-20) as historical baseline for workspaces, docking, monitors, timeline, properties, keyboard/accessibility and export. Do not repeat that research. Investigate only gaps in project continuity, reusable template parameters/channel adaptation and changes since 2026-10-20; distinguish current observations from historical baseline evidence. Use source URLs already in the baseline for inherited fields.
+  - name: DaVinci Resolve and Fusion
+    slug: resolve_fusion
+    category: Editing and node-workspace continuity
+    description: Investigate shared project/media identity across editing and Fusion, reusable macros/templates, exposed parameters, version/output management and keyboard workspace navigation. Distinguish Fusion graphs from the Color node editor; never generalize a feature across them without evidence.
+  - name: n8n
+    slug: n8n
+    category: Reusable node-role execution
+    description: Investigate workflow definition/version/instance identity, project-scoped resources and credentials, input/output inspection, execution history, partial execution/retry and approval/publishing semantics. Verify whether copying workflows preserves credentials or other target-specific settings; distinguish workflow publication from posting a video to a channel.
+  - name: Frame.io
+    slug: frame_io
+    category: Review, versioning and delivery evidence
+    description: Investigate asset/project identity, media discovery, review version binding, comments/approval, share/delivery controls, permissions and supported integrations. Distinguish sharing or approval from verified channel upload/public publication, and images/PDF comparison from video comparison. Identify explicit documented limits rather than claiming absence from silence.
+  - name: YouTube upload API and Studio
+    slug: youtube_upload
+    category: Channel-isolated upload and publication
+    description: Compare official videos.insert and OAuth documentation with the documented Studio upload flow. Verify destination/channel authorization, explicit privacyStatus and documented default, quota/call limits, processing, copyright checks, altered-content disclosures, resumable upload/recovery and post-upload identity/visibility read-back. Do not assume a quota number or default from prior summaries. The current FrameForge publish stage opens a browser upload session or stages a queue item; that is not verified upload/publication. Read public docs only, never inspect or act on an account.
+  - name: Downloadable and licensed factual footage sources
+    slug: licensed_footage
+    category: Footage discovery, import and provenance
+    description: Compare Wikimedia Commons API, Korean public-license/KOGL information and at least one documented stock-footage API such as Pexels. Verify downloadable file endpoints, machine-readable license/metadata, attribution and derivative/redistribution limits, commercial reuse, API auth/quotas and provenance/file-hash retention. Distinguish authenticity, copyright license, privacy/publicity and factual relevance. Do not treat a public YouTube search URL as an authorized download endpoint. No actual media download, API-key use or purchase.

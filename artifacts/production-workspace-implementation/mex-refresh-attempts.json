@@ -1,0 +1,12 @@
+{
+  "attempts": [
+    {
+      "command": "mex graph refresh --json",
+      "exitCode": 1,
+      "stdout": "",
+      "stderr": "Could not stage 2 source file(s): tests/layout-pipeline-session.test.mjs, tests/white-studio.test.mjs",
+      "observedWhile": "NativeLegacyCallers was still migrating these owned test files",
+      "action": "Retry once after the caller owner completes; do not claim graph freshness from this failed attempt."
+    }
+  ]
+}

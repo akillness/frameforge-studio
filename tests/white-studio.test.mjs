@@ -147,13 +147,19 @@ function workflowFixture({ withGenerate = false, scriptAgent = 'studio' } = {}) 
   const order = withGenerate ? ['trend', 'research', 'script', 'storyboard', 'generate', 'render', 'review'] : ['trend', 'research', 'script', 'storyboard', 'render', 'review'];
   return {
     id: 'workflow-fixture', version: 2, name: 'Existing graph',
-    nodes: order.map((type, index) => ({ id: ids[type], type, x: index * 10, y: 20, config: type === 'script' ? { agent: scriptAgent, prompt: '' } : type === 'generate' ? { model: model, prompt: 'existing', params: { duration: 5 }, sceneIndex: 0 } : {} })),
+    nodes: order.map((type, index) => ({ id: ids[type], type, x: index * 10, y: 20, config: type === 'script' ? { agent: scriptAgent, prompt: '' } : type === 'generate' ? { model: model, prompt: 'existing', params: { duration: 5 }, sceneIndex: 1 } : {} })),
     edges: order.slice(1).map((type, index) => ({ id: `edge-${index}`, source: ids[order[index]], target: ids[type] })),
   };
 }
 
-function editorFixture(workflow) {
-  const episodes = [{ id: 'episode-1', title: 'Episode one', scenes: [starterScene('A', 'Keep A'), starterScene('B', 'Keep B')] }];
+async function editorFixture(t, templateGraph) {
+  const root = await mkdtemp(path.join(tmpdir(), 'frameforge-white-editor-'));
+  const store = new Store(root);
+  t.after(async () => { store.close(); await rm(root, { recursive: true, force: true }); });
+  const channel = store.list('channels')[0];
+  const episodes = [store.create('episodes', { id: 'episode-1', channelId: channel.id, version: 1, status: 'draft', format: '9:16', title: 'Episode one', topic: 'Local editor fixture', scenes: [starterScene('A', 'Keep A'), starterScene('B', 'Keep B')] })];
+  const template = store.create('workflows', templateGraph);
+  const workflow = store.createWorkflowCopy({ templateId: template.id, expectedTemplateVersion: template.version, episodeId: episodes[0].id, channelId: channel.id });
   const calls = [];
   const api = async (url, options) => {
     calls.push({ url, method: options?.method || 'GET', body: options?.body });
@@ -168,12 +174,13 @@ function editorFixture(workflow) {
   return { editor, calls, episodes, workflow };
 }
 
-test('openGeneration creates an unsaved draft without spend, preserves scenes, and keeps a valid graph', async () => {
+test('openGeneration adds an unsaved node to the owned project graph without spend or scene replacement', async t => {
   const existing = workflowFixture();
-  const f = editorFixture(existing);
+  const f = await editorFixture(t, existing);
   const draft = await f.editor.openGeneration({ episodeId: 'episode-1', sceneIndex: 1 });
-  assert.equal(draft.id, undefined);
-  assert.equal(draft.nodes.find(node => node.type === 'script').config.agent, 'existing');
+  assert.equal(draft.id, f.workflow.id);
+  assert.equal(draft.templateId, existing.id);
+  assert.equal(draft.nodes.find(node => node.type === 'script').config.agent, 'studio');
   assert.equal(draft.nodes.find(node => node.type === 'generate').config.sceneIndex, 1);
   const generated = draft.nodes.find(node => node.type === 'generate');
   const storyboard = draft.nodes.find(node => node.type === 'storyboard');
@@ -184,26 +191,25 @@ test('openGeneration creates an unsaved draft without spend, preserves scenes, a
   assert.deepEqual(workflowErrors(draft), []);
   assert.equal(f.calls.some(call => call.method === 'POST' || call.url.includes('/generations')), false);
 });
-test('openGeneration preserves an appended unsaved scene identity without spending or mutating episodes', async () => {
+test('openGeneration preserves an appended unsaved scene identity without spending or mutating episodes', async t => {
   const existing = workflowFixture();
-  const f = editorFixture(existing);
+  const f = await editorFixture(t, existing);
   f.episodes[0].scenes.push(starterScene('C', 'Keep appended C'));
   const before = structuredClone(f.episodes[0].scenes);
   const draft = await f.editor.openGeneration({ episodeId: 'episode-1', sceneIndex: 2 });
   assert.equal(draft.nodes.find(node => node.type === 'generate').config.sceneIndex, 2);
   assert.deepEqual(f.episodes[0].scenes, before);
   assert.equal(f.calls.some(call => call.method === 'POST' || call.url.includes('/api/trends') || call.url.includes('/generations')), false);
-  assert.ok(f.calls.some(call => call.url === '/api/generation/models'));
-  assert.ok(f.calls.some(call => call.url.startsWith('/api/generation/models?model=')));
+  assert.equal(f.calls.some(call => call.url.startsWith('/api/generation/models')), false, 'opening a local draft must not search provider models');
 });
 
 
-test('openGeneration targets an existing generation node without replacing graph or scene content', async () => {
+test('openGeneration targets an existing generation node without replacing graph or scene content', async t => {
   const existing = workflowFixture({ withGenerate: true, scriptAgent: 'existing' });
   const originalGraph = structuredClone(existing);
-  const f = editorFixture(existing);
+  const f = await editorFixture(t, existing);
   const result = await f.editor.openGeneration({ episodeId: 'episode-1', sceneIndex: 1 });
-  assert.equal(result.id, existing.id);
+  assert.equal(result.id, f.workflow.id);
   assert.equal(result.nodes.find(node => node.type === 'generate').config.sceneIndex, 1);
   assert.deepEqual(result.nodes.map(node => node.id), originalGraph.nodes.map(node => node.id));
   assert.deepEqual(result.edges, originalGraph.edges);
@@ -211,16 +217,18 @@ test('openGeneration targets an existing generation node without replacing graph
   assert.equal(f.calls.some(call => call.method === 'POST' || call.url.includes('/generations')), false);
 });
 
-test('openGeneration makes a safe five-node draft instead of reusing a saved studio chain', async () => {
+test('openGeneration preserves the owned studio chain and its template while targeting the selected scene', async t => {
   const existing = workflowFixture({ withGenerate: true, scriptAgent: 'studio' });
   const originalGraph = structuredClone(existing);
-  const f = editorFixture(existing);
+  const f = await editorFixture(t, existing);
   const result = await f.editor.openGeneration({ episodeId: 'episode-1', sceneIndex: 1 });
-  assert.equal(result.id, undefined);
-  assert.equal(result.nodes.length, 5);
-  assert.equal(result.nodes.find(node => node.type === 'script').config.agent, 'existing');
+  assert.equal(result.id, f.workflow.id);
+  assert.notEqual(result.id, existing.id);
+  assert.equal(result.nodes.length, originalGraph.nodes.length);
+  assert.equal(result.nodes.find(node => node.type === 'script').config.agent, 'studio');
   assert.equal(result.nodes.find(node => node.type === 'generate').config.sceneIndex, 1);
-  assert.notDeepEqual(result.nodes.map(node => node.id), originalGraph.nodes.map(node => node.id));
+  assert.deepEqual(result.nodes.map(node => node.id), originalGraph.nodes.map(node => node.id));
+  assert.deepEqual(result.edges, originalGraph.edges);
   assert.deepEqual(existing, originalGraph);
   assert.deepEqual(workflowErrors(result), []);
   assert.equal(f.calls.some(call => call.method === 'POST' || call.url.includes('/generations')), false);
@@ -289,6 +297,20 @@ test('adding a workflow node inserts it at its stage position and rewires adjace
   assert.equal(result.edges.some(edge => edge.source === 'storyboard' && edge.target === 'render'), false);
   assert.deepEqual(workflowErrors(result), []);
   assert.equal(workflow.nodes.some(node => node.id === 'generate'), false);
-  assert.throws(() => addWorkflowNode(result, 'generate', { id: 'duplicate' }), /one|하나|already/i);
+  const repeated = addWorkflowNode(result, 'generate', { id: 'generate-second', afterNodeId: 'generate' });
+  assert.deepEqual(repeated.nodes.filter(node => node.type === 'generate').map(node => node.id), ['generate', 'generate-second']);
+  assert.ok(repeated.edges.some(edge => edge.source === 'generate' && edge.target === 'generate-second'));
+  assert.ok(repeated.edges.some(edge => edge.source === 'generate-second' && edge.target === 'render'));
+  assert.equal(repeated.edges.some(edge => edge.source === 'generate' && edge.target === 'render'), false);
+  assert.deepEqual(workflowErrors(repeated), []);
+  assert.equal(result.nodes.length, 5, 'inserting a repeated role must not mutate the original graph');
+  assert.throws(() => addWorkflowNode(repeated, 'generate', { id: 'generate-second' }), /ID/);
+  assert.throws(() => addWorkflowNode(repeated, 'generate', { id: 'third', afterNodeId: 'missing' }));
+  assert.throws(() => addWorkflowNode({ ...result, nodes: Array.from({ length: 128 }, (_, i) => ({ id: `node-${i}`, type: 'script' })) }, 'script', { id: 'overflow' }), /128/);
+  assert.throws(() => addWorkflowNode({ ...result, edges: Array.from({ length: 256 }, (_, i) => ({ id: `edge-${i}`, source: 'script', target: 'storyboard' })) }, 'generate', { id: 'edge-overflow', afterNodeId: 'generate' }), /256/);
+  assert.ok(workflowErrors({ ...repeated, nodes: [...repeated.nodes, repeated.nodes[0]] }).length, 'duplicate node identities remain invalid');
+  assert.ok(workflowErrors({ ...repeated, edges: [...repeated.edges, { id: 'cycle', source: 'review', target: 'script' }] }).length, 'cycles remain invalid');
+  const ambiguous = { ...result, nodes: [...result.nodes, { id: 'render-alternate', type: 'render', x: 4, y: 1, config: {} }], edges: [...result.edges, { id: 'fork', source: 'generate', target: 'render-alternate' }, { id: 'merge', source: 'render-alternate', target: 'review' }] };
+  assert.ok(workflowErrors(ambiguous).length, 'a review cannot guess between two connected render candidates');
 });
 

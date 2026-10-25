@@ -1,0 +1,88 @@
+{
+  "topic": "Unified reusable channel-video production workspace UI",
+  "observed_at": "2026-10-24",
+  "status": "deep_research_completed_with_explicit_uncertainties",
+  "implementation_status": "No application UI, storage schema, provider connection or channel action changed.",
+  "counts": {
+    "completed": 6,
+    "failed": 0,
+    "items_with_uncertainty": 6,
+    "required_fields_per_item": 10
+  },
+  "existing_baseline_reused": "artifacts/premiere-workspace-research.json; historical observation 2026-10-20",
+  "recommended_product_model": {
+    "status": "[INFERENCE] Proposal for the next interview, not an approved persistence model.",
+    "blueprint": "Versioned node-role graph and scene/layout defaults with exposed parameters; contains no live run, approval, credential or upload identity.",
+    "channel_profile": "Explicit channel destination plus brand, caption, format and authorized-delivery defaults; credentials remain separate private references.",
+    "production_instance": "Bound channel and blueprint version plus research evidence, licensed local media, scene edits, run history, exact output approvals and delivery read-back.",
+    "open_decision": "Whether one production project equals one finished video/upload or a series containing multiple episodes."
+  },
+  "workspace_direction": {
+    "status": "[INFERENCE] Research-grounded layout candidate, not a rendered or implemented UI.",
+    "persistent_header": "Show channel, production identity, blueprint version, save/conflict state, approval state and delivery destination.",
+    "workflow_strip": "Show the complete ordered production path and node readiness, running, failed, stale-input and approval-wait states.",
+    "left_library": "Project-scoped keyword/evidence, authentic source footage, license/attribution status and scene assets.",
+    "center": "Scene/storyboard editing and the existing sequence monitor within the same production context.",
+    "bottom": "Existing duration-based scene timeline and run/output history; do not imply independent tracks, waveforms or frame-accurate NLE support.",
+    "right_inspector": "Selection-driven node/scene settings, source evidence, prior result/version and required next action.",
+    "context_rule": "Switch work surfaces without independently reselecting channel, episode and workflow; opening or navigating starts no external action."
+  },
+  "evidence_to_design": [
+    {
+      "object": "Premiere Pro",
+      "documented_fact": "A project records sequences/assets/settings and nondestructive edits; export creates a new encoded file.",
+      "source": "https://helpx.adobe.com/premiere/desktop/organize-media/create-projects/start-projects.html",
+      "design_inference": "[INFERENCE] Keep production definition, editable media and exact deliverable versions separate inside one project context."
+    },
+    {
+      "object": "DaVinci Resolve/Fusion",
+      "documented_fact": "Fusion templates expose selected macro parameters to the Edit page and support reusable brand-consistent graphics.",
+      "source": "https://www.blackmagicdesign.com/products/davinciresolve/fusion",
+      "design_inference": "[INFERENCE] Separate reusable internal node structure from the limited channel/content parameters an operator changes."
+    },
+    {
+      "object": "n8n",
+      "documented_fact": "Failed-execution retries retain completed-node state but rerun every item in the failed node; each retry is a new execution.",
+      "source": "https://docs.n8n.io/build/understand-workflows/understand-executions/view-all-executions.md",
+      "design_inference": "[INFERENCE] Expose node inputs/results/history and guard item-level external effects, rather than treating a retry button as proof of idempotency."
+    },
+    {
+      "object": "Frame.io",
+      "documented_fact": "Version stacks open the newest version, permit reordering and can compare versions; Mounted Storage saves have distinct version-history behavior.",
+      "source": "https://help.frame.io/en/articles/9101068-versioning-in-frame-io",
+      "design_inference": "[INFERENCE] Do not substitute a mutable latest-version label or review link for FrameForge exact-version/hash approval."
+    },
+    {
+      "object": "YouTube",
+      "documented_fact": "videos.insert documents an omitted privacyStatus default of public, with account-setting exceptions, and requires an authorized upload request.",
+      "source": "https://developers.google.com/youtube/data/reference/rest/v3/videos/insert",
+      "design_inference": "[INFERENCE] Always set the authorized visibility explicitly, bind channel identity, and read back remote video/channel/visibility before declaring upload complete."
+    },
+    {
+      "object": "YouTube AI-use disclosure",
+      "documented_fact": "YouTube requires disclosure of realistic AI-generated or meaningfully altered content, including realistic invented scenes and changes to real events; minor edits and ordinary production assistance do not automatically require disclosure. Studio documents Attributes > AI use. The upload API supports status.containsSyntheticMedia.",
+      "sources": [
+        "https://support.google.com/youtube/answer/14328491?hl=en&co=GENIE.Platform%3DDesktop",
+        "https://developers.google.com/youtube/data/reference/rest/v3/videos/insert"
+      ],
+      "design_inference": "[INFERENCE] Whole-candidate approval must lock a human-reviewed AI-use disclosure decision alongside each scene's source type. A source-type change invalidates approval. API delivery sends status.containsSyntheticMedia and verifies the returned video's status through videos.list; Studio delivery confirms AI use and reads back its saved setting. A label inside the video is not a substitute for platform disclosure."
+    },
+    {
+      "object": "Licensed factual footage",
+      "documented_fact": "Commons extended metadata exposes author, credit and license fields but documents unreliable multi-license values; KOGL distinguishes commercial/derivative conditions by item license type.",
+      "sources": [
+        "https://www.mediawiki.org/wiki/Extension:CommonsMetadata",
+        "https://www.kogl.or.kr/info/license.do"
+      ],
+      "design_inference": "[INFERENCE] Present source authenticity, rights clearance and edit suitability as separate states; unknown rights block automatic use. Illustrative stock is not evidence of the actual reported event."
+    }
+  ],
+  "uncertainty_boundaries": [
+    "No live competitor UI, mobile behavior, account access or accessibility compliance was tested.",
+    "Official documentation does not establish universal byte-bound approval or automatic invalidation in the compared tools.",
+    "Fusion macro live-update/pinning behavior and some product-specific channel/template semantics remain unestablished.",
+    "A downloadable file and machine-readable license are not a warranty of authenticity, complete rights clearance or suitability for a news claim.",
+    "No actual media import, paid generation, upload, public posting or channel ownership verification was performed."
+  ],
+  "next_interview_question": "Does one production project represent one finished video/upload, or a recurring series containing several video episodes?"
+}

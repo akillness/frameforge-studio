@@ -1,0 +1,21 @@
+{
+  "command": "node --test tests/production-media-credits.test.mjs",
+  "format": "decoded rgb24 1080x1920 at 0.4s",
+  "sameLengthAttributions": [
+    "ALICE AMBER",
+    "BRUNO BROWN"
+  ],
+  "decodedFrameSha256": [
+    "8c5d3d0d65d4f2ef42c7710e30f8407e5adb3cf7baacbd8268103aa36075c06f",
+    "af1b34615e3573a00cbef43b9c97998637b54646646155496da5692c9f7a8a10"
+  ],
+  "changedGlyphPixels": 4695,
+  "brightPixels": 4400,
+  "glyphDifferenceBounds": {
+    "minX": 32,
+    "maxX": 540,
+    "minY": 1796,
+    "maxY": 1824
+  },
+  "verifiedAt": "2026-10-25T09:24:07.135Z"
+}

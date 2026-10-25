@@ -1,0 +1,97 @@
+{
+  "role": "NativeOAuth",
+  "status": "module-ready",
+  "changedFiles": ["server/private-runtime.mjs", "server/youtube-oauth.mjs", "server/platform-session.mjs", "artifacts/production-workspace-implementation/native-status/NativeOAuth.json"],
+  "modules": {
+    "server/private-runtime.mjs": {
+      "importVerified": true,
+      "exports": ["PrivateRuntime({dataDir,tokenKey?})"],
+      "methods": ["read(name,fallback=null)", "write(name,value)", "remove(name)", "consume(name)"],
+      "storage": "Lazy encrypted AES-256-GCM atomic files in dataDir/.private; strict alphanumeric/underscore/hyphen identifiers (leading letter, max160); corrupt records/keys fail503; consume is atomic one-use claim."
+    },
+    "server/youtube-oauth.mjs": {
+      "importVerified": true,
+      "signatures": [
+        "new YouTubeOAuth({store,fetchImpl=fetch,clientId?,clientSecret?,redirectUri?,testing=false,tokenKey?})",
+        "async begin(channelId,{sessionId,correlationToken}) -> {authUrl}",
+        "async complete({state,code,error,correlationToken},{isSessionActive}) -> sanitized status with literal connected boolean",
+        "async status(channelId) -> sanitized status including fresh channelUpdatedAt",
+        "async accessToken(channelId) -> internal bearer string",
+        "async disconnect(channelId) -> sanitized not-connected status"
+      ],
+      "constants": {
+        "YOUTUBE_OAUTH_COOKIE_NAME": "frameforge_youtube_oauth",
+        "YOUTUBE_OAUTH_CALLBACK_PATH": "/oauth/youtube/callback",
+        "YOUTUBE_OAUTH_COOKIE_PATH": "/oauth/youtube",
+        "YOUTUBE_OAUTH_STATE_TTL_SECONDS": 600,
+        "YOUTUBE_SCOPE": "https://www.googleapis.com/auth/youtube.force-ssl"
+      },
+      "behavior": [
+        "Optional configuration; local status not_configured; explicit begin503 when not configured",
+        "Known valid UC externalId required before authorization; exact channels.list mine match after exchange; never first-item fallback",
+        "600-second one-use state and PKCE S256, offline access, independent correlation token and active initiating-session checks",
+        "Denial consumes state; sanitized failures; no raw provider errors returned",
+        "PrivateRuntime stores state/verifiers/tokens; no secrets in entities/events/history",
+        "Refresh token retained when omitted; revocation and provider expiry fail locally; conditional Testing seven-day cap",
+        "Refreshes serialized per channel; reconnect/disconnect and changed channel bindings invalidate in-flight refresh"
+      ]
+    },
+    "server/platform-session.mjs": {
+      "importVerified": true,
+      "exports": ["PlatformSessionManager"],
+      "behavior": [
+        "YouTube openSession returns manual-external mode and canonical manual Studio URL without launching Chromium",
+        "YouTube navigate/input/click/key/scroll/attach-export/upload/refresh and screenshot cannot start browser automation",
+        "Local metadata and close remain available; no bypass flag",
+        "Other platforms retain controls with a YouTube URL/redirect guard",
+        "Channel selected explicitly or from episode ownership; no first-channel fallback"
+      ]
+    }
+  },
+  "verification": [
+    {"command":"node scripts/version-harness.mjs verify","exitCode":0,"version":"1.5.0"},
+    {"command":"node --check server/private-runtime.mjs","exitCode":0},
+    {"command":"node --check server/youtube-oauth.mjs","exitCode":0},
+    {"command":"node --check server/platform-session.mjs","exitCode":0},
+    {
+      "command": "node --input-type=module -e \"for (const file of ['private-runtime','youtube-oauth','platform-session']) { const m = await import('./server/'+file+'.mjs'); console.log(JSON.stringify({file:'server/'+file+'.mjs',exports:Object.keys(m)})); }\"",
+      "exitCode": 0,
+      "modules": 3
+    },
+    {
+      "command": "node --test --test-name-pattern='^(authorize |begin\\(|successive begin|complete\\(|a state |an expired |accessToken\\(|Testing-mode |no raw |disconnect\\(|every automated |opening a YouTube |the YouTube )' tests/production-publication.test.mjs",
+      "exitCode": 0,
+      "tests": 21,
+      "passed": 21,
+      "failed": 0,
+      "skipped": 0,
+      "groups": ["A","B","C","D","E","J"],
+      "lastRunAfterFinalSourceEdit": true
+    },
+    {
+      "command": "node --test tests/production-publication.test.mjs",
+      "exitCode": 1,
+      "tests": 34,
+      "passed": 25,
+      "failed": 9,
+      "skipped": 0,
+      "failure": "Publication requires the exact project-owned workflow",
+      "failureLocations": [562,578,659,675,695,709,730,746,772],
+      "failureFile": "tests/production-publication.test.mjs",
+      "scope": "All9 stop inside PublicationService._manifest, outside NativeOAuth allowlist"
+    }
+  ],
+  "earlierVerification": {
+    "initialScopedImport": "Failed because server/publication.mjs was absent; now resolved by its owner",
+    "independentInMemoryRun": "21/21 unchanged existing A-E/J tests passed before publication landed. Omitted absent unused PublicationService import and F-I; no test files written. Direct scoped command subsequently passed."
+  },
+  "unresolved": [
+    "Main/NativePublication/NativeTester must resolve9 independent publication failures. No publication implementation or test files changed by NativeOAuth.",
+    "No dedicated independent PrivateRuntime corruption/permissions/concurrent-process test file exists in the supplied suite. Test authoring remains exclusively NativeTester.",
+    "Main owns HTTP callback cookie issuance/clearing, active initiating-session lookup, clean redirect and routes in server/app.mjs; not modified here.",
+    "Windows ACL semantics and live Google consent/token/channel behavior were not exercised."
+  ],
+  "jev": {"profile":"frameforge-codex","active":false,"used":false},
+  "boundaries": {"providerCalls":0,"productionAccess":false,"gitCommands":false,"testFilesChanged":false,"otherSourceFilesChanged":false,"localOnly":true},
+  "sharingBoundary": "Explicit shared contract artifact in the working tree; no commit, push or external sharing performed."
+}

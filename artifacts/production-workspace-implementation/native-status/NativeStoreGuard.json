@@ -1,0 +1,73 @@
+{
+  "role": "NativeStoreGuard",
+  "status": "module-ready",
+  "changedFiles": [
+    "server/store.mjs",
+    "artifacts/production-workspace-implementation/native-status/NativeStoreGuard.json"
+  ],
+  "exports": {
+    "server/store.mjs": [
+      "Store.applyGeneration(id, expectedVersion, sceneId, slotId) -> {job, episode} (existing synchronous instance method)"
+    ]
+  },
+  "importVerified": true,
+  "implemented": [
+    "Only applyGeneration, its imports and a private file-verification helper were changed. Other Store behavior is unchanged.",
+    "Before episode/history/job/event writes, require a completed output matching the registered upload ID, job ID, URL, SHA-256, byte size, media type and kind.",
+    "Validate the registered UUID filename and exact local upload URL; reject path traversal, redirected upload roots, symlinks, missing files and non-regular files with 409.",
+    "Require a positive registered byte size no larger than the existing 100 MiB generation limit; rehash actual bytes through a 64 KiB buffer and reject reads exceeding the registered size.",
+    "Check the opened descriptor and path identity, size and timestamps before/after reading, and compare the actual SHA-256 with the registered completed output.",
+    "Retain synchronous API, existing transaction rollback, expectedVersion/scene/slot guards, generated illustration source metadata and immutable versioned history. No rights records are fabricated."
+  ],
+  "verification": [
+    {
+      "phase": "before change",
+      "command": "node --test --test-name-pattern='same-length local generated-byte tampering' tests/production-local-guards.test.mjs",
+      "exitCode": 1,
+      "tests": 1,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0,
+      "failure": "Missing expected exception: same-length changed bytes were accepted instead of a 409."
+    },
+    {
+      "phase": "after change",
+      "command": "node --test tests/production-local-guards.test.mjs tests/generations.test.mjs",
+      "exitCode": 0,
+      "tests": 23,
+      "passed": 23,
+      "failed": 0,
+      "skipped": 0,
+      "result": "Tampering rejects before episode/source/history/job-applied mutation; valid generation apply, stale version reconciliation, audit rollback, real PNG/video probing and HEVC normalization/reapply remain passing."
+    },
+    {
+      "command": "node --check server/store.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node --input-type=module -e \"const {Store}=await import('./server/store.mjs'); if (typeof Store.prototype.applyGeneration !== 'function' || Store.prototype.applyGeneration.constructor.name !== 'Function') throw new Error('Synchronous applyGeneration export missing'); console.log('Store.applyGeneration(id, expectedVersion, sceneId, slotId): synchronous import OK');\"",
+      "exitCode": 0
+    },
+    {
+      "command": "node scripts/version-harness.mjs verify",
+      "exitCode": 0,
+      "version": "1.5.0",
+      "boundary": "Immutable bundle integrity only; no new semantic harness claim."
+    }
+  ],
+  "unresolvedDependencies": [],
+  "verificationGaps": [
+    "NativeTester owns additional independent Store.applyGeneration cases for symlinks, redirected roots, non-files, missing files, traversal, size bounds, registry/output mismatches and concurrent filesystem replacement. These guards were inspected but those permutations were not separately tested in this role.",
+    "Source-validation/render byte verification is separately owned and unchanged. Future filesystem changes after apply remain subject to those checks.",
+    "No tests were authored or modified; no project-wide suites, linters, formatters, browser scripts, production data, provider calls, uploads, deployment or Git commands were used. The executed Store/queue tests use temporary databases and start no application server."
+  ],
+  "jev": {
+    "command": "node C:/Users/bangg/.agents/jev/jev-harness.mjs --profile frameforge-codex status",
+    "profile": "frameforge-codex",
+    "active": false,
+    "enabled": false,
+    "used": false,
+    "unmetPrerequisite": "Selected profile is disabled; no routing/review output was obtained or claimed."
+  },
+  "sharingBoundary": "Explicit shared working-tree contract artifact; checkout-local until separately committed/pushed. No external sharing performed."
+}

@@ -3,6 +3,7 @@ import path from 'node:path';
 import { createReadStream } from 'node:fs';
 import { randomUUID, createHash } from 'node:crypto';
 import { execute } from './process.mjs';
+import { requiredMediaCredits } from './media-credits.mjs';
 
 export const dimensions = { '9:16': [1080, 1920], '16:9': [1920, 1080], '1:1': [1080, 1080] };
 const MEDIA_FORMATS = {
@@ -44,6 +45,31 @@ function stripHtmlTags(html = '') {
     .replace(/<[^>]+>/g, ' ')
     .replace(/[ \t]+/g, ' ')
     .trim();
+}
+
+function mediaCreditPlan(scene, w, h) {
+  const credits = requiredMediaCredits([scene]);
+  if (!credits) return null;
+  const fontSize = 28, padding = 32, lineSpacing = 8;
+  // Count every code point as a full em, including URLs without word boundaries.
+  // This conservative wrap also accommodates CJK glyphs at the same readable size.
+  const columns = Math.floor((w - padding * 2) / fontSize);
+  const lines = credits.split(/\r?\n/).flatMap((line) => {
+    const characters = Array.from(line.replace(/\t/g, '    '));
+    const rows = [];
+    while (characters.length) rows.push(characters.splice(0, columns).join(''));
+    return rows.length ? rows : [''];
+  });
+  const height = Math.ceil((lines.length * (fontSize + lineSpacing) + padding) / 2) * 2;
+  if (height > h * 0.45) throw new Error('Required media credits do not fit legibly in this scene; shorten the credit text or separate the credited assets before rendering');
+  return { text: lines.join('\n'), height, fontSize, lineSpacing, padding, contentHeight: h - height };
+}
+
+function visualInputOptions(source, mediaOptions, isImage, trimStart = 0, trimEnd) {
+  if (!Number.isFinite(trimStart) || trimStart < 0 || trimStart > 36000 || (trimEnd !== undefined && (!Number.isFinite(trimEnd) || trimEnd <= trimStart || trimEnd > 36000))) throw new Error('Invalid media trim');
+  return isImage
+    ? [...mediaOptions, '-stream_loop', '-1', '-i', source]
+    : [...mediaOptions, '-ss', String(trimStart), ...(trimEnd !== undefined ? ['-t', String(trimEnd - trimStart)] : []), '-i', source];
 }
 
 export function buildSceneCompositionPlan(scene, w, h) {
@@ -105,7 +131,7 @@ export function buildSceneCompositionPlan(scene, w, h) {
   dialogues.unshift(...globalDialogues);
   const makeAss = (events) => `[Script Info]\nScriptType: v4.00\nPlayResX: ${w}\nPlayResY: ${h}\nWrapStyle: 0\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n${styles.join('\n')}\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n${events.join('\n')}\n`;
   const slotAss = Object.fromEntries([...slotDialogues.entries()].map(([index, dialogue]) => [index, makeAss([dialogue])]));
-  return { ass: makeAss(dialogues), globalAss: globalDialogues.length ? makeAss(globalDialogues) : '', slotAss, slotBoxes: slotBoxes.map((box) => slotAss[box.index] ? { ...box, textAss: slotAss[box.index] } : box), hasSlots: slots.length > 0 };
+  return { ass: makeAss(dialogues), globalAss: globalDialogues.length ? makeAss(globalDialogues) : '', slotAss, slotBoxes: slotBoxes.map((box) => slotAss[box.index] ? { ...box, textAss: slotAss[box.index] } : box), hasSlots: slots.length > 0, credits: mediaCreditPlan(scene, w, h) };
 }
 
 async function resolveVerifiedUpload(root, assetUrl) {
@@ -131,6 +157,12 @@ export async function renderEpisode(episode, { dataDir, onProgress = () => {} })
       const scene = episode.scenes[i], duration = Number(scene.duration);
       if (!(duration >= 0.25 && duration <= 120) || !/^#[\da-f]{6}$/i.test(scene.background)) throw new Error('Invalid scene duration/color');
       const plan = buildSceneCompositionPlan(scene, w, h);
+      if (plan.credits) {
+        await writeFile(path.join(temp, `scene-${i}-credits.txt`), plan.credits.text);
+        // Windows FFmpeg builds may have no Fontconfig configuration. An explicit
+        // local font file avoids that global dependency and requires no setup.
+        if (process.platform === 'win32') await copyFile(path.join(process.env.WINDIR || 'C:/Windows', 'Fonts', 'malgun.ttf'), path.join(temp, 'credit-font.ttf'));
+      }
       await writeFile(path.join(temp, `scene-${i}.ass`), plan.ass);
       if (plan.globalAss) await writeFile(path.join(temp, `scene-${i}-global.ass`), plan.globalAss);
       for (const [slotIndex, slotAss] of Object.entries(plan.slotAss || {})) await writeFile(path.join(temp, `scene-${i}-slot-${slotIndex}.ass`), slotAss);
@@ -138,9 +170,10 @@ export async function renderEpisode(episode, { dataDir, onProgress = () => {} })
       let mediaAudio = false;
       const trimStart = Number(scene.trimStart || 0), audioVolume = Number(scene.audioVolume ?? 1);
       if (!Number.isFinite(trimStart) || trimStart < 0 || trimStart > 36000 || !Number.isFinite(audioVolume) || audioVolume < 0 || audioVolume > 2) throw new Error('Invalid trim/audio volume');
+      if (scene.trimEnd !== undefined && (!Number.isFinite(scene.trimEnd) || scene.trimEnd <= trimStart || scene.trimEnd > 36000)) throw new Error('Invalid media trim');
       if (scene.assetUrl) {
         const { source, mediaOptions } = await resolveVerifiedUpload(root, scene.assetUrl);
-        input = scene.kind === 'image' ? [...mediaOptions, '-stream_loop', '-1', '-i', source] : [...mediaOptions, '-ss', String(trimStart), '-i', source];
+        input = visualInputOptions(source, mediaOptions, scene.kind === 'image', trimStart, scene.trimEnd);
         if (scene.kind === 'video') {
           const probe = await execute(process.env.FFPROBE_PATH || 'ffprobe', ['-v', 'error', ...mediaOptions, '-select_streams', 'a:0', '-show_entries', 'stream=codec_type', '-of', 'csv=p=0', source], { timeout: 15000 });
           mediaAudio = probe.stdout.trim() === 'audio';
@@ -155,7 +188,7 @@ export async function renderEpisode(episode, { dataDir, onProgress = () => {} })
         slotInputs.push({
           ...box,
           isImage,
-          args: isImage ? [...mediaOptions, '-stream_loop', '-1', '-i', source] : [...mediaOptions, '-ss', '0', '-i', source],
+          args: visualInputOptions(source, mediaOptions, isImage, box.slot.trimStart ?? 0, box.slot.trimEnd),
         });
       }
 
@@ -178,8 +211,13 @@ export async function renderEpisode(episode, { dataDir, onProgress = () => {} })
 
       let filterArgs;
       let videoMap = '0:v:0';
+      // Compose the authored image/captions first, then fit that complete picture above
+      // an opaque credit band. Credits can never cover a caption or be hidden by a slot.
+      const creditFilter = plan.credits
+        ? `,scale=${w}:${plan.credits.contentHeight}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:0:color=black,setsar=1,drawtext=textfile=scene-${i}-credits.txt:expansion=none:${process.platform === 'win32' ? 'fontfile=credit-font.ttf' : "font='Noto Sans CJK KR'"}:fontsize=${plan.credits.fontSize}:fontcolor=white:line_spacing=${plan.credits.lineSpacing}:x=${plan.credits.padding}:y=${plan.credits.contentHeight + plan.credits.padding / 2}`
+        : '';
       if (!plan.hasSlots) {
-        const filter = `${base},setsar=1,fps=30,tpad=stop_mode=clone:stop_duration=${duration},subtitles=scene-${i}.ass`;
+        const filter = `${base},setsar=1,fps=30,tpad=stop_mode=clone:stop_duration=${duration},subtitles=scene-${i}.ass${creditFilter}`;
         filterArgs = ['-vf', filter];
       } else {
         const chains = [`[0:v]${base},setsar=1,fps=30,tpad=stop_mode=clone:stop_duration=${duration}[v0]`];
@@ -212,7 +250,7 @@ export async function renderEpisode(episode, { dataDir, onProgress = () => {} })
           chains.push(`[${currentLabel}]subtitles=scene-${i}-global.ass[${globalLabel}]`);
           currentLabel = globalLabel;
         }
-        chains.push(`[${currentLabel}]null[vout]`);
+        chains.push(`[${currentLabel}]null${creditFilter}[vout]`);
         filterArgs = ['-filter_complex', chains.join(';')];
         videoMap = '[vout]';
       }

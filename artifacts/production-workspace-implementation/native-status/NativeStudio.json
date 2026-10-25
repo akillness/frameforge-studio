@@ -1,0 +1,164 @@
+{
+  "role": "NativeStudio",
+  "status": "module-ready-own-scope-verified-integration-prerequisites-remain",
+  "files": [
+    "public/app.js",
+    "public/styles.css",
+    "public/workspace.css",
+    "artifacts/production-workspace-implementation/native-status/NativeStudio.json"
+  ],
+  "exports": {
+    "public/app.js": "Browser entrypoint; imports createWorkflowEditor and createProductionTools; browser boot verified by the independent UI suite",
+    "canvasConsumed": [
+      "bindProject({episodeId,channelId})",
+      "getContext()",
+      "hasAnyChanges()",
+      "load()",
+      "mount()",
+      "destroy()",
+      "save()",
+      "openGeneration(options)"
+    ],
+    "toolsConsumed": "createProductionTools({api,getEpisode,getWorkflowContext,refresh,onEpisodeUpdated,toast,canMutate}) -> {html({mode}),mount(),destroy()}"
+  },
+  "controls": {
+    "defaultMode": "studio",
+    "modeButtons": "[data-action=view][data-view=studio|workflow]; visible A/B buttons in .project-modes and existing .task-nav",
+    "project": "#project-episode, existing episode/channel controls, #wf-episode synchronized with Studio",
+    "stage": "#project-stage uses exact node IDs from owned Canvas getContext().workflow; existing Canvas controls retained",
+    "source": "[data-production-tools][data-mode=source] in both modes",
+    "delivery": "[data-production-tools][data-mode=delivery] in both modes",
+    "history": "existing History view; selector navigation stashes drafts without save",
+    "youtube": "Manual Studio link; source/delivery uses official OAuth/publication modules. No automated YouTube platform-session controls or first-channel fallback."
+  },
+  "drafts": "Per-episode Map preserves full episode, original baseVersion, revision, dirty, scene/slot selection and history. Hidden dirty episode/graph drafts protect beforeunload. Async tool results cache by result.id and replace only matching clean active episode. Tool instances capture project identity; inactive drafts never rebase.",
+  "verification": [
+    {
+      "command": "node scripts/version-harness.mjs verify",
+      "result": "passed: immutable 1.5.0 integrity only"
+    },
+    {
+      "command": "node --check public/app.js",
+      "result": "passed"
+    },
+    {
+      "command": "node --input-type=module -e (import Canvas/SourceTools and enumerate factories)",
+      "result": "passed: required Canvas and tools factory methods exist"
+    },
+    {
+      "command": "node --test tests/production-workspace-ui.test.mjs",
+      "phase": "initial",
+      "passed": 4,
+      "failed": 2,
+      "detail": "Before Studio changes: tool Maximum call stack and Canvas selected episode mismatch"
+    },
+    {
+      "command": "node --test tests/production-workspace-ui.test.mjs",
+      "phase": "post-implementation",
+      "passed": 4,
+      "failed": 2,
+      "detail": "Both failures wait for #workflow-canvas with ambiguous unowned templates. Draft switching, stale409 and beforeunload pass."
+    },
+    {
+      "command": "node --test tests/production-workspace-journey.test.mjs",
+      "passed": 2,
+      "failed": 4,
+      "detail": "Owned copies and A/B+all-stage drafts pass. Failures: Canvas node-127 absent dialog text; source open-import timeout; raw upload missing name; PUT /api/channels/:id/youtube404. This run preceded Main HTTP composition."
+    },
+    {
+      "command": "node --test tests/workspace-layout.test.mjs tests/workflow-ui-regressions.test.mjs",
+      "passed": 73,
+      "failed": 0
+    },
+    {
+      "command": "node --test --test-name-pattern=\"A/B and every stage\" tests/production-workspace-journey.test.mjs",
+      "runs": 3,
+      "passedEach": 1,
+      "failedEach": 0
+    },
+    {
+      "command": "node --test --test-name-pattern=\"A/B and every stage|unknown media origin|real Commons\" tests/production-workspace-journey.test.mjs",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "detail": "Actual app: both modes/all stages/hidden drafts/original409; Commons video+still rights/import/attach/card; unanswered origin/audience/disclosure;1600/1024/375/320 screenshots, no browser external requests or script errors."
+    },
+    {
+      "command": "node --check public/app.js",
+      "phase": "final",
+      "exitCode": 0
+    },
+    {
+      "command": "node --input-type=module -e \"const c=await import('./public/workflow.js'); const t=await import('./public/production-tools.js'); const e=c.createWorkflowEditor({api:async()=>[],getEpisodes:()=>[]}); console.log(JSON.stringify({canvasMethods:Object.keys(e),toolMethods:Object.keys(t.createProductionTools({}))}));\"",
+      "phase": "final",
+      "exitCode": 0
+    }
+  ],
+  "pending": [],
+  "dependencies": [
+    {
+      "owner": "NativeCanvas",
+      "detail": "Existing six-UI suite tests1/2 still timeout #workflow-canvas when multiple unowned templates have no selected preview. Preserve null ownership and resolve without guessing a project workflow."
+    },
+    {
+      "owner": "NativeCanvas",
+      "detail": "Initial full journey large-graph case fails because tools-dialog visible text omits selected exact ID node-127. Not rerun after sibling changes."
+    },
+    {
+      "owner": "Main",
+      "detail": "Main.json currently reports publication HTTP composition pending. Earlier full journey stopped at YouTube binding404 before the subsequently landed source/OAuth routes. Final FFmpeg/review/manifest/public-readback remains an integration prerequisite."
+    },
+    {
+      "owner": "NativeTester",
+      "detail": "New generation-consent journey appended after the initial full run is not exercised by Studio focused filters. Tester owns all test authoring and complete journey rerun."
+    }
+  ],
+  "jev": {
+    "profile": "frameforge-codex",
+    "active": false,
+    "enabled": false,
+    "used": false
+  },
+  "boundary": "Only four allowlisted files modified by NativeStudio. Test-generated journey evidence is owned by the independent runner. No tests authored, no Git commands, production4310/privateHTTPS/data/env/credentials/provider/paid/consent/upload/deploy/config/model/hook/installer actions. Isolated test HTTP and fixture transport only.",
+  "updatedAt": "2026-10-25T07:38:49.930Z",
+  "visual": {
+    "inspected": [
+      "journey-evidence/A-375.png",
+      "journey-evidence/B-1600.png",
+      "journey-evidence/A-1600.png",
+      "journey-evidence/delivery-320.png"
+    ],
+    "corrected": "Source/delivery radio and checkbox geometry constrained; shared existing visual tokens retained.",
+    "reflow": "A/B screenshots pass1600/1024/375/320 geometry and reduced-motion assertions.",
+    "verdict": {
+      "status": "pass-for-exercised-views",
+      "criteria": [
+        "No document overflow at1600/1024/375/320",
+        "A/B modes visible",
+        "Existing editor/overlay/token layout retained",
+        "New radio/checkbox controls readable and bounded"
+      ],
+      "evidenceBoundary": "Screenshots and independent browser assertions for exercised Studio/Workflow/source/delivery only; no publication completion claim"
+    }
+  },
+  "checklist": {
+    "syntax": "passed with node --check public/app.js",
+    "runtime": "targeted tests only; full counts above",
+    "render": "not rerun by Studio; NativeTester owns real-render journey",
+    "sourceReview": "manual read of changed allowlisted source; no Git commands",
+    "knowledge": "not updated: outside exact allowlist",
+    "lint": "skipped by explicit user instruction"
+  },
+  "resolvedSinceInitialFullJourney": [
+    "Commons video/still import+rights+attach+card passes against Main routes",
+    "Raw upload fixture and initially unanswered origin/audience/disclosure journey now passes",
+    "Visual radio/checkbox geometry fixed and screenshots inspected"
+  ],
+  "toolingFailures": [
+    {
+      "operation": "Status artifact update with node --input-type=module -e",
+      "result": "PowerShell quote parsing caused SyntaxError before writes; corrected with literal here-string piped to node --input-type=module."
+    }
+  ]
+}

@@ -16,3 +16,5 @@ ops/
 graphify-out/
 .omx/
 artifacts/private/
+
+_workspace/

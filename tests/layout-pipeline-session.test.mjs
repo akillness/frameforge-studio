@@ -105,16 +105,45 @@ test('FFmpeg multi-layer renderer composites top image slot, middle video backgr
   assert.match(result.sha256, /^[a-f0-9]{64}$/);
 });
 
-test('full 10-stage workflow (news -> layout -> Higgsfield slot generation -> render -> review -> publish) and server-side platform browser session', async (t) => {
+function incrementalPipelineGraph() {
+  const baseWf = {
+    name: 'Incremental pipeline',
+    nodes: [
+      { id: 'script', type: 'script', x: 0, y: 0, config: { agent: 'studio', prompt: '' } },
+      { id: 'storyboard', type: 'storyboard', x: 10, y: 0, config: {} },
+      { id: 'render', type: 'render', x: 20, y: 0, config: {} },
+      { id: 'review', type: 'review', x: 30, y: 0, config: {} },
+    ],
+    edges: [
+      { id: 'e1', source: 'script', target: 'storyboard' },
+      { id: 'e2', source: 'storyboard', target: 'render' },
+      { id: 'e3', source: 'render', target: 'review' },
+    ],
+  };
+  const withNews = addWorkflowNode(baseWf, 'news', { id: 'news', config: { query: 'AI 반도체', maxArticles: 3, source: 'trend_news' } });
+  const withLayout = addWorkflowNode(withNews, 'layout', { id: 'layout', config: { preset: 'premiere-3tier', autoPrompts: true } });
+  const withGen = addWorkflowNode(withLayout, 'generate', { id: 'generate', config: { model: 'seedance_2_5', prompt: '', sceneIndex: 0, slotId: 'slot-top-image' } });
+  return addWorkflowNode(withGen, 'publish', { id: 'publish', config: { platform: 'youtube', visibility: 'private', autoAttachExport: true } });
+}
+
+test('unique-stage insertion preserves adjacent wiring when prepending news and adding layout, generation and publish', () => {
+  const workflow = incrementalPipelineGraph();
+  assert.deepEqual(workflow.nodes.map(n => n.type), ['news', 'script', 'storyboard', 'layout', 'generate', 'render', 'review', 'publish']);
+  assert.deepEqual(workflowErrors(workflow), []);
+});
+
+test('full 10-stage workflow preserves slot generation and exact-node review before local publication staging', async (t) => {
   const dataDir = await mkdtemp(path.join(tmpdir(), 'frameforge-full-pipeline-'));
   const store = new Store(dataDir);
+  store.create('trends', { keyword: 'AI 반도체 HBM4', title: 'HBM4 source fixture', source: 'Local news fixture', url: 'https://example.test/hbm4', capturedAt: '2026-10-25T00:00:00.000Z' });
   let renderCount = 0;
+  let generationCalls = 0;
   const provider = {
     transport: 'api',
     capability: async () => ({ available: true, authenticated: true }),
     models: async () => [{ id: 'seedance_2_5', name: 'Seedance 2.5', type: 'video' }],
     modelSchema: async () => ({ id: 'seedance_2_5', type: 'image', parameters: [{ name: 'prompt', type: 'string', required: true }] }),
-    create: async () => ({ requestId: 'hf-slot-req-1', status: 'completed', outputs: [{ url: 'https://images.higgs.ai/slot-output.png', type: 'image' }] }),
+    create: async () => { generationCalls++; return { requestId: 'hf-slot-req-1', status: 'completed', outputs: [{ url: 'https://images.higgs.ai/slot-output.png', type: 'image' }] }; },
     status: async () => ({ requestId: 'hf-slot-req-1', status: 'completed', outputs: [{ url: 'https://images.higgs.ai/slot-output.png', type: 'image' }] }),
   };
   const generations = new GenerationQueue({
@@ -157,26 +186,17 @@ test('full 10-stage workflow (news -> layout -> Higgsfield slot generation -> re
   assert.deepEqual(workflowErrors(fullGraph), []);
   assert.equal(validateWorkflow(fullGraph).nodes.length, 10);
 
-  // 2. Build incremental workflow with news, layout, generate (targeting slot-top-image), and publish
-  const baseWf = {
-    name: 'Incremental pipeline',
-    nodes: [
-      { id: 'script', type: 'script', x: 0, y: 0, config: { agent: 'studio', prompt: '' } },
-      { id: 'storyboard', type: 'storyboard', x: 10, y: 0, config: {} },
-      { id: 'render', type: 'render', x: 20, y: 0, config: {} },
-      { id: 'review', type: 'review', x: 30, y: 0, config: {} },
-    ],
-    edges: [
-      { id: 'e1', source: 'script', target: 'storyboard' },
-      { id: 'e2', source: 'storyboard', target: 'render' },
-      { id: 'e3', source: 'render', target: 'review' },
-    ],
-  };
-  const withNews = addWorkflowNode(baseWf, 'news', { id: 'news', config: { query: 'AI 반도체', maxArticles: 3 } });
-  const withLayout = addWorkflowNode(withNews, 'layout', { id: 'layout', config: { preset: 'premiere-3tier', autoPrompts: true } });
-  const withGen = addWorkflowNode(withLayout, 'generate', { id: 'generate', config: { model: 'seedance_2_5', prompt: '', sceneIndex: 0, slotId: 'slot-top-image' } });
-  const withPublish = addWorkflowNode(withGen, 'publish', { id: 'publish', config: { platform: 'youtube', visibility: 'private', autoAttachExport: true } });
-  assert.deepEqual(withPublish.nodes.map((n) => n.type), ['news', 'script', 'storyboard', 'layout', 'generate', 'render', 'review', 'publish']);
+  // Explicit node-ID edges isolate engine integration from the insertion regression above.
+  // The nodes deliberately retain their unsorted storage order.
+  const withPublish = { ...incrementalPipelineGraph(), edges: [
+    { id: 'news-script', source: 'news', target: 'script' },
+    { id: 'script-storyboard', source: 'script', target: 'storyboard' },
+    { id: 'storyboard-layout', source: 'storyboard', target: 'layout' },
+    { id: 'layout-generate', source: 'layout', target: 'generate' },
+    { id: 'generate-render', source: 'generate', target: 'render' },
+    { id: 'render-review', source: 'render', target: 'review' },
+    { id: 'review-publish', source: 'review', target: 'publish' },
+  ] };
   assert.deepEqual(workflowErrors(withPublish), []);
 
   const channel = store.list('channels')[0];
@@ -191,10 +211,31 @@ test('full 10-stage workflow (news -> layout -> Higgsfield slot generation -> re
     scenes: [starterScene('오프닝', 'HBM4 반도체 시나리오')],
     notes: '',
   });
-  const createdWf = workflows.create(withPublish);
+  const template = workflows.create(withPublish);
+  const createdWf = workflows.copy(template.id, { episodeId: ep.id, channelId: channel.id, expectedTemplateVersion: template.version });
+  assert.notEqual(createdWf.id, template.id);
+  assert.equal(createdWf.episodeId, ep.id);
+  const preparation = workflows.start(createdWf.id, ep.id, { selectedStages: ['news', 'script', 'storyboard', 'layout'], startStage: 'news' });
+  let prepared;
+  for (let i = 0; i < 100; i++) {
+    prepared = store.get('workflowRuns', preparation.id);
+    if (['completed', 'failed'].includes(prepared.status)) break;
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  assert.equal(prepared.status, 'completed', prepared.error);
+  assert.equal(prepared.nodeRuns.find(n => n.nodeId === 'news').status, 'completed');
+  assert.equal(generationCalls, 0, 'preparing source and layout cannot submit paid generation');
+  assert.equal(renderCount, 0);
+  const selection = { selectedStages: ['generate', 'render', 'review'], startStage: 'generate', resumeRunId: prepared.id };
+  const disclosure = { containsSyntheticMedia: true, rationale: 'Owner reviewed the synthetic fixture illustration' };
+  const plan = await workflows.quote(createdWf.id, ep.id, { ...selection, disclosure });
   const startedRun = workflows.start(createdWf.id, ep.id, {
     allowGeneration: true,
-    selectedStages: ['news', 'script', 'storyboard', 'layout', 'generate', 'render', 'review'],
+    ...selection,
+    disclosure,
+    generationPlanId: plan.id,
+    generationFingerprint: plan.fingerprint,
+    acceptUnquotedEstimate: true,
   });
 
   let completedRun;
@@ -207,10 +248,11 @@ test('full 10-stage workflow (news -> layout -> Higgsfield slot generation -> re
     await new Promise((r) => setTimeout(r, 10));
   }
   assert.equal(completedRun.status, 'awaiting_review', completedRun.error || 'should reach awaiting_review');
-  assert.equal(completedRun.nodeRuns.find((n) => n.type === 'news').status, 'completed');
+  assert.equal(completedRun.nodeRuns.find((n) => n.nodeId === 'news').status, 'skipped');
   assert.equal(completedRun.nodeRuns.find((n) => n.type === 'review').status, 'awaiting_review');
   assert.equal(completedRun.nodeRuns.find((n) => n.type === 'publish').status, 'skipped');
   assert.equal(completedRun.nodeRuns.find((n) => n.type === 'generate').status, 'completed');
+  assert.equal(generationCalls, 1);
 
   const renderOutput = completedRun.nodeRuns.find((n) => n.type === 'render').output;
   assert.match(renderOutput.outputUrl, /^\/api\/exports\/pipeline-export-1\.mp4$/);
@@ -223,11 +265,16 @@ test('full 10-stage workflow (news -> layout -> Higgsfield slot generation -> re
   assert.ok(topImgSlot?.assetUrl?.startsWith('/api/uploads/'));
   assert.equal(topImgSlot.mediaKind, 'image');
 
+  const reviewNodeId = completedRun.nodeRuns.find((n) => n.type === 'review').nodeId;
   const reviewed = await workflows.review(createdWf.id, completedRun.id, {
+    reviewNodeId,
     decision: 'approved',
-    notes: 'Fixture review approved for staged browser attachment.',
+    notes: 'Fixture review approved for local publication staging only.',
     expectedEpisodeVersion: completedRun.episodeVersion,
   });
+  assert.equal(reviewed.review, undefined, 'the legacy singular run.review alias must never reappear on the new per-node review contract');
+  assert.equal(reviewed.reviews[reviewNodeId].decision, 'approved');
+  assert.equal(reviewed.reviews[reviewNodeId].sha256, renderOutput.sha256);
   assert.equal(reviewed.nodeRuns.find((n) => n.type === 'review').output.review.decision, 'approved');
   assert.equal(reviewed.nodeRuns.find((n) => n.type === 'review').output.review.sha256, renderOutput.sha256);
   const runCountBeforeArtifactResume = workflows.listRuns(createdWf.id).length;
@@ -239,7 +286,7 @@ test('full 10-stage workflow (news -> layout -> Higgsfield slot generation -> re
       resumeRunId: completedRun.id,
       expectedEpisodeVersion: completedRun.episodeVersion,
     }),
-    (error) => error.status === 409 && /approved review|artifact/i.test(error.message),
+    (error) => error.status === 409 && /approved.*(?:review|candidate)|artifact/i.test(error.message),
   );
   assert.equal(workflows.listRuns(createdWf.id).length, runCountBeforeArtifactResume);
   assert.equal(renderCount, renderCountBeforeArtifactResume);
@@ -254,17 +301,28 @@ test('full 10-stage workflow (news -> layout -> Higgsfield slot generation -> re
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
     const current = workflows.listRuns(createdWf.id).find((r) => r.id === resumed.id);
-    if (['completed', 'failed'].includes(current?.status)) { resumedRun = current; break; }
+    if (['approved', 'completed', 'failed'].includes(current?.status)) { resumedRun = current; break; }
     await new Promise((r) => setTimeout(r, 50));
   }
   assert.ok(resumedRun, `publish resume did not reach terminal state within 30s; run=${resumed.id}`);
-  assert.equal(resumedRun.status, 'completed', resumedRun.error || 'approved publish resume should complete');
+  assert.equal(resumedRun.status, 'approved', resumedRun.error || 'staging retains the connected candidate approval');
+  assert.equal(resumedRun.nodeRuns.find(node => node.nodeId === reviewNodeId).output.review.id, reviewed.reviews[reviewNodeId].id);
+  assert.equal(resumedRun.review, undefined);
   const publishOutput = resumedRun.nodeRuns.find((n) => n.type === 'publish').output;
-  assert.ok(publishOutput.sessionId);
+  assert.ok(publishOutput.stagingId);
+  assert.equal(publishOutput.channelId, channel.id);
   assert.equal(publishOutput.exportUrl, renderOutput.outputUrl);
-  assert.ok(['staged', 'attached'].includes(publishOutput.attachmentStatus));
-  assert.ok(['not_attempted', 'unknown'].includes(publishOutput.publicationStatus));
+  assert.equal(publishOutput.status, 'staged');
+  assert.equal(publishOutput.publicationStatus, 'not_attempted');
+  assert.equal(publishOutput.sessionId, undefined);
   assert.notEqual(publishOutput.uploadStatus, 'completed');
+  const staged = store.get('publicationStages', publishOutput.stagingId);
+  assert.equal(staged.reviewNodeId, reviewNodeId);
+  assert.equal(staged.reviewId, reviewed.reviews[reviewNodeId].id);
+  assert.equal(staged.render.jobId, renderOutput.jobId);
+  assert.equal(staged.render.sha256, renderOutput.sha256);
+  assert.equal(platformSessions.listSessions().length, 0, 'workflow staging cannot open an automated YouTube browser');
+  assert.notEqual(store.get('episodes', ep.id).status, 'completed', 'local staging is not verified public delivery');
   assert.equal(store.list('platformUploads').length, 0);
 });
 

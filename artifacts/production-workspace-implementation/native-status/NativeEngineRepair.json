@@ -1,0 +1,131 @@
+{
+  "role": "NativeEngineRepair",
+  "status": "module-ready-focused-tests-passed",
+  "changedFiles": [
+    "server/workflows.mjs",
+    "artifacts/production-workspace-implementation/native-status/NativeEngineRepair.json"
+  ],
+  "candidateHelperChanged": false,
+  "exportsImported": [
+    "TYPES",
+    "validateWorkflow(raw)",
+    "defaultWorkflow()",
+    "WorkflowEngine({store,fetchTrends,runAgent,render,validateAssets,generations,platformSessions,publication})",
+    "WorkflowEngine.copy(templateId,body)",
+    "WorkflowEngine.quote(workflowId,episodeId,options={}) -> Promise<generationPlan>",
+    "WorkflowEngine.start(workflowId,episodeId,options={}) -> workflowRun",
+    "WorkflowEngine.review(workflowId,runId,body) -> Promise<workflowRun>",
+    "candidateManifest(store,episode,workflow,options={})",
+    "verifyCandidateAssets(store,manifest) -> Promise<manifest>"
+  ],
+  "repairs": [
+    {
+      "reviewFinding": 1,
+      "repro": "Two distinct script/storyboard branches execute before branch A layout; the saved episode contains branch B scenes.",
+      "change": "Both quote preparation and execution resolve the unique connected storyboard and pass its scenes into layoutScenes. Missing storyboard scenes fail explicitly."
+    },
+    {
+      "reviewFinding": 2,
+      "repro": "Resume only branch A render after another branch changed the saved episode; original connected storyboard/layout/generation outputs must survive.",
+      "change": "Render selection adds resolved storyboard/layout and their dependencies to requiredReuse. Resumed render also requires connected generation outputs, their original completed job identity and valid scene evidence. A connected producer without scenes fails; episode.scenes is used only when no connected storyboard/layout exists."
+    },
+    {
+      "reviewFinding": 3,
+      "repro": "Two approved generate nodes target different slots of one scene; applying the first previously changed the second job input fingerprint.",
+      "change": "Slot job input retains every normalized shared scene field, the exact target slot, scene-level media and target-slot media. Sibling slots retain separate job identities. The full candidate manifest, whole-plan fingerprint, source/rights verification, optimistic versions and per-node original intent remain intact. Scene-targeted job input remains whole-scene."
+    },
+    {
+      "change": "Authoritative nearby workflow regressions additionally require completed output itself to retain generationJobId, even when intent fallback still resolves a job. Interrupted incomplete intents retain recovery by their original identity. Rerun rejection explicitly names script/storyboard/layout."
+    }
+  ],
+  "verification": [
+    {
+      "command": "node scripts/version-harness.mjs verify",
+      "exitCode": 0,
+      "result": "Immutable 1.5.0 integrity passed; no semantic agreement or new promotion claimed."
+    },
+    {
+      "command": "node --check server/workflows.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node --check server/candidates.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "@'\nconst engine = await import('./server/workflows.mjs');\nconst candidates = await import('./server/candidates.mjs');\nconsole.log(JSON.stringify({workflows:Object.keys(engine),candidates:Object.keys(candidates),methods:['quote','start','copy','review'].map(name=>({name,type:typeof engine.WorkflowEngine.prototype[name]}))}));\n'@ | node --input-type=module",
+      "exitCode": 0,
+      "result": "Actual ESM imports passed; four workflow exports, two candidate exports, and quote/start/copy/review methods are callable."
+    },
+    {
+      "command": "node --test tests/production-generation-plan.test.mjs",
+      "phase": "before edits",
+      "exitCode": 0,
+      "tests": 10,
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "command": "node --test tests/production-workflow-graph.test.mjs",
+      "phase": "before edits",
+      "exitCode": 0,
+      "tests": 15,
+      "passed": 15,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "command": "node --test tests/production-generation-plan.test.mjs tests/production-workflow-graph.test.mjs tests/workflows.test.mjs tests/reviews.test.mjs",
+      "exitCode": 0,
+      "tests": 58,
+      "passed": 58,
+      "failed": 0,
+      "skipped": 0,
+      "runsAfterCorrection": 2,
+      "latestDurationMs": 6405.5706,
+      "breakdown": {
+        "production-generation-plan": 10,
+        "production-workflow-graph": 15,
+        "workflows": 23,
+        "reviews": 10
+      }
+    }
+  ],
+  "earlierFailures": [
+    {
+      "command": "node --test tests/production-generation-plan.test.mjs tests/production-workflow-graph.test.mjs tests/workflows.test.mjs tests/reviews.test.mjs",
+      "passed": 56,
+      "failed": 2,
+      "failures": [
+        "workflows: completed generation resume with missing generationJobId returned202 instead of409",
+        "workflows: storyboard-rerun rejection message omitted storyboard/generated/preserve"
+      ],
+      "resolution": "Both corrected at source in workflows.mjs; latest focused suite58/58."
+    },
+    {
+      "command": "node --input-type=module -e 'const engine = await import(\"./server/workflows.mjs\"); const candidates = await import(\"./server/candidates.mjs\"); console.log(JSON.stringify({workflows:Object.keys(engine),candidates:Object.keys(candidates)}));'",
+      "exitCode": 1,
+      "failure": "PowerShell stripped nested quotes from inline evaluation; no source import occurred.",
+      "resolution": "Replaced evaluation argv with a literal PowerShell here-string piped into node; actual imports passed."
+    }
+  ],
+  "unresolvedPrerequisites": [
+    "NativeTesterRepair/Main: independent regression coverage for layout branch pollution (quote and runtime), render-only resume/missing connected evidence, and two slots in one scene remains to be authored/run by the exclusive test owner. No tests were authored or edited by this role.",
+    "Main owns final integration and independent per-branch partial-review journey validation. The browser journey suite writes receipts outside this role's allowlist, so it was not run here."
+  ],
+  "jev": {
+    "command": "node C:/Users/bangg/.agents/jev/jev-harness.mjs --profile frameforge-codex status",
+    "active": false,
+    "enabled": false,
+    "used": false,
+    "configurationChanged": false
+  },
+  "boundaries": [
+    "Only the two listed allowlisted files changed; candidates.mjs and tests untouched.",
+    "Temporary SQLite and ephemeral loopback HTTP in existing authoritative tests; HTTP fixtures explicitly set loginToken:'' and publicOrigin:''.",
+    "No Git commands, worktrees, subdelegation, production data/ports/HTTPS, credential reads, provider calls, paid generation, consent, upload or deploy.",
+    "No formatters, linters, project-wide suites, installers, model/config/hook changes or immutable harness edits.",
+    "MEX bootstrap read and significant logging policy observed. Documentation/graph/wiki writes were omitted under the exact allowlist."
+  ]
+}

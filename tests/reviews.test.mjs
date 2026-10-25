@@ -26,9 +26,11 @@ async function candidate(t, { legacyHash = false } = {}) {
     },
   });
   engine = new WorkflowEngine(adapters());
+  t.after(async () => { engine.close(); store.close(); await rm(dataDir, { recursive: true, force: true }); });
   const channel = store.list('channels')[0];
   const episode = store.create('episodes', { channelId: channel.id, title: 'Review candidate', topic: '검증할 영상', category: 'information', status: 'draft', format: '9:16', version: 1, scenes: [starterScene('Scene', 'Text')], notes: '' });
-  const workflow = store.list('workflows')[0];
+  const template = store.list('workflows')[0];
+  const workflow = store.createWorkflowCopy({ templateId: template.id, channelId: channel.id, episodeId: episode.id, expectedTemplateVersion: template.version });
   const initial = engine.start(workflow.id, episode.id);
   let run;
   for (let attempt = 0; attempt < 100; attempt++) {
@@ -38,14 +40,14 @@ async function candidate(t, { legacyHash = false } = {}) {
     await new Promise((resolve) => setTimeout(resolve, 5));
   }
   assert.equal(run.status, 'awaiting_review');
+  const reviewNodeId = run.nodeRuns.find((node) => node.type === 'review').nodeId;
   const output = run.nodeRuns.find((node) => node.type === 'render').output;
-  t.after(async () => { engine.close(); store.close(); await rm(dataDir, { recursive: true, force: true }); });
   return {
     get store() { return store; },
     get engine() { return engine; },
-    dataDir, bytes, run, workflow, output,
+    dataDir, bytes, run, workflow, output, reviewNodeId,
     artifactPath: path.join(dataDir, 'exports', output.filename),
-    decide: (body = {}) => engine.review(workflow.id, run.id, { decision: 'approved', notes: '영상과 출처를 확인했습니다.', expectedEpisodeVersion: run.episodeVersion, ...body }),
+    decide: (body = {}) => engine.review(workflow.id, run.id, { reviewNodeId, decision: 'approved', notes: '영상과 출처를 확인했습니다.', expectedEpisodeVersion: run.episodeVersion, ...body }),
     restart: () => { engine.close(); store.close(); store = new Store(dataDir); engine = new WorkflowEngine(adapters()); },
   };
 }
@@ -54,30 +56,32 @@ test('human approval binds exact rendered version/hash and persists audit across
   const f = await candidate(t);
   const approved = await f.decide();
   assert.equal(approved.status, 'approved');
-  assert.equal(approved.review.decision, 'approved');
-  assert.equal(approved.review.sha256, hash(f.bytes));
-  assert.equal(approved.review.jobId, f.output.jobId);
-  assert.equal(approved.review.outputUrl, f.output.outputUrl);
-  assert.equal(approved.review.episodeVersion, f.run.episodeVersion);
-  assert.equal(approved.review.workflowVersion, f.run.workflowVersion);
-  assert.ok(Number.isFinite(Date.parse(approved.review.reviewedAt)));
+  assert.equal(approved.reviews[f.reviewNodeId].decision, 'approved');
+  assert.equal(approved.reviews[f.reviewNodeId].sha256, hash(f.bytes));
+  assert.equal(approved.reviews[f.reviewNodeId].jobId, f.output.jobId);
+  assert.equal(approved.reviews[f.reviewNodeId].outputUrl, f.output.outputUrl);
+  assert.equal(approved.reviews[f.reviewNodeId].episodeVersion, f.run.episodeVersion);
+  assert.equal(approved.reviews[f.reviewNodeId].workflowVersion, f.run.workflowVersion);
+  assert.ok(Number.isFinite(Date.parse(approved.reviews[f.reviewNodeId].reviewedAt)));
+  assert.equal(approved.review, undefined, 'the legacy singular run.review alias must never reappear on the new per-node review contract');
   assert.equal(approved.nodeRuns.find((node) => node.type === 'review').status, 'approved');
   assert.equal(f.store.get('episodes', f.run.episodeId).version, f.run.episodeVersion);
   assert.equal(f.store.get('episodes', f.run.episodeId).status, 'draft');
-  assert.equal(f.store.workflowReviews(f.run.id).length, 1);
+  assert.equal(f.store.workflowNodeReviews(f.run.id).length, 1);
   assert.equal(f.store.list('events').filter((event) => event.type === 'workflow.reviewed').length, 1);
   assert.ok(!f.store.list('events').some((event) => /publish/.test(event.type)));
   f.restart();
-  assert.deepEqual(f.engine.listRuns(f.workflow.id).find((run) => run.id === f.run.id).review, approved.review);
-  assert.deepEqual(f.store.workflowReviews(f.run.id), [approved.review]);
+  assert.deepEqual(f.engine.listRuns(f.workflow.id).find((run) => run.id === f.run.id).reviews[f.reviewNodeId], approved.reviews[f.reviewNodeId]);
+  assert.deepEqual(f.store.workflowNodeReviews(f.run.id), [approved.reviews[f.reviewNodeId]]);
 });
 
 test('revision request is a durable terminal decision and legacy render receives a computed artifact hash', async (t) => {
   const f = await candidate(t, { legacyHash: true });
   const revised = await f.decide({ decision: 'changes_requested', notes: '두 번째 장면의 출처 표시를 수정하세요.' });
   assert.equal(revised.status, 'changes_requested');
-  assert.equal(revised.review.sha256, hash(f.bytes));
-  assert.match(revised.review.notes, /출처/);
+  assert.equal(revised.review, undefined, 'the legacy singular run.review alias must never reappear on the new per-node review contract');
+  assert.equal(revised.reviews[f.reviewNodeId].sha256, hash(f.bytes));
+  assert.match(revised.reviews[f.reviewNodeId].notes, /출처/);
   assert.equal(revised.nodeRuns.find((node) => node.type === 'review').status, 'changes_requested');
   assert.throws(() => f.engine.cancel(f.workflow.id, f.run.id), { status: 409 });
   f.restart();
@@ -90,17 +94,17 @@ test('review rejects stale episodes even when client submits the new draft versi
   await assert.rejects(f.decide(), { status: 409 });
   await assert.rejects(f.decide({ expectedEpisodeVersion: edited.version }), { status: 409 });
   assert.equal(f.store.get('workflowRuns', f.run.id).status, 'awaiting_review');
-  assert.deepEqual(f.store.workflowReviews(f.run.id), []);
+  assert.deepEqual(f.store.workflowNodeReviews(f.run.id), []);
 });
 
 test('wrong run/workflow, malformed review fields and terminal runs cannot create review records', async (t) => {
   const f = await candidate(t);
-  await assert.rejects(f.engine.review(randomUUID(), f.run.id, { decision: 'approved', notes: '', expectedEpisodeVersion: f.run.episodeVersion }), { status: 404 });
-  await assert.rejects(f.engine.review(f.workflow.id, randomUUID(), { decision: 'approved', notes: '', expectedEpisodeVersion: f.run.episodeVersion }), { status: 404 });
+  await assert.rejects(f.engine.review(randomUUID(), f.run.id, { reviewNodeId: f.reviewNodeId, decision: 'approved', notes: '', expectedEpisodeVersion: f.run.episodeVersion }), { status: 404 });
+  await assert.rejects(f.engine.review(f.workflow.id, randomUUID(), { reviewNodeId: f.reviewNodeId, decision: 'approved', notes: '', expectedEpisodeVersion: f.run.episodeVersion }), { status: 404 });
   for (const patch of [{ decision: 'published' }, { notes: 123 }, { notes: 'x'.repeat(10001) }, { notes: undefined }, { expectedEpisodeVersion: undefined }, { expectedEpisodeVersion: '2' }, { expectedEpisodeVersion: 0 }]) await assert.rejects(f.decide(patch), { status: 400 });
   f.store.save('workflowRuns', { ...f.run, status: 'failed' });
   await assert.rejects(f.decide(), { status: 409 });
-  assert.deepEqual(f.store.workflowReviews(f.run.id), []);
+  assert.deepEqual(f.store.workflowNodeReviews(f.run.id), []);
 });
 
 test('parallel and repeated decisions commit exactly once', async (t) => {
@@ -109,7 +113,7 @@ test('parallel and repeated decisions commit exactly once', async (t) => {
   assert.equal(results.filter((result) => result.status === 'fulfilled').length, 1);
   const rejected = results.find((result) => result.status === 'rejected');
   assert.equal(rejected.reason.status, 409);
-  assert.equal(f.store.workflowReviews(f.run.id).length, 1);
+  assert.equal(f.store.workflowNodeReviews(f.run.id).length, 1);
   assert.equal(f.store.list('events').filter((event) => event.type === 'workflow.reviewed').length, 1);
   await assert.rejects(f.decide(), { status: 409 });
 });
@@ -122,13 +126,13 @@ test('transaction rechecks episode changes after asynchronous hashing and rolls 
     return commit(...args);
   };
   await assert.rejects(f.decide(), { status: 409 });
-  assert.deepEqual(f.store.workflowReviews(f.run.id), []);
+  assert.deepEqual(f.store.workflowNodeReviews(f.run.id), []);
   const other = await candidate(t);
   const record = other.store.record.bind(other.store);
   other.store.record = (type, details) => { if (type === 'workflow.reviewed') throw new Error('Injected audit failure'); return record(type, details); };
   await assert.rejects(other.decide(), /Injected audit failure/);
   assert.equal(other.store.get('workflowRuns', other.run.id).status, 'awaiting_review');
-  assert.deepEqual(other.store.workflowReviews(other.run.id), []);
+  assert.deepEqual(other.store.workflowNodeReviews(other.run.id), []);
   other.store.record = record;
   assert.equal((await other.decide()).status, 'approved');
 });
@@ -143,7 +147,7 @@ test('tampered, missing or mismatched rendered artifacts cannot receive approval
   const job = f.store.get('jobs', f.output.jobId);
   f.store.save('jobs', { ...job, episodeVersion: f.run.episodeVersion + 1 });
   await assert.rejects(f.decide(), { status: 409 });
-  assert.deepEqual(f.store.workflowReviews(f.run.id), []);
+  assert.deepEqual(f.store.workflowNodeReviews(f.run.id), []);
 });
 
 test('review rejects export links escaping the artifact root without changing the outside data', async (t) => {
@@ -157,7 +161,7 @@ test('review rejects export links escaping the artifact root without changing th
   catch (error) { if (['EPERM', 'EACCES'].includes(error.code)) return t.skip('Cannot create test link on this platform'); throw error; }
   await assert.rejects(f.decide(), { status: 409 });
   assert.equal(await readFile(sentinel, 'utf8'), 'preserve');
-  assert.deepEqual(f.store.workflowReviews(f.run.id), []);
+  assert.deepEqual(f.store.workflowNodeReviews(f.run.id), []);
 });
 
 test('narration attachment atomically saves uploads, draft scenes and history and rejects stale writes', async (t) => {

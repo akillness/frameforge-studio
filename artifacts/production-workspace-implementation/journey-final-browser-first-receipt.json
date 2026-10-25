@@ -1,0 +1,739 @@
+{
+  "schema": "frameforge-real-journey/v2",
+  "command": "node --test tests/production-workspace-journey.test.mjs",
+  "startedAt": "2026-10-25T08:27:42.704Z",
+  "scenarios": [
+    {
+      "name": "two channels own independent copied graphs, histories and versions with no execution on copy",
+      "criteria": [
+        "PW-06"
+      ],
+      "status": "passed"
+    },
+    {
+      "name": "A/B and every stage preserve hidden episode and graph drafts, beforeunload and original stale 409 base",
+      "criteria": [
+        "PW-01",
+        "PW-02",
+        "PW-07"
+      ],
+      "status": "passed"
+    },
+    {
+      "name": "128-node/256-edge owned canvas fits, pans, inspects and saves the last node without overflow",
+      "criteria": [
+        "PW-02",
+        "PW-07"
+      ],
+      "status": "passed"
+    },
+    {
+      "name": "real Commons video/still import, rights, attach and original card retain story without generation",
+      "criteria": [
+        "PW-03",
+        "PW-07"
+      ],
+      "status": "passed"
+    },
+    {
+      "name": "unknown media origin, audience and disclosure are initially unanswered; source and delivery reflow",
+      "criteria": [
+        "PW-03",
+        "PW-04",
+        "PW-07"
+      ],
+      "status": "passed"
+    },
+    {
+      "name": "real FFmpeg render and exact review precede server manifest preview and fixture Google public readback",
+      "criteria": [
+        "PW-03",
+        "PW-04",
+        "PW-05",
+        "PW-07"
+      ],
+      "status": "passed"
+    },
+    {
+      "name": "whole-candidate consent displays every generate node and exact costs, and disclosure changes invalidate the quote without spending",
+      "criteria": [
+        "PW-04",
+        "PW-07"
+      ],
+      "status": "passed"
+    },
+    {
+      "name": "both repeated render/review branches use real FFmpeg jobs and require independent exact-node approvals",
+      "criteria": [
+        "PW-02",
+        "PW-04"
+      ],
+      "status": "passed"
+    },
+    {
+      "name": "all ten roles prepare and quote through the UI while publish stays outside both execution selections",
+      "criteria": [
+        "PW-02",
+        "PW-04",
+        "PW-05"
+      ],
+      "status": "failed",
+      "error": "Expected values to be strictly equal:\n\nfalse !== true\n"
+    },
+    {
+      "name": "source-only whole execution excludes publish and stops at the real local review checkpoint",
+      "criteria": [
+        "PW-02",
+        "PW-04",
+        "PW-05"
+      ],
+      "status": "passed"
+    },
+    {
+      "name": "sequential reviewed producers enable the next render in the UI while publish requires its nearest approved review",
+      "criteria": [
+        "PW-02",
+        "PW-04",
+        "PW-05"
+      ],
+      "status": "passed"
+    }
+  ],
+  "screenshots": [
+    {
+      "name": "B",
+      "width": 1600,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/B-1600.png",
+      "sha256": "404fabf168db9c407d6b6e490d77b2dd7916299c11c549eaafd7cf659c50dd6b",
+      "geometry": {
+        "client": 1600,
+        "scroll": 1600,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "B",
+      "width": 1024,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/B-1024.png",
+      "sha256": "7d78b71eaf591b6b6ec8a24e78bab8201150eeedcdd75bfa3edd761d2602c673",
+      "geometry": {
+        "client": 1024,
+        "scroll": 1024,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "B",
+      "width": 375,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/B-375.png",
+      "sha256": "7e95cf8e65cb2395756312b123b2a4a6938ff131d2b6f887caa617703e97fcf9",
+      "geometry": {
+        "client": 375,
+        "scroll": 375,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "B",
+      "width": 320,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/B-320.png",
+      "sha256": "08da3f362877d5dd2c4dc28aa2306ad696e0fd163468f4888a431dfd847e09c8",
+      "geometry": {
+        "client": 320,
+        "scroll": 320,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "A",
+      "width": 1600,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/A-1600.png",
+      "sha256": "20b973c1fa268fe3686baf360e1da012868a4c3bd47285bf8531c3e86839addb",
+      "geometry": {
+        "client": 1600,
+        "scroll": 1600,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "A",
+      "width": 1024,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/A-1024.png",
+      "sha256": "3c7b5c4eec2e0165ec173c6abf29071d550e46d70aa9bdb967440dd2dd30714e",
+      "geometry": {
+        "client": 1024,
+        "scroll": 1024,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "A",
+      "width": 375,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/A-375.png",
+      "sha256": "60290c90883c0951e922a5b04d0b895039daf1b886b82b3804185ae843832e91",
+      "geometry": {
+        "client": 375,
+        "scroll": 375,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "A",
+      "width": 320,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/A-320.png",
+      "sha256": "b3c6988ea700ba446f216a83534c135d0950d912525c6c60c2d8baf777e07d29",
+      "geometry": {
+        "client": 320,
+        "scroll": 320,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "B-large",
+      "width": 1600,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/B-large-1600.png",
+      "sha256": "66e0ab8dcc9933c3c430b7060138a432604dc6e6a07c22d17d013e4e67ad2b57",
+      "geometry": {
+        "client": 1600,
+        "scroll": 1600,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "B-large",
+      "width": 1024,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/B-large-1024.png",
+      "sha256": "e075c7742e6e6ef1f3404f13c2e25e158bd61c007cac4fe0ccbf1893c936f3d4",
+      "geometry": {
+        "client": 1024,
+        "scroll": 1024,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "B-large",
+      "width": 375,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/B-large-375.png",
+      "sha256": "8e7aa9ba32922288c7e795b5b2aa7a1fc94bed68380c94bbe85da10991b5b777",
+      "geometry": {
+        "client": 375,
+        "scroll": 375,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "B-large",
+      "width": 320,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/B-large-320.png",
+      "sha256": "aa71812ecf535cfeb4e4d36b3ffe9f200dfb69f6bd6014dd15b92af1428081d8",
+      "geometry": {
+        "client": 320,
+        "scroll": 320,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "source-initial",
+      "width": 1600,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/source-initial-1600.png",
+      "sha256": "e880b9b5edc63e37fe791d80ab2e360f3426a008278b5b24544c4d7ac7c360c9",
+      "geometry": {
+        "client": 1600,
+        "scroll": 1600,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "source-initial",
+      "width": 1024,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/source-initial-1024.png",
+      "sha256": "e20362c3083b95f152e626d48bb1f6bf3d9f488fe0d27b2975555e99e81595c4",
+      "geometry": {
+        "client": 1024,
+        "scroll": 1024,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "source-initial",
+      "width": 375,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/source-initial-375.png",
+      "sha256": "d04f2bd2c46d61e3dd10bcc12a5a9bbf5a1c0486e6262a5897b7bedfced69275",
+      "geometry": {
+        "client": 375,
+        "scroll": 375,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "source-initial",
+      "width": 320,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/source-initial-320.png",
+      "sha256": "48cba75187c60679ac464afda11106786bad9502a0e4929910604d4e16e85ce8",
+      "geometry": {
+        "client": 320,
+        "scroll": 320,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "source",
+      "width": 1600,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/source-1600.png",
+      "sha256": "341c62103f5356d13c52e4f0ba15683dd1891613bd6fe8eeefd5765bec2a5aa6",
+      "geometry": {
+        "client": 1600,
+        "scroll": 1600,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "source",
+      "width": 1024,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/source-1024.png",
+      "sha256": "e1fe3d2e38abfff905124a7e66697d0c6f40f7e100381717ee536696337e3c46",
+      "geometry": {
+        "client": 1024,
+        "scroll": 1024,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "source",
+      "width": 375,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/source-375.png",
+      "sha256": "e17f7de3ccc7ec8f13ca6fdf7c11cab0e2bfe5fd1332bdfa26107b5b12bcf52c",
+      "geometry": {
+        "client": 375,
+        "scroll": 375,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "source",
+      "width": 320,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/source-320.png",
+      "sha256": "292fa8e8f6e04feb4ef1d50b666febf2d1e7541c4121f9c2112d97a8195b0202",
+      "geometry": {
+        "client": 320,
+        "scroll": 320,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "delivery",
+      "width": 1600,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-1600.png",
+      "sha256": "e12683e6b9d61f67eab7f4b33e739b7822edb87e011f0ded45a7084b07817637",
+      "geometry": {
+        "client": 1600,
+        "scroll": 1600,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "delivery",
+      "width": 1024,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-1024.png",
+      "sha256": "e22844f37c3d43ee11472c5e2eeabe6529b852cc7c99bc0cd121672e5e8ec97f",
+      "geometry": {
+        "client": 1024,
+        "scroll": 1024,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "delivery",
+      "width": 375,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-375.png",
+      "sha256": "1fb9c3af00b052ad16050ce754dd2da718602521792d6545b39953c231246928",
+      "geometry": {
+        "client": 375,
+        "scroll": 375,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "delivery",
+      "width": 320,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-320.png",
+      "sha256": "b6ca444f7ef29592bac3c6b988806514388db835dd99cedcfd4b4b85c4ed5473",
+      "geometry": {
+        "client": 320,
+        "scroll": 320,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "delivery-preview",
+      "width": 1600,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-1600.png",
+      "sha256": "fcad300f2fe81b1207b426ae3b76855d080aa35f7bac44488b9f60b6f9a68382",
+      "geometry": {
+        "client": 1600,
+        "scroll": 1600,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "delivery-preview",
+      "width": 1024,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-1024.png",
+      "sha256": "2c6bcd9bc69031dab6f48a977a155c7536c6d141fb44b2cf56a0e408bff42d49",
+      "geometry": {
+        "client": 1024,
+        "scroll": 1024,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "delivery-preview",
+      "width": 375,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-375.png",
+      "sha256": "ecb29ab60b9891119dea121d77c688c1be1fdcc399eb7889946dc380b67d121f",
+      "geometry": {
+        "client": 375,
+        "scroll": 375,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "delivery-preview",
+      "width": 320,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-320.png",
+      "sha256": "f701a325200c6bec272e6360075a17b6344c196848c549d6e55198ac54f54e2d",
+      "geometry": {
+        "client": 320,
+        "scroll": 320,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "generation-consent",
+      "width": 1600,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/generation-consent-1600.png",
+      "sha256": "53326e4d7329195d73bb54d30b2727e6c0a7c9878de038001c0d6549c80ca131",
+      "geometry": {
+        "client": 1600,
+        "scroll": 1600,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "generation-consent",
+      "width": 1024,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/generation-consent-1024.png",
+      "sha256": "191236b767849096c197410028d1294b8e71d33678c7d0982c7bd75bdc234a5e",
+      "geometry": {
+        "client": 1024,
+        "scroll": 1024,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "generation-consent",
+      "width": 375,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/generation-consent-375.png",
+      "sha256": "4f3338dc6ac4a91c45f6f1791b215d6553ab7a2f98f8638dd9d6b59de5b28323",
+      "geometry": {
+        "client": 375,
+        "scroll": 375,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "generation-consent",
+      "width": 320,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/generation-consent-320.png",
+      "sha256": "c4b9c1ff7621ec5fdcf79ef612e6c8ca4ad43beda9c65105c76262b0e5cd3c43",
+      "geometry": {
+        "client": 320,
+        "scroll": 320,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "sequential-readiness",
+      "width": 1600,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/sequential-readiness-1600.png",
+      "sha256": "aab1a1672ee592284dccd34eb6cf8cccdad16eed1127e795af278de72e9d1f44",
+      "geometry": {
+        "client": 1600,
+        "scroll": 1600,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "sequential-readiness",
+      "width": 1024,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/sequential-readiness-1024.png",
+      "sha256": "b0934d2f364602e51e1d59c533019c71ac48c7964dfc0440040bd4de42b7b2e5",
+      "geometry": {
+        "client": 1024,
+        "scroll": 1024,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "sequential-readiness",
+      "width": 375,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/sequential-readiness-375.png",
+      "sha256": "94f47eae7cd1626a18043be82be83dafda3aaaad80427c4ff8a47541bb0d1994",
+      "geometry": {
+        "client": 375,
+        "scroll": 375,
+        "reducedMotion": true
+      }
+    },
+    {
+      "name": "sequential-readiness",
+      "width": 320,
+      "path": "artifacts/production-workspace-implementation/journey-evidence/sequential-readiness-320.png",
+      "sha256": "4fbda6675af846bdaf270e27666c82048acc6ab4a50d4ef4221af2410267c6b7",
+      "geometry": {
+        "client": 320,
+        "scroll": 320,
+        "reducedMotion": true
+      }
+    }
+  ],
+  "network": [
+    {
+      "base": "http://127.0.0.1:57182",
+      "writes": [],
+      "external": [],
+      "errors": []
+    },
+    {
+      "base": "http://127.0.0.1:57236",
+      "writes": [
+        {
+          "method": "PUT",
+          "path": "/api/episodes/bc443b37-6e48-4b97-a815-fec0f90dbef5",
+          "body": "{\"title\":\"Project A\",\"topic\":\"Keep story A\",\"status\":\"draft\",\"format\":\"9:16\",\"scenes\":[{\"id\":\"efba23ae-831f-41d1-86be-adc2d0c698df\",\"title\":\"Unsaved A scene\",\"text\":\"Original source-backed card\",\"duration\":1,\"background\":\"#282544\",\"kind\":\"title\",\"layout\":\"center\",\"trimStart\":0,\"audioVolume\":1,\"narration\":\"\"}],\"notes\":\"\",\"expectedVersion\":2}"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/workflows/3518105f-5c5f-439a-8440-6ce88e2cc859",
+          "body": "{\"name\":\"Unsaved A graph\",\"nodes\":[{\"id\":\"script\",\"type\":\"script\",\"x\":60,\"y\":80,\"config\":{\"agent\":\"existing\",\"prompt\":\"\"}},{\"id\":\"storyboard\",\"type\":\"storyboard\",\"x\":340,\"y\":80,\"config\":{}},{\"id\":\"render\",\"type\":\"render\",\"x\":620,\"y\":80,\"config\":{}},{\"id\":\"review\",\"type\":\"review\",\"x\":900,\"y\":80,\"config\":{}}],\"edges\":[{\"id\":\"e0\",\"source\":\"script\",\"target\":\"storyboard\"},{\"id\":\"e1\",\"source\":\"storyboard\",\"target\":\"render\"},{\"id\":\"e2\",\"source\":\"render\",\"target\":\"review\"}],\"expectedVersion\":1}"
+        }
+      ],
+      "external": [],
+      "errors": []
+    },
+    {
+      "base": "http://127.0.0.1:57566",
+      "writes": [
+        {
+          "method": "PUT",
+          "path": "/api/workflows/6b8706c4-887f-4b5a-b685-63c7d4078dcb",
+          "body": "{\"name\":\"Maximum graph\",\"nodes\":[{\"id\":\"node-000\",\"type\":\"trend\",\"x\":40,\"y\":50,\"label\":\"Unique node 0\",\"config\":{}},{\"id\":\"node-001\",\"type\":\"trend\",\"x\":300,\"y\":50,\"label\":\"Unique node 1\",\"config\":{}},{\"id\":\"node-002\",\"type\":\"trend\",\"x\":560,\"y\":50,\"label\":\"Unique node 2\",\"config\":{}},{\"id\":\"node-003\",\"type\":\"trend\",\"x\":820,\"y\":50,\"label\":\"Unique node 3\",\"config\":{}},{\"id\":\"node-004\",\"type\":\"trend\",\"x\":1080,\"y\":50,\"label\":\"Unique node 4\",\"config\":{}},{\"id\":\"node-005\",\"type\":\"trend\",\"x\":1340,\"y\":50,\"label\":\"Unique node 5\",\"config\":{}},{\"id\":\"node-006\",\"type\":\"trend\",\"x\":1600,\"y\":50,\"label\":\"Unique node 6\",\"config\":{}},{\"id\":\"node-007\",\"type\":\"trend\",\"x\":1860,\"y\":50,\"label\":\"Unique node 7\",\"config\":{}},{\"id\":\"node-008\",\"type\":\"trend\",\"x\":2120,\"y\":50,\"label\":\"Unique node 8\",\"config\":{}},{\"id\":\"node-009\",\"type\":\"trend\",\"x\":2380,\"y\":50,\"label\":\"Unique node 9\",\"config\":{}},{\"id\":\"node-010\",\"type\":\"trend\",\"x\":2640,\"y\":50,\"label\":\"Unique node 10\",\"config\":{}},{\"id\":\"node-011\",\"type\":\"trend\",\"x\":2900,\"y\":50,\"label\":\"Unique node 11\",\"config\":{}},{\"id\":\"node-012\",\"type\":\"trend\",\"x\":3160,\"y\":50,\"label\":\"Unique node 12\",\"config\":{}},{\"id\":\"node-013\",\"type\":\"trend\",\"x\":3420,\"y\":50,\"label\":\"Unique node 13\",\"config\":{}},{\"id\":\"node-014\",\"type\":\"trend\",\"x\":3680,\"y\":50,\"label\":\"Unique node 14\",\"config\":{}},{\"id\":\"node-015\",\"type\":\"trend\",\"x\":3940,\"y\":50,\"label\":\"Unique node 15\",\"config\":{}},{\"id\":\"node-016\",\"type\":\"trend\",\"x\":40,\"y\":240,\"label\":\"Unique node 16\",\"config\":{}},{\"id\":\"node-017\",\"type\":\"trend\",\"x\":300,\"y\":240,\"label\":\"Unique node 17\",\"config\":{}},{\"id\":\"node-018\",\"type\":\"trend\",\"x\":560,\"y\":240,\"label\":\"Unique node 18\",\"config\":{}},{\"id\":\"node-019\",\"type\":\"trend\",\"x\":820,\"y\":240,\"label\":\"Unique node 19\",\"config\":{}},{\"id\":\"node-020\",\"type\":\"trend\",\"x\":1080,\"y\":240,\"label\":\"Unique node 20\",\"config\":{}},{\"id\":\"node-021\",\"type\":\"trend\",\"x\":1340,\"y\":240,\"label\":\"Unique node 21\",\"config\":{}},{\"id\":\"node-022\",\"type\":\"trend\",\"x\":1600,\"y\":240,\"label\":\"Unique node 22\",\"config\":{}},{\"id\":\"node-023\",\"type\":\"trend\",\"x\":1860,\"y\":240,\"label\":\"Unique node 23\",\"config\":{}},{\"id\":\"node-024\",\"type\":\"trend\",\"x\":2120,\"y\":240,\"label\":\"Unique node 24\",\"config\":{}},{\"id\":\"node-025\",\"type\":\"trend\",\"x\":2380,\"y\":240,\"label\":\"Unique node 25\",\"config\":{}},{\"id\":\"node-026\",\"type\":\"trend\",\"x\":2640,\"y\":240,\"label\":\"Unique node 26\",\"config\":{}},{\"id\":\"node-027\",\"type\":\"trend\",\"x\":2900,\"y\":240,\"label\":\"Unique node 27\",\"config\":{}},{\"id\":\"node-028\",\"type\":\"trend\",\"x\":3160,\"y\":240,\"label\":\"Unique node 28\",\"config\":{}},{\"id\":\"node-029\",\"type\":\"trend\",\"x\":3420,\"y\":240,\"label\":\"Unique node 29\",\"config\":{}},{\"id\":\"node-030\",\"type\":\"trend\",\"x\":3680,\"y\":240,\"label\":\"Unique node 30\",\"config\":{}},{\"id\":\"node-031\",\"type\":\"trend\",\"x\":3940,\"y\":240,\"label\":\"Unique node 31\",\"config\":{}},{\"id\":\"node-032\",\"type\":\"trend\",\"x\":40,\"y\":430,\"label\":\"Unique node 32\",\"config\":{}},{\"id\":\"node-033\",\"type\":\"trend\",\"x\":300,\"y\":430,\"label\":\"Unique node 33\",\"config\":{}},{\"id\":\"node-034\",\"type\":\"trend\",\"x\":560,\"y\":430,\"label\":\"Unique node 34\",\"config\":{}},{\"id\":\"node-035\",\"type\":\"trend\",\"x\":820,\"y\":430,\"label\":\"Unique node 35\",\"config\":{}},{\"id\":\"node-036\",\"type\":\"trend\",\"x\":1080,\"y\":430,\"label\":\"Unique node 36\",\"config\":{}},{\"id\":\"node-037\",\"type\":\"trend\",\"x\":1340,\"y\":430,\"label\":\"Unique node 37\",\"config\":{}},{\"id\":\"node-038\",\"type\":\"trend\",\"x\":1600,\"y\":430,\"label\":\"Unique node 38\",\"config\":{}},{\"id\":\"node-039\",\"type\":\"trend\",\"x\":1860,\"y\":430,\"label\":\"Unique node 39\",\"config\":{}},{\"id\":\"node-040\",\"type\":\"trend\",\"x\":2120,\"y\":430,\"label\":\"Unique node 40\",\"config\":{}},{\"id\":\"node-041\",\"type\":\"trend\",\"x\":2380,\"y\":430,\"label\":\"Unique node 41\",\"config\":{}},{\"id\":\"node-042\",\"type\":\"trend\",\"x\":2640,\"y\":430,\"label\":\"Unique node 42\",\"config\":{}},{\"id\":\"node-043\",\"type\":\"trend\",\"x\":2900,\"y\":430,\"label\":\"Unique node 43\",\"config\":{}},{\"id\":\"node-044\",\"type\":\"trend\",\"x\":3160,\"y\":430,\"label\":\"Unique node 44\",\"config\":{}},{\"id\":\"node-045\",\"type\":\"trend\",\"x\":3420,\"y\":430,\"label\":\"Unique node 45\",\"config\":{}},{\"id\":\"node-046\",\"type\":\"trend\",\"x\":3680,\"y\":430,\"label\":\"Unique node 46\",\"config\":{}},{\"id\":\"node-047\",\"type\":\"trend\",\"x\":3940,\"y\":430,\"label\":\"Unique node 47\",\"config\":{}},{\"id\":\"node-048\",\"type\":\"trend\",\"x\":40,\"y\":620,\"label\":\"Unique node 48\",\"config\":{}},{\"id\":\"node-049\",\"type\":\"trend\",\"x\":300,\"y\":620,\"label\":\"Unique node 49\",\"config\":{}},{\"id\":\"node-050\",\"type\":\"trend\",\"x\":560,\"y\":620,\"label\":\"Unique node 50\",\"config\":{}},{\"id\":\"node-051\",\"type\":\"trend\",\"x\":820,\"y\":620,\"label\":\"Unique node 51\",\"config\":{}},{\"id\":\"node-052\",\"type\":\"trend\",\"x\":1080,\"y\":620,\"label\":\"Unique node 52\",\"config\":{}},{\"id\":\"node-053\",\"type\":\"trend\",\"x\":1340,\"y\":620,\"label\":\"Unique node 53\",\"config\":{}},{\"id\":\"node-054\",\"type\":\"trend\",\"x\":1600,\"y\":620,\"label\":\"Unique node 54\",\"config\":{}},{\"id\":\"node-055\",\"type\":\"trend\",\"x\":1860,\"y\":620,\"label\":\"Unique node 55\",\"config\":{}},{\"id\":\"node-056\",\"type\":\"trend\",\"x\":2120,\"y\":620,\"label\":\"Unique node 56\",\"config\":{}},{\"id\":\"node-057\",\"type\":\"trend\",\"x\":2380,\"y\":620,\"label\":\"Unique node 57\",\"config\":{}},{\"id\":\"node-058\",\"type\":\"trend\",\"x\":2640,\"y\":620,\"label\":\"Unique node 58\",\"config\":{}},{\"id\":\"node-059\",\"type\":\"trend\",\"x\":2900,\"y\":620,\"label\":\"Unique node 59\",\"config\":{}},{\"id\":\"node-060\",\"type\":\"trend\",\"x\":3160,\"y\":620,\"label\":\"Unique node 60\",\"config\":{}},{\"id\":\"node-061\",\"type\":\"trend\",\"x\":3420,\"y\":620,\"label\":\"Unique node 61\",\"config\":{}},{\"id\":\"node-062\",\"type\":\"trend\",\"x\":3680,\"y\":620,\"label\":\"Unique node 62\",\"config\":{}},{\"id\":\"node-063\",\"type\":\"trend\",\"x\":3940,\"y\":620,\"label\":\"Unique node 63\",\"config\":{}},{\"id\":\"node-064\",\"type\":\"trend\",\"x\":40,\"y\":810,\"label\":\"Unique node 64\",\"config\":{}},{\"id\":\"node-065\",\"type\":\"trend\",\"x\":300,\"y\":810,\"label\":\"Unique node 65\",\"config\":{}},{\"id\":\"node-066\",\"type\":\"trend\",\"x\":560,\"y\":810,\"label\":\"Unique node 66\",\"config\":{}},{\"id\":\"node-067\",\"type\":\"trend\",\"x\":820,\"y\":810,\"label\":\"Unique node 67\",\"config\":{}},{\"id\":\"node-068\",\"type\":\"trend\",\"x\":1080,\"y\":810,\"label\":\"Unique node 68\",\"config\":{}},{\"id\":\"node-069\",\"type\":\"trend\",\"x\":1340,\"y\":810,\"label\":\"Unique node 69\",\"config\":{}},{\"id\":\"node-070\",\"type\":\"trend\",\"x\":1600,\"y\":810,\"label\":\"Unique node 70\",\"config\":{}},{\"id\":\"node-071\",\"type\":\"trend\",\"x\":1860,\"y\":810,\"label\":\"Unique node 71\",\"config\":{}},{\"id\":\"node-072\",\"type\":\"trend\",\"x\":2120,\"y\":810,\"label\":\"Unique node 72\",\"config\":{}},{\"id\":\"node-073\",\"type\":\"trend\",\"x\":2380,\"y\":810,\"label\":\"Unique node 73\",\"config\":{}},{\"id\":\"node-074\",\"type\":\"trend\",\"x\":2640,\"y\":810,\"label\":\"Unique node 74\",\"config\":{}},{\"id\":\"node-075\",\"type\":\"trend\",\"x\":2900,\"y\":810,\"label\":\"Unique node 75\",\"config\":{}},{\"id\":\"node-076\",\"type\":\"trend\",\"x\":3160,\"y\":810,\"label\":\"Unique node 76\",\"config\":{}},{\"id\":\"node-077\",\"type\":\"trend\",\"x\":3420,\"y\":810,\"label\":\"Unique node 77\",\"config\":{}},{\"id\":\"node-078\",\"type\":\"trend\",\"x\":3680,\"y\":810,\"label\":\"Unique node 78\",\"config\":{}},{\"id\":\"node-079\",\"type\":\"trend\",\"x\":3940,\"y\":810,\"label\":\"Unique node 79\",\"config\":{}},{\"id\":\"node-080\",\"type\":\"trend\",\"x\":40,\"y\":1000,\"label\":\"Unique node 80\",\"config\":{}},{\"id\":\"node-081\",\"type\":\"trend\",\"x\":300,\"y\":1000,\"label\":\"Unique node 81\",\"config\":{}},{\"id\":\"node-082\",\"type\":\"trend\",\"x\":560,\"y\":1000,\"label\":\"Unique node 82\",\"config\":{}},{\"id\":\"node-083\",\"type\":\"trend\",\"x\":820,\"y\":1000,\"label\":\"Unique node 83\",\"config\":{}},{\"id\":\"node-084\",\"type\":\"trend\",\"x\":1080,\"y\":1000,\"label\":\"Unique node 84\",\"config\":{}},{\"id\":\"node-085\",\"type\":\"trend\",\"x\":1340,\"y\":1000,\"label\":\"Unique node 85\",\"config\":{}},{\"id\":\"node-086\",\"type\":\"trend\",\"x\":1600,\"y\":1000,\"label\":\"Unique node 86\",\"config\":{}},{\"id\":\"node-087\",\"type\":\"trend\",\"x\":1860,\"y\":1000,\"label\":\"Unique node 87\",\"config\":{}},{\"id\":\"node-088\",\"type\":\"trend\",\"x\":2120,\"y\":1000,\"label\":\"Unique node 88\",\"config\":{}},{\"id\":\"node-089\",\"type\":\"trend\",\"x\":2380,\"y\":1000,\"label\":\"Unique node 89\",\"config\":{}},{\"id\":\"node-090\",\"type\":\"trend\",\"x\":2640,\"y\":1000,\"label\":\"Unique node 90\",\"config\":{}},{\"id\":\"node-091\",\"type\":\"trend\",\"x\":2900,\"y\":1000,\"label\":\"Unique node 91\",\"config\":{}},{\"id\":\"node-092\",\"type\":\"trend\",\"x\":3160,\"y\":1000,\"label\":\"Unique node 92\",\"config\":{}},{\"id\":\"node-093\",\"type\":\"trend\",\"x\":3420,\"y\":1000,\"label\":\"Unique node 93\",\"config\":{}},{\"id\":\"node-094\",\"type\":\"trend\",\"x\":3680,\"y\":1000,\"label\":\"Unique node 94\",\"config\":{}},{\"id\":\"node-095\",\"type\":\"trend\",\"x\":3940,\"y\":1000,\"label\":\"Unique node 95\",\"config\":{}},{\"id\":\"node-096\",\"type\":\"trend\",\"x\":40,\"y\":1190,\"label\":\"Unique node 96\",\"config\":{}},{\"id\":\"node-097\",\"type\":\"trend\",\"x\":300,\"y\":1190,\"label\":\"Unique node 97\",\"config\":{}},{\"id\":\"node-098\",\"type\":\"trend\",\"x\":560,\"y\":1190,\"label\":\"Unique node 98\",\"config\":{}},{\"id\":\"node-099\",\"type\":\"trend\",\"x\":820,\"y\":1190,\"label\":\"Unique node 99\",\"config\":{}},{\"id\":\"node-100\",\"type\":\"trend\",\"x\":1080,\"y\":1190,\"label\":\"Unique node 100\",\"config\":{}},{\"id\":\"node-101\",\"type\":\"trend\",\"x\":1340,\"y\":1190,\"label\":\"Unique node 101\",\"config\":{}},{\"id\":\"node-102\",\"type\":\"trend\",\"x\":1600,\"y\":1190,\"label\":\"Unique node 102\",\"config\":{}},{\"id\":\"node-103\",\"type\":\"trend\",\"x\":1860,\"y\":1190,\"label\":\"Unique node 103\",\"config\":{}},{\"id\":\"node-104\",\"type\":\"trend\",\"x\":2120,\"y\":1190,\"label\":\"Unique node 104\",\"config\":{}},{\"id\":\"node-105\",\"type\":\"trend\",\"x\":2380,\"y\":1190,\"label\":\"Unique node 105\",\"config\":{}},{\"id\":\"node-106\",\"type\":\"trend\",\"x\":2640,\"y\":1190,\"label\":\"Unique node 106\",\"config\":{}},{\"id\":\"node-107\",\"type\":\"trend\",\"x\":2900,\"y\":1190,\"label\":\"Unique node 107\",\"config\":{}},{\"id\":\"node-108\",\"type\":\"trend\",\"x\":3160,\"y\":1190,\"label\":\"Unique node 108\",\"config\":{}},{\"id\":\"node-109\",\"type\":\"trend\",\"x\":3420,\"y\":1190,\"label\":\"Unique node 109\",\"config\":{}},{\"id\":\"node-110\",\"type\":\"trend\",\"x\":3680,\"y\":1190,\"label\":\"Unique node 110\",\"config\":{}},{\"id\":\"node-111\",\"type\":\"trend\",\"x\":3940,\"y\":1190,\"label\":\"Unique node 111\",\"config\":{}},{\"id\":\"node-112\",\"type\":\"trend\",\"x\":40,\"y\":1380,\"label\":\"Unique node 112\",\"config\":{}},{\"id\":\"node-113\",\"type\":\"trend\",\"x\":300,\"y\":1380,\"label\":\"Unique node 113\",\"config\":{}},{\"id\":\"node-114\",\"type\":\"trend\",\"x\":560,\"y\":1380,\"label\":\"Unique node 114\",\"config\":{}},{\"id\":\"node-115\",\"type\":\"trend\",\"x\":820,\"y\":1380,\"label\":\"Unique node 115\",\"config\":{}},{\"id\":\"node-116\",\"type\":\"trend\",\"x\":1080,\"y\":1380,\"label\":\"Unique node 116\",\"config\":{}},{\"id\":\"node-117\",\"type\":\"trend\",\"x\":1340,\"y\":1380,\"label\":\"Unique node 117\",\"config\":{}},{\"id\":\"node-118\",\"type\":\"trend\",\"x\":1600,\"y\":1380,\"label\":\"Unique node 118\",\"config\":{}},{\"id\":\"node-119\",\"type\":\"trend\",\"x\":1860,\"y\":1380,\"label\":\"Unique node 119\",\"config\":{}},{\"id\":\"node-120\",\"type\":\"trend\",\"x\":2120,\"y\":1380,\"label\":\"Unique node 120\",\"config\":{}},{\"id\":\"node-121\",\"type\":\"trend\",\"x\":2380,\"y\":1380,\"label\":\"Unique node 121\",\"config\":{}},{\"id\":\"node-122\",\"type\":\"trend\",\"x\":2640,\"y\":1380,\"label\":\"Unique node 122\",\"config\":{}},{\"id\":\"node-123\",\"type\":\"trend\",\"x\":2900,\"y\":1380,\"label\":\"Unique node 123\",\"config\":{}},{\"id\":\"node-124\",\"type\":\"trend\",\"x\":3160,\"y\":1380,\"label\":\"Unique node 124\",\"config\":{}},{\"id\":\"node-125\",\"type\":\"trend\",\"x\":3420,\"y\":1380,\"label\":\"Unique node 125\",\"config\":{}},{\"id\":\"node-126\",\"type\":\"trend\",\"x\":3680,\"y\":1380,\"label\":\"Unique node 126\",\"config\":{}},{\"id\":\"node-127\",\"type\":\"trend\",\"x\":3950,\"y\":1380,\"label\":\"Unique node 127\",\"config\":{}}],\"edges\":[{\"id\":\"chain-0\",\"source\":\"node-000\",\"target\":\"node-001\"},{\"id\":\"chain-1\",\"source\":\"node-001\",\"target\":\"node-002\"},{\"id\":\"chain-2\",\"source\":\"node-002\",\"target\":\"node-003\"},{\"id\":\"chain-3\",\"source\":\"node-003\",\"target\":\"node-004\"},{\"id\":\"chain-4\",\"source\":\"node-004\",\"target\":\"node-005\"},{\"id\":\"chain-5\",\"source\":\"node-005\",\"target\":\"node-006\"},{\"id\":\"chain-6\",\"source\":\"node-006\",\"target\":\"node-007\"},{\"id\":\"chain-7\",\"source\":\"node-007\",\"target\":\"node-008\"},{\"id\":\"chain-8\",\"source\":\"node-008\",\"target\":\"node-009\"},{\"id\":\"chain-9\",\"source\":\"node-009\",\"target\":\"node-010\"},{\"id\":\"chain-10\",\"source\":\"node-010\",\"target\":\"node-011\"},{\"id\":\"chain-11\",\"source\":\"node-011\",\"target\":\"node-012\"},{\"id\":\"chain-12\",\"source\":\"node-012\",\"target\":\"node-013\"},{\"id\":\"chain-13\",\"source\":\"node-013\",\"target\":\"node-014\"},{\"id\":\"chain-14\",\"source\":\"node-014\",\"target\":\"node-015\"},{\"id\":\"chain-15\",\"source\":\"node-015\",\"target\":\"node-016\"},{\"id\":\"chain-16\",\"source\":\"node-016\",\"target\":\"node-017\"},{\"id\":\"chain-17\",\"source\":\"node-017\",\"target\":\"node-018\"},{\"id\":\"chain-18\",\"source\":\"node-018\",\"target\":\"node-019\"},{\"id\":\"chain-19\",\"source\":\"node-019\",\"target\":\"node-020\"},{\"id\":\"chain-20\",\"source\":\"node-020\",\"target\":\"node-021\"},{\"id\":\"chain-21\",\"source\":\"node-021\",\"target\":\"node-022\"},{\"id\":\"chain-22\",\"source\":\"node-022\",\"target\":\"node-023\"},{\"id\":\"chain-23\",\"source\":\"node-023\",\"target\":\"node-024\"},{\"id\":\"chain-24\",\"source\":\"node-024\",\"target\":\"node-025\"},{\"id\":\"chain-25\",\"source\":\"node-025\",\"target\":\"node-026\"},{\"id\":\"chain-26\",\"source\":\"node-026\",\"target\":\"node-027\"},{\"id\":\"chain-27\",\"source\":\"node-027\",\"target\":\"node-028\"},{\"id\":\"chain-28\",\"source\":\"node-028\",\"target\":\"node-029\"},{\"id\":\"chain-29\",\"source\":\"node-029\",\"target\":\"node-030\"},{\"id\":\"chain-30\",\"source\":\"node-030\",\"target\":\"node-031\"},{\"id\":\"chain-31\",\"source\":\"node-031\",\"target\":\"node-032\"},{\"id\":\"chain-32\",\"source\":\"node-032\",\"target\":\"node-033\"},{\"id\":\"chain-33\",\"source\":\"node-033\",\"target\":\"node-034\"},{\"id\":\"chain-34\",\"source\":\"node-034\",\"target\":\"node-035\"},{\"id\":\"chain-35\",\"source\":\"node-035\",\"target\":\"node-036\"},{\"id\":\"chain-36\",\"source\":\"node-036\",\"target\":\"node-037\"},{\"id\":\"chain-37\",\"source\":\"node-037\",\"target\":\"node-038\"},{\"id\":\"chain-38\",\"source\":\"node-038\",\"target\":\"node-039\"},{\"id\":\"chain-39\",\"source\":\"node-039\",\"target\":\"node-040\"},{\"id\":\"chain-40\",\"source\":\"node-040\",\"target\":\"node-041\"},{\"id\":\"chain-41\",\"source\":\"node-041\",\"target\":\"node-042\"},{\"id\":\"chain-42\",\"source\":\"node-042\",\"target\":\"node-043\"},{\"id\":\"chain-43\",\"source\":\"node-043\",\"target\":\"node-044\"},{\"id\":\"chain-44\",\"source\":\"node-044\",\"target\":\"node-045\"},{\"id\":\"chain-45\",\"source\":\"node-045\",\"target\":\"node-046\"},{\"id\":\"chain-46\",\"source\":\"node-046\",\"target\":\"node-047\"},{\"id\":\"chain-47\",\"source\":\"node-047\",\"target\":\"node-048\"},{\"id\":\"chain-48\",\"source\":\"node-048\",\"target\":\"node-049\"},{\"id\":\"chain-49\",\"source\":\"node-049\",\"target\":\"node-050\"},{\"id\":\"chain-50\",\"source\":\"node-050\",\"target\":\"node-051\"},{\"id\":\"chain-51\",\"source\":\"node-051\",\"target\":\"node-052\"},{\"id\":\"chain-52\",\"source\":\"node-052\",\"target\":\"node-053\"},{\"id\":\"chain-53\",\"source\":\"node-053\",\"target\":\"node-054\"},{\"id\":\"chain-54\",\"source\":\"node-054\",\"target\":\"node-055\"},{\"id\":\"chain-55\",\"source\":\"node-055\",\"target\":\"node-056\"},{\"id\":\"chain-56\",\"source\":\"node-056\",\"target\":\"node-057\"},{\"id\":\"chain-57\",\"source\":\"node-057\",\"target\":\"node-058\"},{\"id\":\"chain-58\",\"source\":\"node-058\",\"target\":\"node-059\"},{\"id\":\"chain-59\",\"source\":\"node-059\",\"target\":\"node-060\"},{\"id\":\"chain-60\",\"source\":\"node-060\",\"target\":\"node-061\"},{\"id\":\"chain-61\",\"source\":\"node-061\",\"target\":\"node-062\"},{\"id\":\"chain-62\",\"source\":\"node-062\",\"target\":\"node-063\"},{\"id\":\"chain-63\",\"source\":\"node-063\",\"target\":\"node-064\"},{\"id\":\"chain-64\",\"source\":\"node-064\",\"target\":\"node-065\"},{\"id\":\"chain-65\",\"source\":\"node-065\",\"target\":\"node-066\"},{\"id\":\"chain-66\",\"source\":\"node-066\",\"target\":\"node-067\"},{\"id\":\"chain-67\",\"source\":\"node-067\",\"target\":\"node-068\"},{\"id\":\"chain-68\",\"source\":\"node-068\",\"target\":\"node-069\"},{\"id\":\"chain-69\",\"source\":\"node-069\",\"target\":\"node-070\"},{\"id\":\"chain-70\",\"source\":\"node-070\",\"target\":\"node-071\"},{\"id\":\"chain-71\",\"source\":\"node-071\",\"target\":\"node-072\"},{\"id\":\"chain-72\",\"source\":\"node-072\",\"target\":\"node-073\"},{\"id\":\"chain-73\",\"source\":\"node-073\",\"target\":\"node-074\"},{\"id\":\"chain-74\",\"source\":\"node-074\",\"target\":\"node-075\"},{\"id\":\"chain-75\",\"source\":\"node-075\",\"target\":\"node-076\"},{\"id\":\"chain-76\",\"source\":\"node-076\",\"target\":\"node-077\"},{\"id\":\"chain-77\",\"source\":\"node-077\",\"target\":\"node-078\"},{\"id\":\"chain-78\",\"source\":\"node-078\",\"target\":\"node-079\"},{\"id\":\"chain-79\",\"source\":\"node-079\",\"target\":\"node-080\"},{\"id\":\"chain-80\",\"source\":\"node-080\",\"target\":\"node-081\"},{\"id\":\"chain-81\",\"source\":\"node-081\",\"target\":\"node-082\"},{\"id\":\"chain-82\",\"source\":\"node-082\",\"target\":\"node-083\"},{\"id\":\"chain-83\",\"source\":\"node-083\",\"target\":\"node-084\"},{\"id\":\"chain-84\",\"source\":\"node-084\",\"target\":\"node-085\"},{\"id\":\"chain-85\",\"source\":\"node-085\",\"target\":\"node-086\"},{\"id\":\"chain-86\",\"source\":\"node-086\",\"target\":\"node-087\"},{\"id\":\"chain-87\",\"source\":\"node-087\",\"target\":\"node-088\"},{\"id\":\"chain-88\",\"source\":\"node-088\",\"target\":\"node-089\"},{\"id\":\"chain-89\",\"source\":\"node-089\",\"target\":\"node-090\"},{\"id\":\"chain-90\",\"source\":\"node-090\",\"target\":\"node-091\"},{\"id\":\"chain-91\",\"source\":\"node-091\",\"target\":\"node-092\"},{\"id\":\"chain-92\",\"source\":\"node-092\",\"target\":\"node-093\"},{\"id\":\"chain-93\",\"source\":\"node-093\",\"target\":\"node-094\"},{\"id\":\"chain-94\",\"source\":\"node-094\",\"target\":\"node-095\"},{\"id\":\"chain-95\",\"source\":\"node-095\",\"target\":\"node-096\"},{\"id\":\"chain-96\",\"source\":\"node-096\",\"target\":\"node-097\"},{\"id\":\"chain-97\",\"source\":\"node-097\",\"target\":\"node-098\"},{\"id\":\"chain-98\",\"source\":\"node-098\",\"target\":\"node-099\"},{\"id\":\"chain-99\",\"source\":\"node-099\",\"target\":\"node-100\"},{\"id\":\"chain-100\",\"source\":\"node-100\",\"target\":\"node-101\"},{\"id\":\"chain-101\",\"source\":\"node-101\",\"target\":\"node-102\"},{\"id\":\"chain-102\",\"source\":\"node-102\",\"target\":\"node-103\"},{\"id\":\"chain-103\",\"source\":\"node-103\",\"target\":\"node-104\"},{\"id\":\"chain-104\",\"source\":\"node-104\",\"target\":\"node-105\"},{\"id\":\"chain-105\",\"source\":\"node-105\",\"target\":\"node-106\"},{\"id\":\"chain-106\",\"source\":\"node-106\",\"target\":\"node-107\"},{\"id\":\"chain-107\",\"source\":\"node-107\",\"target\":\"node-108\"},{\"id\":\"chain-108\",\"source\":\"node-108\",\"target\":\"node-109\"},{\"id\":\"chain-109\",\"source\":\"node-109\",\"target\":\"node-110\"},{\"id\":\"chain-110\",\"source\":\"node-110\",\"target\":\"node-111\"},{\"id\":\"chain-111\",\"source\":\"node-111\",\"target\":\"node-112\"},{\"id\":\"chain-112\",\"source\":\"node-112\",\"target\":\"node-113\"},{\"id\":\"chain-113\",\"source\":\"node-113\",\"target\":\"node-114\"},{\"id\":\"chain-114\",\"source\":\"node-114\",\"target\":\"node-115\"},{\"id\":\"chain-115\",\"source\":\"node-115\",\"target\":\"node-116\"},{\"id\":\"chain-116\",\"source\":\"node-116\",\"target\":\"node-117\"},{\"id\":\"chain-117\",\"source\":\"node-117\",\"target\":\"node-118\"},{\"id\":\"chain-118\",\"source\":\"node-118\",\"target\":\"node-119\"},{\"id\":\"chain-119\",\"source\":\"node-119\",\"target\":\"node-120\"},{\"id\":\"chain-120\",\"source\":\"node-120\",\"target\":\"node-121\"},{\"id\":\"chain-121\",\"source\":\"node-121\",\"target\":\"node-122\"},{\"id\":\"chain-122\",\"source\":\"node-122\",\"target\":\"node-123\"},{\"id\":\"chain-123\",\"source\":\"node-123\",\"target\":\"node-124\"},{\"id\":\"chain-124\",\"source\":\"node-124\",\"target\":\"node-125\"},{\"id\":\"chain-125\",\"source\":\"node-125\",\"target\":\"node-126\"},{\"id\":\"chain-126\",\"source\":\"node-126\",\"target\":\"node-127\"},{\"id\":\"extra-0-2\",\"source\":\"node-000\",\"target\":\"node-002\"},{\"id\":\"extra-1-2\",\"source\":\"node-001\",\"target\":\"node-003\"},{\"id\":\"extra-2-2\",\"source\":\"node-002\",\"target\":\"node-004\"},{\"id\":\"extra-3-2\",\"source\":\"node-003\",\"target\":\"node-005\"},{\"id\":\"extra-4-2\",\"source\":\"node-004\",\"target\":\"node-006\"},{\"id\":\"extra-5-2\",\"source\":\"node-005\",\"target\":\"node-007\"},{\"id\":\"extra-6-2\",\"source\":\"node-006\",\"target\":\"node-008\"},{\"id\":\"extra-7-2\",\"source\":\"node-007\",\"target\":\"node-009\"},{\"id\":\"extra-8-2\",\"source\":\"node-008\",\"target\":\"node-010\"},{\"id\":\"extra-9-2\",\"source\":\"node-009\",\"target\":\"node-011\"},{\"id\":\"extra-10-2\",\"source\":\"node-010\",\"target\":\"node-012\"},{\"id\":\"extra-11-2\",\"source\":\"node-011\",\"target\":\"node-013\"},{\"id\":\"extra-12-2\",\"source\":\"node-012\",\"target\":\"node-014\"},{\"id\":\"extra-13-2\",\"source\":\"node-013\",\"target\":\"node-015\"},{\"id\":\"extra-14-2\",\"source\":\"node-014\",\"target\":\"node-016\"},{\"id\":\"extra-15-2\",\"source\":\"node-015\",\"target\":\"node-017\"},{\"id\":\"extra-16-2\",\"source\":\"node-016\",\"target\":\"node-018\"},{\"id\":\"extra-17-2\",\"source\":\"node-017\",\"target\":\"node-019\"},{\"id\":\"extra-18-2\",\"source\":\"node-018\",\"target\":\"node-020\"},{\"id\":\"extra-19-2\",\"source\":\"node-019\",\"target\":\"node-021\"},{\"id\":\"extra-20-2\",\"source\":\"node-020\",\"target\":\"node-022\"},{\"id\":\"extra-21-2\",\"source\":\"node-021\",\"target\":\"node-023\"},{\"id\":\"extra-22-2\",\"source\":\"node-022\",\"target\":\"node-024\"},{\"id\":\"extra-23-2\",\"source\":\"node-023\",\"target\":\"node-025\"},{\"id\":\"extra-24-2\",\"source\":\"node-024\",\"target\":\"node-026\"},{\"id\":\"extra-25-2\",\"source\":\"node-025\",\"target\":\"node-027\"},{\"id\":\"extra-26-2\",\"source\":\"node-026\",\"target\":\"node-028\"},{\"id\":\"extra-27-2\",\"source\":\"node-027\",\"target\":\"node-029\"},{\"id\":\"extra-28-2\",\"source\":\"node-028\",\"target\":\"node-030\"},{\"id\":\"extra-29-2\",\"source\":\"node-029\",\"target\":\"node-031\"},{\"id\":\"extra-30-2\",\"source\":\"node-030\",\"target\":\"node-032\"},{\"id\":\"extra-31-2\",\"source\":\"node-031\",\"target\":\"node-033\"},{\"id\":\"extra-32-2\",\"source\":\"node-032\",\"target\":\"node-034\"},{\"id\":\"extra-33-2\",\"source\":\"node-033\",\"target\":\"node-035\"},{\"id\":\"extra-34-2\",\"source\":\"node-034\",\"target\":\"node-036\"},{\"id\":\"extra-35-2\",\"source\":\"node-035\",\"target\":\"node-037\"},{\"id\":\"extra-36-2\",\"source\":\"node-036\",\"target\":\"node-038\"},{\"id\":\"extra-37-2\",\"source\":\"node-037\",\"target\":\"node-039\"},{\"id\":\"extra-38-2\",\"source\":\"node-038\",\"target\":\"node-040\"},{\"id\":\"extra-39-2\",\"source\":\"node-039\",\"target\":\"node-041\"},{\"id\":\"extra-40-2\",\"source\":\"node-040\",\"target\":\"node-042\"},{\"id\":\"extra-41-2\",\"source\":\"node-041\",\"target\":\"node-043\"},{\"id\":\"extra-42-2\",\"source\":\"node-042\",\"target\":\"node-044\"},{\"id\":\"extra-43-2\",\"source\":\"node-043\",\"target\":\"node-045\"},{\"id\":\"extra-44-2\",\"source\":\"node-044\",\"target\":\"node-046\"},{\"id\":\"extra-45-2\",\"source\":\"node-045\",\"target\":\"node-047\"},{\"id\":\"extra-46-2\",\"source\":\"node-046\",\"target\":\"node-048\"},{\"id\":\"extra-47-2\",\"source\":\"node-047\",\"target\":\"node-049\"},{\"id\":\"extra-48-2\",\"source\":\"node-048\",\"target\":\"node-050\"},{\"id\":\"extra-49-2\",\"source\":\"node-049\",\"target\":\"node-051\"},{\"id\":\"extra-50-2\",\"source\":\"node-050\",\"target\":\"node-052\"},{\"id\":\"extra-51-2\",\"source\":\"node-051\",\"target\":\"node-053\"},{\"id\":\"extra-52-2\",\"source\":\"node-052\",\"target\":\"node-054\"},{\"id\":\"extra-53-2\",\"source\":\"node-053\",\"target\":\"node-055\"},{\"id\":\"extra-54-2\",\"source\":\"node-054\",\"target\":\"node-056\"},{\"id\":\"extra-55-2\",\"source\":\"node-055\",\"target\":\"node-057\"},{\"id\":\"extra-56-2\",\"source\":\"node-056\",\"target\":\"node-058\"},{\"id\":\"extra-57-2\",\"source\":\"node-057\",\"target\":\"node-059\"},{\"id\":\"extra-58-2\",\"source\":\"node-058\",\"target\":\"node-060\"},{\"id\":\"extra-59-2\",\"source\":\"node-059\",\"target\":\"node-061\"},{\"id\":\"extra-60-2\",\"source\":\"node-060\",\"target\":\"node-062\"},{\"id\":\"extra-61-2\",\"source\":\"node-061\",\"target\":\"node-063\"},{\"id\":\"extra-62-2\",\"source\":\"node-062\",\"target\":\"node-064\"},{\"id\":\"extra-63-2\",\"source\":\"node-063\",\"target\":\"node-065\"},{\"id\":\"extra-64-2\",\"source\":\"node-064\",\"target\":\"node-066\"},{\"id\":\"extra-65-2\",\"source\":\"node-065\",\"target\":\"node-067\"},{\"id\":\"extra-66-2\",\"source\":\"node-066\",\"target\":\"node-068\"},{\"id\":\"extra-67-2\",\"source\":\"node-067\",\"target\":\"node-069\"},{\"id\":\"extra-68-2\",\"source\":\"node-068\",\"target\":\"node-070\"},{\"id\":\"extra-69-2\",\"source\":\"node-069\",\"target\":\"node-071\"},{\"id\":\"extra-70-2\",\"source\":\"node-070\",\"target\":\"node-072\"},{\"id\":\"extra-71-2\",\"source\":\"node-071\",\"target\":\"node-073\"},{\"id\":\"extra-72-2\",\"source\":\"node-072\",\"target\":\"node-074\"},{\"id\":\"extra-73-2\",\"source\":\"node-073\",\"target\":\"node-075\"},{\"id\":\"extra-74-2\",\"source\":\"node-074\",\"target\":\"node-076\"},{\"id\":\"extra-75-2\",\"source\":\"node-075\",\"target\":\"node-077\"},{\"id\":\"extra-76-2\",\"source\":\"node-076\",\"target\":\"node-078\"},{\"id\":\"extra-77-2\",\"source\":\"node-077\",\"target\":\"node-079\"},{\"id\":\"extra-78-2\",\"source\":\"node-078\",\"target\":\"node-080\"},{\"id\":\"extra-79-2\",\"source\":\"node-079\",\"target\":\"node-081\"},{\"id\":\"extra-80-2\",\"source\":\"node-080\",\"target\":\"node-082\"},{\"id\":\"extra-81-2\",\"source\":\"node-081\",\"target\":\"node-083\"},{\"id\":\"extra-82-2\",\"source\":\"node-082\",\"target\":\"node-084\"},{\"id\":\"extra-83-2\",\"source\":\"node-083\",\"target\":\"node-085\"},{\"id\":\"extra-84-2\",\"source\":\"node-084\",\"target\":\"node-086\"},{\"id\":\"extra-85-2\",\"source\":\"node-085\",\"target\":\"node-087\"},{\"id\":\"extra-86-2\",\"source\":\"node-086\",\"target\":\"node-088\"},{\"id\":\"extra-87-2\",\"source\":\"node-087\",\"target\":\"node-089\"},{\"id\":\"extra-88-2\",\"source\":\"node-088\",\"target\":\"node-090\"},{\"id\":\"extra-89-2\",\"source\":\"node-089\",\"target\":\"node-091\"},{\"id\":\"extra-90-2\",\"source\":\"node-090\",\"target\":\"node-092\"},{\"id\":\"extra-91-2\",\"source\":\"node-091\",\"target\":\"node-093\"},{\"id\":\"extra-92-2\",\"source\":\"node-092\",\"target\":\"node-094\"},{\"id\":\"extra-93-2\",\"source\":\"node-093\",\"target\":\"node-095\"},{\"id\":\"extra-94-2\",\"source\":\"node-094\",\"target\":\"node-096\"},{\"id\":\"extra-95-2\",\"source\":\"node-095\",\"target\":\"node-097\"},{\"id\":\"extra-96-2\",\"source\":\"node-096\",\"target\":\"node-098\"},{\"id\":\"extra-97-2\",\"source\":\"node-097\",\"target\":\"node-099\"},{\"id\":\"extra-98-2\",\"source\":\"node-098\",\"target\":\"node-100\"},{\"id\":\"extra-99-2\",\"source\":\"node-099\",\"target\":\"node-101\"},{\"id\":\"extra-100-2\",\"source\":\"node-100\",\"target\":\"node-102\"},{\"id\":\"extra-101-2\",\"source\":\"node-101\",\"target\":\"node-103\"},{\"id\":\"extra-102-2\",\"source\":\"node-102\",\"target\":\"node-104\"},{\"id\":\"extra-103-2\",\"source\":\"node-103\",\"target\":\"node-105\"},{\"id\":\"extra-104-2\",\"source\":\"node-104\",\"target\":\"node-106\"},{\"id\":\"extra-105-2\",\"source\":\"node-105\",\"target\":\"node-107\"},{\"id\":\"extra-106-2\",\"source\":\"node-106\",\"target\":\"node-108\"},{\"id\":\"extra-107-2\",\"source\":\"node-107\",\"target\":\"node-109\"},{\"id\":\"extra-108-2\",\"source\":\"node-108\",\"target\":\"node-110\"},{\"id\":\"extra-109-2\",\"source\":\"node-109\",\"target\":\"node-111\"},{\"id\":\"extra-110-2\",\"source\":\"node-110\",\"target\":\"node-112\"},{\"id\":\"extra-111-2\",\"source\":\"node-111\",\"target\":\"node-113\"},{\"id\":\"extra-112-2\",\"source\":\"node-112\",\"target\":\"node-114\"},{\"id\":\"extra-113-2\",\"source\":\"node-113\",\"target\":\"node-115\"},{\"id\":\"extra-114-2\",\"source\":\"node-114\",\"target\":\"node-116\"},{\"id\":\"extra-115-2\",\"source\":\"node-115\",\"target\":\"node-117\"},{\"id\":\"extra-116-2\",\"source\":\"node-116\",\"target\":\"node-118\"},{\"id\":\"extra-117-2\",\"source\":\"node-117\",\"target\":\"node-119\"},{\"id\":\"extra-118-2\",\"source\":\"node-118\",\"target\":\"node-120\"},{\"id\":\"extra-119-2\",\"source\":\"node-119\",\"target\":\"node-121\"},{\"id\":\"extra-120-2\",\"source\":\"node-120\",\"target\":\"node-122\"},{\"id\":\"extra-121-2\",\"source\":\"node-121\",\"target\":\"node-123\"},{\"id\":\"extra-122-2\",\"source\":\"node-122\",\"target\":\"node-124\"},{\"id\":\"extra-123-2\",\"source\":\"node-123\",\"target\":\"node-125\"},{\"id\":\"extra-124-2\",\"source\":\"node-124\",\"target\":\"node-126\"},{\"id\":\"extra-125-2\",\"source\":\"node-125\",\"target\":\"node-127\"},{\"id\":\"extra-0-3\",\"source\":\"node-000\",\"target\":\"node-003\"},{\"id\":\"extra-1-3\",\"source\":\"node-001\",\"target\":\"node-004\"},{\"id\":\"extra-2-3\",\"source\":\"node-002\",\"target\":\"node-005\"}],\"expectedVersion\":1}"
+        }
+      ],
+      "external": [],
+      "errors": []
+    },
+    {
+      "base": "http://127.0.0.1:57751",
+      "writes": [
+        {
+          "method": "POST",
+          "path": "/api/sources/import",
+          "body": "{\"pageId\":601,\"kind\":\"video\",\"useAs\":\"illustration\",\"rightsAcknowledged\":true}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/uploads/25eac9c8-c6fb-4242-8775-0fbfb12605be/rights",
+          "body": "{\"origin\":\"third-party\",\"sourceUrl\":\"https://commons.wikimedia.org/wiki/File:Fixture.webm\",\"licenseId\":\"CC-BY-4.0\",\"attribution\":\"Video Fixture Author\"}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/episodes/40bd4cc0-715c-4101-aee2-7e8eebb37577/source",
+          "body": "{\"sceneId\":\"eb45265e-6e7b-4ba2-b701-15fe425d18b6\",\"uploadId\":\"25eac9c8-c6fb-4242-8775-0fbfb12605be\",\"expectedVersion\":2,\"useAs\":\"illustration\",\"trimStart\":0.1,\"trimEnd\":0.9}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/sources/import",
+          "body": "{\"pageId\":602,\"kind\":\"image\",\"useAs\":\"illustration\",\"rightsAcknowledged\":true}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/uploads/b948ba8d-18b7-4a73-b194-ce295c006a94/rights",
+          "body": "{\"origin\":\"third-party\",\"sourceUrl\":\"https://commons.wikimedia.org/wiki/File:Fixture.png\",\"licenseId\":\"CC-BY-4.0\",\"attribution\":\"Still Fixture Author\"}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/episodes/40bd4cc0-715c-4101-aee2-7e8eebb37577/source",
+          "body": "{\"sceneId\":\"eb45265e-6e7b-4ba2-b701-15fe425d18b6\",\"uploadId\":\"b948ba8d-18b7-4a73-b194-ce295c006a94\",\"expectedVersion\":3,\"useAs\":\"illustration\"}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/episodes/40bd4cc0-715c-4101-aee2-7e8eebb37577/card",
+          "body": "{\"sceneId\":\"eb45265e-6e7b-4ba2-b701-15fe425d18b6\",\"expectedVersion\":4}"
+        }
+      ],
+      "external": [],
+      "errors": []
+    },
+    {
+      "base": "http://127.0.0.1:58045",
+      "writes": [],
+      "external": [],
+      "errors": []
+    },
+    {
+      "base": "http://127.0.0.1:58209",
+      "writes": [
+        {
+          "method": "POST",
+          "path": "/api/publication/approvals",
+          "body": "{\"workflowId\":\"d214537e-3369-4498-93d3-753cfb61ee43\",\"runId\":\"f199d7b1-121e-47da-99c0-7f1f64a09a06\",\"reviewNodeId\":\"review\",\"expectedEpisodeVersion\":4,\"title\":\"Fixture approved title\",\"description\":\"Fixture final description\",\"categoryId\":\"25\",\"tags\":[],\"selfDeclaredMadeForKids\":false,\"containsSyntheticMedia\":false,\"disclosureRationale\":\"Original factual cards, no realistic synthetic evidence\",\"rightsAcknowledged\":true}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/publication/approvals",
+          "body": "{\"workflowId\":\"d214537e-3369-4498-93d3-753cfb61ee43\",\"runId\":\"f199d7b1-121e-47da-99c0-7f1f64a09a06\",\"reviewNodeId\":\"review\",\"expectedEpisodeVersion\":4,\"title\":\"Fixture approved title\",\"description\":\"Fixture final description\",\"categoryId\":\"25\",\"tags\":[],\"selfDeclaredMadeForKids\":false,\"containsSyntheticMedia\":false,\"disclosureRationale\":\"Original factual cards, no realistic synthetic evidence\",\"rightsAcknowledged\":true}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/publication/approvals/c5b14731-4fcc-46e0-90c4-d2301072cdeb/publish",
+          "body": "{}"
+        }
+      ],
+      "external": [],
+      "errors": []
+    },
+    {
+      "base": "http://127.0.0.1:58406",
+      "writes": [
+        {
+          "method": "POST",
+          "path": "/api/workflows/e388d5c7-a00d-43fa-8ecd-bc7308d29e18/run",
+          "body": "{\"episodeId\":\"83db6854-0d26-4ff2-a75f-3aab95dd4a3f\",\"selectedStages\":[\"script\",\"storyboard\"],\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":3}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/workflows/e388d5c7-a00d-43fa-8ecd-bc7308d29e18/quote",
+          "body": "{\"episodeId\":\"83db6854-0d26-4ff2-a75f-3aab95dd4a3f\",\"selectedStages\":[\"generate-1\",\"generate-2\",\"render\",\"review\"],\"disclosure\":{\"containsSyntheticMedia\":true,\"rationale\":\"Every realistic generated illustration requires explicit disclosure\"},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":4,\"resumeRunId\":\"065b0c2e-aec7-408b-a05c-93e1c12d25e7\"}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/workflows/e388d5c7-a00d-43fa-8ecd-bc7308d29e18/quote",
+          "body": "{\"episodeId\":\"83db6854-0d26-4ff2-a75f-3aab95dd4a3f\",\"selectedStages\":[\"generate-1\",\"generate-2\",\"render\",\"review\"],\"disclosure\":{\"containsSyntheticMedia\":false,\"rationale\":\"Every realistic generated illustration requires explicit disclosure\"},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":4,\"resumeRunId\":\"065b0c2e-aec7-408b-a05c-93e1c12d25e7\"}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/workflows/e388d5c7-a00d-43fa-8ecd-bc7308d29e18/quote",
+          "body": "{\"episodeId\":\"83db6854-0d26-4ff2-a75f-3aab95dd4a3f\",\"selectedStages\":[\"generate-1\",\"generate-2\",\"render\",\"review\"],\"disclosure\":{\"containsSyntheticMedia\":false,\"rationale\":\"Revised rationale is a different approval input\"},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":4,\"resumeRunId\":\"065b0c2e-aec7-408b-a05c-93e1c12d25e7\"}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/workflows/e388d5c7-a00d-43fa-8ecd-bc7308d29e18/quote",
+          "body": "{\"episodeId\":\"83db6854-0d26-4ff2-a75f-3aab95dd4a3f\",\"selectedStages\":[\"generate-1\",\"generate-2\",\"render\",\"review\"],\"disclosure\":{\"containsSyntheticMedia\":false,\"rationale\":\"Another rationale invalidates the prior unknown-cost waiver\"},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":4,\"resumeRunId\":\"065b0c2e-aec7-408b-a05c-93e1c12d25e7\"}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/workflows/e388d5c7-a00d-43fa-8ecd-bc7308d29e18/quote",
+          "body": "{\"episodeId\":\"83db6854-0d26-4ff2-a75f-3aab95dd4a3f\",\"selectedStages\":[\"generate-1\",\"generate-2\",\"render\",\"review\"],\"disclosure\":{\"containsSyntheticMedia\":true,\"rationale\":\"Another rationale invalidates the prior unknown-cost waiver\"},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":4,\"resumeRunId\":\"065b0c2e-aec7-408b-a05c-93e1c12d25e7\"}"
+        }
+      ],
+      "external": [],
+      "errors": []
+    },
+    {
+      "base": "http://127.0.0.1:58645",
+      "writes": [],
+      "external": [],
+      "errors": []
+    },
+    {
+      "base": "http://127.0.0.1:58739",
+      "writes": [
+        {
+          "method": "POST",
+          "path": "/api/workflows/704744e8-2a91-45d3-8a78-6d1cd7518b3e/run",
+          "body": "{\"episodeId\":\"5dd711f0-f30e-49dd-bbf0-3834ef0de3e5\",\"selectedStages\":[\"trend\",\"news\",\"research\",\"script\",\"storyboard\",\"layout\"],\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":2}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/workflows/704744e8-2a91-45d3-8a78-6d1cd7518b3e/quote",
+          "body": "{\"episodeId\":\"5dd711f0-f30e-49dd-bbf0-3834ef0de3e5\",\"selectedStages\":[\"generate\",\"render\",\"review\"],\"disclosure\":{\"containsSyntheticMedia\":true,\"rationale\":\"Realistic fixture illustrations need disclosure\"},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":4,\"resumeRunId\":\"095164c0-4c32-49aa-b58d-492f873562cb\"}"
+        }
+      ],
+      "external": [],
+      "errors": []
+    },
+    {
+      "base": "http://127.0.0.1:58943",
+      "writes": [
+        {
+          "method": "POST",
+          "path": "/api/workflows/6d1e735c-2522-4b03-bb86-1396b224bb43/run",
+          "body": "{\"episodeId\":\"e4dc0913-8dd4-4bae-ba9a-c6a279696cde\",\"selectedStages\":[\"trend\",\"news\",\"research\",\"script\",\"storyboard\",\"layout\",\"render\",\"review\"],\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":2}"
+        }
+      ],
+      "external": [],
+      "errors": []
+    },
+    {
+      "base": "http://127.0.0.1:59193",
+      "writes": [
+        {
+          "method": "POST",
+          "path": "/api/workflows/b55c1ff2-0864-4e8e-871b-992a28a762db/run",
+          "body": "{\"episodeId\":\"a13df898-e34d-469b-9fac-f677cc37a74b\",\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":3,\"selectedStages\":[\"render-2\"],\"startStage\":\"render-2\",\"resumeRunId\":\"41cf77b3-3909-4ebd-81e7-393f086bfd62\"}"
+        }
+      ],
+      "external": [],
+      "errors": []
+    }
+  ],
+  "boundary": "Temporary SQLite, ephemeral loopback HTTP, actual public app; fixture-only external transport. No live consent, credentials, generation or publication.",
+  "finishedAt": "2026-10-25T08:30:13.512Z",
+  "counts": {
+    "expected": 11,
+    "executed": 11,
+    "passed": 10,
+    "failed": 1
+  },
+  "fullJourney": true,
+  "verdict": "FAILED_OR_BLOCKED",
+  "sources": [
+    {
+      "path": "public/app.js",
+      "sha256": "ebe8b752846de062b15819c215b3bad0d61b33584f95ae6ca105a6621c359bc5"
+    },
+    {
+      "path": "public/workflow.js",
+      "sha256": "0ea6319232d51118cc2159a8a4b7ed2d0f0395b631ecd8deac46c78ca8f7d209"
+    },
+    {
+      "path": "public/production-tools.js",
+      "sha256": "2b495ecb55b00584b5fa8dd8d6d6ad0721c08db4abacb04cca4c922d5809f4d4"
+    },
+    {
+      "path": "public/styles.css",
+      "sha256": "25e9be09c24abd7a8a12b3889724d19a525936d41e6609e26f0c4a377a772d49"
+    },
+    {
+      "path": "public/workspace.css",
+      "sha256": "cc6b3d1197f422df27f2aeb58c6cf7495de8b9c161c1f052b1edc0909475401f"
+    },
+    {
+      "path": "server/app.mjs",
+      "sha256": "e3d69648cc3f6f7083d3c7a91e891457d874320d0d1fb8ce2f9fc03c09703958"
+    },
+    {
+      "path": "server/publication.mjs",
+      "sha256": "3666427a226d7ec52b98a083c83999a38158527aece98dea103746d7e892f827"
+    },
+    {
+      "path": "server/media-sources.mjs",
+      "sha256": "c67789ea91b376aaadfc3457a34f9662dac5f8d9dd97fbaf835056b713ea4056"
+    },
+    {
+      "path": "tests/production-workspace-journey.test.mjs",
+      "sha256": "7d3b51bef0b6183983e10ff526d18232b9a4d8e0b484ff5f7ccf98b18c778c34"
+    }
+  ]
+}

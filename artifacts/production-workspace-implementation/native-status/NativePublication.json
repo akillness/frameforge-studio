@@ -1,0 +1,44 @@
+{
+  "role": "NativePublication",
+  "status": "module-ready-with-independent-test-conflicts",
+  "files": ["server/publication.mjs"],
+  "exports": {
+    "PublicationService": {
+      "constructor": "new PublicationService({store,oauth,fetchImpl=fetch})",
+      "approve": "async approve(body,{ownerId}) -> approval {id,status:'approved',fingerprint,manifest,request,...manifest fields}",
+      "publish": "async publish(approvalId,{ownerId}) -> persisted queued intent {id,approvalId,ownerId,episodeId,channelId,fingerprint,status,phase,videoId,privacyStatus,message,createdAt,updatedAt}",
+      "resume": "async resume(intentId,{ownerId}) -> current intent; schedules saved-session/video reconciliation only",
+      "state": "state(approvalId) -> latest intent plus manifest, or approval before an intent exists",
+      "list": "list(episodeId) -> approval[] each with intent:null|intent",
+      "close": "close() -> Promise<void>; prevents further DB writes and aborts in-flight fetches"
+    }
+  },
+  "importsVerified": true,
+  "dependencies": ["server/candidates.mjs", "server/graph.mjs", "server/media-credits.mjs", "server/private-runtime.mjs"],
+  "privateRuntimeNamespace": "publication",
+  "verification": [
+    {"command":"node scripts/version-harness.mjs verify","exitCode":0,"version":"1.5.0"},
+    {"command":"node --check server/publication.mjs","exitCode":0},
+    {"command":"node --input-type=module -e \"const m=await import('./server/publication.mjs'); console.log(Object.keys(m));\"","exitCode":0,"exports":["PublicationService"]},
+    {"command":"node --test tests/production-publication.test.mjs","run":1,"exitCode":1,"tests":34,"passed":22,"failed":12,"skipped":0},
+    {"command":"node --test tests/production-publication.test.mjs","run":2,"exitCode":1,"tests":34,"passed":25,"failed":9,"skipped":0},
+    {"command":"node --test tests/production-publication.test.mjs","run":3,"exitCode":1,"tests":34,"passed":25,"failed":9,"skipped":0,"failedTestNumbers":[23,24,25,26,27,28,29,30,31],"failure":"Publication requires the exact project-owned workflow"}
+  ],
+  "implemented": [
+    "Local approval validates explicit owner/metadata/audience/disclosure/rights and exact workflow/run/review/render/episode versions; verifies candidate assets and actual export bytes; appends server credits before final description limits and graph.candidateFingerprint.",
+    "Private resumable insert and contiguous chunk transfer with encrypted session persistence, 308 range reconciliation, Retry-After, known video identity persistence and an atomic pre-insert phase claim.",
+    "Strict complete owner readback before the same video ID can transition to public; explicit audience/disclosure and metadata comparison, bounded processing observation, mutable status preservation and final public readback.",
+    "Uncertain update readback, restart reconciliation, no automatic reinsert, exact owner 403 and duplicate approval-intent 409, trusted HTTPS Google host/path and manual redirect handling.",
+    "Abortable request and body reads, bounded processing timers and shutdown guards preventing DB writes after close."
+  ],
+  "unresolved": [
+    "Tests 23-31 create unowned reusable workflows in renderCandidate at tests/production-publication.test.mjs:112; exact project/channel ownership required by the approved contract rejects these before approval. NativeTester must reconcile the independent fixtures with the approved ownership contract; no bypass was added.",
+    "Existing provider readback fixtures omit approved description/tags and sometimes title/category. Strict manifest verification cannot report completion or initiate public update from omitted metadata.",
+    "The initial platform-session failures were resolved by their owner: the latest full 34-test run passes both YouTube restriction and manual-link checks.",
+    "Full publication happy-path, resumable transfer and recovery behavior remains unverified by the current independent suite because the nine affected tests fail at fixture ownership before publication starts.",
+    "NativeTester exclusively owns test changes; this role did not modify tests or relax the approved publication contract."
+  ],
+  "verificationBoundary": "Only the assigned module and shared status artifact were edited. Project-wide suites, linters, formatters, live browser scripts and prohibited smoke scripts were not run. Integration through server/app.mjs belongs to Main. This artifact is in the working tree only; no Git command or external sharing occurred.",
+  "jev": {"profile":"frameforge-codex","active":false,"used":false},
+  "boundaries": {"providerCalls":false,"productionAccess":false,"gitCommands":false,"testFilesChanged":false,"publicationCompletionVerified":false}
+}

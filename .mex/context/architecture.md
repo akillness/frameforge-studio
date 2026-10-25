@@ -9,7 +9,7 @@ edges:
   - target: context/decisions.md
     condition: when related context is needed
 grounds_to: []
-last_updated: 2026-10-21
+last_updated: 2026-10-25
 ---
 
 # Architecture
@@ -35,13 +35,18 @@ Source evidence and template edits remain associated with channel and episode hi
 - Store.knowledge/exportKnowledge: runtime generation-job and imported-asset relationships to episodes, refreshed after import/apply with applied-version OKF atoms and signed URL query strings omitted.
 - server/higgsfield.mjs, server/higgsfield-cli.mjs and the authenticated host bridge: distinct Developer REST and official CLI adapters. REST estimates use `POST /estimate/{model}` with exact generation input, and create sends persisted `generationJobs.id` as `Idempotency-Key`; ambiguous submissions are not replayed automatically. scripts/higgsfield-mcp.mjs exposes the authenticated project API over stdio, separate from the vendor's OAuth-protected remote MCP. Browser confirmation requires a fresh exact-input quote or explicit no-quote acknowledgement; configured-only status is not verified authentication/availability.
 - server/narration.mjs, scripts/agent-bridge.mjs and scripts/speech.ps1: queued Windows voice synthesis locally or through an authenticated container-to-host raw-WAV bridge; generated audio attaches through the Store only if the original episode version still matches. Partial/stale output is cleaned.
+- `server/graph.mjs` and `server/workflows.mjs`: deterministic edge-based execution for repeated roles within 128 nodes/256 edges; exact node-ID selection/resume and nearest connected producer boundaries. Layout and render consume their own branch evidence rather than another branch's mutable saved scenes. Each review is keyed by node ID; completed paid jobs retain their original identities.
+- `server/candidates.mjs`: shared canonical exact-input generation/publication snapshots and physical local-byte/rights/provenance validation. A whole generation quote covers selected node/scene/slot inputs, costs and the human disclosure decision; approved sibling slot outputs do not invalidate one another's stable jobs.
+- `server/media-sources.mjs` and `server/media-credits.mjs`: optional Commons discovery/import, explicit hash-bound rights, versioned source/trim attachment and original text-card fallback. Rendering and the final publication description derive credits from actual scene/slot sources. Generated outputs stay illustrations, not factual event evidence; local provenance never fabricates human rights clearance.
+- `enqueueRender` persists the actual input `sceneSnapshot` before queueing asynchronous work; workflow render outputs retain matching branch provenance. `server/publication.mjs` requires that match and derives the selected candidate's assets, generation ancestry and credits from it, not the current sibling episode scenes. Current episode/workflow/channel/version guards remain mandatory.
+- `server/youtube-oauth.mjs`, `server/private-runtime.mjs` and `server/publication.mjs`: channel-bound PKCE/one-use-state OAuth, encrypted per-intent recovery identities and separate exact-manifest final approval. Final private upload/readback precedes a same-video public transition and second readback. Last-moment input changes block effects; stale approvals allow only known-identity observation, never duplicate upload or changed-project completion. Concurrent one-use state claims use exclusive ownership and fail closed on uncertainty.
 ## External Dependencies
 - FFmpeg and ffprobe provide local encoding and probing.
 - Google Trends supplies a network RSS observation source.
 - Agent CLIs run only through the configured host bridge.
 - Higgsfield CLI supplies live model schemas and the historically exercised paid-generation transport. Developer REST uses server-only credentials when configured; vendor MCP owns a separate OAuth session. The white-studio change exercised provider catalog/quote/recovery/apply fixtures, not a live provider.
 - Docker and Tailscale are deployment dependencies, not proof of application readiness.
-## What Does NOT Exist Here
+## Evidence boundaries
 - Local channel records are not OAuth channel ownership verification.
 - A local render does not upload or publish a video.
 - Generated source graphs are structural; they do not establish semantic truth.

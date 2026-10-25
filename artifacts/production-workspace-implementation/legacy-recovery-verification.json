@@ -1,0 +1,141 @@
+{
+  "schema": "frameforge-legacy-contract-verification/v1",
+  "observedAt": "2026-10-25T09:25:48.524Z",
+  "status": "verified-on-existing-isolated-linux",
+  "runtime": {
+    "context": "desktop-linux",
+    "image": "sha256:dc18f680d820162f769ff2e807cb08b23b6d35688adc68ff04759f708a862a5a",
+    "node": "v22.23.3"
+  },
+  "executable": "docker",
+  "argv": [
+    "run",
+    "--rm",
+    "--pull=never",
+    "--network",
+    "none",
+    "--read-only",
+    "--user",
+    "1000:1000",
+    "--cap-drop",
+    "ALL",
+    "--security-opt",
+    "no-new-privileges",
+    "--pids-limit",
+    "512",
+    "--no-healthcheck",
+    "--tmpfs",
+    "/tmp:rw,nosuid,nodev,mode=1777,size=1073741824",
+    "--mount",
+    "type=bind,source=C:/Users/bangg/source/repos/frameforge-studio/server,target=/app/server,readonly",
+    "--mount",
+    "type=bind,source=C:/Users/bangg/source/repos/frameforge-studio/public,target=/app/public,readonly",
+    "--mount",
+    "type=bind,source=C:/Users/bangg/source/repos/frameforge-studio/scripts,target=/app/scripts,readonly",
+    "--mount",
+    "type=bind,source=C:/Users/bangg/source/repos/frameforge-studio/tests,target=/app/tests,readonly",
+    "--mount",
+    "type=bind,source=C:/Users/bangg/source/repos/frameforge-studio/package.json,target=/app/package.json,readonly",
+    "--env",
+    "HOME=/tmp",
+    "--env",
+    "XDG_CONFIG_HOME=/tmp/chromium-config",
+    "--env",
+    "XDG_CACHE_HOME=/tmp/chromium-cache",
+    "--env",
+    "LOGIN_TOKEN=",
+    "--env",
+    "PUBLIC_ORIGIN=",
+    "--env",
+    "MEDIA_USER_AGENT=",
+    "--env",
+    "YOUTUBE_CLIENT_ID=",
+    "--env",
+    "YOUTUBE_CLIENT_SECRET=",
+    "--env",
+    "YOUTUBE_REDIRECT_URI=",
+    "--env",
+    "DATA_DIR=/tmp/frameforge-acceptance",
+    "--entrypoint",
+    "node",
+    "sha256:dc18f680d820162f769ff2e807cb08b23b6d35688adc68ff04759f708a862a5a",
+    "--test",
+    "--test-concurrency=2",
+    "tests/white-studio.test.mjs",
+    "tests/white-studio-versions.test.mjs",
+    "tests/platform-session.test.mjs",
+    "tests/layout-pipeline-session.test.mjs",
+    "tests/api.test.mjs"
+  ],
+  "environment": {
+    "MSYS_NO_PATHCONV": "1",
+    "MSYS2_ARG_CONV_EXCL": "*"
+  },
+  "command": "docker run --rm --pull=never --network none --read-only --user 1000:1000 --cap-drop ALL --security-opt no-new-privileges --pids-limit 512 --no-healthcheck --tmpfs /tmp:rw,nosuid,nodev,mode=1777,size=1073741824 --mount type=bind,source=C:/Users/bangg/source/repos/frameforge-studio/server,target=/app/server,readonly --mount type=bind,source=C:/Users/bangg/source/repos/frameforge-studio/public,target=/app/public,readonly --mount type=bind,source=C:/Users/bangg/source/repos/frameforge-studio/scripts,target=/app/scripts,readonly --mount type=bind,source=C:/Users/bangg/source/repos/frameforge-studio/tests,target=/app/tests,readonly --mount type=bind,source=C:/Users/bangg/source/repos/frameforge-studio/package.json,target=/app/package.json,readonly --env HOME=/tmp --env XDG_CONFIG_HOME=/tmp/chromium-config --env XDG_CACHE_HOME=/tmp/chromium-cache --env LOGIN_TOKEN= --env PUBLIC_ORIGIN= --env MEDIA_USER_AGENT= --env YOUTUBE_CLIENT_ID= --env YOUTUBE_CLIENT_SECRET= --env YOUTUBE_REDIRECT_URI= --env DATA_DIR=/tmp/frameforge-acceptance --entrypoint node sha256:dc18f680d820162f769ff2e807cb08b23b6d35688adc68ff04759f708a862a5a --test --test-concurrency=2 tests/white-studio.test.mjs tests/white-studio-versions.test.mjs tests/platform-session.test.mjs tests/layout-pipeline-session.test.mjs tests/api.test.mjs",
+  "result": {
+    "exitCode": 0,
+    "tests": 47,
+    "passed": 47,
+    "failed": 0,
+    "skipped": 0
+  },
+  "log": "artifacts/production-workspace-implementation/legacy-linux-home.tap",
+  "testSources": [
+    {
+      "path": "tests/white-studio.test.mjs",
+      "sha256": "4528a0032751d77885711a95b16aa3e8c313b91e3094941961af9cf07fe57887"
+    },
+    {
+      "path": "tests/white-studio-versions.test.mjs",
+      "sha256": "63cd04fb256645ca5786f70cccbe00bd6a51a5efd948f37a535c515e3eaf3d9f"
+    },
+    {
+      "path": "tests/platform-session.test.mjs",
+      "sha256": "ffbd82759482ac0bb054458c7a7a02554b299bff3810c457de34303628e8a3aa"
+    },
+    {
+      "path": "tests/layout-pipeline-session.test.mjs",
+      "sha256": "9f50a2b8e4c4c17b7247c6bfd581c922faba96ab3ef8139759e1a0536ef2d864"
+    },
+    {
+      "path": "tests/api.test.mjs",
+      "sha256": "9fcceecce9ff04113bdb2eeb1b30678dacaa9c25cae9fae39f20005675bce233"
+    }
+  ],
+  "runtimeSources": "artifacts/production-workspace-implementation/final-runtime-sources.json",
+  "all31RuntimeHashesUnchanged": true,
+  "fixture": "Real filesystem file symlink follows to an outside regular file and exact bytes; actual PlatformSessionManager rejects it. Every original assertion retained.",
+  "preservedFailures": [
+    {
+      "log": "artifacts/production-workspace-implementation/legacy-final.tap",
+      "platform": "Windows",
+      "tests": 47,
+      "passed": 46,
+      "failed": 1,
+      "reason": "EPERM creating a real file symlink; native Windows symlink containment remains unexercised."
+    },
+    {
+      "log": "artifacts/production-workspace-implementation/legacy-linux-final.tap",
+      "platform": "Linux",
+      "tests": 47,
+      "passed": 45,
+      "failed": 2,
+      "reason": "Read-only container browser unavailable before a disposable HOME/XDG was configured."
+    }
+  ],
+  "boundaries": {
+    "network": "none",
+    "portsPublished": false,
+    "sourceMounts": "read-only",
+    "user": "1000:1000",
+    "capabilities": "ALL dropped",
+    "rootFilesystem": "read-only",
+    "temporaryStorage": "tmpfs /tmp; container --rm",
+    "productionVolumes": false,
+    "hostCredentialsForwarded": false,
+    "pullOrInstall": false,
+    "hostPermissionOrConfigurationChanges": false,
+    "deployment": false,
+    "claim": "Current bind-mounted source verification, not a deployed image or Windows symlink success."
+  }
+}

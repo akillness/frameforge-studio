@@ -1,0 +1,37 @@
+{
+  "schema": "frameforge-supervisor-recovery/v1",
+  "observedAt": "2026-10-25T08:20:11.273Z",
+  "failure": "A 180-second eval child-completion wait timed out and reset the JS VM. In-memory supervisor handles were lost and unfinished children exited without final result files.",
+  "verifiedExitedPids": [
+    53452,
+    31660,
+    15876,
+    12520
+  ],
+  "pidCommand": "tasklist.exe /FI \"PID eq <pid>\" /FO CSV /NH",
+  "pidObservation": "All four returned no matching process",
+  "durableCompleted": [
+    "NativePublicationRepair.result.json",
+    "NativeStoreGuard.result.json"
+  ],
+  "durableIncomplete": [
+    "NativeTesterRepair.json checkpoint:8/8 browser, private consume concurrency RED, additional JS regressions in progress",
+    "NativeBranchBinding: no final result; no findings claimed"
+  ],
+  "restarted": [
+    {
+      "id": "NativeAtomicClaim",
+      "pid": 46544
+    },
+    {
+      "id": "NativeTesterFinal",
+      "pid": 45236
+    },
+    {
+      "id": "NativeBranchFinal",
+      "pid": 20224
+    }
+  ],
+  "correction": "No duplicate writers; restarted only after PID absence was verified. Use short nonblocking lifecycle snapshots and durable checkpoints, never another long VM-bound wait.",
+  "boundaries": "No production data, credentials, real provider calls, Git, publication or deployment"
+}

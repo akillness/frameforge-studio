@@ -30,6 +30,7 @@ export class TrendCollector {
     this.closed = false;
     this.activePromise = null;
     this.activeRunId = null;
+    this.activeQuery = undefined;
     this.inFlight = 0;
     this.cachedSettings = { ...DEFAULT_TREND_COLLECTOR_SETTINGS };
   }
@@ -102,38 +103,45 @@ export class TrendCollector {
     this.timer.unref?.();
   }
 
-  async runNow({ force = false } = {}) {
+  async runNow({ force = false, query } = {}) {
     if (this.closed) throw new Error('Trend collector is closed');
-    if (this.activePromise) return this.activePromise;
+    if (this.activePromise && this.activeQuery === query) return this.activePromise;
     if (this.stopped && !force) throw new Error('Trend collector is stopped');
     const settings = this.settings();
     const current = stamp(this.now);
     if (!force && !settings.enabled) throw new Error('Trend collector is disabled');
     if (!force && settings.nextDueAt && Date.parse(settings.nextDueAt) > Date.parse(current)) throw new Error(`Trend collection is not due until ${settings.nextDueAt}`);
-    return this.collectOnce({ settings });
+    return this.collectOnce({ settings, query });
   }
 
-  async collectOnce({ settings = this.settings() } = {}) {
+  async collectOnce({ settings = this.settings(), query } = {}) {
     if (this.closed) throw new Error('Trend collector is closed');
-    if (this.activePromise) return this.activePromise;
-    const operation = this._collect({ settings });
+    if (this.activePromise) {
+      if (this.activeQuery === query) return this.activePromise;
+      // The other query's failure is already audited; it must not substitute for this query.
+      await this.activePromise.catch(() => {});
+      return this.collectOnce({ settings, query });
+    }
+    this.activeQuery = query;
+    const operation = this._collect({ settings, query });
     this.activePromise = operation.finally(() => {
       this.activePromise = null;
       this.activeRunId = null;
+      this.activeQuery = undefined;
       this.inFlight = 0;
       if (this.running && !this.closed) this.schedule();
     });
     return this.activePromise;
   }
 
-  async _collect({ settings }) {
+  async _collect({ settings, query }) {
     const startedAt = stamp(this.now);
-    const run = this.store.create('trendCollectionRuns', { status: 'running', startedAt, completedAt: null, nextDueAt: null, inserted: 0, pruned: 0, cleanupFailures: 0, error: null, sources: [] });
+    const run = this.store.create('trendCollectionRuns', { status: 'running', startedAt, completedAt: null, nextDueAt: null, inserted: 0, pruned: 0, cleanupFailures: 0, error: null, sources: [], ...(query === undefined ? {} : { query }) });
     this.activeRunId = run.id;
     this.inFlight = 1;
     let sourceDiagnostics = [];
     try {
-      const result = await this.fetchTrends();
+      const result = query === undefined ? await this.fetchTrends() : await this.fetchTrends(query);
       if (this.closed) throw new Error('Trend collector is closed');
       if (!result || !Array.isArray(result.trends)) throw new Error('Trend source returned an invalid result');
       sourceDiagnostics = Array.isArray(result.sources) ? result.sources : [];

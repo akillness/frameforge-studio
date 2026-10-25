@@ -1,0 +1,62 @@
+{
+  "role": "NativeBranchFinal",
+  "findings": [
+    {
+      "severity": "P1",
+      "file": "server/publication.mjs",
+      "line": 164,
+      "problem": "Final approval binds render A to saved episode B's assets and credits. _snapshot reads the current episode at line 147 and builds candidateManifest from it at lines 164–168; _manifest derives credits from episode.scenes at line 193. Neither uses renderRun.output.sceneSnapshot. WorkflowEngine.renderCandidate preserves the current episode version while substituting connected branch scenes (server/workflows.mjs:669–695); execution records those scenes at line 867. Matching version/job/hash guards therefore do not establish matching scene provenance.",
+      "reproduction": {
+        "setup": "Validated two sibling storyboard→render→review branches. Current episode version 7 contains scene-B, asset bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb.png and attribution Creator B. Branch A's storyboard output contains scene-A, asset aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa.png and attribution Creator A.",
+        "actualCalls": "renderCandidate returned A scenes with episode version 7. Constructed matching completed job-A and approved review-A records, including render output.sceneSnapshot=A. Invoked actual PublicationService.approve(), _snapshot(), _manifest(), _export(), candidateManifest(), verifyCandidateAssets() and _assertCurrent() against memory adapters.",
+        "observed": "approve() returned status approved, render.jobId=job-a, candidate.assets containing only B's asset, and credits='Creator B | CC-BY-4.0 | https://fixture.invalid/B'. Render sceneSnapshot retained A. Filesystem verification accessed only B's upload; A's upload was not verified.",
+        "boundary": "Synthetic records and bytes; no actual rendering, engine scheduling, persistent review commit or publication transport."
+      },
+      "correction": "Build publication assets and credits from the selected render's persisted sceneSnapshot. Bind that snapshot or its candidate fingerprint to the reviewed render identity; reject records without sufficient render provenance instead of falling back to current episode scenes. Keep current-version invalidation checks."
+    },
+    {
+      "severity": "P2",
+      "file": "server/publication.mjs",
+      "line": 165,
+      "problem": "Publication selects every workflow node when rebuilding the candidate. candidateManifest consequently resolves every generation target (server/candidates.mjs:127–137), including skipped nodes unrelated to the reviewed render. An unrelated missing scene or slot blocks approval of a completed source-only branch.",
+      "reproduction": {
+        "setup": "Added gen-unrelated on sibling branch B, feeding render-b. Actual validateWorkflow accepted both fixtures. gen-unrelated was skipped and was not an ancestor of render-a.",
+        "observed": [
+          "With config.sceneId='absent-scene', actual approve() failed with status 400: 'Generation target scene does not exist for gen-unrelated'.",
+          "With config.sceneId='scene-B' and slotId='absent-slot', actual approve() failed with status 400: 'Generation target slot does not exist for gen-unrelated'."
+        ],
+        "control": "candidateManifest using render A's scene snapshot and exact branch-A stage IDs succeeded in both fixtures and contained A's asset."
+      },
+      "correction": "Use the selected render's persisted candidate lineage or exact upstream node IDs when selecting generation inputs. Verify every asset actually rendered, while excluding generation targets belonging solely to other branches."
+    }
+  ],
+  "scope": {
+    "requirements": ".mex/context/decisions.md:69–71,76,92",
+    "probe": "Bounded in-memory execution of unchanged actual source modules under Node v22.23.3 using VM modules. Store operations, file bytes/stat operations and validateAssets were synthetic adapters. Provider and private-runtime boundaries failed closed. One approval was created only in memory.",
+    "testsRead": [
+      "tests/production-publication.test.mjs:104–128 constructs completed jobs/reviews directly; its render output lacks sceneSnapshot.",
+      "tests/production-publication.test.mjs:762–798 checks credits against the same saved episode used by its fixture.",
+      "tests/production-workflow-graph.test.mjs:312–343 checks connected render/review job identity."
+    ],
+    "sha256": {
+      "server/workflows.mjs": "e2bfbc2c54c223a320cb6b9c3ab1faed5363b71fdf0329d0272cb6f786fc9b8c",
+      "server/publication.mjs": "31b0a1b0dd9416f49353ac787df5ab4d1ef2662ce777856c111fdf88b9e2584f",
+      "server/candidates.mjs": "e361e4fdd8fc86c8705cc7b411cbd48990a9a19cc0b2ba6fea17f53184f84f34",
+      "server/graph.mjs": "e131ae0f2c918c48b3fcb31a7efc5897a06b363579855075e52b6af3a48a95e0",
+      "server/validation.mjs": "7dca5937373596089c12620fead3d6694187d5fc81f3086f5caf10f219c0c5e0",
+      "server/media-credits.mjs": "3ff19043be55dab4109d39948f7f75d8b5abc83d742874e588c6a463d600d134"
+    },
+    "sourceHashesUnchangedAfterProbe": true,
+    "fullE2E": false
+  },
+  "notExecuted": [
+    "File edits or persistent fixture creation",
+    "Git operations",
+    "Project suites, formatters or linters",
+    "Project data, .env or credential access",
+    "Live providers, OAuth or publication transport",
+    "Subdelegation",
+    "Jev status/routing: outside the explicit allowlist; no successful Jev use claimed",
+    "Proposed fixes or fix verification"
+  ]
+}

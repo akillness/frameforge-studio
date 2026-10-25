@@ -1,0 +1,51 @@
+{
+  "role": "NativeSourceTools",
+  "status": "module-ready-with-reported-integration-failures",
+  "files": ["public/production-tools.js", "artifacts/production-workspace-implementation/native-status/NativeSourceTools.json"],
+  "importsVerified": true,
+  "sourceSha256": "2b495ecb55b00584b5fa8dd8d6d6ad0721c08db4abacb04cca4c922d5809f4d4",
+  "exports": {
+    "createProductionTools": "createProductionTools({api,getEpisode,getWorkflowContext,refresh,onEpisodeUpdated,toast,canMutate}) -> {html,mount,destroy,getStatus}",
+    "html": "html({mode:'source'|'delivery'}) -> HTML string; no network or writes",
+    "mount": "mount() -> attaches delegated native controls; only sanitized local GET uploads, OAuth status and publication history",
+    "destroy": "destroy() -> aborts listeners, invalidates in-flight response lifetime and stops polling; no server mutation",
+    "getStatus": "getStatus() -> {mode,episodeId,channelId,busy,sourceStatus,approvalId,fingerprint,intentId,publicationStatus}; no network, secret or opaque transport identity"
+  },
+  "studioContract": {
+    "verifiedAgainst": "public/app.js toolsForProject() and native-status/NativeStudio.json",
+    "arguments": "Unchanged seven Studio dependency arguments; getStatus is additive",
+    "identity": "Capture episode/channel/workflow/version/run/review/render and full available workflow/run before asynchronous work; accept responses only for captured active context/lifetime",
+    "reconciliation": "Source writes check actual saved history against the active full episode draft before POST; approval preparation also checks project-owned workflow history against the full graph draft. onEpisodeUpdated only for same unchanged active episode. Never call refresh(), change project or write a hidden stash. Studio's canMutate also blocks dirty/save-pending drafts."
+  },
+  "source": [
+    "Explicit Commons search and pageId import through real HTTP; raw escaped extmetadata review, upstream SHA1 and local SHA256",
+    "GET /api/uploads and GET /api/uploads/:id/rights, with upload/hash-bound clearance and no state.uploads dependency",
+    "Origin initially unanswered; explicit reviewed rights, generated-job identity, scene/slot selection and finite bounded video trims",
+    "Text-only card uses /api/episodes/:id/card without generation or story replacement",
+    "Explicit blocked/rate-limited/not-configured/provider-invalid status; no error-to-empty-success fallback"
+  ],
+  "delivery": [
+    "Guarded UC channel update using channelUpdatedAt; sanitized OAuth status and explicit trusted Google authorization link only",
+    "Audience, disclosure and rights initially unanswered",
+    "Prepare POST creates only server approval; complete server manifest, credits and fingerprint displayed before final '최종 승인하고 공개'",
+    "Input/content/project changes invalidate preparation; final publish uses exactly that approval ID",
+    "Ambiguous publish response queries existing approval state and never POSTs publish again; resume uses exact saved intent ID",
+    "Only completed + public + videoId + verifiedAt is labelled public complete; explicit privacy and server phase shown"
+  ],
+  "verification": [
+    {"command":"node scripts/version-harness.mjs verify","exitCode":0,"version":"1.5.0","boundary":"immutable bundle integrity only"},
+    {"command":"rtk proxy node --check public/production-tools.js","exitCode":0},
+    {"command":"rtk proxy node --input-type=module -e \"const {createProductionTools}=await import('./public/production-tools.js'); const t=createProductionTools(); console.log(JSON.stringify({exports:Object.keys(t),source:t.html({mode:'source'}).length,delivery:t.html({mode:'delivery'}).length,status:t.getStatus()})); t.destroy();\"","exitCode":0,"exports":["html","mount","destroy","getStatus"],"sourceHtmlLength":2260,"deliveryHtmlLength":3804},
+    {"command":"rtk proxy node --test tests/production-workspace-ui.test.mjs","phase":"initial","exitCode":1,"tests":6,"passed":4,"failed":2,"skipped":0,"failure":"Tests 1 and 2 time out at #workflow-canvas; unowned template selection belongs to Canvas/Studio integration"},
+    {"command":"rtk proxy node --test tests/production-workspace-ui.test.mjs","phase":"latest","exitCode":1,"tests":6,"passed":5,"failed":1,"skipped":0,"failure":"production-workspace-ui.test.mjs:137: fill('#wf-workflow-name') times out because the selected shared template's input is disabled. Selected project, episode/channel draft, stale-version and beforeunload tests pass."},
+    {"command":"rtk proxy node --test tests/production-source-media.test.mjs tests/production-publication.test.mjs","exitCode":1,"tests":63,"passed":53,"failed":10,"skipped":0,"failure":"One source-history shape failure at production-source-media.test.mjs:485; nine publication failures include project-owned workflow gate and incomplete manifest/readback fixtures. No tests changed."}
+  ],
+  "unresolved": [
+    "One independent UI failure remains at the unowned shared-template editing seam; Canvas/NativeTester ownership.",
+    "One independent source-history shape failure and nine independent publication failures remain in the executed 63-test service seam run; no service/test code was modified by this role.",
+    "NativeTester owns complete source/delivery/race/preview real-browser assertions and generated journey receipts; Main owns HTTP integration and final reruns. The module's provider-facing UI journey has not been independently verified in this role.",
+    "MEDIA_USER_AGENT and OAuth client configuration remain operational prerequisites; none enabled or changed. Live consent/upload/publication was not requested or exercised."
+  ],
+  "jev": {"profile":"frameforge-codex","active":false,"enabled":false,"used":false},
+  "boundaries": {"productionAccess":false,"providerCalls":false,"paidGeneration":false,"realGoogleConsent":false,"liveUpload":false,"gitCommands":false,"subdelegation":false,"testFilesChanged":false,"outsideAllowlistSourceChanged":false}
+}

@@ -1,0 +1,965 @@
+TAP version 13
+# (node:41296) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: starting generation without a prior exact-input quote is rejected before any provider request
+ok 1 - starting generation without a prior exact-input quote is rejected before any provider request
+  ---
+  duration_ms: 188.2767
+  type: 'test'
+  ...
+# Subtest: candidateManifest and quote() select exactly the chosen generate nodes/scenes and require an explicit disclosure decision
+ok 2 - candidateManifest and quote() select exactly the chosen generate nodes/scenes and require an explicit disclosure decision
+  ---
+  duration_ms: 173.3949
+  type: 'test'
+  ...
+# Subtest: editing the episode after quoting invalidates the generation plan; only a fresh quote against the new version is accepted
+ok 3 - editing the episode after quoting invalidates the generation plan; only a fresh quote against the new version is accepted
+  ---
+  duration_ms: 436.0228
+  type: 'test'
+  ...
+# Subtest: a quote with an unavailable cost estimate is marked unquoted; starting it requires explicit acceptUnquotedEstimate
+ok 4 - a quote with an unavailable cost estimate is marked unquoted; starting it requires explicit acceptUnquotedEstimate
+  ---
+  duration_ms: 441.7113
+  type: 'test'
+  ...
+# Subtest: verifyCandidateAssets checks real on-disk asset hashes and blocks third-party assets with no matching rights clearance
+ok 5 - verifyCandidateAssets checks real on-disk asset hashes and blocks third-party assets with no matching rights clearance
+  ---
+  duration_ms: 429.4915
+  type: 'test'
+  ...
+# Subtest: generation targeted by stable scene ID resolves the correct scene after a reorder; a missing target fails before any provider request
+ok 6 - generation targeted by stable scene ID resolves the correct scene after a reorder; a missing target fails before any provider request
+  ---
+  duration_ms: 445.3228
+  type: 'test'
+  ...
+# Subtest: independent generate branches persist separate jobs; a recoverable failure resumes without resubmitting, recharging or losing job identity
+ok 7 - independent generate branches persist separate jobs; a recoverable failure resumes without resubmitting, recharging or losing job identity
+  ---
+  duration_ms: 968.0694
+  type: 'test'
+  ...
+# Subtest: source-only selected execution (no generate node selected) makes zero generation or provider requests
+ok 8 - source-only selected execution (no generate node selected) makes zero generation or provider requests
+  ---
+  duration_ms: 175.5015
+  type: 'test'
+  ...
+# Subtest: initialGraph (no optional news/trend context) quotes and executes with absent optional context, not a required error
+ok 9 - initialGraph (no optional news/trend context) quotes and executes with absent optional context, not a required error
+  ---
+  duration_ms: 351.1568
+  type: 'test'
+  ...
+# Subtest: fullPipelineGraph (default, all ten stage types) aggregates selected generate nodes and resolves transitive data through the whole pipeline
+ok 10 - fullPipelineGraph (default, all ten stage types) aggregates selected generate nodes and resolves transitive data through the whole pipeline
+  ---
+  duration_ms: 626.0532
+  type: 'test'
+  ...
+# Subtest: equal-length attribution changes alter decoded credit glyph pixels in a real FFmpeg render
+ok 11 - equal-length attribution changes alter decoded credit glyph pixels in a real FFmpeg render
+  ---
+  duration_ms: 10623.9532
+  type: 'test'
+  ...
+# Subtest: requiredMediaCredits includes scene and slot rights once, deterministically, without invented credits
+ok 12 - requiredMediaCredits includes scene and slot rights once, deterministically, without invented credits
+  ---
+  duration_ms: 4.3228
+  type: 'test'
+  ...
+# (node:30532) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: createWorkflowCopy produces a fresh v1 workflow owned by episode/channel, with template lineage recorded and node IDs preserved
+ok 13 - createWorkflowCopy produces a fresh v1 workflow owned by episode/channel, with template lineage recorded and node IDs preserved
+  ---
+  duration_ms: 209.8624
+  type: 'test'
+  ...
+# Subtest: createWorkflowCopy rejects a channelId that does not match the target episode's own channel
+ok 14 - createWorkflowCopy rejects a channelId that does not match the target episode's own channel
+  ---
+  duration_ms: 342.6579
+  type: 'test'
+  ...
+# Subtest: two project copies from the same template are isolated: editing one never affects the other, with independent version conflicts and history
+ok 15 - two project copies from the same template are isolated: editing one never affects the other, with independent version conflicts and history
+  ---
+  duration_ms: 270.5149
+  type: 'test'
+  ...
+# Subtest: project-owned lineage fields are immutable through ordinary graph edits: a patch attempting to change one is rejected, a same-value resend is an ordinary edit
+ok 16 - project-owned lineage fields are immutable through ordinary graph edits: a patch attempting to change one is rejected, a same-value resend is an ordinary edit
+  ---
+  duration_ms: 206.5979
+  type: 'test'
+  ...
+# Subtest: createWorkflowCopy rebinds a template publish node to the destination channel, never the template source channel
+ok 17 - createWorkflowCopy rebinds a template publish node to the destination channel, never the template source channel
+  ---
+  duration_ms: 212.5767
+  type: 'test'
+  ...
+# Subtest: createWorkflowCopy creates no operational records and copies no run/job/session/paid-intent/approval fields or sample marker
+ok 18 - createWorkflowCopy creates no operational records and copies no run/job/session/paid-intent/approval fields or sample marker
+  ---
+  duration_ms: 209.4217
+  type: 'test'
+  ...
+# Subtest: an explicit template version update leaves existing project copies pinned to their original graph and templateVersion
+ok 19 - an explicit template version update leaves existing project copies pinned to their original graph and templateVersion
+  ---
+  duration_ms: 484.7419
+  type: 'test'
+  ...
+# Subtest: reviewCandidate resolves each review node to its own edge-connected render, not any other branch
+ok 20 - reviewCandidate resolves each review node to its own edge-connected render, not any other branch
+  ---
+  duration_ms: 229.7022
+  type: 'test'
+  ...
+# Subtest: committing a decision for review-2 writes a per-node review record and leaves review-1 untouched while the run stays open
+ok 21 - committing a decision for review-2 writes a per-node review record and leaves review-1 untouched while the run stays open
+  ---
+  duration_ms: 446.1429
+  type: 'test'
+  ...
+# Subtest: the run becomes approved only once every active review node has been approved, regardless of commit order
+ok 22 - the run becomes approved only once every active review node has been approved, regardless of commit order
+  ---
+  duration_ms: 184.1256
+  type: 'test'
+  ...
+# Subtest: a changes_requested decision on one branch makes the run terminal even though its sibling branch was already approved
+ok 23 - a changes_requested decision on one branch makes the run terminal even though its sibling branch was already approved
+  ---
+  duration_ms: 296.741
+  type: 'test'
+  ...
+# Subtest: re-deciding an already-decided review node is rejected and never overwrites the first decision
+ok 24 - re-deciding an already-decided review node is rejected and never overwrites the first decision
+  ---
+  duration_ms: 209.4006
+  type: 'test'
+  ...
+# Subtest: reviewCandidate resolves a correctly-versioned candidate and rejects a decision whose expected episode version does not match, whether the client is stale or the episode changed after render
+ok 25 - reviewCandidate resolves a correctly-versioned candidate and rejects a decision whose expected episode version does not match, whether the client is stale or the episode changed after render
+  ---
+  duration_ms: 383.5474
+  type: 'test'
+  ...
+# Subtest: commitWorkflowReview rejects a tampered artifact hash that does not match the actual rendered output
+ok 26 - commitWorkflowReview rejects a tampered artifact hash that does not match the actual rendered output
+  ---
+  duration_ms: 452.5531
+  type: 'test'
+  ...
+# Subtest: unknown workflow, run, or review node ids are rejected as not found, never silently resolved
+ok 27 - unknown workflow, run, or review node ids are rejected as not found, never silently resolved
+  ---
+  duration_ms: 152.2849
+  type: 'test'
+  ...
+# Subtest: a legacy single review is attributed to the one review node of an older run, without touching the legacy table
+ok 28 - a legacy single review is attributed to the one review node of an older run, without touching the legacy table
+  ---
+  duration_ms: 185.829
+  type: 'test'
+  ...
+# Subtest: an ambiguous legacy review (two review nodes exist on the workflow) is never guess-attributed to either node
+ok 29 - an ambiguous legacy review (two review nodes exist on the workflow) is never guess-attributed to either node
+  ---
+  duration_ms: 267.0898
+  type: 'test'
+  ...
+# Subtest: a trend upload referenced only through the new per-node review side table survives retention pruning
+ok 30 - a trend upload referenced only through the new per-node review side table survives retention pruning
+  ---
+  duration_ms: 76.6378
+  type: 'test'
+  ...
+# Subtest: setChannelExternalId stores a well-formed YouTube channel id and advances updatedAt under optimistic concurrency
+ok 31 - setChannelExternalId stores a well-formed YouTube channel id and advances updatedAt under optimistic concurrency
+  ---
+  duration_ms: 421.6816
+  type: 'test'
+  ...
+# Subtest: setChannelExternalId rejects a stale expectedUpdatedAt and leaves the stored channel unchanged
+ok 32 - setChannelExternalId rejects a stale expectedUpdatedAt and leaves the stored channel unchanged
+  ---
+  duration_ms: 118.5873
+  type: 'test'
+  ...
+# Subtest: setChannelExternalId rejects identifiers that are not well-formed YouTube channel ids
+ok 33 - setChannelExternalId rejects identifiers that are not well-formed YouTube channel ids
+  ---
+  duration_ms: 48.695
+  type: 'test'
+  ...
+# (node:16852) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: authorize rejects a channel with no known externalId before any outbound call
+ok 34 - authorize rejects a channel with no known externalId before any outbound call
+  ---
+  duration_ms: 135.9801
+  type: 'test'
+  ...
+# Subtest: authorize rejects a malformed (non-UC-format) channel externalId before any outbound call
+ok 35 - authorize rejects a malformed (non-UC-format) channel externalId before any outbound call
+  ---
+  duration_ms: 113.7625
+  type: 'test'
+  ...
+# Subtest: begin() builds a Google authorization URL carrying the force-ssl scope, PKCE S256 challenge, offline access, and the exact registered redirect_uri
+ok 36 - begin() builds a Google authorization URL carrying the force-ssl scope, PKCE S256 challenge, offline access, and the exact registered redirect_uri
+  ---
+  duration_ms: 175.378
+  type: 'test'
+  ...
+# Subtest: successive begin() calls produce unpredictable, distinct state values
+ok 37 - successive begin() calls produce unpredictable, distinct state values
+  ---
+  duration_ms: 230.5823
+  type: 'test'
+  ...
+# Subtest: complete() exchanges the authorization code for tokens with the exact PKCE verifier, then verifies channel binding via channels.list — in that exact order
+ok 38 - complete() exchanges the authorization code for tokens with the exact PKCE verifier, then verifies channel binding via channels.list — in that exact order
+  ---
+  duration_ms: 481.397
+  type: 'test'
+  ...
+# Subtest: complete() rejects channel_mismatch and persists no connected state when channels.list never returns the known externalId (no first-item fallback)
+ok 39 - complete() rejects channel_mismatch and persists no connected state when channels.list never returns the known externalId (no first-item fallback)
+  ---
+  duration_ms: 213.6549
+  type: 'test'
+  ...
+# Subtest: complete() matches the authorized channel by exact ID even when it is not the first item returned
+ok 40 - complete() matches the authorized channel by exact ID even when it is not the first item returned
+  ---
+  duration_ms: 139.8193
+  type: 'test'
+  ...
+# Subtest: complete() rejects insufficient_scope and persists no connected state when the granted scope omits youtube.force-ssl
+ok 41 - complete() rejects insufficient_scope and persists no connected state when the granted scope omits youtube.force-ssl
+  ---
+  duration_ms: 224.0436
+  type: 'test'
+  ...
+# Subtest: complete() returns a sanitized denied status for an explicit Google denial and never exchanges a code
+ok 42 - complete() returns a sanitized denied status for an explicit Google denial and never exchanges a code
+  ---
+  duration_ms: 206.2509
+  type: 'test'
+  ...
+# Subtest: complete() rejects a correlation-cookie mismatch, an unknown state, and an inactive initiating session without ever exchanging a code
+ok 43 - complete() rejects a correlation-cookie mismatch, an unknown state, and an inactive initiating session without ever exchanging a code
+  ---
+  duration_ms: 243.9992
+  type: 'test'
+  ...
+# Subtest: a state that has already been consumed (even by a denial) cannot be replayed on a second complete() call
+ok 44 - a state that has already been consumed (even by a denial) cannot be replayed on a second complete() call
+  ---
+  duration_ms: 275.6998
+  type: 'test'
+  ...
+# (node:16852) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# Subtest: an expired one-time state is rejected without any outbound call
+ok 45 - an expired one-time state is rejected without any outbound call
+  ---
+  duration_ms: 155.7234
+  type: 'test'
+  ...
+# Subtest: complete() throws (structurally malformed call, not a real Google outcome) when both state and error are entirely absent, and never calls out
+ok 46 - complete() throws (structurally malformed call, not a real Google outcome) when both state and error are entirely absent, and never calls out
+  ---
+  duration_ms: 145.6773
+  type: 'test'
+  ...
+# Subtest: accessToken() transparently refreshes an expired token, returns the refreshed value, and a provider response omitting refresh_token retains and reuses the previously stored one
+ok 47 - accessToken() transparently refreshes an expired token, returns the refreshed value, and a provider response omitting refresh_token retains and reuses the previously stored one
+  ---
+  duration_ms: 222.3558
+  type: 'test'
+  ...
+# Subtest: accessToken() rejects with status 409 when the refresh token has been revoked (invalid_grant), signalling reconsent is required
+ok 48 - accessToken() rejects with status 409 when the refresh token has been revoked (invalid_grant), signalling reconsent is required
+  ---
+  duration_ms: 269.6983
+  type: 'test'
+  ...
+# Subtest: Testing-mode caps effective refresh-token validity at seven days even when the provider omits refresh_token_expires_in, and blocks refresh locally once expired
+ok 49 - Testing-mode caps effective refresh-token validity at seven days even when the provider omits refresh_token_expires_in, and blocks refresh locally once expired
+  ---
+  duration_ms: 172.1364
+  type: 'test'
+  ...
+# Subtest: no raw access token, refresh token, authorization code, or one-time state ever lands in entities (or the events recorded through them) after a full OAuth connect cycle
+ok 50 - no raw access token, refresh token, authorization code, or one-time state ever lands in entities (or the events recorded through them) after a full OAuth connect cycle
+  ---
+  duration_ms: 318.8423
+  type: 'test'
+  ...
+# Subtest: disconnect() clears locally stored tokens; a subsequent accessToken() rejects and status reports not connected
+ok 51 - disconnect() clears locally stored tokens; a subsequent accessToken() rejects and status reports not connected
+  ---
+  duration_ms: 267.074
+  type: 'test'
+  ...
+# Subtest: approve() rejects an incomplete manifest for each missing required field and performs no network calls or persisted side effects
+ok 52 - approve() rejects an incomplete manifest for each missing required field and performs no network calls or persisted side effects
+  ---
+  duration_ms: 274.1841
+  type: 'test'
+  ...
+# Subtest: approve() requires a non-empty ownerId and never persists an approval without one
+ok 53 - approve() requires a non-empty ownerId and never persists an approval without one
+  ---
+  duration_ms: 256.1182
+  type: 'test'
+  ...
+# Subtest: approve() rejects an unknown workflowId, an unknown runId, a run that belongs to a different workflow, and an unknown reviewNodeId — all before any network call or persisted approval
+ok 54 - approve() rejects an unknown workflowId, an unknown runId, a run that belongs to a different workflow, and an unknown reviewNodeId — all before any network call or persisted approval
+  ---
+  duration_ms: 315.2294
+  type: 'test'
+  ...
+# Subtest: approve() rejects when the episode changed since this run was reviewed, when the bound review was not approved, or when the render artifact diverged from the approved review — all before any network call or persisted approval
+ok 55 - approve() rejects when the episode changed since this run was reviewed, when the bound review was not approved, or when the render artifact diverged from the approved review — all before any network call or persisted approval
+  ---
+  duration_ms: 326.8691
+  type: 'test'
+  ...
+# Subtest: approve() succeeds with a complete manifest and the approval is retrievable for its episode with no network calls
+ok 56 - approve() succeeds with a complete manifest and the approval is retrievable for its episode with no network calls
+  ---
+  duration_ms: 204.4015
+  type: 'test'
+  ...
+# Subtest: publish() and resume() reject a mismatched or missing ownerId with 403 and mutate no state; the rightful owner can still proceed afterward
+ok 57 - publish() and resume() reject a mismatched or missing ownerId with 403 and mutate no state; the rightful owner can still proceed afterward
+  ---
+  duration_ms: 307.1945
+  type: 'test'
+  ...
+# Subtest: final fingerprint and outbound snippet contain ALL scene and slot server credits
+ok 58 - final fingerprint and outbound snippet contain ALL scene and slot server credits
+  ---
+  duration_ms: 295.9362
+  type: 'test'
+  ...
+# Subtest: description that fits before credit append but exceeds the final provider limit is rejected prefetch
+ok 59 - description that fits before credit append but exceeds the final provider limit is rejected prefetch
+  ---
+  duration_ms: 182.4748
+  type: 'test'
+  ...
+# Subtest: publish() drives private insert (no publishAt) -> byte transfer -> owner readback -> public update preserving status -> final public readback, in exact order
+ok 60 - publish() drives private insert (no publishAt) -> byte transfer -> owner readback -> public update preserving status -> final public readback, in exact order
+  ---
+  duration_ms: 450.7955
+  type: 'test'
+  ...
+# Subtest: a second publish() call for an approval with an existing intent is rejected (409, use resume) and performs no additional network calls
+ok 61 - a second publish() call for an approval with an existing intent is rejected (409, use resume) and performs no additional network calls
+  ---
+  duration_ms: 354.3242
+  type: 'test'
+  ...
+# Subtest: publish() rejects a stale manifest after the episode changed since approval, before any network call
+ok 62 - publish() rejects a stale manifest after the episode changed since approval, before any network call
+  ---
+  duration_ms: 248.3142
+  type: 'test'
+  ...
+# Subtest: publish() rejects when the approved render artifact hash changed since approval, before any network call
+ok 63 - publish() rejects when the approved render artifact hash changed since approval, before any network call
+  ---
+  duration_ms: 223.0311
+  type: 'test'
+  ...
+# Subtest: a provider rejection on the private insert surfaces as an explicit blocked/restricted state, never completed or public, with exactly one insert attempt
+ok 64 - a provider rejection on the private insert surfaces as an explicit blocked/restricted state, never completed or public, with exactly one insert attempt
+  ---
+  duration_ms: 250.0998
+  type: 'test'
+  ...
+# Subtest: an uncertain public-update transport failure reads back the video before reporting state, and a still-private readback reports a recoverable blocked state rather than false-public
+ok 65 - an uncertain public-update transport failure reads back the video before reporting state, and a still-private readback reports a recoverable blocked state rather than false-public
+  ---
+  duration_ms: 232.6977
+  type: 'test'
+  ...
+# Subtest: resume() after a restart reconciles the saved resumable session with a fresh PublicationService instance, never re-inserting
+ok 66 - resume() after a restart reconciles the saved resumable session with a fresh PublicationService instance, never re-inserting
+  ---
+  duration_ms: 560.2968
+  type: 'test'
+  ...
+# Subtest: every automated interact() action on a YouTube platform session is rejected and never launches a browser
+ok 67 - every automated interact() action on a YouTube platform session is rejected and never launches a browser
+  ---
+  duration_ms: 115.8165
+  type: 'test'
+  ...
+# Subtest: opening a YouTube platform session still succeeds and exposes the manual external Studio upload link
+ok 68 - opening a YouTube platform session still succeeds and exposes the manual external Studio upload link
+  ---
+  duration_ms: 55.746
+  type: 'test'
+  ...
+# Subtest: the YouTube automation restriction does not affect interact() actions on other platforms
+ok 69 - the YouTube automation restriction does not affect interact() actions on other platforms
+  ---
+  duration_ms: 69.6602
+  type: 'test'
+  ...
+# (node:49636) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: search maps a formatversion=2 Commons response to an explicit status and items, preserving raw booleanish extmetadata strings untouched
+ok 70 - search maps a formatversion=2 Commons response to an explicit status and items, preserving raw booleanish extmetadata strings untouched
+  ---
+  duration_ms: 235.989
+  type: 'test'
+  ...
+# Subtest: search builds the documented Commons query per kind and bounds gsrlimit to the Commons public maximum without ever sending zero/negative
+ok 71 - search builds the documented Commons query per kind and bounds gsrlimit to the Commons public maximum without ever sending zero/negative
+  ---
+  duration_ms: 78.4397
+  type: 'test'
+  ...
+# Subtest: search returns an explicit empty-but-ok result when Commons has zero matches, never conflated with a blocked/rate-limited provider failure
+ok 72 - search returns an explicit empty-but-ok result when Commons has zero matches, never conflated with a blocked/rate-limited provider failure
+  ---
+  duration_ms: 44.3465
+  type: 'test'
+  ...
+# Subtest: search distinguishes blocked (403) and rate-limited (429, with parsed Retry-After) from each other and from no-results
+ok 73 - search distinguishes blocked (403) and rate-limited (429, with parsed Retry-After) from each other and from no-results
+  ---
+  duration_ms: 599.5175
+  type: 'test'
+  ...
+# Subtest: search and importMedia both send the configured descriptive User-Agent on every outbound call, including the original-file download
+ok 74 - search and importMedia both send the configured descriptive User-Agent on every outbound call, including the original-file download
+  ---
+  duration_ms: 244.8511
+  type: 'test'
+  ...
+# Subtest: search and importMedia both reject with 503 before any fetch when the configured User-Agent is missing/blank, instead of silently sending a generic/spoofed header
+ok 75 - search and importMedia both reject with 503 before any fetch when the configured User-Agent is missing/blank, instead of silently sending a generic/spoofed header
+  ---
+  duration_ms: 61.8631
+  type: 'test'
+  ...
+# Subtest: an instance with no configured User-Agent still fully supports local-only clearRights/attach/card/validateAssets, and never lazy-skips the rights validator for a missing network config
+not ok 76 - an instance with no configured User-Agent still fully supports local-only clearRights/attach/card/validateAssets, and never lazy-skips the rights validator for a missing network config
+  ---
+  duration_ms: 96.7549
+  type: 'test'
+  location: 'C:\\Users\\bangg\\source\\repos\\frameforge-studio\\tests\\production-source-media.test.mjs:219:1'
+  failureType: 'testCodeFailure'
+  error: 'Source media file is missing or unsafe'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    verifiedUploadHash (file:///C:/Users/bangg/source/repos/frameforge-studio/server/media-sources.mjs:158:13)
+    SourceMediaService.clearRights (file:///C:/Users/bangg/source/repos/frameforge-studio/server/media-sources.mjs:286:20)
+    TestContext.<anonymous> (file:///C:/Users/bangg/source/repos/frameforge-studio/tests/production-source-media.test.mjs:224:15)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: importMedia requires an actual boolean rightsAcknowledged:true before any network call; missing/false/truthy-string are all rejected
+ok 77 - importMedia requires an actual boolean rightsAcknowledged:true before any network call; missing/false/truthy-string are all rejected
+  ---
+  duration_ms: 128.3811
+  type: 'test'
+  ...
+# Subtest: importMedia requires a valid positive integer Commons pageId before any network call
+ok 78 - importMedia requires a valid positive integer Commons pageId before any network call
+  ---
+  duration_ms: 88.6943
+  type: 'test'
+  ...
+# Subtest: importMedia always re-fetches by pageId itself; a caller-supplied sourceUrl is never fetched, downloaded, or trusted
+ok 79 - importMedia always re-fetches by pageId itself; a caller-supplied sourceUrl is never fetched, downloaded, or trusted
+  ---
+  duration_ms: 140.7481
+  type: 'test'
+  ...
+# Subtest: importMedia rejects an imageinfo URL on an untrusted host or a thumb/preview path, without ever attempting the download
+ok 80 - importMedia rejects an imageinfo URL on an untrusted host or a thumb/preview path, without ever attempting the download
+  ---
+  duration_ms: 118.6706
+  type: 'test'
+  ...
+# Subtest: importMedia requests the download with redirects disabled and cleanly rejects a server-side redirect instead of silently following it
+ok 81 - importMedia requests the download with redirects disabled and cleanly rejects a server-side redirect instead of silently following it
+  ---
+  duration_ms: 87.7734
+  type: 'test'
+  ...
+# Subtest: importMedia accepts only formats BOTH Commons-documented as originals AND locally decodable: webm passes; mp4 (locally decodable, Commons-original-support unverified) and ogv (Commons-documented, outside the local 11-format decoder set) and svg (vector, not raster) are each rejected for their own distinct reason
+ok 82 - importMedia accepts only formats BOTH Commons-documented as originals AND locally decodable: webm passes; mp4 (locally decodable, Commons-original-support unverified) and ogv (Commons-documented, outside the local 11-format decoder set) and svg (vector, not raster) are each rejected for their own distinct reason
+  ---
+  duration_ms: 119.5687
+  type: 'test'
+  ...
+# Subtest: importMedia rejects when the actual downloaded Content-Type disagrees with the metadata-declared mime (interstitial/error-page defense)
+ok 83 - importMedia rejects when the actual downloaded Content-Type disagrees with the metadata-declared mime (interstitial/error-page defense)
+  ---
+  duration_ms: 40.693
+  type: 'test'
+  ...
+# Subtest: importMedia probes the downloaded bytes and uses the verified result rather than trusting Commons-declared dimensions; a probe rejection registers no upload and leaves no orphaned file
+ok 84 - importMedia probes the downloaded bytes and uses the verified result rather than trusting Commons-declared dimensions; a probe rejection registers no upload and leaves no orphaned file
+  ---
+  duration_ms: 71.3199
+  type: 'test'
+  ...
+# Subtest: importMedia hashes the actually-written bytes with sha256 and retains Commons' own sha1 as separate upstream evidence
+ok 85 - importMedia hashes the actually-written bytes with sha256 and retains Commons' own sha1 as separate upstream evidence
+  ---
+  duration_ms: 49.1239
+  type: 'test'
+  ...
+# Subtest: importMedia never auto-creates a mediaRights clearance record; AttributionRequired/Copyrighted/license fields are preserved only as raw evidence for later human review
+ok 86 - importMedia never auto-creates a mediaRights clearance record; AttributionRequired/Copyrighted/license fields are preserved only as raw evidence for later human review
+  ---
+  duration_ms: 73.4031
+  type: 'test'
+  ...
+# Subtest: clearRights requires licenseId+attribution+sourceUrl for third-party origin and binds the record to the upload's current sha256
+ok 87 - clearRights requires licenseId+attribution+sourceUrl for third-party origin and binds the record to the upload's current sha256
+  ---
+  duration_ms: 55.6778
+  type: 'test'
+  ...
+# Subtest: clearRights accepts own-origin without a license, rejects an unknown origin value, and rejects an unknown uploadId
+ok 88 - clearRights accepts own-origin without a license, rejects an unknown origin value, and rejects an unknown uploadId
+  ---
+  duration_ms: 72.4813
+  type: 'test'
+  ...
+# Subtest: attach rejects a third-party uploadId with no matching mediaRights record, even though Commons metadata claimed a license (no automatic clearance)
+ok 89 - attach rejects a third-party uploadId with no matching mediaRights record, even though Commons metadata claimed a license (no automatic clearance)
+  ---
+  duration_ms: 131.5019
+  type: 'test'
+  ...
+# Subtest: attach rejects a third-party uploadId whose mediaRights sha256 no longer matches the upload's current sha256 (stale clearance cannot be reused)
+ok 90 - attach rejects a third-party uploadId whose mediaRights sha256 no longer matches the upload's current sha256 (stale clearance cannot be reused)
+  ---
+  duration_ms: 164.4191
+  type: 'test'
+  ...
+# Subtest: attach succeeds for an own-origin upload cleared with no license/attribution required (bare clearRights record), sets scene.kind/assetUrl/source, and bumps the episode version
+ok 91 - attach succeeds for an own-origin upload cleared with no license/attribution required (bare clearRights record), sets scene.kind/assetUrl/source, and bumps the episode version
+  ---
+  duration_ms: 214.1071
+  type: 'test'
+  ...
+# Subtest: attach image source/attribution/trim/history roundtrip: history preserves the first version unchanged while the current version reflects the second attach
+ok 92 - attach image source/attribution/trim/history roundtrip: history preserves the first version unchanged while the current version reflects the second attach
+  ---
+  duration_ms: 186.2102
+  type: 'test'
+  ...
+# Subtest: attach video roundtrip with trimStart/trimEnd and useAs, and rejects a stale expectedVersion (409) leaving the episode unchanged
+ok 93 - attach video roundtrip with trimStart/trimEnd and useAs, and rejects a stale expectedVersion (409) leaving the episode unchanged
+  ---
+  duration_ms: 272.3028
+  type: 'test'
+  ...
+# Subtest: card preserves title/text/narration, clears assetUrl/source, flips kind to title, bumps version, and calls no provider/network at all
+ok 94 - card preserves title/text/narration, clears assetUrl/source, flips kind to title, bumps version, and calls no provider/network at all
+  ---
+  duration_ms: 190.5083
+  type: 'test'
+  ...
+# Subtest: the existing scenes() validator accepts SourceMediaService's registered upload URL unmodified, and still rejects a raw Commons description URL used directly as assetUrl
+ok 95 - the existing scenes() validator accepts SourceMediaService's registered upload URL unmodified, and still rejects a raw Commons description URL used directly as assetUrl
+  ---
+  duration_ms: 45.6748
+  type: 'test'
+  ...
+# Subtest: media.validateAssets rejects a scene whose third-party source has no/mismatched mediaRights, passes a cleared match, and passes a legacy source-less scene untouched
+ok 96 - media.validateAssets rejects a scene whose third-party source has no/mismatched mediaRights, passes a cleared match, and passes a legacy source-less scene untouched
+  ---
+  duration_ms: 335.861
+  type: 'test'
+  ...
+# Subtest: scene and slot provenance survive validation independently, and generated visuals cannot claim factual-event evidence
+ok 97 - scene and slot provenance survive validation independently, and generated visuals cannot claim factual-event evidence
+  ---
+  duration_ms: 2.6856
+  type: 'test'
+  ...
+# Subtest: attaching an uncleared own-origin asset leaves the episode a draft and renders mechanically through the unmodified local pipeline, and rendering never fabricates a mediaRights record
+ok 98 - attaching an uncleared own-origin asset leaves the episode a draft and renders mechanically through the unmodified local pipeline, and rendering never fabricates a mediaRights record
+  ---
+  duration_ms: 4389.8976
+  type: 'test'
+  ...
+# Subtest: a Commons-imported, rights-cleared image actually renders through the existing local pipeline and its credit metadata survives afterward
+ok 99 - a Commons-imported, rights-cleared image actually renders through the existing local pipeline and its credit metadata survives afterward
+  ---
+  duration_ms: 3094.794
+  type: 'test'
+  ...
+# (node:45928) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: repeated supported node types validate with distinct IDs and a same-type edge between them when acyclic
+ok 100 - repeated supported node types validate with distinct IDs and a same-type edge between them when acyclic
+  ---
+  duration_ms: 6.5636
+  type: 'test'
+  ...
+# Subtest: a genuine cycle among repeated same-type nodes is rejected by real cycle detection, not a same-type-edge ban
+ok 101 - a genuine cycle among repeated same-type nodes is rejected by real cycle detection, not a same-type-edge ban
+  ---
+  duration_ms: 1.4388
+  type: 'test'
+  ...
+# Subtest: a self-referencing edge remains rejected once same-type edges become generally valid
+ok 102 - a self-referencing edge remains rejected once same-type edges become generally valid
+  ---
+  duration_ms: 0.6048
+  type: 'test'
+  ...
+# Subtest: duplicate node IDs across different supported types are rejected
+ok 103 - duplicate node IDs across different supported types are rejected
+  ---
+  duration_ms: 0.5227
+  type: 'test'
+  ...
+# Subtest: duplicate edge IDs and duplicate source/target endpoint pairs are both rejected
+ok 104 - duplicate edge IDs and duplicate source/target endpoint pairs are both rejected
+  ---
+  duration_ms: 1.1351
+  type: 'test'
+  ...
+# Subtest: edges referencing an unknown node id are rejected
+ok 105 - edges referencing an unknown node id are rejected
+  ---
+  duration_ms: 0.5338
+  type: 'test'
+  ...
+# Subtest: a node with no edges touching it is rejected even though every individual edge is otherwise valid
+ok 106 - a node with no edges touching it is rejected even though every individual edge is otherwise valid
+  ---
+  duration_ms: 0.6195
+  type: 'test'
+  ...
+# Subtest: a node ID equal to its own type is a valid exact ID, but an ID equal to a different supported type is rejected as shadowing
+ok 107 - a node ID equal to its own type is a valid exact ID, but an ID equal to a different supported type is rejected as shadowing
+  ---
+  duration_ms: 0.5588
+  type: 'test'
+  ...
+# Subtest: the engineering graph bounds are exactly 128 nodes and 256 edges, independent of the number of supported stage types
+ok 108 - the engineering graph bounds are exactly 128 nodes and 256 edges, independent of the number of supported stage types
+  ---
+  duration_ms: 37.2402
+  type: 'test'
+  ...
+# Subtest: deterministic execution order follows real edges across shuffled same-type nodes, not array position or type order
+ok 109 - deterministic execution order follows real edges across shuffled same-type nodes, not array position or type order
+  ---
+  duration_ms: 470.0429
+  type: 'test'
+  ...
+# Subtest: selectedStages and startStage resolve by exact node ID only; a literal ID equal to a type name still resolves but a bare type string that is not an ID is rejected
+ok 110 - selectedStages and startStage resolve by exact node ID only; a literal ID equal to a type name still resolves but a bare type string that is not an ID is rejected
+  ---
+  duration_ms: 454.2893
+  type: 'test'
+  ...
+# Subtest: selected stages after startStage must be downstream per actual edges, not merely a later TYPES index, among repeated-type nodes
+ok 111 - selected stages after startStage must be downstream per actual edges, not merely a later TYPES index, among repeated-type nodes
+  ---
+  duration_ms: 201.3193
+  type: 'test'
+  ...
+# Subtest: parallel render->review branches each bind to their own edge-connected render, not the first node of that type
+not ok 112 - parallel render->review branches each bind to their own edge-connected render, not the first node of that type
+  ---
+  duration_ms: 306.5071
+  type: 'test'
+  location: 'C:\\Users\\bangg\\source\\repos\\frameforge-studio\\tests\\production-workflow-graph.test.mjs:306:1'
+  failureType: 'testCodeFailure'
+  error: 'review-2 lost its connected render output: {"nodeId":"review-2","type":"review","status":"awaiting_review"}'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/bangg/source/repos/frameforge-studio/tests/production-workflow-graph.test.mjs:328:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: a sequential repeated producer chain (render1->review1->render2->review2) binds review2 to its nearest render, not an earlier reused producer
+not ok 113 - a sequential repeated producer chain (render1->review1->render2->review2) binds review2 to its nearest render, not an earlier reused producer
+  ---
+  duration_ms: 309.6233
+  type: 'test'
+  location: 'C:\\Users\\bangg\\source\\repos\\frameforge-studio\\tests\\production-workflow-graph.test.mjs:386:1'
+  failureType: 'testCodeFailure'
+  error: 'review-2 lost its nearest producer output: {"nodeId":"review-2","type":"review","status":"awaiting_review"}'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/bangg/source/repos/frameforge-studio/tests/production-workflow-graph.test.mjs:414:10)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: a review node fed by two equally-near render candidates is a genuine ambiguous merge and must be rejected, not silently resolved to either one
+ok 114 - a review node fed by two equally-near render candidates is a genuine ambiguous merge and must be rejected, not silently resolved to either one
+  ---
+  duration_ms: 359.7158
+  type: 'test'
+  ...
+# (node:41916) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: copying a shared workflow template creates a fresh project-owned workflow while the template is unchanged
+ok 115 - copying a shared workflow template creates a fresh project-owned workflow while the template is unchanged
+  ---
+  duration_ms: 317.4812
+  type: 'test'
+  ...
+# Subtest: a conflicting templateId in the request body can never override the URL path template
+ok 116 - a conflicting templateId in the request body can never override the URL path template
+  ---
+  duration_ms: 265.8447
+  type: 'test'
+  ...
+# Subtest: copy rejects a channel/episode ownership mismatch and does not create a workflow
+ok 117 - copy rejects a channel/episode ownership mismatch and does not create a workflow
+  ---
+  duration_ms: 507.2205
+  type: 'test'
+  ...
+# Subtest: copy rejects a stale expectedTemplateVersion and does not create a workflow
+ok 118 - copy rejects a stale expectedTemplateVersion and does not create a workflow
+  ---
+  duration_ms: 190.6883
+  type: 'test'
+  ...
+# Subtest: copy rejects an unknown templateId without creating a workflow
+ok 119 - copy rejects an unknown templateId without creating a workflow
+  ---
+  duration_ms: 114.2392
+  type: 'test'
+  ...
+# Subtest: GET on the copies collection performs no write and never creates a workflow
+ok 120 - GET on the copies collection performs no write and never creates a workflow
+  ---
+  duration_ms: 155.4341
+  type: 'test'
+  ...
+# Subtest: copy requires an authenticated admin session like every other workflow write
+ok 121 - copy requires an authenticated admin session like every other workflow write
+  ---
+  duration_ms: 192.8144
+  type: 'test'
+  ...
+# Subtest: review without a reviewNodeId is rejected and commits no decision
+ok 122 - review without a reviewNodeId is rejected and commits no decision
+  ---
+  duration_ms: 414.371
+  type: 'test'
+  ...
+# Subtest: review with the correct reviewNodeId commits that node decision; an unknown reviewNodeId on a still-pending run is rejected
+ok 123 - review with the correct reviewNodeId commits that node decision; an unknown reviewNodeId on a still-pending run is rejected
+  ---
+  duration_ms: 460.7239
+  type: 'test'
+  ...
+# Subtest: every new production-workspace route requires an authenticated session before any route-specific logic runs
+ok 124 - every new production-workspace route requires an authenticated session before any route-specific logic runs
+  ---
+  duration_ms: 211.7467
+  type: 'test'
+  ...
+# Subtest: unmatched paths under the new route prefixes return explicit failure, never a fabricated 2xx
+ok 125 - unmatched paths under the new route prefixes return explicit failure, never a fabricated 2xx
+  ---
+  duration_ms: 130.6399
+  type: 'test'
+  ...
+# Subtest: attaching a cleared upload to a scene performs a guarded versioned update
+ok 126 - attaching a cleared upload to a scene performs a guarded versioned update
+  ---
+  duration_ms: 262.7822
+  type: 'test'
+  ...
+# Subtest: converting a scene to a text-only card preserves story content and fabricates no image or license
+ok 127 - converting a scene to a text-only card preserves story content and fabricates no image or license
+  ---
+  duration_ms: 243.4204
+  type: 'test'
+  ...
+# Subtest: source search maps upstream 429/403 to explicit provider status with Retry-After, never fabricating no-results
+ok 128 - source search maps upstream 429/403 to explicit provider status with Retry-After, never fabricating no-results
+  ---
+  duration_ms: 99.4396
+  type: 'test'
+  ...
+# Subtest: source import requires explicit rightsAcknowledged before any network call and never imports an arbitrary caller URL
+ok 129 - source import requires explicit rightsAcknowledged before any network call and never imports an arbitrary caller URL
+  ---
+  duration_ms: 128.2604
+  type: 'test'
+  ...
+# Subtest: setting a channel's known YouTube externalId is guarded by optimistic concurrency
+ok 130 - setting a channel's known YouTube externalId is guarded by optimistic concurrency
+  ---
+  duration_ms: 187.9863
+  type: 'test'
+  ...
+# Subtest: channel YouTube status is sanitized -- scopes/expiry/channel/status only, never raw OAuth secret bytes
+ok 131 - channel YouTube status is sanitized -- scopes/expiry/channel/status only, never raw OAuth secret bytes
+  ---
+  duration_ms: 108.0613
+  type: 'test'
+  ...
+# Subtest: authorize is rejected until the channel has a known YouTube externalId; never falls back to the first channel
+ok 132 - authorize is rejected until the channel has a known YouTube externalId; never falls back to the first channel
+  ---
+  duration_ms: 184.6709
+  type: 'test'
+  ...
+# Subtest: authorize on a channel with a known externalId returns authUrl and a Lax correlation cookie distinct from the Strict session cookie
+ok 133 - authorize on a channel with a known externalId returns authUrl and a Lax correlation cookie distinct from the Strict session cookie
+  ---
+  duration_ms: 162.7305
+  type: 'test'
+  ...
+# Subtest: the OAuth callback rejects a request with no correlation cookie and never marks the channel connected
+ok 134 - the OAuth callback rejects a request with no correlation cookie and never marks the channel connected
+  ---
+  duration_ms: 92.0822
+  type: 'test'
+  ...
+# Subtest: disconnecting a channel's YouTube binding clears connected status
+ok 135 - disconnecting a channel's YouTube binding clears connected status
+  ---
+  duration_ms: 129.0406
+  type: 'test'
+  ...
+# Subtest: publication approval requires explicit rightsAcknowledged and audience/disclosure booleans
+ok 136 - publication approval requires explicit rightsAcknowledged and audience/disclosure booleans
+  ---
+  duration_ms: 247.649
+  type: 'test'
+  ...
+# Subtest: publication approve -> publish -> state -> episode list preserves exact request identity
+ok 137 - publication approve -> publish -> state -> episode list preserves exact request identity
+  ---
+  duration_ms: 589.9114
+  type: 'test'
+  ...
+# Subtest: resuming an unknown publication intent fails explicitly rather than fabricating progress
+ok 138 - resuming an unknown publication intent fails explicitly rather than fabricating progress
+  ---
+  duration_ms: 59.0219
+  type: 'test'
+  ...
+# Subtest: quote on a real workflow/episode returns a persisted plan shape, not a route-missing failure
+ok 139 - quote on a real workflow/episode returns a persisted plan shape, not a route-missing failure
+  ---
+  duration_ms: 121.61
+  type: 'test'
+  ...
+# Subtest: starting a run that includes paid generation without a prior quote/consent is rejected, not silently allowed
+ok 140 - starting a run that includes paid generation without a prior quote/consent is rejected, not silently allowed
+  ---
+  duration_ms: 107.04
+  type: 'test'
+  ...
+# Subtest: secret OAuth and publication identifiers never appear in /api/state or /api/knowledge
+ok 141 - secret OAuth and publication identifiers never appear in /api/state or /api/knowledge
+  ---
+  duration_ms: 78.639
+  type: 'test'
+  ...
+# (node:20076) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: collection is disabled by default and starts only after explicit enablement
+ok 142 - collection is disabled by default and starts only after explicit enablement
+  ---
+  duration_ms: 293.6457
+  type: 'test'
+  ...
+# Subtest: concurrent runNow calls never overlap collection calls
+ok 143 - concurrent runNow calls never overlap collection calls
+  ---
+  duration_ms: 62.5012
+  type: 'test'
+  ...
+# Subtest: failed collection is persisted with a future retry and successful retry clears the failure
+ok 144 - failed collection is persisted with a future retry and successful retry clears the failure
+  ---
+  duration_ms: 94.8749
+  type: 'test'
+  ...
+# Subtest: stop prevents a queued retry from starting and close is idempotent
+ok 145 - stop prevents a queued retry from starting and close is idempotent
+  ---
+  duration_ms: 431.3326
+  type: 'test'
+  ...
+# Subtest: close persists a terminal interruption before an in-flight fetch can finish
+ok 146 - close persists a terminal interruption before an in-flight fetch can finish
+  ---
+  duration_ms: 48.9458
+  type: 'test'
+  ...
+# Subtest: enabled due state survives restart and is collected once after the interval
+ok 147 - enabled due state survives restart and is collected once after the interval
+  ---
+  duration_ms: 238.4614
+  type: 'test'
+  ...
+# Subtest: restart converts an interrupted run into a future retry instead of replaying stale due state
+ok 148 - restart converts an interrupted run into a future retry instead of replaying stale due state
+  ---
+  duration_ms: 150.3444
+  type: 'test'
+  ...
+# Subtest: keyword reads support query, selected filter, pagination and bounded popular results
+ok 149 - keyword reads support query, selected filter, pagination and bounded popular results
+  ---
+  duration_ms: 81.764
+  type: 'test'
+  ...
+# Subtest: 14-day retention removes old trend snapshots and related media while preserving authored state
+ok 150 - 14-day retention removes old trend snapshots and related media while preserving authored state
+  ---
+  duration_ms: 257.6141
+  type: 'test'
+  ...
+# Subtest: retention reports media unlink failures after committing database cleanup
+ok 151 - retention reports media unlink failures after committing database cleanup
+  ---
+  duration_ms: 72.6002
+  type: 'test'
+  ...
+1..151
+# tests 151
+# suites 0
+# pass 148
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 11960.2179

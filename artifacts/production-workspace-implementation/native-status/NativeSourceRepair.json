@@ -1,0 +1,90 @@
+{
+  "role": "NativeSourceRepair",
+  "status": "module-ready-with-independent-test-fixture-prerequisite",
+  "changedFiles": [
+    "server/media-sources.mjs",
+    "artifacts/production-workspace-implementation/native-status/NativeSourceRepair.json"
+  ],
+  "exports": {
+    "server/media-sources.mjs": [
+      "SourceMediaService({store,fetchImpl=globalThis.fetch,userAgent,probe=probeGenerationAsset})",
+      "async search({query,kind,limit})",
+      "async importMedia(body)",
+      "async clearRights(uploadId,body)",
+      "async attach(episodeId,{sceneId,slotId?,uploadId,expectedVersion,trimStart?,trimEnd?,useAs})",
+      "async card(episodeId,{sceneId,expectedVersion})",
+      "validateAssets(sceneList) -> sceneList (synchronous)"
+    ]
+  },
+  "importVerified": true,
+  "implemented": [
+    "Local generated illustration validation and attachment require registered upload.generationJobId plus an exact completed generation-job output uploadId, URL and SHA-256 match. Scene/slot generationJobId must match. Forged or missing identities fail closed.",
+    "Generation provenance does not create mediaRights records or infer model-license clearance. Existing explicit generated rights metadata is retained where present. Registered generated uploads cannot be reclassified as own or third-party to become factual event evidence.",
+    "Rights decisions, attachment and source-bearing local validation hash actual contained regular files in incremental 64 KiB chunks, reject symlinks/path escapes/non-files/missing or empty files, bound content to 100 MiB, and check file identity/size/timestamps around the read.",
+    "Per-validation-call asset cache avoids rehashing shared files; subsequent calls verify bytes again. Both registered SHA and registered size, where present, are checked.",
+    "An explicit clearRights decision for a legacy upload without sha256 computes and registers the actual SHA with the human rights record and unchanged mediaRights.created event shape in one transaction. Origin is always explicit. No clearance occurs automatically."
+  ],
+  "verification": [
+    {
+      "command": "node scripts/version-harness.mjs verify",
+      "exitCode": 0,
+      "result": "Immutable selected harness 1.5.0 integrity verified; not evidence for new feature semantics."
+    },
+    {
+      "command": "node --check server/media-sources.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "node --input-type=module -e \"const {SourceMediaService}=await import('./server/media-sources.mjs'); for(const method of ['search','importMedia','clearRights','attach','card','validateAssets']) if(typeof SourceMediaService.prototype[method]!=='function') throw Error(method); console.log('SourceMediaService import and six contract methods verified');\"",
+      "exitCode": 0
+    },
+    {
+      "phase": "before repair",
+      "command": "node --test tests/production-source-media.test.mjs tests/generations.test.mjs tests/generation-integration.test.mjs",
+      "exitCode": 1,
+      "tests": 52,
+      "passed": 51,
+      "failed": 1,
+      "skipped": 0,
+      "failure": "generation-integration: generated output applied but local render rejected for absent human mediaRights. Fixed by this repair."
+    },
+    {
+      "phase": "after repair",
+      "command": "node --test --test-reporter=spec tests/production-source-media.test.mjs tests/generations.test.mjs tests/generation-integration.test.mjs",
+      "exitCode": 1,
+      "tests": 52,
+      "passed": 51,
+      "failed": 1,
+      "skipped": 0,
+      "failure": "production-source-media.test.mjs:219 unconfigured local-service positive fixture calls seedUpload(), which registers metadata but never writes a physical file. clearRights correctly rejects missing bytes with 409. The generated-output-to-render integration now passes; all existing generation tests and both actual source-render cases pass."
+    },
+    {
+      "command": "node --test --test-reporter=spec tests/production-generation-plan.test.mjs",
+      "exitCode": 0,
+      "tests": 10,
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "resolvedDuringImplementation": [
+    "An intermediate implementation nested Store.create's transaction. Replaced with one explicit transaction preserving rights entity timestamps, audit-event shape and knowledge export; subsequent verification has no transaction errors."
+  ],
+  "independentTestRequests": {
+    "owner": "NativeTester",
+    "doNotRelaxProductionValidation": true,
+    "requests": [
+      "Correct the source-media seedUpload fixture to write its real bytes into the temporary uploads directory. The history snapshot fixture is already corrected in the version read for this task.",
+      "Add generated scene and slot local-validator cases: authentic completed output with zero human rights rows succeeds as illustration; wrong job ID, unfinished job, output upload ID/URL/SHA mismatch and evidence use fail; no rights rows are automatically created.",
+      "Add actual physical-tamper cases for clearRights, attach and synchronous validateAssets: same-length changed bytes with unchanged DB SHA fail; missing files, symlinks/redirected roots, escapes, directories and over-100-MiB files fail.",
+      "Add legacy hashless-upload clearRights coverage: explicit valid origin decision binds actual SHA atomically; invalid/incomplete origin or rights inputs and audit failure do not register a hash or rights row. Verify repeat references use a per-call cache and later calls rehash."
+    ]
+  },
+  "unverifiedPaths": [
+    "New generated-provenance negative permutations, physical-tamper and legacy-hash atomicity need NativeTester-authored independent coverage; no test files were edited or authored by this role.",
+    "Legacy source-less scenes retain the existing validator contract and are not newly subjected to source-rights validation here; candidate/publication byte checks remain owned by their existing modules.",
+    "No project-wide suites, linters, formatters or live provider/browser/production operations were run."
+  ],
+  "jev": { "profile": "frameforge-codex", "active": false, "enabled": false, "used": false },
+  "sharingBoundary": "Explicit shared working-tree contract artifact. No Git operations, commit, push or external sharing."
+}

@@ -1,0 +1,163 @@
+{
+  "VerifiedYouTubeProtocol": {
+    "status": "verified_documentation_only",
+    "contract": ".mex/context/decisions.md:75-83",
+    "api_version": "YouTube Data API v3; fetched method references report last updated 2026-10-15",
+    "scope": {
+      "request": "https://www.googleapis.com/auth/youtube.force-ssl",
+      "finding": "One documented write-capable scope suffices for this insert/read/update integration; youtube.upload alone is NOT an accepted videos.update scope. Do not add youtube.readonly merely because read-back is required. Check granted scope, not just requested scope.",
+      "sources": [
+        "https://developers.google.com/youtube/data/reference/rest/v3/videos/insert",
+        "https://developers.google.com/youtube/data/reference/rest/v3/videos/update",
+        "https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest"
+      ]
+    },
+    "oauth": {
+      "authorize": "GET https://accounts.google.com/o/oauth2/v2/auth with client_id, exact registered redirect_uri, response_type=code, scope, unpredictable state, access_type=offline; prompt=consent is available for reconsent; include_granted_scopes=true is optional.",
+      "exchange": "POST https://oauth2.googleapis.com/token; application/x-www-form-urlencoded: client_id, client_secret for confidential web client, code, redirect_uri, grant_type=authorization_code, code_verifier when PKCE is used.",
+      "pkce": "Per-request 43–128 character high-entropy unreserved ASCII code_verifier; code_challenge=base64url-without-padding(SHA256(ASCII(verifier))), code_challenge_method=S256. Official Node sample explicitly uses OAuth2Client(keys.web), generateCodeVerifierAsync(), generateAuthUrl({code_challenge_method:'S256',code_challenge}), getToken({code,codeVerifier}). The web-server REST table itself does not list PKCE; support is separately evidenced by Google's Node sample, not inferred from desktop-only guidance.",
+      "tokens": "Successful token response: access_token, expires_in (seconds), token_type=Bearer, granted scope (space-delimited), optionally refresh_token; refresh_token_expires_in is documented for time-based access. Securely retain the prior refresh token if a later response omits one; do not assume every exchange returns a refresh token.",
+      "refresh": "POST same token endpoint, form client_id, client_secret, grant_type=refresh_token, refresh_token. Store new access token and expiry. invalid_grant/revocation requires reauthorization, not credential/account fallback.",
+      "testing": "External OAuth consent screen + Testing gives seven-day refresh tokens unless ONLY identity/profile scopes are requested. YouTube scopes do not qualify for that exception. Production status does not guarantee perpetual validity.",
+      "sources": [
+        "https://developers.google.com/identity/protocols/oauth2/web-server",
+        "https://developers.google.com/identity/protocols/oauth2#expiration",
+        "https://developers.google.com/identity/protocols/oauth2/native-app#step1-code-verifier",
+        "https://raw.githubusercontent.com/googleapis/google-auth-library-nodejs/main/samples/oauth2-codeVerifier.js"
+      ],
+      "version_note": "Cloud's OAuth2Client reference currently labels its latest page 9.0.0; use the official sample as API evidence, not as proof of the repo's installed dependency version."
+    },
+    "strict_callback": {
+      "verified_fact": "SameSite=Strict cookies are absent on the initial cross-site navigation back from Google; a callback cannot depend on the ordinary Strict session cookie being present.",
+      "recommendation": "[INFERENCE/design] Preserve the main Strict cookie. At authenticated initiation, persist a short-lived state record bound to initiating owner/session, intended channel, exact redirect URI and PKCE verifier; set a separate unpredictable host-only HttpOnly SameSite=Lax correlation cookie, Secure on HTTPS. Permit only the dedicated GET callback through ordinary session-cookie middleware. Require BOTH state and the matching correlation cookie; verify initiating server-side session is still valid, expiry and exact callback parameters. Atomically claim/consume the state before exchange, including validated denial/error responses; reject replay, missing/mismatched binding and expired state without exchange. Clear the correlation cookie, use no-store/no-referrer and redirect to a clean URL. State lookup alone, a signed state alone, or PKCE alone must not authorize connecting credentials to an arbitrary app owner.",
+      "sources": [
+        "https://developers.google.com/identity/protocols/oauth2/web-server#creatingclient",
+        "https://web.dev/articles/samesite-cookies-explained"
+      ],
+      "freshness": "The Google web.dev SameSite article is dated 2019-05-07: baseline browser semantics, not new guidance or a verified project/browser test."
+    },
+    "resumable": {
+      "initiate": "POST https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status ; Authorization: Bearer TOKEN; Content-Type: application/json; charset=UTF-8; X-Upload-Content-Length: N; X-Upload-Content-Type: video/mp4. Body includes approved snippet and explicit private/audience/disclosure status.",
+      "session": "Documented successful initiation is HTTP 200 with Location. Persist the exact session URL before transmitting media. Official example origin/path is https://www.googleapis.com/upload/youtube/v3/videos with uploadType=resumable and upload_id; do not construct upload_id yourself.",
+      "transfer": "PUT binary bytes to the saved Location. Completion is HTTP 201 with a video resource; persist its id immediately.",
+      "query": "After interrupted/uncertain transfer, PUT saved Location with Authorization, Content-Length: 0, Content-Range: bytes */N. Completed session returns the original completion response. Incomplete returns 308 Resume Incomplete; Range: bytes=0-LAST means next byte LAST+1. Missing Range means zero bytes received. Honor Retry-After if supplied; 308 here is protocol progress, not a reason to follow a redirect.",
+      "resume": "PUT same session with Content-Range: bytes FIRST-LAST/N and precisely the missing contiguous bytes. Query server state rather than assume previously sent bytes arrived. Guide recommends exponential backoff for 500/502/503/504.",
+      "origin_guard": "[INFERENCE/security] Require exact trusted HTTPS origin/path, no URL userinfo, and no redirects to untrusted origins before attaching bearer tokens. Documentation supplies an example, not an exhaustive promise that every future session host is identical; unexpected hosts must block pending review rather than widen to arbitrary googleapis.com suffixes.",
+      "source": "https://developers.google.com/youtube/data/guides/using_resumable_upload_protocol"
+    },
+    "publication": {
+      "bind_channel": "GET https://www.googleapis.com/youtube/v3/channels?part=id,snippet&mine=true ; match the authorized returned channel against the intended channel. No first-item/account fallback; onBehalfOfContentOwnerChannel is CMS-partner-only, not general channel selection.",
+      "private_insert": "Explicit status: {privacyStatus:'private', selfDeclaredMadeForKids: APPROVED_BOOLEAN, containsSyntheticMedia: APPROVED_BOOLEAN}; no publishAt.",
+      "read_back": "GET https://www.googleapis.com/youtube/v3/videos?part=snippet,status,processingDetails&id=REMOTE_ID with owner OAuth. Require the exact item.id, snippet.channelId, approved snippet metadata, status.privacyStatus, status.selfDeclaredMadeForKids and status.containsSyntheticMedia. Missing disclosure/audience evidence is unknown, not false. selfDeclaredMadeForKids and processingDetails are owner-authorized fields.",
+      "processing": "processingDetails.processingStatus values: processing, succeeded, failed, terminated. Only succeeded is positive processing evidence; terminated means information unavailable, not success. status.uploadStatus values: deleted, failed, processed, rejected, uploaded; inspect failureReason/rejectionReason where applicable.",
+      "public_update": "PUT https://www.googleapis.com/youtube/v3/videos?part=status ; body includes SAME id and complete intended mutable status: public visibility, approved selfDeclaredMadeForKids/containsSyntheticMedia and preserved license/embeddable/publicStatsViewable. Do not include snippet unless intentionally replacing it; snippet updates require title and categoryId.",
+      "replacement_detail": "Current update docs explicitly say mutable properties in supplied parts are replaced/deleted when omitted, BUT selfDeclaredMadeForKids and containsSyntheticMedia are specifically exempt and only update when explicitly set. Still resend both approved values to satisfy the publication contract. Never round-trip read-only uploadStatus/madeForKids as writable fields.",
+      "completion": "Revalidate manifest immediately before update; then owner-read-back same ID/channel, public visibility, metadata, audience/disclosure and processing. A transfer/update response alone does not prove contract completion.",
+      "sources": [
+        "https://developers.google.com/youtube/data/reference/rest/v3/channels/list",
+        "https://developers.google.com/youtube/data/reference/rest/v3/videos/list",
+        "https://developers.google.com/youtube/data/reference/rest/v3/videos",
+        "https://developers.google.com/youtube/data/reference/rest/v3/videos/update"
+      ]
+    },
+    "uncertain_recovery": {
+      "known_session": "Query/resume that same persisted upload session; completed query recovers video.id. Never initiate another insert merely because media PUT timed out.",
+      "known_video": "Read back that same video ID after uncertain public update. Confirmed public+matching fields can finish; confirmed private remains blocked/recoverable under approved manifest; unavailable read-back remains UNKNOWN. Do not report confidently private/public from a transport error.",
+      "lost_identity": "[INFERENCE/contract] Persist intent before initiating and session before bytes. If initiation response/persistence is ambiguous, session disappears, or a completion may have happened but both session and video identity are unrecoverable, block for reconciliation. YouTube insert docs do not document a client Idempotency-Key or a deterministic local-intent-to-video lookup. Filename/title matching is not proof of identity.",
+      "expired_session": "Guide says expired session gives 404 and generally instructs starting over; that generic instruction does NOT justify a duplicate insert when this contract's earlier completion is uncertain. Preserve evidence and fail closed instead.",
+      "sources": [
+        "https://developers.google.com/youtube/data/guides/using_resumable_upload_protocol",
+        "https://developers.google.com/youtube/data/reference/rest/v3/videos/insert",
+        ".mex/context/decisions.md:78-81"
+      ]
+    },
+    "unknowns": [
+      "No live credentials, account/channel availability, token behavior, uploads, processing, false-boolean omission behavior or publication were exercised; these are documentation facts and explicitly labeled adapter recommendations.",
+      "The session URL guide does not document an exhaustive host allowlist or exact expiration lifetime.",
+      "No provider-side idempotency key or exact recovery lookup from a local request ID is documented in the consulted insert/resumable references."
+    ],
+    "coordination": "Essential API, recovery, OAuth/PKCE, Strict-cookie and update-replacement facts sent to WorkspaceArchitecture in two IRC messages.",
+    "read_only": "No files created/modified, installs, accounts, credentials, provider actions, media transfers, formatters, linters or test suites."
+  },
+  "VerifiedCommonsProtocol": {
+    "title": "Research: Commons source-media adapter under PW-03",
+    "answer": "Use Commons Action API for discovery and original-file metadata, not as automatic rights clearance. Support only locally verified original formats, require human review of file-specific rights/attribution, and retain an original source-backed text-only title card when nothing is cleared. Essential facts and caveats were delivered to WorkspaceArchitecture by IRC.",
+    "search": {
+      "endpoint": "https://commons.wikimedia.org/w/api.php",
+      "parameters": "action=query&format=json&formatversion=2&generator=search&gsrnamespace=6&gsrsearch=<encoded terms plus filetype:video or filetype:bitmap>&gsrlimit=5&prop=imageinfo&iiprop=url|mime|mediatype|size|sha1|timestamp|extmetadata&iilimit=1&iiextmetadatalanguage=en",
+      "response": "With formatversion=2, query.pages[] contains pageid, ns:6, title, index (search rank), imagerepository and imageinfo[]. Continuation includes gsroffset; retain returned continuation parameters rather than manufacturing offsets. Without formatversion=2, documented pages is an object keyed by page ID.",
+      "filters": "filetype:bitmap selects raster images; filetype:video selects videos. Neither restricts namespace by itself: retain gsrnamespace=6. filemime:\"image/png\" is exact; unquoted filemime accepts partial MIME-component matches. Search filtering is discovery, not validation.",
+      "limits": "Search default 10, public maximum 500; current paraminfo exposes privileged highmax 5000, not a public guarantee. iilimit defaults to 1 and limits revisions PER FILE, not number of search results (public max500). extmetadata is explicitly expensive: request only a few files at a time. iiextmetadatafilter accepts pipe-separated keys, public maximum50. iiurlwidth requests scaled output and caps generated scaled images at50; omit scaling for original-only import.",
+      "sources": [
+        "https://www.mediawiki.org/wiki/API:Search",
+        "https://www.mediawiki.org/wiki/Help:CirrusSearch#File_properties_search",
+        "https://commons.wikimedia.org/w/api.php?action=paraminfo&modules=query%2Bsearch%7Cquery%2Bimageinfo&format=json",
+        "https://commons.wikimedia.org/w/api.php?action=query&format=json&formatversion=2&generator=search&gsrnamespace=6&gsrsearch=kingfisher%20filetype%3Abitmap&gsrlimit=1&prop=imageinfo&iiprop=url%7Cmime%7Cmediatype%7Csize%7Csha1&iilimit=1"
+      ]
+    },
+    "imageinfo": {
+      "fields": "imageinfo[0].url is the original-file URL; descriptionurl is the Commons file-description page; descriptionshorturl is a short description-page URL. size is file bytes; width/height are pixels; pagecount applies when available. mime and mediatype describe the original. sha1 is the file SHA-1 (observed40-character hexadecimal); timestamp is upload-version time, NOT retrieval time. Missing/deleted/hidden fields are not usable-media proof.",
+      "actual_sample": "The official CommonsMetadata example currently returns size:2897129, width:2000, height:2000, mime:\"image/jpeg\", mediatype:\"BITMAP\", sha1:\"b72cae08ddb2c4a4d06d91d052cf0b78ed1ab74c\", and original URL on https://upload.wikimedia.org/wikipedia/commons/c/cc/Common_Kingfisher_Alcedo_atthis.jpg with tracking query parameters.",
+      "extmetadata_shape": "extmetadata is keyed by field name; each field is an object with value, source and optional hidden. Observed Artist.value and Credit.value contain HTML; AttributionRequired.value is the STRING \"true\"; Copyrighted.value is the STRING \"True\". Do not apply JavaScript truthiness to booleanish strings. Metadata values are not uniformly strings (the parser version value was numeric).",
+      "sources": [
+        "https://www.mediawiki.org/wiki/API:Imageinfo",
+        "https://commons.wikimedia.org/w/api.php?action=query&prop=imageinfo&format=json&formatversion=2&iiprop=url%7Cmime%7Cmediatype%7Csize%7Csha1%7Cextmetadata%7Ctimestamp&iilimit=1&titles=File%3ACommon%20Kingfisher%20Alcedo%20atthis.jpg"
+      ]
+    },
+    "rights": {
+      "exact_keys": {
+        "LicenseShortName": "Human-readable license name.",
+        "LicenseUrl": "License URL.",
+        "UsageTerms": "License/usage terms description.",
+        "Artist": "Author(s), potentially complex HTML; uploader is not necessarily creator.",
+        "Credit": "Source/credit, potentially HTML.",
+        "Attribution": "Custom attribution replacing Artist + Credit when supplied.",
+        "AttributionRequired": "Booleanish legal attribution requirement; observed string, not native boolean.",
+        "Copyrighted": "True/False classification; observed string with capital T.",
+        "Permission": "May contain license templates, attribution instructions, permission identifiers and large HTML blocks.",
+        "Restrictions": "Non-copyright restriction keywords (e.g. trademark/personality rights). Docs describe an array of keywords, but the live example exposes an object whose value is an empty string. Preserve raw representation; empty/missing is not evidence that no restrictions apply.",
+        "NonFree": "Booleanish non-free marker documented chiefly for non-Commons files; absence is not positive clearance.",
+        "DeletionReason": "Deletion consideration/reason signal; block or escalate for review.",
+        "License": "Internal best guess; explicitly less reliable than LicenseShortName."
+      },
+      "caveats": "CommonsMetadata extracts templates/categories and returns display-oriented HTML. LicenseShortName/LicenseUrl/UsageTerms/Copyrighted are explicitly unreliable for multi-licensed files. Preserve raw metadata evidence separately from safe plain-text/UI rendering; never execute returned HTML. Human review must resolve the chosen license, required credit/link/change notice, adaptation/ShareAlike obligations and non-copyright restrictions. Commons explicitly provides no copyright-status warranty.",
+      "sources": [
+        "https://www.mediawiki.org/wiki/Extension:CommonsMetadata",
+        "https://commons.wikimedia.org/wiki/Commons:Reusing_content_outside_Wikimedia"
+      ]
+    },
+    "download_formats": {
+      "hosts": "Confirmed original-download host: upload.wikimedia.org under /wikipedia/commons/. Description/redirect host: commons.wikimedia.org. Technical guidance also documents Special:FilePath / Special:Redirect/file (omitting width for full resolution). Do not promote thumb.wikimedia.org or /thumb/ preview URLs to original imports. Recommendation: accept only API-returned HTTPS originals on the exact supported host/path; validate redirects independently, not broad *.wikimedia.org or arbitrary Credit links.",
+      "video": "Commons documents WebM (.webm, VP8/VP9/AV1) and Ogg Theora (.ogv). Commons:File_types additionally mentions MPEG-1/2 .mpg/.mpeg, while the allowable-file-types policy omits them: do not promise these without resolving the discrepancy and verifying local support. MP4 ORIGINAL availability is UNVERIFIED/not listed in the reviewed allowed-original formats; do not infer it from player playback, transcodes or an app's MP4 decoder. Never invent an MP4 download by changing an original URL suffix.",
+      "raster": "Commons documents JPEG, PNG, GIF, TIFF and WebP raster formats, plus XCF; SVG is vector, not raster. Recommendation: start only with the intersection of these originals and the application's actually validated local decoders. JPEG/PNG are the smallest still-image support scope; adding other raster formats needs explicit local probe/decode coverage. Browser thumbnail compatibility is not original-format compatibility.",
+      "sources": [
+        "https://commons.wikimedia.org/wiki/Commons:File_types",
+        "https://commons.wikimedia.org/wiki/Commons:Project_scope/Allowable_file_types",
+        "https://commons.wikimedia.org/wiki/Commons:Reusing_content_outside_Wikimedia/technical"
+      ]
+    },
+    "minimal_truthful_support": {
+      "recommendation": "Discover candidate originals; show their Commons description and raw rights evidence for explicit user review. Import only supported original bytes through a bounded, validated download path. Locally hash and probe/decode those bytes before treating them as renderable uploads; retain Commons SHA-1 as upstream evidence and local content hash separately. Version the source page/original URL, chosen license/evidence, attribution, retrieval time, local hash and video trim range. This is an implementation recommendation derived from canonical PW-03, not a claim of implemented or runtime-verified behavior.",
+      "fallback": "If there is no cleared, supported footage or still, retain the story and use an original source-backed text-only title card. No uploaded image or fabricated image-license record is needed. Article/RSS/og:image thumbnails do not inherit clearance from being public. Generated illustration is not evidence of the reported event and the fallback authorizes no paid generation.",
+      "scope": "No generic KOGL API, third-party media source support, accounts, credentials, provider changes, media downloads, file writes, implementation or tests were performed. Only official documentation/public JSON metadata were read."
+    },
+    "version_notes": "Facts checked2026-10-25. Commons generated API identified MediaWiki1.47.0-wmf.24; generic MediaWiki docs identified1.48.0-wmf.1, so Commons paraminfo was used for deployed limits. CommonsMetadata and search guidance were updated October2026. Technical reuse guidance was last edited2024-10-26 and is baseline guidance, not proof of current host completeness. Local decoder support, actual source import, file-specific legal clearance and MP4-original support remain explicitly unverified.",
+    "self_assessment": {
+      "accuracy": "4/5: exact fields and sample responses checked; format-policy discrepancy and MP4 uncertainty retained rather than guessed.",
+      "completeness": "4/5: requested search/metadata/rights/hosts/formats/fallback covered; local codecs intentionally not exercised under read-only scope.",
+      "clarity": "4/5: facts, caveats and implementation recommendations separated; compactness limited by exact-field coverage.",
+      "actionability": "4/5: explicit query and minimal support contract supplied; actual importer still requires local verification outside this assignment.",
+      "conciseness": "4/5: grouped field definitions avoid a report file; full response is necessarily longer than the IRC handoff.",
+      "overall": 4,
+      "improvement": "Before implementation sign-off, verify each advertised local decoder and resolve the documented MPEG policy discrepancy; do not expand support based on this research alone."
+    },
+    "user_agent_policy": {
+      "sources": [
+        "https://meta.wikimedia.org/wiki/User-Agent_policy",
+        "https://foundation.wikimedia.org/wiki/Policy:Wikimedia_Foundation_User-Agent_Policy"
+      ],
+      "observed": "Wikimedia requires a descriptive application/version User-Agent with operator contact URL/email for all metadata and original-media requests; generic/empty agents may be blocked with403. Do not spoof browser UA.",
+      "implementation": "Configurable MEDIA_USER_AGENT on both api.php and upload.wikimedia.org fetches; explicit provider_blocked/provider_rate_limited results for403/429 with parsed Retry-After, never silently treat provider failure as no results or trigger fallback."
+    }
+  }
+}

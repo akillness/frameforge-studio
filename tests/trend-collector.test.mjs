@@ -34,6 +34,50 @@ const trendResult = (trends = []) => ({
   sources: [{ name: 'fixture', status: 'ok', count: trends.length }],
 });
 
+test('different concurrent queries serialize with their own results and audits while equal queries coalesce', async t => {
+  const entered = deferred(), release = deferred(), calls = [];
+  let active = 0, maximum = 0;
+  const f = await fixture(t, { fetchTrends: async query => {
+    calls.push(query); maximum = Math.max(maximum, ++active);
+    if (calls.length === 1) { entered.resolve(); await release.promise; }
+    active--;
+    return { trends: [{ keyword: `Result for ${query}`, source: 'fixture transport', url: `https://fixture.invalid/${encodeURIComponent(query)}` }], sources: [{ name: `Source for ${query}`, status: 'ok', count: 1 }] };
+  } });
+  const a = f.collector.runNow({ force: true, query: 'query A exact' }); await entered.promise;
+  const sameA = f.collector.runNow({ force: true, query: 'query A exact' });
+  const b = f.collector.runNow({ force: true, query: 'query B exact' });
+  const sameB = f.collector.runNow({ force: true, query: 'query B exact' });
+  await later(); assert.deepEqual(calls, ['query A exact'], 'query B cannot overlap query A'); release.resolve();
+  const [first, duplicate, second, secondDuplicate] = await Promise.all([a, sameA, b, sameB]);
+  assert.equal(maximum, 1); assert.equal(active, 0); assert.deepEqual(calls, ['query A exact', 'query B exact']);
+  assert.equal(first.runId, duplicate.runId); assert.equal(second.runId, secondDuplicate.runId); assert.notEqual(first.runId, second.runId);
+  for (const [result, query] of [[first, 'query A exact'], [second, 'query B exact']]) {
+    assert.deepEqual(result.trends.map(trend => trend.keyword), [`Result for ${query}`]);
+    assert.equal(result.sources[0].name, `Source for ${query}`);
+    const audit = f.store.get('trendCollectionRuns', result.runId);
+    assert.equal(audit.query, query); assert.equal(audit.status, 'completed'); assert.equal(audit.inserted, 1);
+    assert.equal(audit.sources[0].name, `Source for ${query}`);
+  }
+  assert.equal(f.store.listTrendCollectionRuns({ limit: 10 }).length, 2);
+});
+
+test('a failed active query never substitutes its error or results for a queued different query', async t => {
+  const entered = deferred(), release = deferred(), calls = [];
+  const f = await fixture(t, { fetchTrends: async query => {
+    calls.push(query);
+    if (query === 'fails A') { entered.resolve(); await release.promise; throw new Error('fixture A unavailable'); }
+    return trendResult([query]);
+  } });
+  const a = f.collector.runNow({ force: true, query: 'fails A' });
+  const rejected = assert.rejects(a, /fixture A unavailable/); await entered.promise;
+  const b = f.collector.runNow({ force: true, query: 'succeeds B' }); release.resolve();
+  await rejected; const result = await b;
+  assert.deepEqual(calls, ['fails A', 'succeeds B']); assert.equal(result.trends[0].keyword, 'succeeds B');
+  const runs = f.store.listTrendCollectionRuns({ limit: 10 });
+  assert.equal(runs.find(run => run.query === 'fails A').status, 'failed');
+  assert.equal(runs.find(run => run.query === 'succeeds B').status, 'completed');
+});
+
 test('collection is disabled by default and starts only after explicit enablement', async (t) => {
   let calls = 0;
   const f = await fixture(t, { fetchTrends: async () => { calls += 1; return trendResult(['disabled']); } });
@@ -223,15 +267,15 @@ test('14-day retention removes old trend snapshots and related media while prese
   const authored = f.store.create('uploads', { filename: 'authored.png', url: '/api/uploads/authored.png', kind: 'image', generated: false, createdAt: old });
   const trendMedia = f.store.create('uploads', { filename: 'trend-old.png', url: '/api/uploads/trend-old.png', kind: 'image', generated: true, trend: true, trendKeyword: 'expired', createdAt: old });
   const beforeHistory = f.store.history(episode.id);
-  const workflow = f.store.create('workflows', { name: 'Authored workflow', version: 1, nodes: [], edges: [] });
+  const workflow = f.store.create('workflows', { name: 'Authored workflow', version: 1, nodes: [{ id: 'render', type: 'render', x: 0, y: 0, config: {} }, { id: 'review', type: 'review', x: 100, y: 0, config: {} }], edges: [{ id: 'e1', source: 'render', target: 'review' }] });
   const sha256 = 'a'.repeat(64);
   const job = f.store.create('jobs', { episodeId: episode.id, episodeVersion: editedEpisode.version, status: 'completed', outputUrl: '/api/exports/authored.mp4', sha256 });
-  const run = f.store.create('workflowRuns', { workflowId: workflow.id, episodeId: episode.id, episodeVersion: editedEpisode.version, workflowVersion: 1, status: 'awaiting_review', nodeRuns: [
-    { type: 'render', status: 'completed', output: { jobId: job.id, outputUrl: job.outputUrl, episodeVersion: editedEpisode.version, sha256 } },
-    { type: 'review', status: 'awaiting_review' },
+  const run = f.store.create('workflowRuns', { workflowId: workflow.id, workflowSnapshot: { nodes: workflow.nodes, edges: workflow.edges }, episodeId: episode.id, episodeVersion: editedEpisode.version, workflowVersion: 1, status: 'awaiting_review', nodeRuns: [
+    { nodeId: 'render', type: 'render', status: 'completed', output: { jobId: job.id, outputUrl: job.outputUrl, episodeVersion: editedEpisode.version, sha256 } },
+    { nodeId: 'review', type: 'review', status: 'awaiting_review' },
   ] });
-  f.store.commitWorkflowReview(workflow.id, run.id, { decision: 'approved', notes: 'Keep authored review', expectedEpisodeVersion: editedEpisode.version, jobId: job.id, outputUrl: job.outputUrl, sha256 });
-  const beforeReviews = f.store.workflowReviews(run.id);
+  f.store.commitWorkflowReview(workflow.id, run.id, 'review', { decision: 'approved', notes: 'Keep authored review', expectedEpisodeVersion: editedEpisode.version, jobId: job.id, outputUrl: job.outputUrl, sha256 });
+  const beforeReviews = f.store.workflowNodeReviews(run.id);
 
   assert.equal(beforeReviews.length, 1);
   const result = f.store.pruneTrendRetention({ now });
@@ -239,7 +283,7 @@ test('14-day retention removes old trend snapshots and related media while prese
   assert.deepEqual(f.store.listTrendKeywords({ limit: 10 }).map((item) => item.keyword), ['fresh']);
   assert.equal(f.store.get('uploads', trendMedia.id).id, trendMedia.id);
   assert.deepEqual(f.store.history(episode.id), beforeHistory);
-  assert.deepEqual(f.store.workflowReviews(run.id), beforeReviews);
+  assert.deepEqual(f.store.workflowNodeReviews(run.id), beforeReviews);
 });
 test('retention reports media unlink failures after committing database cleanup', async (t) => {
   const f = await fixture(t);

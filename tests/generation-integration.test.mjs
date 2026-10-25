@@ -52,18 +52,34 @@ test('workflow generation consent precedes edits; completed asset applies with v
   const dataDir = await mkdtemp(path.join(tmpdir(), 'frameforge-generation-api-'));
   let creates = 0;
   const generation = { transport:'api', capability:async () => ({available:true}), models:async () => [], modelSchema:async () => ({ type:'image', parameters:[{name:'prompt',type:'string',required:true}] }), create:async () => { creates++; return {requestId:'fixture-provider',status:'completed',outputs:[{url:'https://images.higgs.ai/fixture.png',type:'image'}]}; }, status:async () => { throw new Error('unexpected poll'); } };
-  const base = await listen(createApp({ dataDir, generation, generationOptions: {
+  const base = await listen(createApp({ dataDir, loginToken: '', publicOrigin: '', generation, generationOptions: {
     pollIntervalMs:1, download:async (_url,file) => { await writeFile(file,'fixture bytes'); return { bytes:13,contentType:'image/png' }; }, probe:async () => ({kind:'image',width:64,height:64}),
   }, integrations:{ integrationStatus:async () => ({}) }, renderer:async (_episode,{dataDir}) => { await writeFile(path.join(dataDir,'exports','fixture.mp4'),'fixture render'); return {outputUrl:'/api/exports/fixture.mp4',filename:'fixture.mp4'}; } }), t);
   t.after(() => rm(dataDir, { recursive:true, force:true, maxRetries:3, retryDelay:100 }));
   const call = (route,body) => fetch(base+route,{method:body?'POST':'GET',...(body?{headers:{'content-type':'application/json'},body:JSON.stringify(body)}:{})});
   const initial = await (await call('/api/state')).json();
   const episode = await (await call('/api/episodes',{channelId:initial.channels[0].id,title:'Generation fixture',topic:'Safe API test'})).json();
-  const workflow = await (await call('/api/workflows',graph())).json();
+  const template = await (await call('/api/workflows',graph())).json();
+  const copied = await call(`/api/workflows/${template.id}/copies`, { episodeId: episode.id, channelId: episode.channelId, expectedTemplateVersion: template.version });
+  assert.equal(copied.status, 201); const workflow = await copied.json();
   assert.equal((await call(`/api/workflows/${workflow.id}/run`,{episodeId:episode.id})).status,400);
   assert.equal(creates,0);
   assert.equal((await (await call(`/api/episodes/${episode.id}/history`)).json()).length,1);
-  const run = await (await call(`/api/workflows/${workflow.id}/run`,{episodeId:episode.id,allowGeneration:true})).json();
+  const preparation = await call(`/api/workflows/${workflow.id}/run`, { episodeId: episode.id, selectedStages: ['script', 'storyboard'], startStage: 'script' });
+  assert.equal(preparation.status, 202); const prepared = await preparation.json();
+  let sourceRun;
+  for (let i = 0; i < 200; i++) {
+    sourceRun = (await (await call(`/api/workflows/${workflow.id}/runs`)).json()).find(item => item.id === prepared.id);
+    if (['completed', 'failed'].includes(sourceRun.status)) break;
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  assert.equal(sourceRun.status, 'completed', JSON.stringify(sourceRun)); assert.equal(creates, 0);
+  const selection = { resumeRunId: prepared.id, selectedStages: ['generate', 'render', 'review'], startStage: 'generate' };
+  const disclosure = { containsSyntheticMedia: true, rationale: 'Explicit fixture generation disclosure' };
+  const quote = await call(`/api/workflows/${workflow.id}/quote`, { episodeId: episode.id, disclosure, ...selection });
+  assert.equal(quote.status, 200, await quote.clone().text()); const plan = await quote.json();
+  const started = await call(`/api/workflows/${workflow.id}/run`, { episodeId: episode.id, allowGeneration: true, disclosure, ...selection, generationPlanId: plan.id, generationFingerprint: plan.fingerprint, acceptUnquotedEstimate: true });
+  assert.equal(started.status, 202, await started.clone().text()); const run = await started.json();
   let complete;
   for (let i=0;i<200;i++) {
     complete = (await (await call(`/api/workflows/${workflow.id}/runs`)).json()).find(item => item.id === run.id);

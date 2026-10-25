@@ -1,0 +1,160 @@
+{
+  "role": "NativeEngine",
+  "status": "module-ready-targeted-generation-passed-integration-prerequisites-remain",
+  "files": [
+    "server/workflows.mjs",
+    "artifacts/production-workspace-implementation/native-status/NativeEngine.json"
+  ],
+  "exports": [
+    "TYPES",
+    "validateWorkflow(raw)",
+    "defaultWorkflow()",
+    "WorkflowEngine({store,fetchTrends,runAgent,render,validateAssets,generations,publication})",
+    "WorkflowEngine.copy(templateId,body)",
+    "WorkflowEngine.quote(workflowId,episodeId,options={}) -> Promise<persisted generation plan>",
+    "WorkflowEngine.start(workflowId,episodeId,options={}) -> synchronous workflow run",
+    "WorkflowEngine.review(workflowId,runId,body) -> Promise<run>; body.reviewNodeId mandatory"
+  ],
+  "verified": [
+    "node --check server/workflows.mjs",
+    "native ESM import with actual graph.mjs and candidates.mjs"
+  ],
+  "prerequisites": [
+    "NativeTester: graph waitRun must follow the terminal sanitized /api/workflow-runs summary with existing GET /api/workflow-runs/:id (or workflow-specific full runs). Keep summaries sanitized. Tests13/14 currently read undefined output.render.",
+    "NativeTester: migrate tests/reviews.test.mjs candidate() to real Store.createWorkflowCopy before execution. No ownership compatibility shim was added.",
+    "Main: expose POST /api/workflows/:id/quote -> await workflows.quote(id,body.episodeId,body). Six existing paid-workflow tests currently stop on404 in consentedRun helper.",
+    "Main: query-filtered trend nodes currently pass query to the engine adapter, but app refreshTrends/TrendCollector discard it before calling transport. NativeTester has adapted the graph fixture to the existing no-argument transport; the engine still passes the exact configured query and filters returned keywords.",
+    "Main/documentation owner: synchronize editable harness contracts and promote/verify a new immutable version for PW-02; this role verified 1.5.0 integrity only and did not edit/promote harness bytes."
+  ],
+  "jev": {
+    "profile": "frameforge-codex",
+    "enabled": false,
+    "used": false
+  },
+  "validation": [
+    {
+      "command": "rtk proxy node --check server/workflows.mjs",
+      "exitCode": 0
+    },
+    {
+      "command": "rtk proxy node --input-type=module -e \"const m=await import('./server/workflows.mjs'); console.log(JSON.stringify({exports:Object.keys(m),methods:['quote','start','copy','review'].map(name=>({name,type:typeof m.WorkflowEngine.prototype[name]}))}));\"",
+      "exitCode": 0,
+      "result": "Real native ESM import; all four existing module exports and quote/start/copy/review callable"
+    },
+    {
+      "command": "rtk proxy node --test tests/production-workflow-graph.test.mjs",
+      "exitCode": 1,
+      "tests": 15,
+      "passed": 13,
+      "failed": 2,
+      "skipped": 0,
+      "failures": [
+        {
+          "test": 13,
+          "reason": "waitRun uses sanitized /api/workflow-runs summary; node output absent"
+        },
+        {
+          "test": 14,
+          "reason": "same summary-vs-detail boundary"
+        }
+      ]
+    },
+    {
+      "command": "rtk proxy node --test tests/production-generation-plan.test.mjs",
+      "exitCode": 0,
+      "tests": 10,
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "command": "rtk proxy node --test tests/workflows.test.mjs",
+      "exitCode": 1,
+      "tests": 23,
+      "passed": 17,
+      "failed": 6,
+      "skipped": 0,
+      "failures": [
+        {
+          "tests": [
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "reason": "Migrated consentedRun helper POST /api/workflows/:id/quote receives 404 in Main-owned app.mjs before engine execution"
+        }
+      ]
+    },
+    {
+      "command": "rtk proxy node --test tests/reviews.test.mjs",
+      "exitCode": 1,
+      "tests": 10,
+      "passed": 0,
+      "failed": 10,
+      "skipped": 0,
+      "reason": "candidate() still executes unowned default workflow; strict project ownership rejects409 before render/review"
+    }
+  ],
+  "implementation": [
+    "128 nodes/256 edges; connected DAG, exact IDs, lexical topological ties and nearest-per-path prerequisites",
+    "Project copy lineage enforced; URL template ID wins over body",
+    "Synchronous start validates persisted plan, exact candidate/cost/disclosure/version/expiry and all selected generation nodes before run creation",
+    "Quote shares real deterministic saved-script/layout/news transforms with execution and freezes prepared scenes; source/agent changes demand fresh quotation without rebasing",
+    "Physical assets verified during execution before paid submission; per-node original intent and stable scene/job/provider identity persist across failure/resume",
+    "Independent branches continue after branch-local failure; reviews aggregate pending before changes_requested before approved; skipped historical output stays retained separately",
+    "Publish creates real local staging record only; no Studio/provider upload or public completion",
+    "Render inputs select their nearest connected storyboard/layout snapshot and aggregate only ancestor generation outputs, recording exact sceneSnapshot and generationNodeIds"
+  ],
+  "sourceSha256": "ac08c9a66e31bab146873e32237bea2a9b25f593b2fd1fec0b086e9eb28defd5",
+  "historicalVerification": [
+    {
+      "command": "rtk proxy node --test tests/production-generation-plan.test.mjs",
+      "results": [
+        "2 passed /8 failed before owned fixture migration",
+        "9 passed /1 failed until deterministic future layout preparation was shared",
+        "10 passed /0 failed on three subsequent focused executions"
+      ]
+    },
+    {
+      "command": "rtk proxy node --test tests/production-workflow-graph.test.mjs",
+      "results": [
+        "10 passed /5 failed before owned fixture migration",
+        "11 passed /4 failed before no-argument transport fixture update",
+        "13 passed /2 failed latest"
+      ]
+    },
+    {
+      "command": "rtk proxy node --test tests/workflows.test.mjs",
+      "results": [
+        "Initial legacy-fixture run interrupted using tool session Ctrl-C after19 subtests (4 passed /15 failed); final4 were not reached",
+        "15 passed /8 failed after owned fixture migration",
+        "17 passed /6 failed latest after preserving skipped-output API and runtime missing-prerequisite behavior"
+      ]
+    },
+    {
+      "command": "rtk proxy node --test tests/reviews.test.mjs",
+      "results": [
+        "0 passed /10 failed on each attempted execution because fixture ownership migration remains pending"
+      ]
+    },
+    {
+      "command": "rtk proxy node --test --test-name-pattern \"repeated supported node types|genuine cycle|self-referencing edge|duplicate node IDs|duplicate edge IDs|unknown node id|no edges touching|node ID equal|engineering graph bounds\" tests/production-workflow-graph.test.mjs",
+      "passed": 9,
+      "failed": 0
+    },
+    {
+      "command": "rtk proxy node --test --test-name-pattern \"typed DAG validator accepts|typed DAG validator rejects|node labels\" tests/workflows.test.mjs",
+      "passed": 3,
+      "failed": 0
+    }
+  ],
+  "limits": [
+    "Quotes for unknown external/new script output require preparing and saving those source-only inputs first; execution never rebases a quote to newly returned script/storyboard/layout input",
+    "No real provider, production, browser, publication, OAuth, credentials, Git or deployment operations; only temporary isolated tests",
+    "No tests, app.mjs, Store, graph or candidate source files were edited by this role; no formatters, linters or project-wide suites run",
+    "Project MEX impact graph was stale; no graph/wiki refresh outside the exact allowlist was attempted"
+  ]
+}

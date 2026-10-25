@@ -1,0 +1,89 @@
+{
+  "role": "NativeTesterRepair",
+  "status": "module-ready-full-journey8of8-with-private-runtime-concurrent-one-use-red",
+  "updatedAt": "2026-10-25T08:14:03.791Z",
+  "exports": {
+    "scripts/production-workspace-browser-smoke.mjs": [
+      "runProductionWorkspaceBrowserSmoke() -> Promise<{code,signal,receipt}>"
+    ]
+  },
+  "importVerified": true,
+  "productionFilesChanged": [],
+  "tests": {
+    "backend": {
+      "command": "node --test tests/production-publication.test.mjs tests/production-local-guards.test.mjs tests/production-source-media.test.mjs tests/production-workflow-graph.test.mjs tests/trend-collector.test.mjs",
+      "tests": 107,
+      "pass": 106,
+      "fail": 1,
+      "skipped": 0,
+      "log": "artifacts/production-workspace-implementation/journey-repair-backend.tap"
+    },
+    "localAfterSeparatingConcurrency": {
+      "command": "node --test tests/production-local-guards.test.mjs",
+      "tests": 9,
+      "pass": 8,
+      "fail": 1,
+      "skipped": 0,
+      "log": "artifacts/production-workspace-implementation/journey-repair-local.tap"
+    },
+    "backendFinal": {
+      "command": "node --test tests/production-publication.test.mjs tests/production-local-guards.test.mjs tests/production-source-media.test.mjs tests/production-workflow-graph.test.mjs tests/trend-collector.test.mjs",
+      "tests": 109,
+      "pass": 108,
+      "fail": 1,
+      "skipped": 0,
+      "log": "artifacts/production-workspace-implementation/journey-repair-backend-final.tap"
+    },
+    "fullJourney": {
+      "command": "node scripts/production-workspace-browser-smoke.mjs",
+      "nestedCommand": "node --test tests/production-workspace-journey.test.mjs",
+      "tests": 8,
+      "pass": 8,
+      "fail": 0,
+      "skipped": 0,
+      "log": "artifacts/production-workspace-implementation/journey-repair-full.tap",
+      "receipt": "artifacts/production-workspace-implementation/journey-receipt.json",
+      "screenshots": 32,
+      "widths": [
+        1600,
+        1024,
+        375,
+        320
+      ],
+      "screenshotHashesVerified": true,
+      "reducedMotion": true,
+      "keyboard": true,
+      "externalBrowserRequests": 0,
+      "pageErrors": 0
+    }
+  },
+  "passingCoverage": [
+    "Three final-validation race cases: episode/rights/channel edits block PUBLIC transport",
+    "Known uncertain video read-only reconciliation after edit for public/private evidence, no current completion",
+    "Two PublicationService instances preserve both encrypted session identities and restart recovery",
+    "Real generated apply -> SourceMediaService.validateAssets -> FFmpeg1080x1920 render -> explicit publication rights acknowledgement",
+    "Detailed run responses retain parallel branch and nearest-producer assertions",
+    "Different trend queries serialize with separate exact results/audit; equal queries coalesce",
+    "Concurrent OAuth callbacks on two service instances exchange exactly once",
+    "Eight full Chromium scenarios,32 actual screenshots with SHA256 verification at1600/1024/375/320, keyboard and reduced motion,zero external browser requests"
+  ],
+  "unresolved": [
+    "SECURITY RED: PrivateRuntime.consume concurrent threads returned the same one-use state to TWO threads in backend-final test7; expected exactly one winner. Earlier local run returned503 to a losing consume thread. See journey-repair-backend-final.tap and journey-repair-local.tap. Production owner must repair atomic cross-thread/process claim; this role cannot edit server/private-runtime.mjs.",
+    "Main shared artifact now lists additional branch/layout/render-only/two-slot/full-recipe regressions; authoring in progress."
+  ],
+  "jev": {
+    "profile": "frameforge-codex",
+    "active": false,
+    "used": false
+  },
+  "boundaries": {
+    "providerTransport": "fixtures-only",
+    "loginToken": "",
+    "publicOrigin": "",
+    "tempDB": true,
+    "ephemeralPorts": true,
+    "productionAccess": false,
+    "gitCommands": false,
+    "subdelegation": false
+  }
+}

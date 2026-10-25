@@ -1,0 +1,452 @@
+{
+  "schema": "frameforge-production-workspace-verification/v1",
+  "observedAt": "2026-10-25T09:33:24.433Z",
+  "status": "PW-01-through-PW-07-verified-in-isolated-execution",
+  "contract": {
+    "path": ".mex/context/decisions.md",
+    "sha256": "f6f38029643377900f3e2e7375b969844f3cebb9926c85f652213c18bcf3e152",
+    "snapshot": "artifacts/production-workspace-implementation/approved-contract-snapshot.json",
+    "snapshotContentVerified": true
+  },
+  "acceptanceCriteria": [
+    {
+      "id": "PW-01",
+      "status": "verified-isolated-execution",
+      "browserScenarios": [
+        "A/B and every stage preserve hidden episode and graph drafts, beforeunload and original stale 409 base"
+      ],
+      "evidence": [
+        "final-backend-after-insertion.tap",
+        "journey-receipt.json"
+      ]
+    },
+    {
+      "id": "PW-02",
+      "status": "verified-isolated-execution",
+      "browserScenarios": [
+        "A/B and every stage preserve hidden episode and graph drafts, beforeunload and original stale 409 base",
+        "128-node/256-edge owned canvas fits, pans, inspects and saves the last node without overflow",
+        "both repeated render/review branches use real FFmpeg jobs and require independent exact-node approvals",
+        "all ten roles prepare and quote through the UI while publish stays outside both execution selections",
+        "source-only whole execution excludes publish and stops at the real local review checkpoint",
+        "sequential reviewed producers enable the next render in the UI while publish requires its nearest approved review"
+      ],
+      "evidence": [
+        "final-backend-after-insertion.tap",
+        "legacy-recovery-verification.json",
+        "journey-receipt.json",
+        "harness-promotion.json",
+        "harness-after.json"
+      ]
+    },
+    {
+      "id": "PW-03",
+      "status": "verified-isolated-execution",
+      "browserScenarios": [
+        "real Commons video/still import, rights, attach and original card retain story without generation",
+        "unknown media origin, audience and disclosure are initially unanswered; source and delivery reflow",
+        "real FFmpeg render and exact review precede server manifest preview and fixture Google public readback"
+      ],
+      "evidence": [
+        "final-backend-after-insertion.tap",
+        "journey-receipt.json"
+      ]
+    },
+    {
+      "id": "PW-04",
+      "status": "verified-isolated-execution",
+      "browserScenarios": [
+        "unknown media origin, audience and disclosure are initially unanswered; source and delivery reflow",
+        "real FFmpeg render and exact review precede server manifest preview and fixture Google public readback",
+        "whole-candidate consent displays every generate node and exact costs, and disclosure changes invalidate the quote without spending",
+        "both repeated render/review branches use real FFmpeg jobs and require independent exact-node approvals",
+        "all ten roles prepare and quote through the UI while publish stays outside both execution selections",
+        "source-only whole execution excludes publish and stops at the real local review checkpoint",
+        "sequential reviewed producers enable the next render in the UI while publish requires its nearest approved review"
+      ],
+      "evidence": [
+        "final-backend-after-insertion.tap",
+        "journey-receipt.json"
+      ]
+    },
+    {
+      "id": "PW-05",
+      "status": "verified-isolated-execution",
+      "browserScenarios": [
+        "real FFmpeg render and exact review precede server manifest preview and fixture Google public readback",
+        "all ten roles prepare and quote through the UI while publish stays outside both execution selections",
+        "source-only whole execution excludes publish and stops at the real local review checkpoint",
+        "sequential reviewed producers enable the next render in the UI while publish requires its nearest approved review"
+      ],
+      "evidence": [
+        "final-backend-after-insertion.tap",
+        "journey-receipt.json"
+      ]
+    },
+    {
+      "id": "PW-06",
+      "status": "verified-isolated-execution",
+      "browserScenarios": [
+        "two channels own independent copied graphs, histories and versions with no execution on copy"
+      ],
+      "evidence": [
+        "final-backend-after-insertion.tap",
+        "legacy-recovery-verification.json",
+        "journey-receipt.json"
+      ]
+    },
+    {
+      "id": "PW-07",
+      "status": "verified-isolated-execution",
+      "browserScenarios": [
+        "A/B and every stage preserve hidden episode and graph drafts, beforeunload and original stale 409 base",
+        "128-node/256-edge owned canvas fits, pans, inspects and saves the last node without overflow",
+        "real Commons video/still import, rights, attach and original card retain story without generation",
+        "unknown media origin, audience and disclosure are initially unanswered; source and delivery reflow",
+        "real FFmpeg render and exact review precede server manifest preview and fixture Google public readback",
+        "whole-candidate consent displays every generate node and exact costs, and disclosure changes invalidate the quote without spending"
+      ],
+      "evidence": [
+        "final-backend-after-insertion.tap",
+        "journey-receipt.json"
+      ]
+    }
+  ],
+  "commands": [
+    {
+      "command": "node --test --test-concurrency=2 tests/production-branch-regressions.test.mjs tests/production-generation-plan.test.mjs tests/production-local-guards.test.mjs tests/production-media-credits.test.mjs tests/production-project-store.test.mjs tests/production-publication.test.mjs tests/production-source-media.test.mjs tests/production-workflow-graph.test.mjs tests/production-workspace-api.test.mjs tests/trend-collector.test.mjs",
+      "exitCode": 0,
+      "tests": 181,
+      "passed": 181,
+      "failed": 0,
+      "skipped": 0,
+      "log": "artifacts/production-workspace-implementation/final-backend-after-insertion.tap"
+    },
+    {
+      "command": "node scripts/production-workspace-browser-smoke.mjs",
+      "actualChildCommand": "node --test tests/production-workspace-journey.test.mjs",
+      "exitCode": 0,
+      "tests": 11,
+      "passed": 11,
+      "failed": 0,
+      "skipped": 0,
+      "log": "artifacts/production-workspace-implementation/final-browser-after-insertion.tap",
+      "receipt": "artifacts/production-workspace-implementation/journey-receipt.json",
+      "screenshots": 40,
+      "zeroExternalBrowserRequests": true,
+      "zeroPageErrors": true
+    },
+    {
+      "command": "npm run check",
+      "exitCode": 0,
+      "modules": 89,
+      "log": "artifacts/production-workspace-implementation/final-syntax.log"
+    },
+    {
+      "verifiedAt": "2026-10-25T08:35:45.168Z",
+      "width": 1080,
+      "height": 1920,
+      "codec": "h264",
+      "duration": "2.021333",
+      "audio": true,
+      "output": "0b46cf8a-a69c-4358-99ac-87489d7bcfee.mp4",
+      "command": "node <checkout>/scripts/render-smoke.mjs",
+      "commandScope": "Exact unchanged npm test:render entrypoint, executed with a fresh OS-temporary cwd instead of the production project cwd",
+      "exitCode": 0,
+      "sha256": "0946a43040cb3ff46f571afec203cbd911cf62cc73808979c16a3f2833b8d3cd",
+      "size": 22541,
+      "artifact": "artifacts/production-workspace-implementation/render-smoke.mp4",
+      "boundary": "Two self-authored title cards and silent fixture audio; actual FFmpeg/ffprobe, not live speech, source media, generation or publication. Project data untouched."
+    },
+    {
+      "command": "python .mex/verify-knowledge.py",
+      "exitCode": 1,
+      "ok": false,
+      "wikiPages": 312,
+      "okfAtoms": 100,
+      "errorCount": 1663,
+      "log": "artifacts/production-workspace-implementation/knowledge-final.json",
+      "boundary": "Historical full-vault diagnostics preserved, no validator exclusions, fixture weakening or deletion to manufacture a pass."
+    },
+    {
+      "command": "docker run --rm --pull=never --network none --read-only --user 1000:1000 --cap-drop ALL --security-opt no-new-privileges --pids-limit 512 --no-healthcheck --tmpfs /tmp:rw,nosuid,nodev,mode=1777,size=1073741824 --mount type=bind,source=C:/Users/bangg/source/repos/frameforge-studio/server,target=/app/server,readonly --mount type=bind,source=C:/Users/bangg/source/repos/frameforge-studio/public,target=/app/public,readonly --mount type=bind,source=C:/Users/bangg/source/repos/frameforge-studio/scripts,target=/app/scripts,readonly --mount type=bind,source=C:/Users/bangg/source/repos/frameforge-studio/tests,target=/app/tests,readonly --mount type=bind,source=C:/Users/bangg/source/repos/frameforge-studio/package.json,target=/app/package.json,readonly --env HOME=/tmp --env XDG_CONFIG_HOME=/tmp/chromium-config --env XDG_CACHE_HOME=/tmp/chromium-cache --env LOGIN_TOKEN= --env PUBLIC_ORIGIN= --env MEDIA_USER_AGENT= --env YOUTUBE_CLIENT_ID= --env YOUTUBE_CLIENT_SECRET= --env YOUTUBE_REDIRECT_URI= --env DATA_DIR=/tmp/frameforge-acceptance --entrypoint node sha256:dc18f680d820162f769ff2e807cb08b23b6d35688adc68ff04759f708a862a5a --test --test-concurrency=2 tests/white-studio.test.mjs tests/white-studio-versions.test.mjs tests/platform-session.test.mjs tests/layout-pipeline-session.test.mjs tests/api.test.mjs",
+      "argv": [
+        "run",
+        "--rm",
+        "--pull=never",
+        "--network",
+        "none",
+        "--read-only",
+        "--user",
+        "1000:1000",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges",
+        "--pids-limit",
+        "512",
+        "--no-healthcheck",
+        "--tmpfs",
+        "/tmp:rw,nosuid,nodev,mode=1777,size=1073741824",
+        "--mount",
+        "type=bind,source=C:/Users/bangg/source/repos/frameforge-studio/server,target=/app/server,readonly",
+        "--mount",
+        "type=bind,source=C:/Users/bangg/source/repos/frameforge-studio/public,target=/app/public,readonly",
+        "--mount",
+        "type=bind,source=C:/Users/bangg/source/repos/frameforge-studio/scripts,target=/app/scripts,readonly",
+        "--mount",
+        "type=bind,source=C:/Users/bangg/source/repos/frameforge-studio/tests,target=/app/tests,readonly",
+        "--mount",
+        "type=bind,source=C:/Users/bangg/source/repos/frameforge-studio/package.json,target=/app/package.json,readonly",
+        "--env",
+        "HOME=/tmp",
+        "--env",
+        "XDG_CONFIG_HOME=/tmp/chromium-config",
+        "--env",
+        "XDG_CACHE_HOME=/tmp/chromium-cache",
+        "--env",
+        "LOGIN_TOKEN=",
+        "--env",
+        "PUBLIC_ORIGIN=",
+        "--env",
+        "MEDIA_USER_AGENT=",
+        "--env",
+        "YOUTUBE_CLIENT_ID=",
+        "--env",
+        "YOUTUBE_CLIENT_SECRET=",
+        "--env",
+        "YOUTUBE_REDIRECT_URI=",
+        "--env",
+        "DATA_DIR=/tmp/frameforge-acceptance",
+        "--entrypoint",
+        "node",
+        "sha256:dc18f680d820162f769ff2e807cb08b23b6d35688adc68ff04759f708a862a5a",
+        "--test",
+        "--test-concurrency=2",
+        "tests/white-studio.test.mjs",
+        "tests/white-studio-versions.test.mjs",
+        "tests/platform-session.test.mjs",
+        "tests/layout-pipeline-session.test.mjs",
+        "tests/api.test.mjs"
+      ],
+      "environment": {
+        "MSYS_NO_PATHCONV": "1",
+        "MSYS2_ARG_CONV_EXCL": "*"
+      },
+      "exitCode": 0,
+      "tests": 47,
+      "passed": 47,
+      "failed": 0,
+      "skipped": 0,
+      "platform": "existing local Linux container with readonly current source",
+      "log": "artifacts/production-workspace-implementation/legacy-linux-home.tap",
+      "receipt": "artifacts/production-workspace-implementation/legacy-recovery-verification.json"
+    },
+    {
+      "command": "node scripts/version-harness.mjs promote 1.6.0",
+      "exitCode": 0,
+      "receipt": "artifacts/production-workspace-implementation/harness-promotion.json"
+    },
+    {
+      "command": "node scripts/version-harness.mjs verify",
+      "exitCode": 0,
+      "receipt": "artifacts/production-workspace-implementation/harness-after.json"
+    },
+    {
+      "command": "mex graph refresh --json",
+      "exitCode": 0,
+      "receipt": "artifacts/production-workspace-implementation/mex-refresh-final.json"
+    },
+    {
+      "command": "mex check",
+      "exitCode": 0,
+      "driftScore": 100,
+      "errors": 0,
+      "warnings": 0,
+      "filesChecked": 16,
+      "graphFresh": true,
+      "sourceChanges": 0,
+      "log": "artifacts/production-workspace-implementation/mex-check-final.txt"
+    },
+    {
+      "command": "python .graphify/refresh.py",
+      "exitCode": 0,
+      "receipt": ".graphify/verification.json",
+      "log": "artifacts/production-workspace-implementation/graphify-final-refresh.log"
+    }
+  ],
+  "browserSourceIdentity": [
+    {
+      "path": "public/app.js",
+      "sha256": "ebe8b752846de062b15819c215b3bad0d61b33584f95ae6ca105a6621c359bc5",
+      "verified": true
+    },
+    {
+      "path": "public/workflow.js",
+      "sha256": "bd90b4ad766965f81f3db71b38fb705d067c0e0e48c6bb4c6a3b5fa47238e44c",
+      "verified": true
+    },
+    {
+      "path": "public/production-tools.js",
+      "sha256": "2b495ecb55b00584b5fa8dd8d6d6ad0721c08db4abacb04cca4c922d5809f4d4",
+      "verified": true
+    },
+    {
+      "path": "public/styles.css",
+      "sha256": "25e9be09c24abd7a8a12b3889724d19a525936d41e6609e26f0c4a377a772d49",
+      "verified": true
+    },
+    {
+      "path": "public/workspace.css",
+      "sha256": "cc6b3d1197f422df27f2aeb58c6cf7495de8b9c161c1f052b1edc0909475401f",
+      "verified": true
+    },
+    {
+      "path": "server/app.mjs",
+      "sha256": "e3d69648cc3f6f7083d3c7a91e891457d874320d0d1fb8ce2f9fc03c09703958",
+      "verified": true
+    },
+    {
+      "path": "server/publication.mjs",
+      "sha256": "3666427a226d7ec52b98a083c83999a38158527aece98dea103746d7e892f827",
+      "verified": true
+    },
+    {
+      "path": "server/media-sources.mjs",
+      "sha256": "c67789ea91b376aaadfc3457a34f9662dac5f8d9dd97fbaf835056b713ea4056",
+      "verified": true
+    },
+    {
+      "path": "tests/production-workspace-journey.test.mjs",
+      "sha256": "2d12729803b1587e4ce6828ce09c9984822bb9938437b82c0024bd5fb3a49b3f",
+      "verified": true
+    }
+  ],
+  "boundaries": {
+    "temporaryDatabases": true,
+    "ephemeralLoopbackPorts": true,
+    "loginToken": "",
+    "publicOrigin": "",
+    "externalTransport": "fixtures only; actual store/graph/services/FFmpeg/browser app",
+    "liveGoogleConsent": false,
+    "liveProviderGeneration": false,
+    "liveUploadOrPublication": false,
+    "deployment": false,
+    "gitMutation": false,
+    "productionDataAccess": false,
+    "jev": {
+      "host": "jeopi",
+      "profile": "jeopi",
+      "active": false,
+      "used": false,
+      "configurationChanged": false
+    }
+  },
+  "reviewReports": [
+    "artifacts/production-workspace-implementation/javascript-review.json",
+    "artifacts/production-workspace-implementation/security-review.json",
+    "artifacts/production-workspace-implementation/branch-publication-review.json"
+  ],
+  "failureEvidenceRetained": true,
+  "artifactIdentity": {
+    "screenshots": {
+      "expected": 40,
+      "verified": 40,
+      "allHashesMatch": true
+    },
+    "browserSources": {
+      "expected": 9,
+      "verified": 9
+    },
+    "renderHashMatches": true,
+    "nonlocalBrowserRequests": 0,
+    "pageErrors": 0
+  },
+  "harness": {
+    "ok": true,
+    "schema": "frameforge-harness-current/v1",
+    "currentVersion": "1.6.0",
+    "bundlePath": "versions/1.6.0",
+    "bundleSha256": "65af70f95e9942cfdaac98008679f4c66b6ee62c8b866c7ef143856fbb8798d4",
+    "previousVersion": "1.5.0",
+    "action": "promote",
+    "updatedAt": "2026-10-25T09:26:02.495Z",
+    "old15BundleMatchesOriginalBaseline": true,
+    "semanticEvidence": "Backend181 + Linux legacy47 + actual-browser11; integrity alone is not semantic proof."
+  },
+  "runtimeSources": "artifacts/production-workspace-implementation/final-runtime-sources.json",
+  "knowledge": {
+    "mex": {
+      "files": 133,
+      "nodes": 4923,
+      "edges": 15622,
+      "parseHealth": {
+        "total": 133,
+        "ok": 133,
+        "partial": 0,
+        "failed": 0,
+        "failedPaths": [],
+        "failedPathsTruncated": false
+      },
+      "sourceChanges": 0,
+      "receipt": "artifacts/production-workspace-implementation/mex-refresh-final.json"
+    },
+    "graphify": {
+      "nodes": 3181,
+      "edges": 7171,
+      "sourceFiles": 412,
+      "portable": true,
+      "remainingExactDuplicateEdges": 0,
+      "receipt": ".graphify/verification.json",
+      "mode": "native deterministic code extraction; semantic enrichment not run"
+    },
+    "fullVault": {
+      "status": "failed-diagnostics-preserved",
+      "errors": 1663,
+      "pages": 312,
+      "atoms": 100,
+      "receipt": "artifacts/production-workspace-implementation/knowledge-final.json",
+      "initialAudit": "artifacts/production-workspace-implementation/knowledge-audit.json",
+      "initialAuditErrors": 1705,
+      "boundary": "Final full-vault command result changed while unrelated vault pages/atoms also changed. No cause or cleanup attribution is inferred; both exact results are preserved."
+    }
+  },
+  "preservedFailures": [
+    {
+      "receipt": "artifacts/production-workspace-implementation/native-status/NativeLegacyCallers.json",
+      "result": "45/47 before insertion repair and filesystem recovery"
+    },
+    {
+      "log": "artifacts/production-workspace-implementation/legacy-final.tap",
+      "result": "Windows46/47; real file-symlink fixture creation EPERM; not claimed passed on Windows"
+    },
+    {
+      "log": "artifacts/production-workspace-implementation/legacy-linux-final.tap",
+      "result": "Linux45/47 before disposable Chromium HOME/XDG configuration"
+    },
+    {
+      "receipt": "artifacts/production-workspace-implementation/mex-refresh-attempts.json",
+      "result": "Source staging failed while the caller owner was changing two test files; final stable-source refresh succeeded"
+    },
+    {
+      "receipt": "artifacts/production-workspace-implementation/knowledge-final.json",
+      "result": "Historical full-vault validation remains failed; not weakened/deleted/excluded"
+    }
+  ],
+  "remainingVerificationGaps": [
+    "Native Windows real file-symlink containment could not execute because the OS denies creating its fixture. The exact same assertions pass on Linux; no Windows equivalent claim.",
+    "Live Google OAuth consent, paid generation, actual upload/publication and deployment were outside authority and were not exercised.",
+    "Full historical wiki lint remains failed with 1663 diagnostics in the final recorded command; the earlier1705-diagnostic audit is retained separately.",
+    "POSIX0600 enforcement and forced-process-crash behavior were not fully exercised by the Windows private-runtime tests."
+  ],
+  "repairReceipts": [
+    "artifacts/production-workspace-implementation/graph-insertion-repair.json",
+    "artifacts/production-workspace-implementation/windows-fixture-repair.json",
+    "artifacts/production-workspace-implementation/legacy-recovery-verification.json"
+  ],
+  "visualComparison": {
+    "receipt": "artifacts/production-workspace-implementation/visual-comparison.json",
+    "boundary": "Manual reference/current UI comparison, not pixel-diff or owner creative acceptance."
+  },
+  "selfEvaluation": "artifacts/production-workspace-implementation/delivery-self-evaluation.json"
+}

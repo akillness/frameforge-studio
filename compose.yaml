@@ -11,9 +11,17 @@ services:
       AGENT_BRIDGE_URL: ${HOST_AGENT_BRIDGE_URL:-http://host.docker.internal:4311}
       AGENT_BRIDGE_TOKEN: ${AGENT_BRIDGE_TOKEN:-}
       SPEECH_PROVIDER: host-bridge
+      HOME: /tmp
+      XDG_CONFIG_HOME: /tmp/chromium-config
+      XDG_CACHE_HOME: /tmp/chromium-cache
       HF_API_KEY: ${HF_API_KEY:-}
       NAVER_CLIENT_ID: ${NAVER_CLIENT_ID:-}
       NAVER_CLIENT_SECRET: ${NAVER_CLIENT_SECRET:-}
+      MEDIA_USER_AGENT: ${MEDIA_USER_AGENT:-}
+      YOUTUBE_CLIENT_ID: ${YOUTUBE_CLIENT_ID:-}
+      YOUTUBE_CLIENT_SECRET: ${YOUTUBE_CLIENT_SECRET:-}
+      YOUTUBE_REDIRECT_URI: ${YOUTUBE_REDIRECT_URI:-}
+      YOUTUBE_OAUTH_TESTING: "${YOUTUBE_OAUTH_TESTING:-false}"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:

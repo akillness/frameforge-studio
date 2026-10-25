@@ -1,0 +1,16 @@
+{
+  "verifiedAt": "2026-10-25T08:35:45.168Z",
+  "width": 1080,
+  "height": 1920,
+  "codec": "h264",
+  "duration": "2.021333",
+  "audio": true,
+  "output": "0b46cf8a-a69c-4358-99ac-87489d7bcfee.mp4",
+  "command": "node <checkout>/scripts/render-smoke.mjs",
+  "commandScope": "Exact unchanged npm test:render entrypoint, executed with a fresh OS-temporary cwd instead of the production project cwd",
+  "exitCode": 0,
+  "sha256": "0946a43040cb3ff46f571afec203cbd911cf62cc73808979c16a3f2833b8d3cd",
+  "size": 22541,
+  "artifact": "artifacts/production-workspace-implementation/render-smoke.mp4",
+  "boundary": "Two self-authored title cards and silent fixture audio; actual FFmpeg/ffprobe, not live speech, source media, generation or publication. Project data untouched."
+}

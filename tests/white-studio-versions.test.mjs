@@ -15,7 +15,7 @@ async function fixture(t) {
   const dataDir = await mkdtemp(join(tmpdir(), 'frameforge-white-versions-'));
   let providerCalls = 0;
   const guardedIntegrations = { ...integrations, runAgent: async (...args) => { providerCalls++; return integrations.runAgent(...args); } };
-  const server = createApp({ dataDir, integrations: guardedIntegrations });
+  const server = createApp({ dataDir, loginToken: '', publicOrigin: '', integrations: guardedIntegrations });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
   const request = (url, method = 'GET', body) => fetch(base + url, {
@@ -33,7 +33,13 @@ async function fixture(t) {
     await new Promise((resolve) => { server.close(resolve); server.closeAllConnections(); });
     await rm(dataDir, { recursive: true, force: true });
   });
-  return { request, workflow: state.workflows[0], episode, providerCalls: () => providerCalls };
+  const template = state.workflows[0];
+  const copied = await request(`/api/workflows/${template.id}/copies`, 'POST', { episodeId: episode.id, channelId: episode.channelId, expectedTemplateVersion: template.version });
+  assert.equal(copied.status, 201);
+  const workflow = await copied.json();
+  assert.notEqual(workflow.id, template.id);
+  assert.equal(workflow.episodeId, episode.id);
+  return { request, workflow, episode, providerCalls: () => providerCalls };
 }
 
 async function runs(f, workflowId) {

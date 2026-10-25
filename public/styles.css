@@ -41,6 +41,13 @@
 }
 
 * { box-sizing: border-box; }
+[data-production-tools] { min-width: 0; overflow-wrap: anywhere; }
+[data-production-tools] :is(input, select, textarea, video, img, pre) { max-width: 100%; min-width: 0; }
+[data-production-tools] pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+[data-production-tools] dialog { width: min(640px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto; }
+[data-production-tools] .row { flex-wrap: wrap; }
+[data-production-tools] .generation-checkbox { min-height: 36px; align-items: center; }
+[data-production-tools] input:is([type="radio"], [type="checkbox"]) { width: 18px; height: 18px; min-height: 18px; margin: 0; padding: 0; flex: 0 0 18px; accent-color: var(--primary); }
 html, body { min-width: 0; min-height: 100%; }
 body { margin: 0; overflow-x: hidden; background: var(--bg); }
 button, input, select, textarea { font: inherit; }

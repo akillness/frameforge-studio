@@ -1,0 +1,53 @@
+{
+  "role": "NativeMedia",
+  "status": "module_ready_with_integration_failure",
+  "sourceSha256": "674f79f51943e806f45f167d574968a7c404d71a4efab8d660e20ea998e8b8fb",
+  "files": [
+    "server/media-sources.mjs",
+    "artifacts/production-workspace-implementation/native-status/NativeMedia.json"
+  ],
+  "exports": {
+    "SourceMediaService({store,fetchImpl=globalThis.fetch,userAgent,probe=probeGenerationAsset})": {
+      "search({query,kind,limit})": "async; explicit ok/provider_blocked/provider_rate_limited status; items and optional retryAfter/continuation",
+      "importMedia({pageId,kind,useAs,rightsAcknowledged:true})": "async; re-fetch Commons pageId, bounded trusted original download, local probe/hash, registered upload with provenance; no automatic mediaRights clearance",
+      "clearRights(uploadId,{origin,licenseId?,attribution?,sourceUrl?,generationJobId?})": "async; explicit hash-bound mediaRights record with acknowledgedAt; third-party requires licenseId/attribution/sourceUrl; generated requires matching completed job",
+      "attach(episodeId,{sceneId,slotId?,uploadId,expectedVersion,trimStart?,trimEnd?,useAs})": "async; current episode with versioned scene/slot source and trim update; rejects stale version and missing/stale rights",
+      "card(episodeId,{sceneId,expectedVersion})": "async; text-only title fallback preserving story/narration/evidence; removes visual assets and media layers; no provider calls",
+      "validateAssets(sceneList)": "synchronous; returns sceneList after verifying scene/slot source against registered upload and explicit hash-bound rights; source-less legacy scenes preserved"
+    }
+  },
+  "configuration": {
+    "MEDIA_USER_AGENT": "Main must pass as userAgent; missing/blank is allowed at construction and returns 503 before any search/import fetch",
+    "localOperations": "Independent of provider configuration, including synchronous validateAssets",
+    "supportedCommonsOriginals": ["image/jpeg", "image/png", "video/webm"],
+    "formatRejections": {
+      "video/mp4": "Local decoder supports MP4; Commons original availability remains unverified",
+      "video/ogg (.ogv)": "Commons-documented original; unsupported by local video decoder allowlist",
+      "image/svg+xml": "Outside the verified original raster/local decoder intersection"
+    },
+    "limits": {"metadataBytes": 2097152, "originalBytes": 104857600, "requestTimeoutMs": 60000},
+    "transport": "Exact HTTPS Commons API and API-returned upload.wikimedia.org original hash-directory paths; redirect:error and configured User-Agent on metadata and download"
+  },
+  "verification": {
+    "syntax": {"command": "node --check server/media-sources.mjs", "exitCode": 0},
+    "import": {"command": "node --input-type=module -e \"const m = await import('./server/media-sources.mjs'); console.log(JSON.stringify({exports:Object.keys(m),validateAssetsConstructor:m.SourceMediaService.prototype.validateAssets.constructor.name}));\"", "exitCode": 0, "exports": ["SourceMediaService"], "validateAssetsConstructor": "Function"},
+    "independentTests": {
+      "command": "node --test --test-reporter=spec tests/production-source-media.test.mjs",
+      "previousCommand": "node --test tests/production-source-media.test.mjs",
+      "runs": {"baseline": 1, "postImplementation": 3},
+      "redBaseline": "exit 1: ERR_MODULE_NOT_FOUND before implementation",
+      "postImplementation": {"tests": 29, "passed": 28, "failed": 1, "skipped": 0, "exitCode": 1, "actualFfmpegRendersPassed": 2, "finalDurationMs": 14276.363},
+      "failure": "Test 23 at tests/production-source-media.test.mjs:485 reads v2.scenes[0]. Current Store.snapshot/history returns v2.snapshot.scenes. Error: Cannot read properties of undefined (reading '0')."
+    },
+    "harness": {"command": "node scripts/version-harness.mjs verify", "exitCode": 0, "version": "1.5.0", "boundary": "Immutable bundle integrity only; not proof of new workspace semantic completion"},
+    "mex": {"command": "mex logging --json", "mode": "significant", "impact": "mex impact server/media-sources.mjs: source-drift, TARGET_NOT_FOUND; no refresh performed outside the allowlist"},
+    "notRun": ["formatters", "linters", "project-wide suites", "HTTP/server/browser tests", "production smoke scripts", "live provider requests"]
+  },
+  "unresolvedPrerequisites": [
+    {"owner": "Main/Store owner", "file": "server/store.mjs", "detail": "Reconcile the authoritative source-media test's historyEntry.scenes contract with Store.snapshot/history's historyEntry.snapshot.scenes shape. No Store monkey-patch, duplicate history fields or test edits were introduced by NativeMedia."},
+    {"owner": "Main", "file": "server/app.mjs", "detail": "Instantiate SourceMediaService with MEDIA_USER_AGENT and mediaOptions; wire the frozen source routes and invoke synchronous validateAssets on scene updates/render. Integration is not owned or verified by NativeMedia."}
+  ],
+  "dependencies": ["NativeSchema sceneSource export is present and imported; rights fields use its licenseId/attribution/generationJobId bounds", "Explicit acknowledgedAt is emitted for NativeCandidate's human-clearance verification"],
+  "jev": {"profile": "frameforge-codex", "active": false, "enabled": false, "used": false},
+  "sharingBoundary": "Shared working-tree contract artifact only. No commit/push, production data/config/credentials, provider calls, paid generation, upload or deployment."
+}

@@ -1,0 +1,110 @@
+{
+  "schema": "frameforge-native-recovery/v1",
+  "createdAt": "2026-10-25T07:21:38.553Z",
+  "context": "Goal: implement the approved FrameForge A(editing-first)+B(project node canvas), every PW-01–PW-07 in .mex/context/decisions.md. Frozen interfaces: artifacts/production-workspace-implementation/plan.json; official protocols: protocols.json beside it. Existing independent tests are authoritative, not mocks of app logic. Prior default delegated agents are no longer live and failed before completing most files; do not assume their intended code exists. Preserve landed Store/graph/copy/review changes and unrelated user work. No new interview or broad planning: read necessary exact source/tests, IMPLEMENT real code, then specific tests.\nSafety: no real production port4310/private HTTPS/data/.env/credentials/provider calls/paid generation/Google consent/upload/deploy or Git commands/mutations; no worktrees. All tests explicit loginToken:'' and publicOrigin:'', tempDB+ephemeralports, fake only at external transport. Never run production-smoke.mjs/workflow-smoke.mjs/container-smoke.mjs or live browser Python scripts. ffmpeg+ffprobe8.1.1 are available. Skip formatters, linters and project-wide suites. No subdelegation, installers, config/model/hook changes, placeholders or fake unconfigured-only implementations. Test authoring belongs exclusively to NativeTester. Follow project MEX bootstrap; Jev frameforge-codex status may be disabled: don't enable it or claim Jev output. No source changes outside your exact allowlist. Main alone owns server/app.mjs.\nShared APIs: candidates.mjs exports candidateManifest(store,episode,workflow,{selectedStages,disclosure,...}) and async verifyCandidateAssets(store,manifest), matching production-generation-plan.test.mjs. Use graph.candidateFingerprint/canonicalJson, no second hash convention. media-credits.mjs exports requiredMediaCredits(sceneList)->stable deduplicated newline string using actual scene/slot.source attribution,licenseId,sourceUrl; no fabricated credits. private-runtime.mjs exports PrivateRuntime({dataDir,tokenKey?}) with read(name,fallback=null),write(name,value),remove(name); encrypted0600+atomic runtime files underdataDir/.private, key generated lazily, strict constant namespace validation, corrupt storage fails closed. OAuth owner writes this helper; Publisher uses it for opaque resumable URLs.\nUI contract: preserve existing createWorkflowEditor exports/mount/destroy/load/save/html/hasChanges/openGeneration; add bindProject({episodeId,channelId}) read-only/no writes and getContext() returning workflowId/workflowVersion/episodeId/channelId/selectedNodeId/runId/reviewNodeId/renderNodeId plus optional full workflow/run; no first-role lookup. Null when unowned/ambiguous. Canvas owns workflow.js, Studio owns app.js/styles.css/workspace.css; SourceTools owns production-tools.js. A/B toggles and project/channel/stage navigation never save/render/generate/upload. Full independent episode/graph drafts + original base versions survive switches; beforeunload checks all hidden dirty stashes, never silently rebase. SourceTools captures all async IDs before await, reconciles only matching clean active draft, never switches project or mutates stash. Mount/destroy only sanitized localGET, no provider/model search/writes. Unknown origin/audience/disclosure initially unanswered.\nPublication API: PublicationService({store,oauth,fetchImpl}) approve(body,{ownerId}),publish(approvalId,{ownerId}),resume(intentId,{ownerId}),state(approvalId),list(episodeId),close(). /api/publication/approvals, /api/publication/approvals/:id/publish, /api/publication/intents/:id/resume, GETapproval/id, GETepisodes/id/publications (no aliases). Prepare/preview may create server approval without provider traffic; SHOW exact fingerprinted server manifest including credits BEFORE final '최종 승인하고 공개', then publish that approval only. Changing fields/episode invalidates preview. Only verified public readback completes project, not local workflow staging. Optional provider constructors never throw merely for missingconfig: search/import fail503 prefetch without MEDIA_USER_AGENT, local rights validation stays active; OAuth status not_configured/begin fails explicitly. No secrets or opaque upload URLs in entities/events/history/state/knowledge/logs.\nReport actual changed files, exact commands/counts/failures and unresolved prerequisites as JSON final response. Announce module-ready exported signatures in your own artifacts/production-workspace-implementation/native-status/<ROLE>.json after actual files exist and import; this is an explicit shared contract artifact, not a private session file. Do not wait idle for missing dependencies: finish real module, prove own import/syntax/available tests and report exact dependency if another owner hasn't landed yet. Main integrates and will re-run. No planning-only final.",
+  "lanes": [
+    {
+      "id": "NativeCandidate",
+      "files": [
+        "server/candidates.mjs",
+        "artifacts/production-workspace-implementation/native-status/NativeCandidate.json"
+      ],
+      "assignment": "Implement actual candidateManifest(store,episode,workflow,{selectedStages,...}) and async verifyCandidateAssets(store,manifest) exactly per tests/production-generation-plan.test.mjs. Read its concrete assumptions/calls, not just prose. Bind selected generate node IDs, stable scene/slot IDs, models/prompts/params/source types, workflow+episode versions, disclosure and physical assets. Use graph canonical fingerprint. Verify real contained paths and rehashed bytes, current upload registry+matching human mediaRights for third-party; include scene/slot/audio references and authentic generated-job provenance, no network. Do not duplicate another hash convention. Preserve no-optional-news/trend initialGraph and fullPipeline contracts. Only this module; Engine owner integrates quote/start. Exports/shared calls are frozen in common prompt. Land file and announce import+schema before polishing; run focused helper tests when other imports ready."
+    },
+    {
+      "id": "NativeMedia",
+      "files": [
+        "server/media-sources.mjs",
+        "artifacts/production-workspace-implementation/native-status/NativeMedia.json"
+      ],
+      "assignment": "Implement full SourceMediaService({store,fetchImpl,userAgent,probe}) and search/importMedia/clearRights/attach/card/validateAssets exactly against29 tests production-source-media.test.mjs. Missing/blank UA allowed constructor; search/valid import reject503 beforefetch, while ALL local operations and rights enforcement work. Config var MEDIA_USER_AGENT passedbyMain. Strict Commons query/schema/status403/429 Retry-After, identifyingUA onmetadata ANDdownloads, re-fetch pageId, never callerURL, trusted original only (not thumbnails), no redirects, bounded actual bytes/MIME/probe/hash/register, cleanup rejected files. MP4 is locally supported but Commons-unverified, OGV unsupported locally: correct rejection rationale, no widening. No automatic rights clearance: explicit boolean+origin/fields, bounduploadhash, no guessed own origin. Attach full nestedsource to scene/slot atomically with trim/expectedVersion/history; card retainsstory/narration/evidence, no assets/licenses/providercalls. validateAssets is synchronous like current App and never disabled byUA. SourceSchema ownedNativeSchema."
+    },
+    {
+      "id": "NativeSchema",
+      "files": [
+        "server/validation.mjs",
+        "server/render.mjs",
+        "server/media-credits.mjs",
+        "server/store.mjs",
+        "artifacts/production-workspace-implementation/native-status/NativeSchema.json"
+      ],
+      "assignment": "Implement validated bounded nested scene AND slot.source roundtrip per plan/tests, keeping existing limits/localformat/protocol/demux/audio/trim/layout behavior. Newpure requiredMediaCredits helper ascommoncontract; actual legible on-screen credits including attribution/license/sourceURL, wrapping/contrast/no caption overlap, no duration change or silent credit truncation. NativeTester will add decoded-pixel coverage, not metadata-only. Preserve all existing rendering. Additional narrow Store task: applyGeneration must atomically mark the changed scene/slot's source as real generated provenance (matching outputSHA/jobID,useAs illustration), NOT retain a stale thirdparty hash/source as if newbytes were original footage. Original source/license/trim remain immutable in history/job snapshot. Do not infer output license or invent credits. Preserve existing Store copy/review behavior21/21; no other Store refactor. Check actual GIF input-loop behavior if accepted, don't expand formats. Announce helper+source schema early. Run focused existing/newmedia/render tests only."
+    },
+    {
+      "id": "NativeOAuth",
+      "files": [
+        "server/youtube-oauth.mjs",
+        "server/private-runtime.mjs",
+        "server/platform-session.mjs",
+        "artifacts/production-workspace-implementation/native-status/NativeOAuth.json"
+      ],
+      "assignment": "Implement real OAuth + shared PrivateRuntime exactcommonAPI first. Constructor optionalconfig; status local/sanitized/not_configured, begin requires known valid UC externalId, sessionId+correlationToken, unpredictable one-use state TTL600s andPKCE S256 offline force-ssl. complete verifies correlation+activeinitiating session, consumes denial/replay, exchanges code before exact channels.list mine match (never first-item fallback), checks granted scopes, returns literalconnected true onlysuccess; missingstate/error structural400 allowed Mainwillcatchcleanredirect. Persistonly encryptedprivatefiles (keylazy,atomic0600, strict filenames); no secret/code/verifier/state inStore/entities/logs. accessToken refresh preserves omitted refreshtoken, explicit expiry/reconsent/Testing7day condition; status adds freshchannelUpdatedAt. Export YOUTUBE_OAUTH_COOKIE_NAME='frameforge_youtube_oauth', YOUTUBE_OAUTH_CALLBACK_PATH='/oauth/youtube/callback', YOUTUBE_OAUTH_COOKIE_PATH='/oauth/youtube', YOUTUBE_OAUTH_STATE_TTL_SECONDS=600. Direct34tests production-publication firstOAuth/platform groups; no publication implementation. Disable all automatedYouTube navigate/input/click/key/scroll/attach/upload unconditionally (no flag); preserve manualStudio link+otherplatforms. SharedPrivateRuntime importedbyPublisher, land early."
+    },
+    {
+      "id": "NativePublication",
+      "files": [
+        "server/publication.mjs",
+        "artifacts/production-workspace-implementation/native-status/NativePublication.json"
+      ],
+      "assignment": "Implement full frozen PublicationService and34 publication tests, notstubs. Use NativeOAuth's PrivateRuntime exactAPI fromcommonprompt for opaque session state, no secrets inStore. OptionalOAuthconfig cannotbreakconstructor/localmanifest validation. approve validates explicitmetadata/audience/AI/rights/owner, exact ownedworkflow/run/reviewNodeId/episode triple-version/renderjob+actualbytes/hash; append server ALLrequiredMediaCredits into FINALfingerprinteddescription, validateGooglelength AFTERcredits. Approve hasZEROprovidertraffic; UIshowsservermanifestbeforefinalpublish. publish persistsintent+phaseBEFOREprivate resumableinsert/chunktransfer/readback(processing/identity/channel/metadata/explicitbooleans)->sameIDpublicupdate->publicreadback. No publishAt, exactowner403/duplicate409. Unknownfailure/restart reconcilesknownsession/video, NEVER reinserts or guessesfalse onmissingfields. Providerprivate/auditblock explicit, readback currentstate before claimingprivate/public. StrictHTTPSGooglehost/path/no redirects. close graceful: no DBwritesafterclose. ReuseCandidateverification. Read exactfixture bodies/state enums fromproduction-publication.test.mjs; onlyproviderfetch mocked. Announceclassready andactualreturnshape."
+    },
+    {
+      "id": "NativeEngine",
+      "files": [
+        "server/workflows.mjs",
+        "artifacts/production-workspace-implementation/native-status/NativeEngine.json"
+      ],
+      "assignment": "Complete repeated-role graphcore + quote/start in existingWorkflowEngine using readygraph.mjs, existingStore. Preserve landedcopy(pathauthoritybodycannotoverrideURL) and mandatoryreviewNodeId fixes; no run.review alias. Allow128nodes/256edges, uniqueIDs/idshadowguard/cycle+duplicateedge bounds, exactnodeID selection (literalid render valid), edge-based deterministictopology/nearest-per-path prerequisites, optionalnews/trend absent allowed, parallel ambiguity explicit409. Per-node outputs/reviews, bothbranchpartial results retained; selected reviews aggregatependingfirst thenchanges_requested thenapproved. quote exactCandidateAPI and10 generation plan tests; real schema/estimate ifavailable, unknowncost explicit no fabricatedprice/currency sums; persistedfingerprint/expiry+all selectednode/scene/params/source snapshot. start remains SYNCHRONOUS perexistingAPI/tests, validates consent/version/fingerprint upfront; awaitphysicalassetverification inside execution BEFORE anypaidrequest. New source-only runs zero generation. Stable sceneID resolution before charge; all-node approvedbatch, notfirstgenerate. Persist original node job intent beforecreate; failed download/poll/resume reuses same knownjob/providerID without resubmit/reapply, evennewresume selection changeswholeplanfingerprint whenexactstorednodeinput is unchanged. Recheckbeforeeffects, never rebaseapproved input afternewscript/storyboard edits; failforfreshquote instead. Project-owned execution/copylineage authoritative; NativeTester maymigrate legacy fixture setup, no compatibilityshims. Publish nodeonlyrealstaging untilseparateexplicitfinalmanifestapproval; nevermarkepisodepublic fromstaging. Run specific15graph+10generation+existingaffectedworkflows/reviews, notprojectwide. Nevereditothermodules/tests."
+    },
+    {
+      "id": "NativeCanvas",
+      "files": [
+        "public/workflow.js",
+        "artifacts/production-workspace-implementation/native-status/NativeCanvas.json"
+      ],
+      "assignment": "Implement real Bcanvas using existing module, notartifactprototype. Repeatedroles/exactnodeID/nearest-boundary validation matchesgraph,128/256 actualfit/pan/select/inspect/save/undo usable. Project binding read-only, explicit createownedcopybutton viaexistingPOST copies; two project graphs isolated. Mapstash fullgraph/selection/baseVersion/dirty, no navigationautosave ordirtyrebase. Preserve exports/mount/destroy/load/save/html/hasChanges/openGeneration, addcommon bindProject/getContext. Global templates preview notautoexecuted/copied. Communicate via native-status exactselectors/API toNativeStudio/NativeSourceTools/NativeTester. Wholecandidate generation quote/waiver/disclosuredialog showsALLselectednodes/targets/modelparams/costs andfingerprint; correctcurrentepisode/scene/slot binding; no firstmatchinggenerate. Source-only prepare mayrun first; newscript output invalidates oldquote. Modes/nav onlylocal/sanitizedGET no model/provider traffic. Existingstyles reused; no otherfiles."
+    },
+    {
+      "id": "NativeStudio",
+      "files": [
+        "public/app.js",
+        "public/styles.css",
+        "public/workspace.css",
+        "artifacts/production-workspace-implementation/native-status/NativeStudio.json"
+      ],
+      "assignment": "Integrate existing Studio(Adefault)+workflow(B) withvisiblemodebuttons, sharedselectedepisode/channel/stages/sourcehistory. RemoveALL navigationautosaves, preservefull episode snapshots/title/topic/notes/status/scene/slot/baseVersion/revision/dirty inper-IDMapstash; graphstash handledNativeCanvas. Beforeunload includesall hidden dirty stashes. Switchingproject/channel/mode/stage no writes/render/gen. Call Canvas.bindProject read-only tokeepcontextcurrent evenAgenerateclick; coordinatecommonAPI via statusJSON. onEpisodeUpdated alwayscache byresult.id; onlyreplace active ifsameIDandclean; dirty/stashed drafts neverrebase; asyncresultforAneveroverwriteB. Mount production-tools realmodule inbothmodes withcapturedcontext; preserve existing personal workspace/overlays/resizing/history/restores/tokenstyles/accessibility. No prototypecopy/newframework. Exactnodeinstance selectors whenrepeatedroles, no firstrole. Existing6UItests + newjourney authoredNativeTester; do notwrite tests. Announceactualmode/source/delivery controls whenlanded."
+    },
+    {
+      "id": "NativeSourceTools",
+      "files": [
+        "public/production-tools.js",
+        "artifacts/production-workspace-implementation/native-status/NativeSourceTools.json"
+      ],
+      "assignment": "Finish real source+finaldelivery panels inside existingmodule, actualHTTP notprototype. Export createProductionTools (confirmcurrentStudioexpectedargs andstatusAPI withNativeStudio), html/mount/destroy; getEpisode/getWorkflowContext/onEpisodeUpdated captureIDs/versions beforeeveryawait. Source explicitsearch/import/rights/attach/card forscene/slot, no implicitlicense or own-origin default. Rawlicensemetadata review, SHA/trim/rights checks, missingproviderconfig/403/429 explicitnotempty. Cardkeepsselectedstory, original text-only fallback zero gen. UploadlistGET/api/uploads andGET/api/uploads/:id/rights, notstate.uploads. DeliverychannelUC updateguard, sanitizedOAuthstatus+authorizeurl, noautoGoogle/publish. Explicitaudience/AI/rights unresolvedinitially; Preparecreatesapprovallocal thenSHOWcomplete servermanifestcredits/fingerprint beforefinal '최종승인하고공개' publishesSAMEapproval.id. Changedform/episode invalidatespreview. Onambiguouspublishresponse inspectexistingintent, no freshapproval/resubmission. Truecompletedonlyverifiedpublicreadback; private/blocked/unknownstaging distinct. Mount/destroy no writes/providersearch; localstatusGET okay; pollingstopsdestroybutpersistedserverintentcontinues. ExistingCSScontrols only, keyboard/focus/320px accessible."
+    },
+    {
+      "id": "NativeTester",
+      "files": [
+        "tests/*.test.mjs",
+        "scripts/production-workspace-browser-smoke.mjs",
+        "artifacts/production-workspace-implementation/journey-receipt.json",
+        "artifacts/production-workspace-implementation/native-status/NativeTester.json",
+        "artifacts/production-workspace-implementation/journey-*"
+      ],
+      "assignment": "You are the authoritative Tester agent, exclusiveauthorofALLtest changes; no production edits. Preserve independent existing140new assertions and strengthen realcontracts, neverplumbing/restatingimplementation. Complete real journey test (existing file is onlyscaffolding), actualappHTTP/Chromium notprototype ormockAPI: twochannels/projects ownedcopy/history/version/no-saveA/B/stages/dirtyhiddenstash409,128/256canvasfit/pan/lastnodeinspect/save/nooverflow; sourcevideo+stillimport/rightsclear/attach/originalcard no gen, all-node consent/invalidation, realcreditedlocalFFmpeg render+review, servermanifestpreview andfixture-onlyGooglepublication. Allproviderboundaryfetch fake only, explicitauth/tempDB/ephemeralports/publicOrigin:'', forbidANYexternalbrowserrequests exceptfakeintercepted fixtureassets, no actualGoogleconsent. CaptureactualA/B/source/delivery screenshots1600/1024/375/320 keyboard/focus/reflow/reducedmotion andhashes. Add missingcreditcoverage: same-lengthdifferentcredits MUSTchange actualdecodedvideo glyphpixels, notonlyscene metadata/MP4hash; outboundfinalsnippet+fingerprintcarryALLservercredits; too-longafterappendrejects. AddURLtemplatebodyoverride guard andgeneratedapplysource/hash/history guard. Migrateobsoleteone-role/type-order andunowned-run fixtureSETUP toapprovednewcontract usingrealownedcopies, preservefunctional oldinvariants, neverweakenassertions/skip. Constructorsunconfigured mustnotbreaklocalrights/auth; unknownsourceoriginnoownautoselect. Runonlyadded/modifiedtests; noformatters/linters/projectsuites. Waitforactualmodule/controlavailability, don'tclaimscaffoldingdone orinventpassingresults. Ifdependencyunfinished writeexactblockedstatusafterrealtestauthoring, Mainwillrerun; do notidleorwriteplaceholders. Keepalltestscenarios real andhighsignal."
+    }
+  ],
+  "modelProbe": {
+    "runtime": "native codex exec",
+    "model": "gpt-6.1-sol",
+    "sandbox": "read-only",
+    "exitCode": 0,
+    "result": "READY"
+  },
+  "boundaries": {
+    "gitMutation": false,
+    "liveProductProviders": false,
+    "productionData": false,
+    "sharedRoot": "C:/Users/bangg/source/repos/frameforge-studio"
+  }
+}

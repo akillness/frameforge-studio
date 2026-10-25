@@ -1,0 +1,55 @@
+{
+  "role": "NativeRenderPublication",
+  "status": "module_ready_focused_api_branch_and_real_render_journey_pass_publication_fixtures_need_migration",
+  "changedFiles": [
+    "server/publication.mjs",
+    "server/app.mjs",
+    "server/workflows.mjs",
+    "artifacts/production-workspace-implementation/native-status/NativeRenderPublication.json"
+  ],
+  "readyExports": [
+    "PublicationService({store,oauth,fetchImpl})",
+    "approve(body,{ownerId})",
+    "publish(approvalId,{ownerId})",
+    "resume(intentId,{ownerId})",
+    "state(approvalId)",
+    "list(episodeId)",
+    "close()"
+  ],
+  "importProbe": {
+    "command": "node --input-type=module -e \"const p = await import('./server/publication.mjs'); const a = await import('./server/app.mjs'); const w = await import('./server/workflows.mjs'); if (typeof p.PublicationService !== 'function' || typeof a.createApp !== 'function' || typeof w.WorkflowEngine !== 'function') throw Error('Missing export'); console.log('NativeRenderPublication imports OK');\"",
+    "exitCode": 0,
+    "output": "NativeRenderPublication imports OK"
+  },
+  "provenanceContract": {
+    "jobs": "enqueueRender structured-clones the episode synchronously before queueing and persists a separately cloned job.sceneSnapshot of the actual render input",
+    "workflowOutput": "render output.sceneSnapshot is captured before awaiting the renderer and must equal job.sceneSnapshot under graph.canonicalJson",
+    "approval": "Missing, empty or unequal snapshots reject409 with fresh-render requirement; never falls back to current saved episode scenes",
+    "candidate": "Use render scenes with current episode/workflow/channel/version guards; selectedStages contains only selected render and its ancestors, with generation restricted to its completed generation lineage; candidate still fingerprints the complete workflow",
+    "credits": "requiredMediaCredits receives the identical persisted render scenes used for candidate assets",
+    "preserved": "Final async record revalidation, read-only stale recovery and per-intent encrypted identities"
+  },
+  "verification": [
+    { "command": "node --check server/publication.mjs", "exitCode": 0 },
+    { "command": "node --check server/app.mjs", "exitCode": 0 },
+    { "command": "node --check server/workflows.mjs", "exitCode": 0 },
+    { "command": "node --test tests/production-publication.test.mjs", "exitCode": 1, "passed": 26, "failed": 20, "skipped": 0, "failure": "Existing synthetic completed render fixtures omit job.sceneSnapshot and render output.sceneSnapshot; approval fails409 before publication transport" },
+    { "command": "node --test --test-name-pattern=\"^(publication|resuming an unknown)\" tests/production-workspace-api.test.mjs", "exitCode": 0, "passed": 3, "failed": 0, "skipped": 0 },
+    { "command": "node --test tests/production-branch-regressions.test.mjs", "exitCode": 0, "passed": 5, "failed": 0, "skipped": 0, "evidence": "Real HTTP/Store/FFmpeg: exact selected render scenes/assets/credits, selected generation ancestry and stable slot snapshots, connected render-only resume, no duplicate generation submits" },
+    { "command": "node --test --test-name-pattern=\"^real FFmpeg render and exact review\" tests/production-workspace-journey.test.mjs", "exitCode": 0, "passed": 1, "failed": 0, "skipped": 0, "evidence": "Real Chromium/FFmpeg exact review, full fingerprinted server manifest with credits, preview invalidation, final explicit approval and fixture Google public readback" },
+    { "command": "node scripts/version-harness.mjs verify", "exitCode": 0, "currentVersion": "1.5.0", "evidence": "Selected immutable bundle integrity verified; no promotion or immutable bundle edits" }
+  ],
+  "testGeneratedArtifacts": [
+    "artifacts/production-workspace-implementation/journey-focused-receipt.json",
+    "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-1600.png",
+    "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-1024.png",
+    "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-375.png",
+    "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-320.png"
+  ],
+  "dependencies": [
+    "NativeTesterFinal must migrate synthetic publication fixtures to real nonempty render-input snapshots on both the job and render output; no production fallback",
+    "NativeTesterFinal owns all four Main.json branchPublicationRisk.requiredRegressions; the two landed branch-publication tests pass. Explicit tampered/uncleared A versus cleared B, skipped sibling generation with absent target and missing/mismatched snapshot rejection coverage remains for that owner; no tests authored or changed by this role"
+  ],
+  "jev": { "profile": "frameforge-codex", "active": false, "used": false, "prerequisite": "Selected profile disabled; no routing/review or configuration changes" },
+  "boundaries": "No Git commands, production port/data, credentials, provider requests, consent, paid generation, live publication, deployment, subdelegation, formatters, linters or project suites"
+}

@@ -1,0 +1,40 @@
+{
+  "role": "NativeCanvas",
+  "status": "module-ready",
+  "files": ["public/workflow.js"],
+  "importVerified": true,
+  "exports": ["createWorkflowEditor", "workflowErrors", "addWorkflowNode", "fitWorkflowCanvas", "workflowCanvasHintText", "workflowRunHistoryHtml", "fullPipelineGraph"],
+  "editorSignatures": [
+    "createWorkflowEditor({api,toast,getEpisodes,getEpisode,hasEpisodeChanges,beforeRun,onRunUpdated})",
+    "bindProject({episodeId,channelId}) -> context (read-only, synchronous, optional local history/runs GETs)",
+    "getContext() -> {workflowId,workflowVersion,episodeId,channelId,selectedNodeId,runId,reviewNodeId,renderNodeId,workflow?,run?}",
+    "load(force=false), mount(), destroy(), save(), html(), hasChanges(), hasAnyChanges(), openGeneration({episode,episodeId,sceneIndex,sceneId,slotId,prompt})"
+  ],
+  "ownership": "bindProject never copies/saves. Unowned templates are read-only previews with null workflow/run/review/render context. Ambiguous owned workflows require explicit #wf-select selection. Explicit copies use POST /api/workflows/:templateId/copies with episodeId,channelId,expectedTemplateVersion.",
+  "drafts": "Map keyed by workflow ID (local IDs for new drafts), full graph/saved base/selection/dirty/revision/undo history/run selection/pan/scale/disclosure. Switches never save or rebase dirty drafts. NativeStudio beforeunload must call hasAnyChanges().",
+  "selectors": {
+    "workflow": "#wf-select",
+    "episode": "#wf-episode (read-only while project-bound)",
+    "copy": "[data-wf-action=create-project-copy]",
+    "canvas": "#workflow-canvas",
+    "node": "[data-node-id] / [data-wf-action=select-node][data-id]",
+    "add": "[data-wf-action=open-add-node], #wf-add-type, #wf-add-label, [data-wf-action=add-node]",
+    "name": "[data-wf-action=open-workflow-settings], #wf-workflow-name",
+    "saveUndoFit": "[data-wf-action=save|undo|redo|fit|layout]",
+    "generation": "#wf-confirm-dialog, #wf-disclosure, #wf-disclosure-rationale, [data-wf-action=prepare-generation-source|quote-generation|confirm-generation-run], #wf-estimate-ack, [data-generation-node], [data-testid=generation-fingerprint]"
+  },
+  "generationAPI": "POST /api/workflows/:id/quote {episodeId,selectedStages,startStage?,resumeRunId?,expectedWorkflowVersion,expectedEpisodeVersion,disclosure:{containsSyntheticMedia:boolean,rationale}}. Requires persisted {id,fingerprint,candidate,nodes,aggregate,expiresAt}. Final POST /run adds allowGeneration,generationPlanId,generationFingerprint,acceptUnquotedEstimate. Source preparation runs only selected non-generation/non-render/non-review/non-publish nodes, then requires fresh quote. No model/provider discovery on mount/navigation/openGeneration.",
+  "reviewAPI": "POST /api/workflows/:workflowId/runs/:runId/review {reviewNodeId,decision,notes,expectedEpisodeVersion}; exact nearest connected render, run.reviews[reviewNodeId]. No run.review or first-role fallback.",
+  "verification": [
+    {"command":"node --check public/workflow.js","result":"pass"},
+    {"command":"node --input-type=module -e \"await import('./public/workflow.js')\"","result":"pass; exports and editor signatures separately inspected"},
+    {"command":"node --test tests/workflow-ui-regressions.test.mjs","passed":5,"failed":0},
+    {"command":"node --test tests/production-workspace-ui.test.mjs","passed":6,"failed":0,"skipped":0,"detail":"Latest observed run 37013.5497ms; NativeTester migrated fixtures to explicit project-owned copies. Earlier observed pre-migration run had4 pass/2 fail (missing canvas); retained here as historical evidence."},
+    {"command":"node --test --test-name-pattern='switching modes targets' tests/production-workspace-ui.test.mjs","passed":1,"failed":0},
+    {"command":"node --test --test-name-pattern='workflow run history|workflow canvas auto-fit|adding a workflow node' tests/white-studio.test.mjs","passed":2,"failed":1,"failure":"white-studio.test.mjs:292 expects duplicate roles to throw; superseded by approved repeated-role contract. Tests unchanged."}
+  ],
+  "pending": ["NativeTester-owned128-node/256-edge pan/select/inspect/save/undo, two-project dirty graph stashes and whole-plan browser scenarios remain independently unverified", "Main-owned POST /api/workflows/:id/quote route was absent at last inspection; Engine.quote is present and copies HTTP route is now present", "Final isolated all-PW journey belongs to Main/NativeTester", "Legacy white-studio duplicate-role rejection assertion requires NativeTester contract migration"],
+  "additionalImplementation": "Project new/preset recipes edit only the owned graph and retain undo/base ownership; unowned previews require explicit copy. Template/node selection, mounting and destruction perform no writes or model discovery. Async save/run/quote/review/restore/apply use captured identity/context epochs. Quote includes all selected node inputs/params/costs, explicit initially-unanswered disclosure, waiver, expiry and exact server candidate fingerprint; changes invalidate consent.",
+  "sharingBoundary": "This explicit shared contract artifact and public/workflow.js are working-tree changes only; no Git sharing performed.",
+  "safety": "Only allowlisted source/status changed. No Git, production service/data/credentials, provider calls, installs or test authoring. Jev frameforge-codex disabled; no Jev advice claimed."
+}

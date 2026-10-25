@@ -1,0 +1,328 @@
+TAP version 13
+# (node:12) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: persistent CRUD snapshots, version conflicts, topic graph and valid OKF atoms
+ok 1 - persistent CRUD snapshots, version conflicts, topic graph and valid OKF atoms
+  ---
+  duration_ms: 330.197861
+  type: 'test'
+  ...
+# Subtest: validation rejects unknown channels, unsafe URLs and malformed scene structures without history changes
+ok 2 - validation rejects unknown channels, unsafe URLs and malformed scene structures without history changes
+  ---
+  duration_ms: 211.587359
+  type: 'test'
+  ...
+# Subtest: templates and deterministic studio edits are durable; unavailable agents return explicit failure
+ok 3 - templates and deterministic studio edits are durable; unavailable agents return explicit failure
+  ---
+  duration_ms: 126.562786
+  type: 'test'
+  ...
+# Subtest: authentication protects API/media, enforces same-origin writes, and invalidates logout sessions
+ok 4 - authentication protects API/media, enforces same-origin writes, and invalidates logout sessions
+  ---
+  duration_ms: 91.121988
+  type: 'test'
+  ...
+# Subtest: admin policy rejects unauthenticated and non-admin principals without issuing privileged sessions
+ok 5 - admin policy rejects unauthenticated and non-admin principals without issuing privileged sessions
+  ---
+  duration_ms: 2.841564
+  type: 'test'
+  ...
+# Subtest: every dashboard mutation is authenticated before dispatch and client role claims grant no access
+ok 6 - every dashboard mutation is authenticated before dispatch and client role claims grant no access
+  ---
+  duration_ms: 220.28267
+  type: 'test'
+  ...
+# Subtest: admin graph node edits persist canonical records, audit, history, media and regenerated exports across restart
+ok 7 - admin graph node edits persist canonical records, audit, history, media and regenerated exports across restart
+  ---
+  duration_ms: 225.853321
+  type: 'test'
+  ...
+# Subtest: graph relationship edits update only canonical episode channel and topic with version conflicts
+ok 8 - graph relationship edits update only canonical episode channel and topic with version conflicts
+  ---
+  duration_ms: 136.10292
+  type: 'test'
+  ...
+# Subtest: invalid and read-only graph node or relation edits reject without source, history or export mutation
+ok 9 - invalid and read-only graph node or relation edits reject without source, history or export mutation
+  ---
+  duration_ms: 251.608594
+  type: 'test'
+  ...
+# Subtest: graph edits roll back canonical records and history when audit fails; channel fingerprints detect same-timestamp changes
+ok 10 - graph edits roll back canonical records and history when audit fails; channel fingerprints detect same-timestamp changes
+  ---
+  duration_ms: 30.641651
+  type: 'test'
+  ...
+# Subtest: uploads use safe generated names and media supports byte ranges while rejecting unsafe paths
+ok 11 - uploads use safe generated names and media supports byte ranges while rejecting unsafe paths
+  ---
+  duration_ms: 56.833571
+  type: 'test'
+  ...
+# Render failed: intentional test failure
+# Subtest: async render queue records version and completion; failures stay failed
+ok 12 - async render queue records version and completion; failures stay failed
+  ---
+  duration_ms: 65.663083
+  type: 'test'
+  ...
+# Subtest: research refresh deduplicates source keyword and returns explicit source status
+ok 13 - research refresh deduplicates source keyword and returns explicit source status
+  ---
+  duration_ms: 32.064284
+  type: 'test'
+  ...
+# Subtest: development host guard rejects DNS rebinding and JSON limits reject oversized requests
+ok 14 - development host guard rejects DNS rebinding and JSON limits reject oversized requests
+  ---
+  duration_ms: 48.891703
+  type: 'test'
+  ...
+# Subtest: late agent responses cannot overwrite concurrent edits and invalid bridge output is rejected
+ok 15 - late agent responses cannot overwrite concurrent edits and invalid bridge output is rejected
+  ---
+  duration_ms: 78.771001
+  type: 'test'
+  ...
+# Subtest: restart marks unfinished render jobs as failed instead of claiming completion
+ok 16 - restart marks unfinished render jobs as failed instead of claiming completion
+  ---
+  duration_ms: 55.282445
+  type: 'test'
+  ...
+# Subtest: scene trimming and audio controls validate bounds and preserve legacy defaults
+ok 17 - scene trimming and audio controls validate bounds and preserve legacy defaults
+  ---
+  duration_ms: 1.295641
+  type: 'test'
+  ...
+# Subtest: uploaded scene audio and trim persist through episode edits and templates; unknown audio is rejected
+ok 18 - uploaded scene audio and trim persist through episode edits and templates; unknown audio is rejected
+  ---
+  duration_ms: 119.170738
+  type: 'test'
+  ...
+# (node:13) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: scene layout preset slots validate and build multi-layer FFmpeg composition plans
+ok 19 - scene layout preset slots validate and build multi-layer FFmpeg composition plans
+  ---
+  duration_ms: 9.014546
+  type: 'test'
+  ...
+# Subtest: FFmpeg multi-layer renderer composites top image slot, middle video background, and HTML/subtitle overlays into MP4
+ok 20 - FFmpeg multi-layer renderer composites top image slot, middle video background, and HTML/subtitle overlays into MP4
+  ---
+  duration_ms: 3129.163083
+  type: 'test'
+  ...
+# Subtest: unique-stage insertion preserves adjacent wiring when prepending news and adding layout, generation and publish
+ok 21 - unique-stage insertion preserves adjacent wiring when prepending news and adding layout, generation and publish
+  ---
+  duration_ms: 2.481961
+  type: 'test'
+  ...
+# Subtest: full 10-stage workflow preserves slot generation and exact-node review before local publication staging
+ok 22 - full 10-stage workflow preserves slot generation and exact-node review before local publication staging
+  ---
+  duration_ms: 353.872445
+  type: 'test'
+  ...
+# Subtest: FFmpeg preserves cross-type z-order and renders slot text alignment
+ok 23 - FFmpeg preserves cross-type z-order and renders slot text alignment
+  ---
+  duration_ms: 9134.866768
+  type: 'test'
+  ...
+# (node:33) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: real persistent browser session navigates, inputs, screenshots, and closes without leaking private handles
+not ok 24 - real persistent browser session navigates, inputs, screenshots, and closes without leaking private handles
+  ---
+  duration_ms: 866.546262
+  type: 'test'
+  location: '/app/tests/platform-session.test.mjs:73:1'
+  failureType: 'testCodeFailure'
+  error: 'Chromium browser unavailable. Install Playwright/Chromium or configure PLATFORM_PLAYWRIGHT_MODULE.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    httpError (file:///app/server/platform-session.mjs:40:17)
+    browserUnavailable (file:///app/server/platform-session.mjs:49:23)
+    PlatformSessionManager.launchRuntime (file:///app/server/platform-session.mjs:146:13)
+    async PlatformSessionManager.openSession (file:///app/server/platform-session.mjs:320:21)
+    async TestContext.<anonymous> (file:///app/tests/platform-session.test.mjs:80:19)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: missing browser dependency fails explicitly instead of creating a fake successful session
+ok 25 - missing browser dependency fails explicitly instead of creating a fake successful session
+  ---
+  duration_ms: 23.011971
+  type: 'test'
+  ...
+# Subtest: server export verification rejects traversal, symlinks, and empty artifacts
+ok 26 - server export verification rejects traversal, symlinks, and empty artifacts
+  ---
+  duration_ms: 54.463247
+  type: 'test'
+  ...
+# Subtest: staged export hash change is rejected before any publication record is created
+not ok 27 - staged export hash change is rejected before any publication record is created
+  ---
+  duration_ms: 327.742391
+  type: 'test'
+  location: '/app/tests/platform-session.test.mjs:185:1'
+  failureType: 'testCodeFailure'
+  error: 'Chromium browser unavailable. Install Playwright/Chromium or configure PLATFORM_PLAYWRIGHT_MODULE.'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    httpError (file:///app/server/platform-session.mjs:40:17)
+    browserUnavailable (file:///app/server/platform-session.mjs:49:23)
+    PlatformSessionManager.launchRuntime (file:///app/server/platform-session.mjs:146:13)
+    async PlatformSessionManager.openSession (file:///app/server/platform-session.mjs:320:21)
+    async TestContext.<anonymous> (file:///app/tests/platform-session.test.mjs:191:19)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: YouTube keeps a manual Studio handoff and rejects automated browser controls without opening a browser
+ok 28 - YouTube keeps a manual Studio handoff and rejects automated browser controls without opening a browser
+  ---
+  duration_ms: 22.808007
+  type: 'test'
+  ...
+# (node:254) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: workflow run accepts matching version guards and preserves omitted compatibility
+ok 29 - workflow run accepts matching version guards and preserves omitted compatibility
+  ---
+  duration_ms: 267.300286
+  type: 'test'
+  ...
+# Subtest: workflow run rejects malformed and stale version guards before creating a run or calling a provider
+    # Subtest: malformed workflow version
+    ok 1 - malformed workflow version
+      ---
+      duration_ms: 56.93906
+      type: 'test'
+      ...
+    # Subtest: malformed episode version
+    ok 2 - malformed episode version
+      ---
+      duration_ms: 40.810715
+      type: 'test'
+      ...
+    # Subtest: stale workflow version
+    ok 3 - stale workflow version
+      ---
+      duration_ms: 36.841498
+      type: 'test'
+      ...
+    # Subtest: stale episode version
+    ok 4 - stale episode version
+      ---
+      duration_ms: 30.998016
+      type: 'test'
+      ...
+    1..4
+ok 30 - workflow run rejects malformed and stale version guards before creating a run or calling a provider
+  ---
+  duration_ms: 167.468251
+  type: 'test'
+  ...
+# Subtest: matching guards detect a cross-tab episode edit before any workflow run or provider call
+ok 31 - matching guards detect a cross-tab episode edit before any workflow run or provider call
+  ---
+  duration_ms: 38.952067
+  type: 'test'
+  ...
+# (node:300) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: Higgsfield REST estimate uses the verified model endpoint and exact validated body
+ok 32 - Higgsfield REST estimate uses the verified model endpoint and exact validated body
+  ---
+  duration_ms: 53.268962
+  type: 'test'
+  ...
+# Subtest: Higgsfield estimate rejects malformed, missing, non-finite, and negative billable values as provider errors
+ok 33 - Higgsfield estimate rejects malformed, missing, non-finite, and negative billable values as provider errors
+  ---
+  duration_ms: 22.988743
+  type: 'test'
+  ...
+# Subtest: Higgsfield estimate timeout and invalid JSON remain non-ambiguous failures
+ok 34 - Higgsfield estimate timeout and invalid JSON remain non-ambiguous failures
+  ---
+  duration_ms: 2.490538
+  type: 'test'
+  ...
+# Subtest: Higgsfield REST create sends one stable Idempotency-Key and rejects header injection before fetch
+ok 35 - Higgsfield REST create sends one stable Idempotency-Key and rejects header injection before fetch
+  ---
+  duration_ms: 4.641594
+  type: 'test'
+  ...
+# Subtest: generation queue uses persisted job identity for REST idempotency and leaves CLI provider input unchanged
+ok 36 - generation queue uses persisted job identity for REST idempotency and leaves CLI provider input unchanged
+  ---
+  duration_ms: 55.780893
+  type: 'test'
+  ...
+# Subtest: openGeneration adds an unsaved node to the owned project graph without spend or scene replacement
+ok 37 - openGeneration adds an unsaved node to the owned project graph without spend or scene replacement
+  ---
+  duration_ms: 20.048861
+  type: 'test'
+  ...
+# Subtest: openGeneration preserves an appended unsaved scene identity without spending or mutating episodes
+ok 38 - openGeneration preserves an appended unsaved scene identity without spending or mutating episodes
+  ---
+  duration_ms: 14.302449
+  type: 'test'
+  ...
+# Subtest: openGeneration targets an existing generation node without replacing graph or scene content
+ok 39 - openGeneration targets an existing generation node without replacing graph or scene content
+  ---
+  duration_ms: 18.69323
+  type: 'test'
+  ...
+# Subtest: openGeneration preserves the owned studio chain and its template while targeting the selected scene
+ok 40 - openGeneration preserves the owned studio chain and its template while targeting the selected scene
+  ---
+  duration_ms: 17.505041
+  type: 'test'
+  ...
+# Subtest: workflow run history renders collapsed searchable pages with traceable run summaries
+ok 41 - workflow run history renders collapsed searchable pages with traceable run summaries
+  ---
+  duration_ms: 73.947806
+  type: 'test'
+  ...
+# Subtest: workflow canvas auto-fit scales uniformly and keeps graph bounds inside the resized viewport
+ok 42 - workflow canvas auto-fit scales uniformly and keeps graph bounds inside the resized viewport
+  ---
+  duration_ms: 1.636833
+  type: 'test'
+  ...
+# Subtest: adding a workflow node inserts it at its stage position and rewires adjacent stages
+ok 43 - adding a workflow node inserts it at its stage position and rewires adjacent stages
+  ---
+  duration_ms: 3.211189
+  type: 'test'
+  ...
+1..43
+# tests 47
+# suites 0
+# pass 45
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 15000.096927
