@@ -1,0 +1,440 @@
+{
+  "schema": "frameforge-production-workspace-deployment/v1",
+  "verifiedAt": "2026-10-25T11:55:55.371Z",
+  "status": "verified-live-private-deployment",
+  "source": {
+    "commit": "0dd31770bc61e1c2438aa8eeed9c7cc14cbdd637",
+    "branch": "main",
+    "repository": "https://github.com/akillness/frameforge-studio",
+    "pushObserved": true,
+    "buildContext": "Committed Git archive; dirty working-tree and private runtime state excluded",
+    "archiveOptions": [
+      "-c",
+      "core.autocrlf=false",
+      "-c",
+      "core.eol=lf",
+      "archive",
+      "--format=tar"
+    ],
+    "immutableHarnessVersion": "1.6.0",
+    "immutableHarnessSha256": "65af70f95e9942cfdaac98008679f4c66b6ee62c8b866c7ef143856fbb8798d4"
+  },
+  "image": {
+    "id": "sha256:fc22099678cee0ae56c2e258987059868c80076eb1533e1e9b255205cd33ab87",
+    "tag": "frameforge-studio:local",
+    "ociRevision": "0dd31770bc61e1c2438aa8eeed9c7cc14cbdd637",
+    "runningSourceChecks": [
+      {
+        "path": "public/app.js",
+        "matches": true,
+        "sha256": "f102302df5d6c432e5b97e0fd5a12b24acb81741a1784d3f4b6b730fbbda73d5"
+      },
+      {
+        "path": "public/history.js",
+        "matches": true,
+        "sha256": "8fc28d510a3e03f50604b178a478484296b70ad445bc22338262e7762606f517"
+      },
+      {
+        "path": "public/index.html",
+        "matches": true,
+        "sha256": "918b6895022099d9524f48a572aeab8db87098da5a9567063d018504f6b7afc0"
+      },
+      {
+        "path": "public/production-tools.js",
+        "matches": true,
+        "sha256": "2b495ecb55b00584b5fa8dd8d6d6ad0721c08db4abacb04cca4c922d5809f4d4"
+      },
+      {
+        "path": "public/styles.css",
+        "matches": true,
+        "sha256": "2798f0ab6075ee2f8f3739cf6979bb275cf3fdf1f52441ceed7730e8d9629558"
+      },
+      {
+        "path": "public/workflow.css",
+        "matches": true,
+        "sha256": "89ce72e99992c6fa1f36cf647df2e22870c4e8a8783e84d3800fbc3d17eabc90"
+      },
+      {
+        "path": "public/workflow.js",
+        "matches": true,
+        "sha256": "8fdaf04cdd68a44b54a510b7635847644cc84771e67b723abdbe39b42192a01a"
+      },
+      {
+        "path": "public/workspace-state.js",
+        "matches": true,
+        "sha256": "2043e5236e2ab49a9beccc0ac92ebb85159c5b53742df7223e20442b36275781"
+      },
+      {
+        "path": "public/workspace.css",
+        "matches": true,
+        "sha256": "befa740957dba30194e13d3630623e7ab9d65874c55930691b43d2c90686f885"
+      },
+      {
+        "path": "public/workspace.js",
+        "matches": true,
+        "sha256": "7cca971793f781957f83e5047efda7b59e6896f832b504b56abb311f0be7071d"
+      },
+      {
+        "path": "server/app.mjs",
+        "matches": true,
+        "sha256": "c431559a18621e84e87e36e9c56da94c6e6928f90c15f9d5efd2cd51eaa2deeb"
+      },
+      {
+        "path": "server/candidates.mjs",
+        "matches": true,
+        "sha256": "e361e4fdd8fc86c8705cc7b411cbd48990a9a19cc0b2ba6fea17f53184f84f34"
+      },
+      {
+        "path": "server/generation-provider.mjs",
+        "matches": true,
+        "sha256": "650bd5cdd2559b86a31cb46367bef418c273f569e3e912196d88ec9178a57c98"
+      },
+      {
+        "path": "server/generations.mjs",
+        "matches": true,
+        "sha256": "9511eb272cf81eaa2cf3c33fdbfd7904233daab988449b81889215010cbac438"
+      },
+      {
+        "path": "server/graph.mjs",
+        "matches": true,
+        "sha256": "e131ae0f2c918c48b3fcb31a7efc5897a06b363579855075e52b6af3a48a95e0"
+      },
+      {
+        "path": "server/higgsfield-cli.mjs",
+        "matches": true,
+        "sha256": "fb27ea122bfb2cdf52456f0c02230e364fae58746924709c691472d0f9b706a7"
+      },
+      {
+        "path": "server/higgsfield.mjs",
+        "matches": true,
+        "sha256": "d6bc9c431356a99476c617c290d9c6662fe917f5005610d100fde4c273364dbf"
+      },
+      {
+        "path": "server/integrations.mjs",
+        "matches": true,
+        "sha256": "9f5de7db4c5bb9d4734fd9e1db280edc78499b7c300ea8b14d6cb4a1faa6dad8"
+      },
+      {
+        "path": "server/media-credits.mjs",
+        "matches": true,
+        "sha256": "3ff19043be55dab4109d39948f7f75d8b5abc83d742874e588c6a463d600d134"
+      },
+      {
+        "path": "server/media-sources.mjs",
+        "matches": true,
+        "sha256": "c67789ea91b376aaadfc3457a34f9662dac5f8d9dd97fbaf835056b713ea4056"
+      },
+      {
+        "path": "server/narration.mjs",
+        "matches": true,
+        "sha256": "db6d232a4aec3366bbfb557c5357e73ea5632da64e34d7a4dc27471753e44927"
+      },
+      {
+        "path": "server/platform-session.mjs",
+        "matches": true,
+        "sha256": "d78ab6392c20a1a47e303512a6b83f54fb6c000c620d3479c99f6d6884442c0a"
+      },
+      {
+        "path": "server/private-runtime.mjs",
+        "matches": true,
+        "sha256": "afb582a18130330707e034e213832514a7e6644a175358ce4553b7ef06d1b814"
+      },
+      {
+        "path": "server/process.mjs",
+        "matches": true,
+        "sha256": "8f60a127601c719dbc510610e350f2637fa5eed98d5c026c93675e1a55f0408a"
+      },
+      {
+        "path": "server/publication.mjs",
+        "matches": true,
+        "sha256": "3666427a226d7ec52b98a083c83999a38158527aece98dea103746d7e892f827"
+      },
+      {
+        "path": "server/render.mjs",
+        "matches": true,
+        "sha256": "dba269c0d42f0577e6c4a281e3d758736d735a533b562b4a59f65df489e6cbeb"
+      },
+      {
+        "path": "server/store.mjs",
+        "matches": true,
+        "sha256": "cb467ab11ffbe3203320aa03d82ab92c169948692c32c23dea45d86c0d542cef"
+      },
+      {
+        "path": "server/trend-collector.mjs",
+        "matches": true,
+        "sha256": "111609504797150f73b21ccb3da11e10246cbb9ffda69022f216592963432b33"
+      },
+      {
+        "path": "server/validation.mjs",
+        "matches": true,
+        "sha256": "4f284486782ae3e50d39fced2cb3b44fe36f587aff34eef24d14996e6cbf72b5"
+      },
+      {
+        "path": "server/workflows.mjs",
+        "matches": true,
+        "sha256": "6017820ea17e450b8486120920bbe6bcdd71274126f9bb6786da1ad5f96406e4"
+      },
+      {
+        "path": "server/youtube-oauth.mjs",
+        "matches": true,
+        "sha256": "6bd626d56fcc5183e145da16a3365dba8d7a1927f03569fa9297990c737f6c78"
+      }
+    ],
+    "all31RuntimeFilesMatchGit": true,
+    "servedEditorFilesMatched": 10,
+    "healthy": true,
+    "nonRoot": true,
+    "readOnlyRootfs": true,
+    "productionVolumePreserved": true,
+    "loopbackBinding": "127.0.0.1:4310",
+    "previousImageRetained": true
+  },
+  "ci": {
+    "runId": 40186809026,
+    "url": "https://github.com/akillness/frameforge-studio/actions/runs/40186809026",
+    "sourceCommit": "0dd31770bc61e1c2438aa8eeed9c7cc14cbdd637",
+    "conclusion": "success",
+    "syntaxModules": 89,
+    "regressions": {
+      "passed": 482,
+      "failed": 0,
+      "skipped": 0
+    },
+    "dockerRenderAndRestartPersistence": "passed",
+    "countCorroboration": {
+      "command": "gh run view 40186809026 --log",
+      "runUrl": "https://github.com/akillness/frameforge-studio/actions/runs/40186809026",
+      "job": "node-and-harness",
+      "originalLogSha256": "9f73d5e613419d488cbc24f98ed43e38f48d0e917a5df91b17143578d2b8c1b0",
+      "boundedRawExcerpt": [
+        "node-and-harness\tCheck JavaScript syntax\t2026-10-25T10:57:06.0260901Z Syntax check passed for 89 modules.",
+        "node-and-harness\tRun API, workflow, security and harness regression tests\t2026-10-25T10:59:08.6216751Z # tests 482",
+        "node-and-harness\tRun API, workflow, security and harness regression tests\t2026-10-25T10:59:08.6217117Z # pass 482",
+        "node-and-harness\tRun API, workflow, security and harness regression tests\t2026-10-25T10:59:08.6217297Z # fail 0",
+        "node-and-harness\tRun API, workflow, security and harness regression tests\t2026-10-25T10:59:08.6217467Z # cancelled 0",
+        "node-and-harness\tRun API, workflow, security and harness regression tests\t2026-10-25T10:59:08.6217665Z # skipped 0"
+      ]
+    }
+  },
+  "exactImageTests": {
+    "testFiles": [
+      "tests/api.test.mjs",
+      "tests/generation-integration.test.mjs",
+      "tests/history-restore.test.mjs",
+      "tests/layout-pipeline-session.test.mjs",
+      "tests/platform-session.test.mjs",
+      "tests/production-branch-regressions.test.mjs",
+      "tests/production-generation-plan.test.mjs",
+      "tests/production-local-guards.test.mjs",
+      "tests/production-media-credits.test.mjs",
+      "tests/production-project-store.test.mjs",
+      "tests/production-publication.test.mjs",
+      "tests/production-source-media.test.mjs",
+      "tests/production-workflow-graph.test.mjs",
+      "tests/production-workspace-api.test.mjs",
+      "tests/production-workspace-journey.test.mjs",
+      "tests/production-workspace-ui.test.mjs",
+      "tests/reviews.test.mjs",
+      "tests/trend-collector.test.mjs",
+      "tests/trends-api.test.mjs",
+      "tests/white-studio-versions.test.mjs",
+      "tests/white-studio.test.mjs",
+      "tests/workflows.test.mjs"
+    ],
+    "tests": {
+      "passed": 290,
+      "failed": 0,
+      "skipped": 0
+    },
+    "realAppJourney": {
+      "expected": 11,
+      "executed": 11,
+      "passed": 11,
+      "failed": 0
+    },
+    "screenshotArtifactsVerified": 40,
+    "sourceIdentitiesVerified": 9,
+    "externalTransports": "fixtures only",
+    "productionVolumeUsed": false,
+    "externalNetwork": false,
+    "assertionsChanged": false,
+    "timeoutsChanged": false,
+    "captureEnvironment": {
+      "PLAYWRIGHT_LEGACY_SCREENSHOT": "1",
+      "sharedMemory": "512 MiB",
+      "fileConcurrency": 1,
+      "evidenceFilesystem": "Linux-native disposable volume"
+    },
+    "compatibilitySource": "https://github.com/microsoft/playwright/blob/v1.58.2/packages/playwright-core/src/server/chromium/chromiumSwitches.ts#L61",
+    "failedRunsPreserved": [
+      {
+        "passed": 287,
+        "failed": 3,
+        "reason": "Missing fixture evidence directory; two capture timeouts under throttled parallel environment"
+      },
+      {
+        "passed": 289,
+        "failed": 1,
+        "reason": "Maximum-graph full-page capture timeout remained with serial execution and Linux output"
+      },
+      {
+        "passed": 289,
+        "failed": 1,
+        "reason": "Larger shared memory alone did not resolve the full-run capture timeout"
+      }
+    ],
+    "finalRecovery": "Pinned Playwright screenshot compatibility switch; same complete tests, viewports, full-page captures and 5000 ms capture limit"
+  },
+  "preservation": {
+    "sqliteIntegrity": "ok",
+    "originalTableCounts": {
+      "entities": 312,
+      "history": 40,
+      "workflow_history": 18,
+      "workflow_reviews": 6,
+      "settings": 2
+    },
+    "originalTables": 5,
+    "originalRows": 378,
+    "allOriginalRowContentsByteIdentical": true,
+    "allEntityIdsPreserved": true,
+    "episodeVersionsPreserved": 7,
+    "workflowVersionsPreserved": 8,
+    "mediaSha256Preserved": 22,
+    "authenticatedMediaDownloadsSha256Matched": 22,
+    "rawProductionRowsOrMediaPublished": false,
+    "beforeAfterVersionCounts": {
+      "before": {
+        "episodes": 7,
+        "workflows": 8
+      },
+      "after": {
+        "episodes": 7,
+        "workflows": 8
+      },
+      "sameEpisodeVersionArrays": true,
+      "sameWorkflowVersionArrays": true
+    }
+  },
+  "liveVerification": {
+    "accessSurfaces": [
+      {
+        "surface": "loopback",
+        "httpStatus": 200,
+        "healthy": true,
+        "authRequired": true
+      },
+      {
+        "surface": "configured-private-origin",
+        "httpStatus": 200,
+        "healthy": true,
+        "authRequired": true
+      }
+    ],
+    "unauthenticatedStateHttpStatus": 401,
+    "uiViews": [
+      {
+        "mode": "studio",
+        "width": 1600,
+        "geometry": {
+          "width": 1600,
+          "client": 1600,
+          "scroll": 1600,
+          "preview": true
+        }
+      },
+      {
+        "mode": "workflow",
+        "width": 1600,
+        "geometry": {
+          "width": 1600,
+          "client": 1600,
+          "scroll": 1600,
+          "canvas": true,
+          "projectSelector": true
+        }
+      },
+      {
+        "mode": "workflow",
+        "width": 1024,
+        "geometry": {
+          "width": 1024,
+          "client": 1024,
+          "scroll": 1024,
+          "canvas": true
+        }
+      },
+      {
+        "mode": "workflow",
+        "width": 375,
+        "geometry": {
+          "width": 375,
+          "client": 375,
+          "scroll": 375,
+          "canvas": true
+        }
+      },
+      {
+        "mode": "workflow",
+        "width": 320,
+        "geometry": {
+          "width": 320,
+          "client": 320,
+          "scroll": 320,
+          "canvas": true
+        }
+      },
+      {
+        "mode": "studio",
+        "width": 375,
+        "geometry": {
+          "width": 375,
+          "client": 375,
+          "scroll": 375,
+          "preview": true
+        }
+      },
+      {
+        "mode": "studio",
+        "width": 320,
+        "geometry": {
+          "width": 320,
+          "client": 320,
+          "scroll": 320,
+          "preview": true
+        }
+      }
+    ],
+    "privateUiScreenshots": 7,
+    "pageErrors": 0,
+    "apiFailures": 0,
+    "attemptedContentMutations": 0,
+    "productionContentWrites": 0,
+    "privateScreenshotFilesPublished": false,
+    "browserVerificationSessionRevoked": true
+  },
+  "commands": {
+    "build": "git -c core.autocrlf=false -c core.eol=lf archive --format=tar --output=ops/releases/20261025T104842Z/source-lf.tar 0dd31770bc61e1c2438aa8eeed9c7cc14cbdd637; docker build --iidfile ops/releases/20261025T104842Z/image-lf-id.txt --label org.opencontainers.image.revision=0dd31770bc61e1c2438aa8eeed9c7cc14cbdd637 --label org.opencontainers.image.source=https://github.com/akillness/frameforge-studio -t frameforge-studio:workspace-0dd31770bc61 - < ops/releases/20261025T104842Z/source-lf.tar",
+    "cutover": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/start-docker.ps1",
+    "runningSourceIdentity": "docker exec <verified-live-container> sha256sum /app/<each of 31 recorded runtime paths>",
+    "privateExactCommandRecord": "ops/releases/20261025T104842Z/candidate-legacy-command.json"
+  },
+  "boundaries": {
+    "liveGoogleConsent": false,
+    "paidGeneration": false,
+    "videoUploadOrPublicPosting": false,
+    "providerCredentialsOrJevConfigurationChanged": false,
+    "jevProfile": "jeopi",
+    "jevEnabled": false,
+    "jevVerdictObtained": false,
+    "proxyOrTailnetRoutingChanged": false,
+    "dockerRegistryPublication": false,
+    "nativeWindowsFileSymlinkSupportVerified": false,
+    "wholeHistoricalWikiValidation": "Not rerun or repaired by this operational update; prior failures remain distinct"
+  },
+  "sharing": {
+    "public": "Sanitized aggregate release evidence and public runtime source hashes only",
+    "private": "Production SQLite/media snapshots, raw row digests, actual production UI screenshots, credentials and native worker traces remain excluded",
+    "laterAuditOnlyCommit": "A later documentation/evidence commit does not change the recorded image source commit"
+  }
+}

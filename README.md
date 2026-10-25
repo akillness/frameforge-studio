@@ -16,7 +16,7 @@
 
 사용 흐름은 [작업공간 안내](docs/premiere-workspace.md), 실행 계약은 [하니스](docs/harness.md), 명령·소스 해시·실패 이력을 포함한 검증은 [통합 영수증](artifacts/production-workspace-implementation/verification.json)을 따릅니다. 아래 날짜가 붙은 이전 검증 기록은 각 당시 소스의 역사적 근거입니다.
 
-**기존 Windows/Tailscale 운영 경로:** [Tailscale 개인 제작실](https://desktop-qrf3t5t.taila2003e.ts.net/) · 같은 tailnet과 접근 토큰을 사용하는 비공개 경로입니다. 아래 최신 macOS 로컬 QA는 이 운영 경로의 전환·재배포 증거가 아닙니다.
+**Windows/Tailscale 운영 경로:** 이 PC의 `PUBLIC_ORIGIN`에 설정된 비공개 HTTPS 주소를 사용하며, 같은 tailnet과 접근 토큰이 필요합니다. 실제 주소는 로컬 설정에만 둡니다. 2026-10-25 운영 갱신은 [실제 배포 영수증](artifacts/production-workspace-deployment.json)을 따르며, 아래 날짜별 로컬 QA·이전 운영 기록과 구분합니다.
 
 ![흰색 제작실의 장면 편집 화면 — 로컬 QA 레코드](docs/assets/white-studio/studio-1440.png)
 
@@ -181,7 +181,9 @@ python .mex/verify-knowledge.py
 
 ## 검증과 현재 경계
 
-운영 개요 변경의 최신 로컬 검증은 `npm run check` **61개 모듈**, `npm test` **254/254 통과·실패 0·skip 0**, 격리 브라우저 검사 **94개**, 시각 검토 **94/100 PASS**입니다. 이어서 commit `0af4b0698abcffb9f719401605fa2a6cdf1fa2ee`의 [GitHub Actions run 39201562842](https://github.com/akillness/frameforge-studio/actions/runs/39201562842)에서 Linux Docker image build, 인증 렌더·다운로드와 재시작 persistence 검증도 통과했습니다([receipt](artifacts/ops-workspace-ci-smoke.json)). CI는 격리 volume을 사용합니다. Windows 운영 서비스는 아직 최신화되지 않았습니다: Docker Desktop 시작 실패로 로컬 런처가 기존 volume에 접근하지 못해 중단됐으며 4310 listener도 없습니다. 정확한 범위와 한계는 [운영 작업공간 검증](docs/verification.md)을 참조하세요.
+**2026-10-25 실제 운영 갱신:** 소스 `0dd3177`의 A/B 제작 작업공간을 기존 Windows Docker/Tailscale 서비스에 반영했습니다. [CI 40186809026](https://github.com/akillness/frameforge-studio/actions/runs/40186809026)는 89개 모듈 구문·482/482 회귀 검사와 Docker 렌더·재시작 보존을 통과했습니다. 동일 후보 이미지의 추가/수정 테스트 290/290, 실제 앱 브라우저 시나리오 11/11과 캡처 40개도 검증했습니다. 운영 실행 코드 31개와 HTTP 편집기 파일 10개가 커밋과 일치하고, 기존 DB 378행·에피소드 7개·워크플로우 8개·미디어 22개의 내용·버전·해시를 보존했습니다. 실제 비공개 HTTPS의 A/B 화면 7개 상태는 오류·콘텐츠 변경 요청 없이 확인했습니다. [배포 근거와 캡처 호환 설정](artifacts/production-workspace-deployment.json)에 초기 실패와 복구를 함께 남겼으며, 실제 Google 인증·유료 생성·영상 공개 게시를 실행한 것은 아닙니다.
+
+이전 운영 개요 소스의 로컬 검증은 `npm run check` 61개 모듈, `npm test` 254/254, 격리 브라우저 검사 94개와 시각 검토 94/100이었습니다. 소스 `0af4b0698abcffb9f719401605fa2a6cdf1fa2ee`의 [CI 39201562842](https://github.com/akillness/frameforge-studio/actions/runs/39201562842)도 격리 Linux Docker 빌드·인증 렌더·재시작 보존을 통과했습니다([당시 영수증](artifacts/ops-workspace-ci-smoke.json)). 당시에는 Docker Desktop 시작 실패로 Windows 운영 전환이 중단됐습니다. 이 실패는 역사적 기록이며 현재 운영 상태는 위 2026-10-25 배포 영수증을 따릅니다. 이전 범위와 한계는 [운영 작업공간 검증](docs/verification.md)을 참조하세요.
 
 이전 흰색 UI의 Linux Docker 전체 테스트는 당시 소스에서 213/213 통과했습니다. 최신 운영 개요 소스는 별도 정확한 커밋 근거가 있습니다. GitHub Actions run 39201562842가 Linux Docker 이미지를 빌드·기동하고 인증 MP4를 렌더·다운로드했으며 재시작 후 영속성도 검증했습니다. 이 CI 결과는 Windows 운영 배포 영수증이 아닙니다.
 
