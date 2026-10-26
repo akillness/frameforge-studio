@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f5f4ef">
+  <meta name="theme-color" content="#171719">
   <title>블로그 운영실 · FrameForge</title>
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/blog.css">
@@ -11,14 +11,32 @@
 </head>
 <body class="blog-page">
   <a class="skip-link" href="#blog-main">블로그 작업 영역으로 이동</a>
-  <header class="blog-topbar">
-    <a class="blog-brand" href="/" target="_blank" rel="noopener" aria-label="FrameForge 영상 작업실 새 탭에서 열기"><span aria-hidden="true">F</span> FRAMEFORGE</a>
-    <span class="blog-workspace-label">BLOG WORKSPACE</span>
-    <a class="blog-back" href="/" target="_blank" rel="noopener">영상 작업실 ↗</a>
-  </header>
+  <div class="blog-shell">
+    <aside class="blog-sidebar" aria-label="워크스페이스 탐색">
+      <a class="blog-brand" href="/" target="_blank" rel="noopener" aria-label="FrameForge 영상 작업실 새 탭에서 열기"><span class="blog-brandmark" aria-hidden="true">F</span><span class="blog-brand-copy">FRAME<small>PRODUCTION STUDIO</small></span></a>
+      <div class="blog-sidebar-label">제작 워크스페이스</div>
+      <nav class="blog-nav" aria-label="제작 도구">
+        <a href="/" target="_blank" rel="noopener" aria-label="영상 작업실 새 탭에서 열기" title="영상 작업실 새 탭에서 열기"><span aria-hidden="true">V</span><span class="blog-nav-label">영상 작업실 ↗</span></a>
+        <a href="/blog.html" aria-current="page" aria-label="블로그 운영실" title="블로그 운영실"><span aria-hidden="true">B</span><span class="blog-nav-label">블로그 운영실</span></a>
+      </nav>
+      <div class="blog-sidebar-label blog-tools-label">블로그 도구</div>
+      <nav class="blog-tool-nav" aria-label="블로그 작업 이동">
+        <a href="#blog-connection" aria-label="연결과 계정 규칙으로 이동" title="연결과 계정 규칙"><span aria-hidden="true">C</span><span class="blog-nav-label">연결 · 계정 규칙</span></a>
+        <a href="#blog-reference" aria-label="레퍼런스 분석으로 이동" title="레퍼런스 분석"><span aria-hidden="true">R</span><span class="blog-nav-label">레퍼런스 분석</span></a>
+        <a href="#blog-research" aria-label="자료 조사로 이동" title="자료 조사"><span aria-hidden="true">S</span><span class="blog-nav-label">자료 조사</span></a>
+        <a href="#blog-editor" aria-label="초안 편집으로 이동" title="초안 편집"><span aria-hidden="true">E</span><span class="blog-nav-label">초안 편집</span></a>
+        <a href="#blog-approval" aria-label="본문 승인과 별도 배포로 이동" title="본문 승인과 별도 배포"><span aria-hidden="true">P</span><span class="blog-nav-label">승인 · 별도 배포</span></a>
+      </nav>
+      <p class="blog-sidebar-note">초안 저장 · 본문 승인 · 공개 배포는 각각 별도 작업입니다.</p>
+    </aside>
+    <div class="blog-workspace">
+      <header class="blog-topbar">
+        <div class="blog-breadcrumb">제작 워크스페이스 <span aria-hidden="true">/</span> <strong>블로그 운영실</strong></div>
+        <span class="badge">승인 · 배포 별도</span>
+      </header>
   <main id="blog-main" class="blog-main" tabindex="-1">
     <div class="blog-heading">
-      <div><p class="eyebrow">내 채널의 언어로, 한 편씩</p><h1>블로그 운영실</h1><p class="blog-subtitle">계정별 규칙과 최신 출처를 확인하고, 검토한 본문만 따로 승인합니다.</p></div>
+      <div><p class="eyebrow">BLOG WORKSPACE</p><h1>블로그 운영실</h1><p class="blog-subtitle">계정별 규칙과 출처를 확인하고, 저장한 초안을 검토·승인합니다. 공개 배포는 별도입니다.</p></div>
       <div class="blog-actions"><button type="button" id="blog-retry">상태 다시 확인</button><button type="button" id="blog-refresh">최신 원본 다시 읽기</button></div>
     </div>
     <p id="blog-notice" class="blog-notice" role="status" aria-live="polite" aria-atomic="true">운영 상태를 불러오는 중입니다.</p>
@@ -56,7 +74,7 @@
             </details>
           </section>
           <section id="blog-reference" class="blog-panel" aria-labelledby="blog-reference-title">
-            <div class="blog-section-heading"><h2 id="blog-reference-title">글쓰기 전 · 같은 주제 인플루언서 분석</h2><span id="blog-reference-status" class="badge">검증한 레퍼런스 없음</span></div>
+            <div class="blog-section-heading"><h2 id="blog-reference-title">같은 주제 레퍼런스 분석</h2><span id="blog-reference-status" class="badge">검증한 레퍼런스 없음</span></div>
             <p class="hint">현재 메뉴와 같은 주제이며 공개 팔로워·구독자(명시된 팬·이웃 포함) 100,000명 이상인 계정만 사용합니다. 방문·조회·좋아요 수는 자격 근거가 아닙니다. 숫자를 직접 입력하거나 추정하지 않습니다.</p>
             <form id="blog-reference-form"><label for="blog-reference-profile">인플루언서 공개 프로필 URL</label><input id="blog-reference-profile" name="profileUrl" type="url" required placeholder="실제 공개 프로필의 HTTPS 주소" aria-describedby="blog-reference-help"><label for="blog-reference-posts">같은 작성자의 대표 글 URL (한 줄에 하나)</label><textarea id="blog-reference-posts" name="postUrls" rows="3" required placeholder="실제로 구조를 확인할 글의 HTTPS 주소" aria-describedby="blog-reference-help"></textarea><p id="blog-reference-help" class="hint">서버가 지원하는 공식 공개 주소만 실제로 읽습니다. 구독 지표·주제 일치·글 작성자 관계가 관찰되지 않으면 차단 이유를 표시하며 다른 주제로 대체하지 않습니다.</p><button type="submit" id="blog-analyze-reference">공개 근거 확인 · 레이아웃 분석</button></form>
             <div id="blog-reference-result" class="blog-reference-result"><p class="hint">검증된 지표·관찰 시각·원본 해시와 측정한 제목/문단/이미지 배치, 우리 페르소나에 맞춘 구조 계획이 표시됩니다.</p></div>
@@ -64,7 +82,7 @@
             <p class="hint">참고 글의 이미지 개수는 관찰값이지 생성 수량 지시가 아닙니다. 실제 제작은 선택 계정의 원본 미디어 규칙과 적용 구조 계획을 따릅니다.</p>
           </section>
           <section id="blog-research" class="blog-panel" aria-labelledby="blog-research-title">
-            <div class="blog-section-heading"><h2 id="blog-research-title">키워드 · 뉴스 리서치</h2><span class="eyebrow">RESEARCH</span></div>
+            <div class="blog-section-heading"><h2 id="blog-research-title">키워드 · 뉴스 리서치</h2><span class="eyebrow">자료 조사</span></div>
             <form id="blog-research-form"><label for="blog-query">이번 글의 조사 주제</label><div class="blog-research-row"><input id="blog-query" name="query" type="search" placeholder="비워 두면 저장한 관심 키워드로 조사"><button type="submit">자료 조사</button></div></form>
             <div id="blog-research-result" class="blog-research-result"><p class="hint">실제 조사 결과가 여기에 표시됩니다. 조사 전에는 결과나 지표를 만들지 않습니다.</p></div>
             <div class="blog-draft-agent"><div><label for="blog-agent">초안 작성 에이전트</label><select id="blog-agent" name="agent"></select></div><button type="button" id="blog-create-draft">에이전트 초안 만들기</button></div>
@@ -82,7 +100,7 @@
             </form>
           </section>
           <section id="blog-approval" class="blog-panel blog-approval" aria-labelledby="blog-approval-title">
-            <div class="blog-section-heading"><h2 id="blog-approval-title">전체 본문 검토 · 승인 · 배포</h2><span class="eyebrow">OWNER GATE</span></div>
+            <div class="blog-section-heading"><h2 id="blog-approval-title">전체 본문 검토 · 승인 · 배포</h2><span class="eyebrow">소유자 승인</span></div>
             <p id="blog-preview-meta" class="hint">초안을 저장한 뒤 전체 본문을 열어 확인하세요.</p>
             <p class="hint">이 미리보기는 전체 본문을 안전한 텍스트로 표시합니다. 플랫폼의 실제 레이아웃·이미지 배치·미디어 권리 검증을 대신하지 않습니다.</p>
             <article id="blog-preview" class="blog-preview" aria-label="전체 본문과 적용 구조 계획 미리보기" tabindex="0" hidden><h3 id="blog-preview-title"></h3><div id="blog-preview-body"></div><h4>이 정확한 초안에 연결된 레이아웃 · 이미지 배치 계획</h4><pre id="blog-preview-plan"></pre></article>
@@ -105,5 +123,7 @@
     </div>
     <div id="blog-empty" class="blog-empty" hidden>블로그 계정 상태를 읽지 못했습니다. 인증 또는 서버 연결을 확인한 뒤 상태를 다시 확인하세요.</div>
   </main>
+    </div>
+  </div>
 </body>
 </html>

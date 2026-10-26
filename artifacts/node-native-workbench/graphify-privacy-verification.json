@@ -1,0 +1,80 @@
+{
+  "schema": "frameforge-observed-privacy-verification/v1",
+  "recordedAt": "2026-10-26T14:29:58.023Z",
+  "provenance": "Main executed the listed exact commands during this session; results below transcribe observed tool outcomes, not a new execution or reconstructed raw TAP.",
+  "frozenSources": [
+    {
+      "path": ".graphify/refresh.py",
+      "sha256": "1137bb032b786b58c49f674871aa8339b34495a14f6c6c856107fd964d37efb9"
+    },
+    {
+      "path": ".graphify/test_refresh_privacy.py",
+      "sha256": "929693c7aa48d2e094493c732e92839011db092329f688f1cf1fe7b71b70c714"
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "70b1e45d5fa12ed7df7bffc1bdf0771a79be29d7b92592619dbc2d11510a89a7"
+    }
+  ],
+  "rootStateRegression": {
+    "command": [
+      "python",
+      ".graphify/test_refresh_privacy.py",
+      "WikiAdmissionTest.test_root_knowledge_index_snapshots_never_enter_exported_graph",
+      "-v"
+    ],
+    "red": {
+      "exitCode": 1,
+      "tests": 1,
+      "subtestFailures": 6,
+      "rawArtifact": "artifact://1641"
+    },
+    "green": {
+      "exitCode": 0,
+      "tests": 1,
+      "failures": 0
+    }
+  },
+  "freshStagingRegression": {
+    "command": [
+      "python",
+      ".graphify/test_refresh_privacy.py",
+      "WikiAdmissionTest.test_fresh_native_staging_replaces_larger_generation_only_after_validation",
+      "-v"
+    ],
+    "red": {
+      "exitCode": 1,
+      "tests": 1,
+      "failures": 1,
+      "observedMessage": "Fresh staging inherited an obsolete public graph: a smaller valid corpus must not reuse the old generation"
+    },
+    "green": {
+      "exitCode": 0,
+      "tests": 1,
+      "failures": 0,
+      "reportedRunSeconds": 2.453
+    }
+  },
+  "completeModifiedFile": {
+    "command": [
+      "python",
+      ".graphify/test_refresh_privacy.py",
+      "-v"
+    ],
+    "exitCode": 0,
+    "tests": 22,
+    "failures": 0,
+    "skipped": 0,
+    "reportedRunSeconds": 30.379,
+    "toolWallSeconds": 32.37
+  },
+  "independentStaticReviews": [
+    "agent://Rootprivate-statePythonsafetyreview",
+    "agent://Fresh-stagegraphPythondeltareview"
+  ],
+  "boundaries": {
+    "rawNativeDiagnosticsRemainPrivate": true,
+    "nativeSemanticVerification": false,
+    "productionOrPublicationAuthority": false
+  }
+}

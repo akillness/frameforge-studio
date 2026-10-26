@@ -46,6 +46,7 @@ test('equal-length attribution changes alter decoded credit glyph pixels in a re
       minY = Math.min(minY, y); maxY = Math.max(maxY, y);
     }
   }
+  await mkdir(new URL('../artifacts/production-workspace-implementation/', import.meta.url), { recursive: true });
   await writeFile(new URL('../artifacts/production-workspace-implementation/journey-credit-pixels.json', import.meta.url), JSON.stringify({
     command: 'node --test tests/production-media-credits.test.mjs',
     format: 'decoded rgb24 1080x1920 at 0.4s', sameLengthAttributions: ['ALICE AMBER', 'BRUNO BROWN'],

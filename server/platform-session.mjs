@@ -275,6 +275,7 @@ export class PlatformSessionManager {
     const session = this.getSession(sessionId), body = object(raw);
     const action = choice(body.action, ACTIONS, 'session action', 'refresh');
     if (action === 'close') return operation();
+    if (isYouTubeSession(session) && action !== 'update-metadata') throw automatedYouTubeDisabled();
     let episodeId = session.episodeId || session.attachedExport?.episodeId;
     let attachment;
     if (action === 'attach-export') {
@@ -408,7 +409,6 @@ export class PlatformSessionManager {
       }
       if (session.status === 'closed') throw httpError(409, 'Platform browser session is closed');
       if (session.episodeId) this.store.assertEpisodeActive(session.episodeId);
-      if (isYouTubeSession(session) && action !== 'update-metadata') throw automatedYouTubeDisabled();
       if (action === 'navigate' && isYouTubeUrl(body.url)) throw automatedYouTubeDisabled();
       if (action === 'update-metadata') {
         next.metadata = {

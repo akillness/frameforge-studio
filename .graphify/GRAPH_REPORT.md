@@ -1,10 +1,10 @@
 # FrameForge structural graph
 
-Native Graphify structural extraction after admission: **3049 nodes, 5391 edges**.
+Native Graphify structural extraction after admission: **3075 nodes, 5469 edges**.
 
 The installed native CLI can accumulate exact duplicate edge records. This refresh
-normalized 5391 native records to
-5391 whole-record-unique edges within their native
+normalized 5469 native records to
+5469 whole-record-unique edges within their native
 collections, removing 0 exact
 duplicates before HTML export. Stable sorted-key JSON identifies equality of the entire
 record within each collection; edges with different metadata remain separate. graph.json,
@@ -19,8 +19,8 @@ paths. The exclusion audit is retained in verification.json; canonical source
 relationships with distinct metadata remain intact.
 
 Exact reviewed authored wiki bodies are admitted through `harness/knowledge-policy.json`.
-This refresh removed 187 unadmitted wiki nodes and
-182 incident or locally sourced edges. Raw captures,
+This refresh removed 212 unadmitted wiki nodes and
+207 incident or locally sourced edges. Raw captures,
 prompt/query stubs, caches, operational state and all index/log/instruction bodies are
 excluded. Provenance evidence paths do not admit their target bodies. Reports remain
 historical references, never current readiness or goal-completion authority.

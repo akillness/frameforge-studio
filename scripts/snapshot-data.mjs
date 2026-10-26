@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const tables = ['entities', 'history', 'workflow_history', 'workflow_reviews', 'settings'];
+const tables = ['entities', 'history', 'workflow_history', 'workflow_reviews', 'workflow_node_reviews', 'settings'];
 const samePath = (left, right) => path.relative(left, right) === '';
 const within = (root, target) => {
   const relative = path.relative(root, target);
@@ -84,7 +84,7 @@ export async function snapshotData({ source, snapshotRoot, target }) {
         if (references.has(url) && /^[a-f0-9]{64}$/i.test(value.sha256 || '')) references.get(url).expectedHashes.add(value.sha256.toLowerCase());
       }
     }
-    for (const table of ['entities', 'history', 'workflow_history', 'workflow_reviews'].filter(table => existing.has(table))) {
+    for (const table of ['entities', 'history', 'workflow_history', 'workflow_reviews', 'workflow_node_reviews'].filter(table => existing.has(table))) {
       for (const row of db.prepare(`SELECT data FROM ${table}`).iterate()) collect(JSON.parse(row.data));
     }
     manifest = { format: 'frameforge-snapshot-v1', createdAt: new Date().toISOString(), integrity: 'ok', tableCounts, entityCounts, entityIds, episodeVersions, workflowVersions, media: [] };

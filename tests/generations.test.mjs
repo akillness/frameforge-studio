@@ -365,7 +365,7 @@ test('legacy completed HEVC normalization preserves applied history, requires ex
   const normalizing = f.queue.normalize(job.id);
   await entered.promise;
   assert.throws(() => f.queue.apply(job.id, { expectedVersion: 2, sceneId: f.request.sceneId }), /being normalized/);
-  const capacityProbe = f.store.create('generationJobs', { status: 'completed', outputs: [] });
+  const capacityProbe = f.store.create('generationJobs', { episodeId: f.episode.id, status: 'completed', outputs: [] });
   await assert.rejects(f.queue.normalize(capacityProbe.id), { status: 429 });
   proceed.resolve();
   const normalized = await normalizing;

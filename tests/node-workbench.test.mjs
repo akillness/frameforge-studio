@@ -266,6 +266,93 @@ test('touch more menus clamp to the viewport, restore focus, dismiss outside, an
   assert.deepEqual(f.writes, []);
 });
 
+for (const { width, height } of [{ width: 390, height: 844 }, { width: 430, height: 932 }]) {
+  test(`${width}px portrait touch workbench keeps actions reachable and exact node and scene drafts through channel reselect without writes`, async t => {
+    const f = await fixture(t, { touch: true, sceneTarget: true }), { page } = f;
+    await page.setViewportSize({ width, height });
+    const assertNoOverflow = async () => {
+      const geometry = await page.evaluate(() => ({ viewport: innerWidth, client: document.documentElement.clientWidth, document: document.documentElement.scrollWidth, body: document.body.scrollWidth }));
+      assert.equal(geometry.viewport, width, 'portrait viewport must not expand to fit desktop content');
+      assert.ok(geometry.client <= width && geometry.document <= width + 1 && geometry.body <= width + 1, `no document horizontal overflow: ${JSON.stringify(geometry)}`);
+    };
+    const reachable = async locator => {
+      await locator.scrollIntoViewIfNeeded();
+      await withinViewport(locator);
+      const target = await locator.boundingBox();
+      assert.ok(target && target.width >= 24 && target.height >= 40, `touch action has a usable target: ${JSON.stringify(target)}`);
+    };
+    const channel = page.locator(`[data-action=channel][data-id="${f.channel.id}"]`);
+    const projectMenu = page.locator('#project-navigation [data-action=project-menu]');
+    const tools = page.locator('[data-action=project-tools]');
+    await assertNoOverflow();
+    for (const control of [channel, tools, page.locator('#project-episode'), page.locator('#project-stage'), projectMenu,
+      page.locator('#project-navigation [data-action=open-scene-editor]'),
+      page.locator('#project-navigation [data-action=project-section][data-section=source]'),
+      page.locator('#project-navigation [data-action=project-section][data-section=delivery]'),
+      page.locator('#wf-select'), page.locator('[data-wf-action=open-add-node]')]) await reachable(control);
+
+    await projectMenu.tap(); await withinViewport(menu(page));
+    assert.equal(await menu(page).locator('.ff-context-menu__title').innerText(), f.episode.title);
+    await page.keyboard.press('Escape'); await menu(page).waitFor({ state: 'hidden' });
+    assert.equal(await projectMenu.evaluate(element => element === document.activeElement), true, 'project menu dismiss restores its touch opener');
+    await tools.tap(); await withinViewport(menu(page));
+    await item(page, '소스 · 이용 권리').waitFor();
+    await page.keyboard.press('Escape'); await menu(page).waitFor({ state: 'hidden' });
+    assert.equal(await tools.evaluate(element => element === document.activeElement), true, 'tools menu dismiss restores its touch opener');
+
+    await header(page, 'a').tap();
+    await reachable(node(page, 'b').locator('[data-wf-action=node-menu]'));
+    await openNodeMenu(page, 'b', 'touch'); await withinViewport(menu(page));
+    assert.match(await menu(page).locator('.ff-context-menu__title').innerText(), /^Node B ·/);
+    await reachable(item(page, '노드 설정 편집')); await item(page, '노드 설정 편집').tap();
+    const nodeDialog = page.locator('#wf-tools-dialog[open]');
+    await nodeDialog.waitFor(); await withinViewport(nodeDialog);
+    assert.equal(await page.locator('.wf-node.selected').getAttribute('data-node-id'), 'b', 'touch invocation targets B rather than previously selected A');
+    assert.equal(await nodeDialog.locator('[data-wf-field=label]').inputValue(), 'Node B');
+    const graphDraft = `Phone ${width} node B draft`, sceneDraft = `Phone ${width} second-scene draft`;
+    await nodeDialog.locator('[data-wf-field=label]').fill(graphDraft);
+    await reachable(nodeDialog.locator('[data-wf-action=close-overlay]'));
+    await nodeDialog.locator('[data-wf-action=close-overlay]').tap();
+    await nodeDialog.waitFor({ state: 'hidden' });
+    await page.waitForFunction(() => document.querySelector('.wf-node[data-node-id="b"] [data-wf-action=node-menu]') === document.activeElement);
+
+    await openNodeMenu(page, 'c', 'touch'); await withinViewport(menu(page));
+    assert.match(await menu(page).locator('.ff-context-menu__title').innerText(), /^Node C ·/);
+    await page.locator('#project-navigation .project-context').tap(); await menu(page).waitFor({ state: 'hidden' });
+    await openNodeMenu(page, 'c', 'touch'); await item(page, '장면 편집기 열기').tap();
+    const sceneDialog = page.locator('#project-scene-dialog[open]');
+    await sceneDialog.waitFor(); await withinViewport(sceneDialog); await assertNoOverflow();
+    assert.equal(await sceneDialog.locator('[data-scene=title]').inputValue(), f.episode.scenes.at(-1).title, 'node C opens its explicit second scene, not the first scene');
+    await sceneDialog.locator('[data-scene=title]').fill(sceneDraft);
+    assert.equal(await sceneDialog.locator('#save-status').getAttribute('class'), 'unsaved');
+    await reachable(sceneDialog.locator('[data-action=close-scene-editor]'));
+    await sceneDialog.locator('[data-action=close-scene-editor]').tap();
+    await sceneDialog.waitFor({ state: 'hidden' });
+    await page.waitForFunction(() => document.querySelector('.wf-node[data-node-id="c"] [data-wf-action=node-menu]') === document.activeElement);
+
+    await channel.tap(); await page.locator('#workflow-canvas').waitFor();
+    assert.equal(await page.locator('#project-episode').inputValue(), f.episode.id);
+    assert.equal(await page.locator('#wf-select').inputValue(), f.workflow.id);
+    assert.equal(await node(page, 'b').locator('.wf-node-label').innerText(), graphDraft, 'channel reselect retains the exact unsaved graph label');
+    assert.equal(await node(page, 'a').locator('.wf-node-label').innerText(), 'Node A', 'the previously selected node was not edited');
+    await openNodeMenu(page, 'c', 'touch'); await item(page, '입력·출력 연결 보기').tap();
+    const connectionsDialog = page.locator('#wf-connect-dialog[open]');
+    await connectionsDialog.waitFor(); await withinViewport(connectionsDialog);
+    assert.deepEqual((await connectionsDialog.locator('[data-wf-action=delete-edge]').evaluateAll(elements => elements.map(element => element.dataset.id))).sort(), ['bc', 'cd'], 'touch context browsing preserves both exact incident connections');
+    await connectionsDialog.getByRole('button', { name: '노드 연결 닫기', exact: true }).tap(); await connectionsDialog.waitFor({ state: 'hidden' });
+    await openNodeMenu(page, 'c', 'touch'); await item(page, '장면 편집기 열기').tap();
+    await sceneDialog.waitFor();
+    assert.equal(await sceneDialog.locator('[data-scene=title]').inputValue(), sceneDraft, 'channel reselect and node context reopening retain the unsaved exact-scene draft');
+    assert.equal(await sceneDialog.locator('#save-status').getAttribute('class'), 'unsaved');
+    assert.equal(await sceneDialog.evaluate(element => element.contains(document.activeElement)), true, 'reopened scene editor owns focus');
+    await sceneDialog.locator('[data-action=close-scene-editor]').tap(); await sceneDialog.waitFor({ state: 'hidden' });
+    await assertNoOverflow();
+    assert.deepEqual(f.writes, [], 'touch navigation, menus, draft edits and dismissal cannot save, delete, generate, render or publish');
+    assert.deepEqual((await f.api('/api/workflows')).find(workflow => workflow.id === f.workflow.id), f.workflow, 'saved graph and version remain unchanged');
+    assert.deepEqual((await f.api('/api/state')).episodes.find(episode => episode.id === f.episode.id), f.episode, 'saved scenes and version remain unchanged');
+  });
+}
+
 test('scene overlay binds the selected scene and Ctrl+S saves only the active episode or graph owner', async t => {
   const f = await fixture(t, { sceneTarget: true }), { page } = f;
   await openNodeMenu(page, 'c', 'more'); await item(page, '노드 설정 편집').click();

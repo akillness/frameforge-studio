@@ -1,4 +1,85 @@
 {
+  "releaseRefresh20261026": {
+    "observedAt": "2026-10-26T17:47:45.509Z",
+    "scope": "Latest bounded source/structural refresh; older fields below remain historical snapshots",
+    "receipt": "_workspace/ci-docker-refresh-2026-10-26T15-20-57-215Z/release-knowledge-refresh.private.json",
+    "releaseOutcomesReceipt": "artifacts/ci-docker-refresh-20261026.json",
+    "mex": {
+      "version": "0.8.3",
+      "refreshExitCode": 0,
+      "checkExitCode": 0,
+      "files": 129,
+      "nodes": 6308,
+      "edges": 20871,
+      "sourceChunks": 624,
+      "parseHealth": {
+        "total": 129,
+        "ok": 129,
+        "partial": 0,
+        "failed": 0,
+        "failedPaths": [],
+        "failedPathsTruncated": false
+      },
+      "checkScore": 100,
+      "filesChecked": 16,
+      "issues": 0,
+      "sourceChangesAtCheck": 0,
+      "indexedPrivatePathMatches": 0,
+      "metadataBoundary": {
+        "matchingRecords": 1,
+        "key": "unindexed_source_coverage",
+        "directoryMarkers": 90,
+        "rawDirectoryPathStampMarkers": 12,
+        "operationalDirectoryMarkers": 0,
+        "bodiesAdmitted": false,
+        "limit": "Rejected-directory metadata only; not source bodies or admitted retrieval. No directory paths or stamps are reproduced."
+      }
+    },
+    "graphify": {
+      "command": "python .graphify/refresh.py",
+      "exitCode": 0,
+      "nodes": 3075,
+      "edges": 5469,
+      "retainedSourceFiles": 341,
+      "graphSha256": "414df9f0e81bbcbf1d70dacd3f21f97b62d916963b5867d54cf71c24dd05525b",
+      "retainedHashesMatched": 341,
+      "sourceHashMismatches": 0,
+      "admittedWikiSources": 10,
+      "unadmittedWikiSources": 0,
+      "privateSourceOrRecordPathMatches": 0,
+      "exactDuplicateEdges": 0,
+      "unresolvedEndpointEdges": 573,
+      "prior567Preserved": true,
+      "semanticVerification": false,
+      "publication": "fsynced five-path rollback generation; cleanup complete; not atomic reader visibility"
+    },
+    "knowledge": {
+      "command": "node scripts/knowledge.mjs check",
+      "exitCode": 0,
+      "entries": 10,
+      "corpusBytes": 49668,
+      "sourceMode": "strict-physical-paths",
+      "provenanceReferences": 57,
+      "policySha256": "42c94c3df8fee07b96ed88f2873848d62b85a46d453bab6c170617eb69c40f62",
+      "indexStatus": "passed",
+      "indexWritePerformed": false,
+      "admittedBodiesOrPolicyChanged": false
+    },
+    "limits": {
+      "legacyFullVaultDiagnostics": 6282,
+      "legacyGateRerun": false,
+      "currentGlobalSourceFreshnessClaimed": false,
+      "releaseOutcomesOwnedBy": "artifacts/ci-docker-refresh-20261026.json"
+    },
+    "antiRecursion": {
+      "excludedReleaseOutcomeReceipt": true,
+      "receiptOnlyUpdateChangesRetainedGraphSourceHashes": false,
+      "routerOrRetainedDocumentEditChangesRetainedGraphSourceHashes": true,
+      "finalPackageBuildOwnedBy": "Main",
+      "statusOnlyReleaseOutcomeUpdateChangesKnowledgePackageBinding": false,
+      "finalKnowledgeReceiptUpdatesChangePackageReferenceHashes": true
+    }
+  },
   "harnessAudit20261026": {
     "observedAt": "2026-10-26T14:06:55.735Z",
     "scope": "Current bounded harness/knowledge audit; older fields below remain historical snapshots",

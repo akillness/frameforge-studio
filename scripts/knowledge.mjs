@@ -3,14 +3,14 @@ import { createHash, randomUUID } from 'node:crypto';
 import { constants, closeSync, fstatSync, linkSync, lstatSync, mkdirSync, openSync, readSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { inspectKnowledge, renderKnowledgeIndex, searchKnowledge } from '../server/project-knowledge.mjs';
+import { inspectKnowledge, packageKnowledge, renderKnowledgeIndex, searchKnowledge } from '../server/project-knowledge.mjs';
 
 const defaultRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const usage = 'Offline knowledge operations: status | check | search <query> [--limit 1..10] [--max-characters 2048..16000] | index [--write]; each accepts --root <repository>. JSON output, exit 0 passed, 1 failed/blocked. No providers or raw writes. Full-vault legacy lint is separate.';
+const usage = 'Offline knowledge operations: status | check | search <query> [--limit 1..10] [--max-characters 2048..16000] | index [--write] | package --output <new-directory-outside-source>; accepts --root <repository> and --mode source|packaged (package always verifies source). JSON output, exit 0 passed, 1 failed/blocked. No providers or raw writes. Full-vault legacy lint is separate.';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 function parse(argv) {
   const [operation, ...args] = argv;
-  if (!['status', 'check', 'search', 'index'].includes(operation)) throw new Error(usage);
+  if (!['status', 'check', 'search', 'index', 'package'].includes(operation)) throw new Error(usage);
   const options = { root: defaultRoot };
   const seen = new Set();
   const query = [];
@@ -19,10 +19,15 @@ function parse(argv) {
     if (key === '--write') {
       if (operation !== 'index' || seen.has(key)) throw new Error(usage);
       options.write = true;
-    } else if (['--root', '--limit', '--max-characters'].includes(key)) {
-      if (seen.has(key) || !args[index + 1] || args[index + 1].startsWith('--') || (key !== '--root' && operation !== 'search')) throw new Error(usage);
+    } else if (['--root', '--mode', '--output', '--limit', '--max-characters'].includes(key)) {
+      if (seen.has(key) || !args[index + 1] || args[index + 1].startsWith('--') || (['--limit', '--max-characters'].includes(key) && operation !== 'search') || (key === '--output' && operation !== 'package')) throw new Error(usage);
       const value = args[++index];
       if (key === '--root') options.root = resolve(value);
+      else if (key === '--output') options.output = resolve(value);
+      else if (key === '--mode') {
+        if (!['source', 'packaged'].includes(value) || (operation === 'package' && value !== 'source')) throw new Error(usage);
+        options.mode = value;
+      }
       else {
         if (!/^[1-9]\d*$/u.test(value)) throw new Error(usage);
         options[key === '--limit' ? 'limit' : 'maxCharacters'] = Number(value);
@@ -32,6 +37,7 @@ function parse(argv) {
     if (key.startsWith('--')) seen.add(key);
   }
   if (operation === 'search') options.query = query.join(' ');
+  if (operation === 'package' && !options.output) throw new Error(usage);
   return { operation, options };
 }
 function indexLocation(root) {
@@ -76,7 +82,7 @@ function prepareStage(root) {
   checkStage(root, path);
   return { path, candidatePath: `${path}/candidate.md`, snapshotPath: `${path}/original.md` };
 }
-function writeIndex(root, rendered) {
+function writeIndex(root, rendered, mode) {
   const { target } = indexLocation(root);
   const previous = existingIndex(target);
   if (previous.sha256 !== rendered.previousSha256) throw new Error('Index changed after rendering; no historical bookkeeping was overwritten.');
@@ -86,7 +92,7 @@ function writeIndex(root, rendered) {
   let movedOriginal = false;
   try {
     writeFileSync(candidate, rendered.content, { flag: 'wx', mode: previous.mode });
-    const refreshed = renderKnowledgeIndex({ root });
+    const refreshed = renderKnowledgeIndex({ root, mode });
     if (!refreshed.ok || refreshed.sha256 !== rendered.sha256 || refreshed.previousSha256 !== rendered.previousSha256) throw new Error('Policy/source/index changed before preservation; review the retained candidate.');
     checkStage(root, stage.path);
     try {
@@ -117,10 +123,11 @@ function writeIndex(root, rendered) {
 export function runKnowledge(argv) {
   try {
     const { operation, options } = parse(argv);
+    if (operation === 'package') return packageKnowledge(options);
     if (operation === 'status' || operation === 'check') return inspectKnowledge(options);
     if (operation === 'search') return searchKnowledge(options);
     const rendered = renderKnowledgeIndex(options);
-    return options.write && rendered.ok ? writeIndex(options.root, rendered) : rendered;
+    return options.write && rendered.ok ? writeIndex(options.root, rendered, options.mode) : rendered;
   } catch (error) {
     return { ok: false, status: 'blocked', scope: 'admitted-project-knowledge', errors: [{ code: 'cli-rejected', path: null, message: error.message }] };
   }

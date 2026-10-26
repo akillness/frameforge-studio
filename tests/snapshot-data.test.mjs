@@ -122,3 +122,88 @@ test('unsafe media references and linked source media directories are rejected',
   await symlink(external, path.join(f.source, 'uploads'), process.platform === 'win32' ? 'junction' : 'dir');
   await assert.rejects(snapshotData({ ...f, target: path.join(f.snapshotRoot, 'linked-media') }), /regular file|ENOENT/);
 });
+
+test('snapshot preserves node-review-only media and every node-review row without writing the live database', async t => {
+  const f = await fixture(t);
+  f.db.exec('CREATE TABLE workflow_node_reviews (id TEXT PRIMARY KEY, run_id TEXT NOT NULL, review_node_id TEXT NOT NULL, data TEXT NOT NULL, UNIQUE(run_id,review_node_id))');
+  const media = [
+    { url: '/api/exports/node-review.mp4', bytes: Buffer.from('Node review render retained only by its decision') },
+    { url: '/api/uploads/node-review.wav', bytes: Buffer.from('Node review audio retained only by its decision') },
+  ];
+  const reviews = media.map((item, index) => ({ id: `node-review-${index}`, runId: 'run-1', reviewNodeId: `review-${index}`, decision: 'approved', evidence: [{ outputUrl: item.url, sha256: hash(item.bytes) }] }));
+  for (let index = 0; index < reviews.length; index++) {
+    const review = reviews[index];
+    f.db.prepare('INSERT INTO workflow_node_reviews VALUES (?,?,?,?)').run(review.id, review.runId, review.reviewNodeId, JSON.stringify(review));
+    await writeFile(path.join(f.source, media[index].url.replace('/api/', '')), media[index].bytes);
+  }
+  const rows = f.db.prepare('SELECT * FROM workflow_node_reviews ORDER BY id').all();
+  const schema = f.db.prepare('SELECT name,sql FROM sqlite_schema ORDER BY name').all();
+  const sourceDatabase = await readFile(path.join(f.source, 'studio.sqlite'));
+  const sourceWal = await readFile(path.join(f.source, 'studio.sqlite-wal'));
+  const manifest = await snapshotData(f);
+  assert.equal(manifest.tableCounts.workflow_node_reviews, reviews.length);
+  assert.equal(manifest.mediaCount, 5);
+  const copied = new DatabaseSync(path.join(f.target, 'studio.sqlite'), { readOnly: true });
+  try { assert.deepEqual(copied.prepare('SELECT * FROM workflow_node_reviews ORDER BY id').all(), rows); }
+  finally { copied.close(); }
+  for (const item of media) {
+    assert.deepEqual(manifest.media.find(entry => entry.url === item.url), { url: item.url, bytes: item.bytes.length, sha256: hash(item.bytes) });
+    assert.deepEqual(await readFile(path.join(f.target, item.url.replace('/api/', ''))), item.bytes);
+  }
+  assert.deepEqual(f.db.prepare('SELECT * FROM workflow_node_reviews ORDER BY id').all(), rows);
+  assert.deepEqual(f.db.prepare('SELECT name,sql FROM sqlite_schema ORDER BY name').all(), schema);
+  assert.deepEqual(await readFile(path.join(f.source, 'studio.sqlite')), sourceDatabase);
+  assert.deepEqual(await readFile(path.join(f.source, 'studio.sqlite-wal')), sourceWal);
+});
+
+test('node-review-only missing media and changed review hashes cannot produce a complete snapshot', async t => {
+  for (const failure of ['missing media', 'changed review hash']) {
+    await t.test(failure, async t => {
+      const f = await fixture(t);
+      f.db.exec('CREATE TABLE workflow_node_reviews (id TEXT PRIMARY KEY, run_id TEXT NOT NULL, review_node_id TEXT NOT NULL, data TEXT NOT NULL, UNIQUE(run_id,review_node_id))');
+      const expected = Buffer.from('The approved node render');
+      const review = { id: 'node-review-1', runId: 'run-1', reviewNodeId: 'review-render', outputUrl: '/api/exports/node-review.mp4', sha256: hash(expected) };
+      f.db.prepare('INSERT INTO workflow_node_reviews VALUES (?,?,?,?)').run(review.id, review.runId, review.reviewNodeId, JSON.stringify(review));
+      if (failure === 'changed review hash') await writeFile(path.join(f.source, 'exports', 'node-review.mp4'), 'Different render after approval');
+      const sourceDatabase = await readFile(path.join(f.source, 'studio.sqlite'));
+      const sourceWal = await readFile(path.join(f.source, 'studio.sqlite-wal'));
+      await assert.rejects(snapshotData(f), failure === 'missing media' ? /ENOENT/ : /hash differs/);
+      await assert.rejects(readFile(path.join(f.target, 'snapshot-manifest.json')), { code: 'ENOENT' });
+      await assert.rejects(readFile(path.join(f.target, '.snapshot-complete')), { code: 'ENOENT' });
+      assert.deepEqual(await readFile(path.join(f.source, 'studio.sqlite')), sourceDatabase);
+      assert.deepEqual(await readFile(path.join(f.source, 'studio.sqlite-wal')), sourceWal);
+      assert.deepEqual(JSON.parse(f.db.prepare('SELECT data FROM workflow_node_reviews').get().data), review);
+    });
+  }
+});
+
+test('snapshot accepts absent optional history and review tables without migrating the live schema', async t => {
+  const f = await fixture(t);
+  f.db.exec('DROP TABLE history; DROP TABLE workflow_history; DROP TABLE workflow_reviews; DROP TABLE settings;');
+  const schema = f.db.prepare('SELECT name,sql FROM sqlite_schema ORDER BY name').all();
+  const sourceDatabase = await readFile(path.join(f.source, 'studio.sqlite'));
+  const sourceWal = await readFile(path.join(f.source, 'studio.sqlite-wal'));
+  const manifest = await snapshotData(f);
+  assert.deepEqual(manifest.tableCounts, { entities: 4 });
+  assert.deepEqual(manifest.media.map(entry => entry.url).sort(), ['/api/exports/render.mp4', '/api/uploads/voice.wav']);
+  const copied = new DatabaseSync(path.join(f.target, 'studio.sqlite'), { readOnly: true });
+  try { assert.deepEqual(copied.prepare('SELECT name,sql FROM sqlite_schema ORDER BY name').all(), schema); }
+  finally { copied.close(); }
+  assert.deepEqual(f.db.prepare('SELECT name,sql FROM sqlite_schema ORDER BY name').all(), schema);
+  assert.deepEqual(await readFile(path.join(f.source, 'studio.sqlite')), sourceDatabase);
+  assert.deepEqual(await readFile(path.join(f.source, 'studio.sqlite-wal')), sourceWal);
+});
+
+test('snapshot rejects a database without entities rather than migrating unsupported state', async t => {
+  const f = await fixture(t);
+  f.db.exec('DROP TABLE entities;');
+  const schema = f.db.prepare('SELECT name,sql FROM sqlite_schema ORDER BY name').all();
+  const sourceDatabase = await readFile(path.join(f.source, 'studio.sqlite'));
+  const sourceWal = await readFile(path.join(f.source, 'studio.sqlite-wal'));
+  await assert.rejects(snapshotData(f), /no entities table/);
+  await assert.rejects(readFile(path.join(f.target, 'snapshot-manifest.json')), { code: 'ENOENT' });
+  await assert.rejects(readFile(path.join(f.target, '.snapshot-complete')), { code: 'ENOENT' });
+  assert.deepEqual(f.db.prepare('SELECT name,sql FROM sqlite_schema ORDER BY name').all(), schema);
+  assert.deepEqual(await readFile(path.join(f.source, 'studio.sqlite')), sourceDatabase);
+  assert.deepEqual(await readFile(path.join(f.source, 'studio.sqlite-wal')), sourceWal);
+});

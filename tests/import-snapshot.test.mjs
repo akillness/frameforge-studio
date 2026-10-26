@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { snapshotData } from '../scripts/snapshot-data.mjs';
 import { importSnapshot } from '../scripts/import-snapshot.mjs';
 
-async function fixture(t) {
+async function fixture(t, seed = async () => {}) {
   const root = await mkdtemp(path.join(tmpdir(), 'frameforge-import-'));
   const live = path.join(root, 'live'), snapshots = path.join(root, 'snapshots');
   const source = path.join(snapshots, 'snapshot'), target = path.join(root, 'volume');
@@ -19,7 +19,10 @@ async function fixture(t) {
   db.prepare('INSERT INTO history VALUES (?,?)').run(1, JSON.stringify({ version: 8, url: '/api/exports/old.mp4' }));
   await writeFile(path.join(live, 'uploads', 'voice.wav'), 'fixture voice');
   await writeFile(path.join(live, 'exports', 'old.mp4'), 'fixture render');
-  try { await snapshotData({ source: live, snapshotRoot: snapshots, target: source }); }
+  try {
+    await seed(db, live);
+    await snapshotData({ source: live, snapshotRoot: snapshots, target: source });
+  }
   finally { db.close(); }
   t.after(() => rm(root, { recursive: true, force: true }));
   const manifest = JSON.parse(await readFile(path.join(source, 'snapshot-manifest.json'), 'utf8'));
@@ -119,4 +122,87 @@ test('rejects a manifest that omits media still referenced by database history',
   f.manifest.mediaCount = f.manifest.media.length;
   await f.saveManifest();
   await assert.rejects(importSnapshot(f), /references media absent/);
+});
+
+async function nodeReviewFixture(t) {
+  const media = [
+    { url: '/api/exports/node-review.mp4', bytes: Buffer.from('Approved render referenced only by a node review') },
+    { url: '/api/uploads/node-review.wav', bytes: Buffer.from('Approved audio referenced only by a node review') },
+  ];
+  const reviews = media.map((item, index) => ({ id: `node-review-${index}`, runId: 'run-1', reviewNodeId: `review-${index}`, decision: 'approved', evidence: [{ outputUrl: item.url, sha256: createHash('sha256').update(item.bytes).digest('hex') }] }));
+  const f = await fixture(t, async (db, live) => {
+    db.exec('CREATE TABLE workflow_node_reviews (id TEXT PRIMARY KEY, run_id TEXT NOT NULL, review_node_id TEXT NOT NULL, data TEXT NOT NULL, UNIQUE(run_id,review_node_id))');
+    for (let index = 0; index < reviews.length; index++) {
+      const review = reviews[index];
+      db.prepare('INSERT INTO workflow_node_reviews VALUES (?,?,?,?)').run(review.id, review.runId, review.reviewNodeId, JSON.stringify(review));
+      await writeFile(path.join(live, media[index].url.replace('/api/', '')), media[index].bytes);
+    }
+  });
+  return { ...f, media, reviews };
+}
+
+test('imports every node-review row and node-review-only media without changing the source snapshot', async t => {
+  const f = await nodeReviewFixture(t);
+  const sourceDatabase = await readFile(path.join(f.source, 'studio.sqlite'));
+  const sourceFiles = (await readdir(f.source)).sort();
+  const receipt = await importSnapshot(f);
+  assert.equal(receipt.tableCounts.workflow_node_reviews, f.reviews.length);
+  assert.equal(receipt.mediaCount, 4);
+  const copied = new DatabaseSync(path.join(f.target, 'studio.sqlite'), { readOnly: true });
+  try {
+    assert.deepEqual(copied.prepare('SELECT id,run_id,review_node_id,data FROM workflow_node_reviews ORDER BY id').all().map(row => ({ ...row })), f.reviews.map(review => ({ id: review.id, run_id: review.runId, review_node_id: review.reviewNodeId, data: JSON.stringify(review) })));
+    assert.deepEqual(copied.prepare("SELECT name FROM sqlite_schema WHERE type='table' ORDER BY name").all().map(row => row.name), ['entities', 'history', 'workflow_node_reviews']);
+  } finally { copied.close(); }
+  for (const item of f.media) assert.deepEqual(await readFile(path.join(f.target, item.url.replace('/api/', ''))), item.bytes);
+  assert.deepEqual(await readFile(path.join(f.source, 'studio.sqlite')), sourceDatabase);
+  assert.deepEqual((await readdir(f.source)).sort(), sourceFiles);
+});
+
+test('import rejects a manifest that drops media referenced only by node reviews', async t => {
+  const f = await nodeReviewFixture(t);
+  f.manifest.media = f.manifest.media.filter(media => media.url !== '/api/exports/node-review.mp4');
+  f.manifest.mediaCount = f.manifest.media.length;
+  await f.saveManifest();
+  const sourceDatabase = await readFile(path.join(f.source, 'studio.sqlite'));
+  await assert.rejects(importSnapshot(f), /references media absent/);
+  assert.deepEqual(await readFile(path.join(f.source, 'studio.sqlite')), sourceDatabase);
+  await assert.rejects(importSnapshot(f), /must be empty/);
+});
+
+test('import verifies node-review counts rather than accepting a manifest that omits review rows', async t => {
+  const f = await nodeReviewFixture(t);
+  f.manifest.tableCounts.workflow_node_reviews = f.reviews.length - 1;
+  await f.saveManifest();
+  const sourceDatabase = await readFile(path.join(f.source, 'studio.sqlite'));
+  await assert.rejects(importSnapshot(f), /tableCounts differs/);
+  assert.deepEqual(await readFile(path.join(f.source, 'studio.sqlite')), sourceDatabase);
+  assert.deepEqual(await readFile(path.join(f.target, 'studio.sqlite')), sourceDatabase);
+});
+
+test('import rejects media bytes that no longer match a node-review hash even when manifest file hashes match', async t => {
+  const f = await nodeReviewFixture(t);
+  const changed = Buffer.from('A different render not approved by the node reviewer');
+  const url = '/api/exports/node-review.mp4';
+  await writeFile(path.join(f.source, url.replace('/api/', '')), changed);
+  const entry = f.manifest.media.find(media => media.url === url);
+  entry.sha256 = createHash('sha256').update(changed).digest('hex');
+  entry.bytes = changed.length;
+  await f.saveManifest();
+  await assert.rejects(importSnapshot(f), /hash differs from its database review or render record/);
+});
+
+test('import rejects a database without entities even when its manifest hash matches', async t => {
+  const f = await fixture(t);
+  const database = path.join(f.source, 'studio.sqlite');
+  const unsupported = new DatabaseSync(database);
+  try { unsupported.exec('DROP TABLE entities'); }
+  finally { unsupported.close(); }
+  const sourceDatabase = await readFile(database);
+  const sourceFiles = (await readdir(f.source)).sort();
+  f.manifest.database.sha256 = createHash('sha256').update(sourceDatabase).digest('hex');
+  await f.saveManifest();
+  await assert.rejects(importSnapshot(f), /no entities table/);
+  assert.deepEqual(await readFile(database), sourceDatabase);
+  assert.deepEqual((await readdir(f.source)).sort(), sourceFiles);
+  assert.deepEqual(await readFile(path.join(f.target, 'studio.sqlite')), sourceDatabase);
 });

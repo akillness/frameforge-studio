@@ -15,7 +15,7 @@ concurrency:
 jobs:
   node-and-harness:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -37,6 +37,8 @@ jobs:
           ffprobe -version
       - name: Run API, workflow, security and harness regression tests
         run: npm test
+      - name: Verify blog tone, smartphone reflow and real touch controls
+        run: node scripts/blog-workspace-browser-smoke.mjs
       - name: Verify immutable harness bundle
         run: node scripts/version-harness.mjs verify
 
@@ -65,6 +67,8 @@ jobs:
           NODE
       - name: Build and start the read-only non-root Compose service
         run: docker compose up --build --detach --wait --wait-timeout 120
+      - name: Verify packaged reviewed knowledge as the non-root service user
+        run: docker compose exec -T studio node scripts/knowledge.mjs check
       - name: Render and download a real authenticated H.264 MP4
         run: node scripts/container-smoke.mjs render
       - name: Restart the service while retaining its data volume

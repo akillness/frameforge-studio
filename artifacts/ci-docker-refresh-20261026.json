@@ -1,0 +1,170 @@
+{
+  "schema": "frameforge-ci-docker-refresh/v1",
+  "observedAt": "2026-10-26T18:22:26.762Z",
+  "status": "local-production-deployment-verified",
+  "local": {
+    "fullSuite": {
+      "command": "npm test",
+      "environment": "Isolated Linux, Node22,2CPU8GB",
+      "tests": 807,
+      "pass": 807,
+      "fail": 0,
+      "skipped": 0,
+      "durationMs": 940371.050441,
+      "filters": false,
+      "individualTestDeadlinesChanged": false
+    },
+    "blog": {
+      "command": "node scripts/blog-workspace-browser-smoke.mjs",
+      "checks": 400,
+      "pass": 400,
+      "widths": [
+        320,
+        375,
+        390,
+        430,
+        1024,
+        1440,
+        1600
+      ],
+      "touchWidths": [
+        390,
+        430
+      ],
+      "linux": {
+        "command": "node scripts/blog-workspace-browser-smoke.mjs",
+        "checks": 400,
+        "pass": 400,
+        "browser": "Official Playwright Chromium145.0.7632.6, build1208",
+        "externalNetwork": "blocked",
+        "productionDataUsed": false
+      }
+    },
+    "editor": {
+      "command": "node --test --test-name-pattern=\"portrait touch workbench\" tests/node-workbench.test.mjs",
+      "tests": 2,
+      "pass": 2,
+      "widths": [
+        390,
+        430
+      ],
+      "physicalDevices": false,
+      "mobileSafari": false
+    },
+    "docker": {
+      "scope": "Isolated candidate; never production data",
+      "nonRoot": true,
+      "readOnlyRoot": true,
+      "knowledgeMode": "packaged",
+      "knowledgeCheck": "passed",
+      "render": {
+        "width": 1080,
+        "height": 1920,
+        "videoCodec": "h264",
+        "audioCodec": "aac",
+        "bytes": 13925
+      },
+      "exactWorkflow": [
+        "render",
+        "restart",
+        "Compose health-wait",
+        "verify-persistence"
+      ],
+      "restartPersistence": true,
+      "episodeHistoryAndPerNodeReviewPreserved": true
+    },
+    "javascriptSpecialistReview": {
+      "scope": "Bounded static review only",
+      "findings": 0
+    },
+    "syntax": {
+      "command": "npm run check",
+      "modules": 119,
+      "status": "passed"
+    }
+  },
+  "workflow": {
+    "jobWallTimeCapMinutes": 20,
+    "individualDeadlinesChanged": false,
+    "packagedKnowledgeGate": "docker compose exec -T studio node scripts/knowledge.mjs check",
+    "mandatoryMobileBlogGate": "node scripts/blog-workspace-browser-smoke.mjs"
+  },
+  "hostedCI": {
+    "authority": "GitHub Actions live run status; deliberately not cached or inferred from local results",
+    "workflowUrl": "https://github.com/akillness/frameforge-studio/actions/workflows/verify.yml"
+  },
+  "production": {
+    "status": "verified",
+    "scope": "Owned local production container and loopback HTTP; no fresh external HTTPS claim",
+    "imageId": "sha256:2e9e669fd7524b70c0de530195bf36511e5934afcf119af198a782217d0bc3af",
+    "user": "node",
+    "readOnlyRoot": true,
+    "loopbackOnly": true,
+    "originalVolume": "frameforge-studio_studio-data",
+    "runtimeSourcesMatched": 185,
+    "runtimeSourceHashMismatches": 0,
+    "sourceManifestSha256": "a5bfb804cfcd411c3ea5afbc9bcf197b908bfa2bf9cd60bce85aebd56a673862",
+    "sqlite": {
+      "integrity": "ok",
+      "tables": 6,
+      "rows": 525,
+      "allOriginalCellFingerprintsUnchanged": true
+    },
+    "media": {
+      "count": 29,
+      "everyOriginalHashAndByteUnchanged": true
+    },
+    "liveReadOnlyApi": {
+      "status": "passed",
+      "health": 200,
+      "unauthenticatedState": 401,
+      "authenticatedState": 200,
+      "existingHistory": 200,
+      "studioHtml": 200,
+      "blogHtml": 200,
+      "ownSessionLogout": 200,
+      "revokedSessionState": 401
+    },
+    "knowledge": {
+      "status": "passed",
+      "mode": "packaged",
+      "admittedBodies": 10,
+      "exactManagedIndexAndBodyInventory": true,
+      "packageSha256": "36c73780cb01bc785e50be021ee10ba78490e35133739ef7d0472ed53f52ba4c",
+      "buildTimeMetadataOnlyReferences": 49
+    },
+    "originalConsistentBackupAndImageRetained": true,
+    "originalEntityOrMediaEdits": false
+  },
+  "knowledge": {
+    "status": "bounded-source-refresh-verified",
+    "admittedBodies": 10,
+    "mex": {
+      "parsedFiles": 129,
+      "checkScore": 100,
+      "scaffolds": 16,
+      "issues": 0,
+      "privateFilesOrChunksIndexed": 0,
+      "rejectedRawDirectoryCoverageMarkers": 12
+    },
+    "graph": {
+      "nodes": 3075,
+      "edges": 5469,
+      "retainedSources": 341,
+      "retainedSourceHashesMatched": 341,
+      "unresolvedEndpointEdges": 573,
+      "semanticCompletenessClaimed": false
+    },
+    "historicalFullVaultDiagnostics": 6282,
+    "fullVaultRerun": false,
+    "globalReadinessClaimed": false
+  },
+  "boundaries": {
+    "paidGenerationAttempted": false,
+    "ownerCreativeAcceptance": false,
+    "rawTracesSnapshotsCredentials": "Remain checkout-private; never included in this receipt",
+    "mediaOrBlogPublicationAttempted": false,
+    "privateAutomaticCaptureIndexAndLogChanges": "Remain checkout-local; committed approved managed index is already identical"
+  },
+  "scope": "Local CI-equivalent regression proofs and actual loopback production replacement; hosted CI is an independent GitHub source of truth"
+}

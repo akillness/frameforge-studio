@@ -20,6 +20,20 @@ The default path neither builds nor pulls an image. To rebuild the reviewed sour
 
 The build has a 20-minute client timeout. A timeout terminates only the helper's Docker CLI; inspect the Docker engine before retrying because server-side work may still be finishing. `--wait` and `--wait-timeout` are documented by [Docker Compose](https://docs.docker.com/reference/cli/docker/compose/up/); detached Desktop startup is documented in [Docker Desktop CLI](https://docs.docker.com/reference/cli/docker/desktop/start/).
 
+### Knowledge modes and image safety
+
+Source checkouts default to strict `source` knowledge validation, including physical provenance/local-link targets. The [Dockerfile](../Dockerfile) strictly verifies that closed admitted corpus through a read-only build mount, then explicitly selects `FRAMEFORGE_KNOWLEDGE_MODE=packaged` in the runtime image. The knowledge package contains only reviewed bodies, managed-only navigation, policy and package metadata; selected harness files are copied separately. Provenance bodies omitted from the runtime remain build-verified metadata, not available knowledge bodies or evidence of current runtime readiness.
+
+Keep the exact [.dockerignore](../.dockerignore) build-input allowlist and selective runtime copies. Never broadly `COPY` `.mex`, `.graphify`, `artifacts` or raw wiki content into the image, fabricate missing dependencies, or weaken strict-source validation to make a build pass.
+
+After Compose is healthy, use the tested non-root runtime check without a user override:
+
+```powershell
+docker compose exec -T studio node scripts/knowledge.mjs check
+```
+
+The [check](../scripts/knowledge.mjs) emits JSON and exits 0 only on success. Missing/changed admitted bodies, stale managed navigation or invalid package bindings fail closed with exit 1; repair the reviewed inputs and rebuild rather than bypass validation. A passing knowledge check does not establish provider readiness or deployment acceptance.
+
 ## Native-to-Docker data migration
 
 The 2026-10-18 migration used a separate staging project on port 4320, then stopped the idle native studio and inbox before taking the final snapshot. The host bridge stayed running. The final snapshot is retained privately at `ops/snapshots/production-20261018-0757`; `ops/production-import.json` records SQLite integrity, table counts, original IDs/versions and 10 media hashes. The sanitized API recheck is [docker-migration.json](../artifacts/docker-migration.json). Original `data/` remains untouched by the container.
@@ -33,6 +47,8 @@ $snapshotTarget = 'ops/snapshots/production-' + (Get-Date -Format 'yyyyMMdd-HHmm
 node scripts/snapshot-data.mjs --source data --snapshot-root ops/snapshots --target $snapshotTarget
 if ($LASTEXITCODE -ne 0) { throw 'Snapshot failed; do not import' }
 ```
+
+The [snapshot helper](../scripts/snapshot-data.mjs) and [import verifier](../scripts/import-snapshot.mjs) scan media references in all five current reference tables when present: `entities`, `history`, `workflow_history`, `workflow_reviews` and `workflow_node_reviews`. This retains media referenced only by node reviews and verifies it against the manifest on import. Both inspect SQLite directly without constructing `Store`, startup mutation or creating/migrating absent optional tables; the snapshot still uses a consistent SQLite backup.
 
 Initialize only a **new, empty** volume. The importer requires its complete manifest, validates database/media hashes and contained paths, uses exclusive copies, checks SQLite integrity/history/IDs/versions, then assigns ownership to the non-root service. Never point this initialization at the already migrated production volume.
 

@@ -1,5 +1,5 @@
 {
-  "observedAt": "2026-10-26T14:42:07.818487+00:00",
+  "observedAt": "2026-10-26T17:41:53.934863+00:00",
   "mode": "native deterministic structural extraction; semantic verification not run",
   "commands": [
     {
@@ -7,7 +7,7 @@
         "graphify",
         "--version"
       ],
-      "cwd": "<repo>\\.graphify\\.native-refresh-wnr3uvo1",
+      "cwd": "<repo>\\.graphify\\.native-refresh-f19vghy3",
       "exitCode": 0,
       "output": "graphify 0.8.39\n"
     },
@@ -18,7 +18,7 @@
         "<repo>",
         "--no-cluster"
       ],
-      "cwd": "<repo>\\.graphify\\.native-refresh-wnr3uvo1",
+      "cwd": "<repo>\\.graphify\\.native-refresh-f19vghy3",
       "exitCode": 0,
       "output": "Native output withheld: local extraction can mention rejected inputs"
     },
@@ -27,15 +27,15 @@
         "graphify",
         "tree",
         "--graph",
-        "<repo>\\.graphify\\.native-refresh-wnr3uvo1\\graph.json",
+        "<repo>\\.graphify\\.native-refresh-f19vghy3\\graph.json",
         "--output",
-        "<repo>\\.graphify\\.native-refresh-wnr3uvo1\\graph.html",
+        "<repo>\\.graphify\\.native-refresh-f19vghy3\\graph.html",
         "--root",
         ".",
         "--label",
         "FrameForge admitted structural graph"
       ],
-      "cwd": "<repo>\\.graphify\\.native-refresh-wnr3uvo1",
+      "cwd": "<repo>\\.graphify\\.native-refresh-f19vghy3",
       "exitCode": 0,
       "output": "Native tree export of the filtered graph"
     }
@@ -236,8 +236,8 @@
     "hyperedgesRemoved": 0
   },
   "wikiAdmissionAudit": {
-    "nodesRemoved": 187,
-    "edgesRemoved": 182,
+    "nodesRemoved": 212,
+    "edgesRemoved": 207,
     "hyperedgesRemoved": 0,
     "admittedFiles": [
       "llm-wiki/wiki/concepts/knowledge-layers.md",
@@ -255,21 +255,21 @@
     "evidenceBoundary": "provenance.evidence paths are pointers, not admitted graph sources"
   },
   "edgeRecordAudit": {
-    "raw": 5391,
-    "exactUnique": 5391,
+    "raw": 5469,
+    "exactUnique": 5469,
     "exactDuplicatesRemoved": 0,
     "remainingDuplicates": 0,
     "collections": {
       "links": {
-        "raw": 5391,
-        "exactUnique": 5391,
+        "raw": 5469,
+        "exactUnique": 5469,
         "exactDuplicatesRemoved": 0
       }
     },
     "method": "stable JSON of each whole record within each native collection; distinct metadata preserved"
   },
-  "nodes": 3049,
-  "edges": 5391,
+  "nodes": 3075,
+  "edges": 5469,
   "sourceFiles": [
     ".agents/skills/mex-inbox/SKILL.md",
     ".agents/skills/mex-inbox/references/cli-workflows.md",
@@ -596,6 +596,7 @@
     "tests/production-workspace-ui.test.mjs",
     "tests/project-agent.test.mjs",
     "tests/project-archive.test.mjs",
+    "tests/project-knowledge-package.test.mjs",
     "tests/project-knowledge.test.mjs",
     "tests/render-security.test.mjs",
     "tests/render.test.mjs",
@@ -659,7 +660,7 @@
     },
     {
       "path": ".mex/ROUTER.md",
-      "sha256": "28127051ff51f0536219df742719e541047c6c7ec1bd7b9aef603bd4fd118902"
+      "sha256": "a6ca04ea539a523898e6352eb2712d0b49963cd053e659a2f132680917e69f70"
     },
     {
       "path": ".mex/SETUP.md",
@@ -755,7 +756,7 @@
     },
     {
       "path": "docs/docker-operations.md",
-      "sha256": "1b52754c637b45a8509d4ac1b374cb496263d79cbcbba5bb9a60e9018479076a"
+      "sha256": "7c6650667c2c475dc31cc64cefbeb34855b8162298efeef2f2c2379aa6500550"
     },
     {
       "path": "docs/harness-versioning.md",
@@ -1503,7 +1504,7 @@
     },
     {
       "path": "scripts/blog-workspace-browser-smoke.mjs",
-      "sha256": "593707d8447b6a9b5b5215448305240c043eaddee76d5117b20d368d70c66310"
+      "sha256": "a2081dab8a1159c49dfd99b7035068fd008f03c0f8b0746de2187085135420f2"
     },
     {
       "path": "scripts/browser-smoke.py",
@@ -1535,7 +1536,7 @@
     },
     {
       "path": "scripts/import-snapshot.mjs",
-      "sha256": "3513c602bf51c7de282b57059056ef4744a5f2bf8738827865ce1fb5c7f8fcc0"
+      "sha256": "324670b15985b5d9e91f5d572e22c686585c33ef790e3768dc30ed45422e5cdc"
     },
     {
       "path": "scripts/jeo-adapter.mjs",
@@ -1551,7 +1552,7 @@
     },
     {
       "path": "scripts/knowledge.mjs",
-      "sha256": "54276dcb2dcb9359caf9c0774ffa85b97265010b4535a50cc5ab6607802a67fb"
+      "sha256": "c1bc4a6c3f4ae30e9c2b3e0753bb7652183784fa5d2abab5417e39486c172c6e"
     },
     {
       "path": "scripts/media-smoke.mjs",
@@ -1595,7 +1596,7 @@
     },
     {
       "path": "scripts/snapshot-data.mjs",
-      "sha256": "51e88c06f3a67870f02720aae7e4af44c1274de901cbe1b4c9fe57195b8be30d"
+      "sha256": "08c86b25c2b11b2526940580c1c864b82092db2431c80ed999ff3c43d926bab6"
     },
     {
       "path": "scripts/speech.ps1",
@@ -1707,7 +1708,7 @@
     },
     {
       "path": "server/platform-session.mjs",
-      "sha256": "a5eaa71a39564e1b7fdc43b33186b67050a69a4c366e0e232e7450db4eb9f745"
+      "sha256": "9a64fc9094b8d18cc7096d020fec576ffd571bdfe9c449919820c731e72ac6aa"
     },
     {
       "path": "server/private-runtime.mjs",
@@ -1719,7 +1720,7 @@
     },
     {
       "path": "server/project-knowledge.mjs",
-      "sha256": "850db922c6ee6e1b1e7665bcee0ce40ba1d92fdcecd763584fd3ea98d054a9d3"
+      "sha256": "aad2abe42b91537b3456e15db0d70244bf5d715deef55195d76085c688abdcb6"
     },
     {
       "path": "server/publication.mjs",
@@ -1799,7 +1800,7 @@
     },
     {
       "path": "tests/generations.test.mjs",
-      "sha256": "1901a9a02f1a0f2d5081350af091189b8cc2384b0c9b4b62abf55fefa27c162f"
+      "sha256": "50086e6f60f58b29d155062a4e137f8cde3d966134042ac0497b1b35372b60cf"
     },
     {
       "path": "tests/harness-context.test.mjs",
@@ -1831,7 +1832,7 @@
     },
     {
       "path": "tests/import-snapshot.test.mjs",
-      "sha256": "fb125b0c3c048bd463af1a9d534c7de2f0e030241cf8ff74ddea636f0d49a992"
+      "sha256": "0e80856e10a161cf7c352f4f8b448cc722d9fdb2250759c1e718bc005b7bce6d"
     },
     {
       "path": "tests/integrations.test.mjs",
@@ -1851,7 +1852,7 @@
     },
     {
       "path": "tests/node-workbench.test.mjs",
-      "sha256": "bd5c22959abd61b6027d967f7da8eee8720a0fcf02393a5e6690ad9c54fa9e6a"
+      "sha256": "9f44648ab4d8455f1773cb2190c8a64f8c7404d57b3aa51125bd78b23f0ded24"
     },
     {
       "path": "tests/ops-workspace.test.mjs",
@@ -1859,7 +1860,7 @@
     },
     {
       "path": "tests/platform-session.test.mjs",
-      "sha256": "ffbd82759482ac0bb054458c7a7a02554b299bff3810c457de34303628e8a3aa"
+      "sha256": "b63c4c56b2d11d0c0e3d421f0585e158b512ab47cf2fb7cfa9f9a350ad52a217"
     },
     {
       "path": "tests/production-branch-regressions.test.mjs",
@@ -1875,7 +1876,7 @@
     },
     {
       "path": "tests/production-media-credits.test.mjs",
-      "sha256": "5db54abc18a6a47afbc3a10fdc59f7e52bf15db1c97952b56517975dbdb9d9b8"
+      "sha256": "b834217a27aea10d5947a284bdff4f25b880112ed7da51d9a14b9e40404bc51e"
     },
     {
       "path": "tests/production-project-store.test.mjs",
@@ -1914,6 +1915,10 @@
       "sha256": "820543a7d9dcdc3e40cb350903a2ae37f5994fdced243c49af740a9d5aaa6f1b"
     },
     {
+      "path": "tests/project-knowledge-package.test.mjs",
+      "sha256": "43721a80a3051d0a79c99f2b31ea8ad05f39f3d8a6ac07a15c7f2dd8c1835876"
+    },
+    {
       "path": "tests/project-knowledge.test.mjs",
       "sha256": "0d22bc446fb6af5864f31b50092e633f9050f1585ee5ad18017503d55e627504"
     },
@@ -1931,7 +1936,7 @@
     },
     {
       "path": "tests/snapshot-data.test.mjs",
-      "sha256": "003bfaee1c9ddbbafbad551dc71482fade342b34deb2f82bfe52537fc1a8ff20"
+      "sha256": "fba29f52b7d8b1bf3727347692cfea5321bdd8f7f2ea62d89afc463435495de0"
     },
     {
       "path": "tests/store-knowledge.test.mjs",
@@ -1975,11 +1980,11 @@
     }
   ],
   "nativeUnfilteredCounts": {
-    "nodes": 3499,
-    "edges": 5941
+    "nodes": 3550,
+    "edges": 6044
   },
   "portableSourcePaths": true,
-  "graphSha256": "acb361ef6b4e0917fd390a6c09864bbe12192dab15bea853acfaa2095047c023",
+  "graphSha256": "414df9f0e81bbcbf1d70dacd3f21f97b62d916963b5867d54cf71c24dd05525b",
   "limitations": [
     "scope command and newer update flags unavailable in installed version",
     "Native extraction still scans rejected local inputs before final filtering; no CPU or token savings claimed",

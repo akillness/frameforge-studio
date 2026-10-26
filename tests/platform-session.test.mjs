@@ -56,6 +56,7 @@ function formMarkup() {
 async function managerFixture(t) {
   const dataDir = await mkdtemp(path.join(tmpdir(), 'frameforge-platform-session-'));
   const store = new Store(dataDir);
+  const episode = store.create('episodes', { channelId: store.list('channels')[0].id, title: 'Browser export episode', topic: 'Fixture', category: 'information', status: 'draft', format: '9:16', version: 1, scenes: [starterScene('Fixture scene', 'Fixture text')] });
   const fixture = await fixtureServer(t);
   const manager = new PlatformSessionManager({ store, browserModule, browserOptions: { executablePath: chromiumExecutable } });
   t.after(async () => {
@@ -63,7 +64,7 @@ async function managerFixture(t) {
     store.close();
     await rm(dataDir, { recursive: true, force: true });
   });
-  return { dataDir, store, fixture, manager };
+  return { dataDir, store, episode, fixture, manager };
 }
 
 function multipartContains(body, value) {
@@ -71,11 +72,11 @@ function multipartContains(body, value) {
 }
 
 test('real persistent browser session navigates, inputs, screenshots, and closes without leaking private handles', async (t) => {
-  const { dataDir, fixture, manager, store } = await managerFixture(t);
+  const { dataDir, fixture, manager, store, episode } = await managerFixture(t);
   const exportBytes = Buffer.from('real local export bytes\n\x00\xff');
   await mkdir(path.join(dataDir, 'exports'), { recursive: true });
   await writeFile(path.join(dataDir, 'exports', 'browser-fixture.mp4'), exportBytes);
-  store.create('jobs', { episodeId: 'fixture-episode', episodeVersion: 1, status: 'completed', outputUrl: '/api/exports/browser-fixture.mp4', sha256: createHash('sha256').update(exportBytes).digest('hex') });
+  store.create('jobs', { episodeId: episode.id, episodeVersion: episode.version, status: 'completed', outputUrl: '/api/exports/browser-fixture.mp4', sha256: createHash('sha256').update(exportBytes).digest('hex') });
 
   const session = await manager.openSession({
     platform: 'other',
@@ -156,14 +157,15 @@ test('server export verification rejects traversal, symlinks, and empty artifact
   const outsideBytes = Buffer.from('outside');
   await writeFile(outside, outsideBytes);
   const link = path.join(exportsDir, 'link.mp4');
-  for (const filename of ['empty.mp4', 'link.mp4', 'not-present.mp4']) store.create('jobs', { episodeId: 'fixture-episode', episodeVersion: 1, status: 'completed', outputUrl: `/api/exports/${filename}` });
+  const episode = store.create('episodes', { channelId: store.list('channels')[0].id, title: 'Linked episode', topic: 'Fixture', category: 'information', status: 'draft', format: '9:16', version: 1, scenes: [starterScene('Fixture scene', 'Fixture text')] });
+  for (const filename of ['empty.mp4', 'link.mp4', 'not-present.mp4']) store.create('jobs', { episodeId: episode.id, episodeVersion: episode.version, status: 'completed', outputUrl: `/api/exports/${filename}` });
   const linkedBytes = Buffer.from('linked render');
   await writeFile(path.join(exportsDir, 'linked.mp4'), linkedBytes);
-  const episode = store.create('episodes', { channelId: store.list('channels')[0].id, title: 'Linked episode', topic: 'Fixture', category: 'information', status: 'draft', format: '9:16', version: 1, scenes: [starterScene('Fixture scene', 'Fixture text')] });
   const linkedJob = store.create('jobs', { episodeId: episode.id, episodeVersion: 1, status: 'completed', outputUrl: '/api/exports/linked.mp4', sha256: createHash('sha256').update(linkedBytes).digest('hex') });
 
   await assert.rejects(() => manager.verifyServerExport('/api/exports/../outside.mp4'), (error) => error?.status === 400);
   await assert.rejects(() => manager.verifyServerExport('/api/exports/empty.mp4'), (error) => error?.status === 409);
+  await assert.rejects(() => manager.verifyServerExport('/api/exports/not-present.mp4'), (error) => error?.status === 404);
   await assert.rejects(() => manager.verifyServerExport('/api/exports/linked.mp4', { jobId: 'wrong-job' }), (error) => error?.status === 409 && /render job/i.test(error.message));
   await assert.rejects(() => manager.verifyServerExport('/api/exports/linked.mp4', { episodeId: 'wrong-episode' }), (error) => error?.status === 409 && /episode/i.test(error.message));
   await assert.rejects(() => manager.verifyServerExport('/api/exports/linked.mp4', { episodeVersion: 2 }), (error) => error?.status === 409 && /episode version/i.test(error.message));
@@ -183,11 +185,11 @@ test('server export verification rejects traversal, symlinks, and empty artifact
 });
 
 test('staged export hash change is rejected before any publication record is created', async (t) => {
-  const { dataDir, fixture, manager, store } = await managerFixture(t);
+  const { dataDir, fixture, manager, store, episode } = await managerFixture(t);
   const exportPath = path.join(dataDir, 'exports', 'mutable.mp4');
   const original = Buffer.from('before-stage');
   await writeFile(exportPath, original);
-  store.create('jobs', { episodeId: 'fixture-episode', episodeVersion: 1, status: 'completed', outputUrl: '/api/exports/mutable.mp4', sha256: createHash('sha256').update(original).digest('hex') });
+  store.create('jobs', { episodeId: episode.id, episodeVersion: episode.version, status: 'completed', outputUrl: '/api/exports/mutable.mp4', sha256: createHash('sha256').update(original).digest('hex') });
   const session = await manager.openSession({ platform: 'other', url: `${fixture.base}/start` });
   const staged = await manager.interact(session.id, { action: 'attach-export', exportUrl: '/api/exports/mutable.mp4', selector: '#upload' });
   await writeFile(exportPath, Buffer.from('after-stage'));
@@ -204,8 +206,14 @@ test('staged export hash change is rejected before any publication record is cre
 test('YouTube keeps a manual Studio handoff and rejects automated browser controls without opening a browser', async t => {
   const dataDir = await mkdtemp(path.join(tmpdir(), 'frameforge-youtube-manual-'));
   const store = new Store(dataDir);
+  const episode = store.create('episodes', { channelId: store.list('channels')[0].id, title: 'Manual handoff episode', topic: 'Fixture', category: 'information', status: 'draft', format: '9:16', version: 1, scenes: [starterScene('Fixture scene', 'Fixture text')] });
+  const exportBytes = Buffer.from('verified manual handoff export');
+  await writeFile(path.join(dataDir, 'exports', 'verified.mp4'), exportBytes);
+  store.create('jobs', { episodeId: episode.id, episodeVersion: episode.version, status: 'completed', outputUrl: '/api/exports/verified.mp4', sha256: createHash('sha256').update(exportBytes).digest('hex') });
   let launches = 0;
   const manager = new PlatformSessionManager({ store, browserModule: { chromium: { launchPersistentContext: async () => { launches++; throw new Error('YouTube must never launch an automated browser'); } } } });
+  const originalList = store.list.bind(store);
+  t.after(() => { store.list = originalList; });
   t.after(async () => { await manager.close(); store.close(); await rm(dataDir, { recursive: true, force: true }); });
   const session = await manager.openSession({ platform: 'youtube', autoAttachExport: true });
   assert.equal(session.mode, 'manual-external');
@@ -213,12 +221,27 @@ test('YouTube keeps a manual Studio handoff and rejects automated browser contro
   assert.equal(session.browser.available, false);
   assert.equal(session.attachmentStatus, 'none');
   assert.equal(session.publicationStatus, 'not_attempted');
+  let exportJobLookups = 0;
+  // Observe the real SQLite boundary: policy denial must not read render jobs.
+  store.list = kind => { if (kind === 'jobs') exportJobLookups++; return originalList(kind); };
   for (const action of [
     { action: 'navigate', url: 'https://studio.youtube.com' },
     { action: 'input', selector: '#title', value: 'Blocked' },
     { action: 'click', selector: '#publish' },
+    { action: 'key', key: 'Enter' },
+    { action: 'scroll', deltaY: 100 },
+    { action: 'upload' },
+    { action: 'refresh' },
     { action: 'attach-export', exportUrl: '/api/exports/fixture.mp4' },
-  ]) await assert.rejects(manager.interact(session.id, action), error => error.status === 409 && /YouTube browser automation is disabled/.test(error.message));
+    { action: 'attach-export' },
+    { action: 'attach-export', exportUrl: '/api/exports/../outside.mp4' },
+    { action: 'attach-export', exportUrl: '/api/exports/verified.mp4', selector: '#upload' },
+  ]) {
+    await assert.rejects(manager.interact(session.id, action), error => error.status === 409 && /YouTube browser automation is disabled/.test(error.message));
+    assert.equal(exportJobLookups, 0, `${action.action} must reject before export lookup`);
+    assert.deepEqual(manager.getSession(session.id), session, `${action.action} must not attach an export or mutate the manual session`);
+  }
+  store.list = originalList;
   await assert.rejects(manager.openSession({ platform: 'other', url: 'https://studio.youtube.com' }), { status: 409 });
   assert.equal(launches, 0);
   assert.equal(store.list('platformUploads').length, 0);

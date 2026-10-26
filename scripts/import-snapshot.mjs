@@ -6,7 +6,7 @@ import { isDeepStrictEqual } from 'node:util';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const tables = ['entities', 'history', 'workflow_history', 'workflow_reviews', 'settings'];
+const tables = ['entities', 'history', 'workflow_history', 'workflow_reviews', 'workflow_node_reviews', 'settings'];
 const samePath = (left, right) => path.relative(left, right) === '';
 const within = (root, filename) => {
   const relative = path.relative(root, filename);
@@ -52,7 +52,7 @@ function verifyDatabase(filename, manifest) {
         if (media.has(url) && /^[a-f0-9]{64}$/i.test(value.sha256 || '') && media.get(url) !== value.sha256.toLowerCase()) throw new Error('Imported media hash differs from its database review or render record');
       }
     }
-    for (const table of ['entities', 'history', 'workflow_history', 'workflow_reviews'].filter(table => existing.has(table))) {
+    for (const table of ['entities', 'history', 'workflow_history', 'workflow_reviews', 'workflow_node_reviews'].filter(table => existing.has(table))) {
       for (const row of db.prepare(`SELECT data FROM ${table}`).iterate()) verifyReferences(JSON.parse(row.data));
     }
     return observed;
