@@ -1,0 +1,346 @@
+{
+  "schema": "frameforge-node-native-knowledge-refresh/v1",
+  "capturedAt": "2026-10-26T14:42:51.540Z",
+  "status": "BOUNDED_EXPORT_VERIFIED_LATER_DOC_DRIFT_LEGACY_FULL_VAULT_FAILED",
+  "mex": {
+    "refreshReceipt": "artifacts/node-native-workbench/mex-refresh.json",
+    "checkReceipt": "artifacts/node-native-workbench/mex-check.json",
+    "files": 128,
+    "nodes": 6160,
+    "edges": 20269,
+    "sourceChunks": 607,
+    "graphStatus": "fresh",
+    "sourceChanges": 0,
+    "checkScore": 100,
+    "checkExitCode": 0,
+    "observedAt": "2026-10-26T14:36:08.956Z",
+    "parseHealth": {
+      "total": 128,
+      "ok": 128,
+      "partial": 0,
+      "failed": 0,
+      "failedPaths": [],
+      "failedPathsTruncated": false
+    },
+    "refreshCreatedFiles": 0,
+    "refreshCreatedNodes": 0,
+    "refreshCreatedEdges": 0,
+    "incrementalNoSourceChanges": true,
+    "privateMetadataPathMatches": 0
+  },
+  "graphify": {
+    "receipt": ".graphify/verification.json",
+    "scope": ".graphify/scope.json",
+    "report": ".graphify/GRAPH_REPORT.md",
+    "graph": ".graphify/graph.json",
+    "html": ".graphify/graph.html",
+    "command": "python .graphify/refresh.py",
+    "commandExitCode": 0,
+    "observedAt": "2026-10-26T14:34:29.979243+00:00",
+    "nativeUpdateExitCode": 0,
+    "nativeTreeExitCode": 0,
+    "nodes": 3049,
+    "edges": 5391,
+    "sourceFiles": 340,
+    "graphSha256": "bf1afc698e921397347d0aff3e6576c14e5d6e5c0f85772a94932a01fe6b54a8",
+    "graphReceiptMatchesHash": true,
+    "retainedSourceHashesChecked": 340,
+    "retainedSourceHashMismatches": 1,
+    "scopeMatchesSourceHashManifest": true,
+    "privateSourceFamilies": [
+      {
+        "prefix": ".state/",
+        "pathCount": 0
+      },
+      {
+        "prefix": ".jeo/",
+        "pathCount": 0
+      },
+      {
+        "prefix": ".omc/",
+        "pathCount": 0
+      },
+      {
+        "prefix": ".omx/",
+        "pathCount": 0
+      },
+      {
+        "prefix": ".ouroboros/",
+        "pathCount": 0
+      },
+      {
+        "prefix": ".zvec-grep/",
+        "pathCount": 0
+      },
+      {
+        "prefix": ".mcp.json",
+        "pathCount": 0
+      },
+      {
+        "prefix": "artifacts/production-workspace-implementation/native-status/",
+        "pathCount": 0
+      },
+      {
+        "prefix": "artifacts/private/",
+        "pathCount": 0
+      },
+      {
+        "prefix": "data/",
+        "pathCount": 0
+      },
+      {
+        "prefix": "ops/",
+        "pathCount": 0
+      },
+      {
+        "prefix": "_workspace/",
+        "pathCount": 0
+      },
+      {
+        "prefix": "llm-wiki/.state/",
+        "pathCount": 0
+      },
+      {
+        "prefix": "llm-wiki/raw/",
+        "pathCount": 0
+      },
+      {
+        "prefix": "llm-wiki/sources/",
+        "pathCount": 0
+      },
+      {
+        "prefix": "llm-wiki/queries/",
+        "pathCount": 0
+      }
+    ],
+    "privateRecordPathFamilies": [
+      {
+        "prefix": ".state/",
+        "records": 0
+      },
+      {
+        "prefix": ".jeo/",
+        "records": 0
+      },
+      {
+        "prefix": ".omc/",
+        "records": 0
+      },
+      {
+        "prefix": ".omx/",
+        "records": 0
+      },
+      {
+        "prefix": ".ouroboros/",
+        "records": 0
+      },
+      {
+        "prefix": ".zvec-grep/",
+        "records": 0
+      },
+      {
+        "prefix": ".mcp.json",
+        "records": 0
+      },
+      {
+        "prefix": "artifacts/production-workspace-implementation/native-status/",
+        "records": 0
+      },
+      {
+        "prefix": "artifacts/private/",
+        "records": 0
+      },
+      {
+        "prefix": "data/",
+        "records": 0
+      },
+      {
+        "prefix": "ops/",
+        "records": 0
+      },
+      {
+        "prefix": "_workspace/",
+        "records": 0
+      },
+      {
+        "prefix": "llm-wiki/.state/",
+        "records": 0
+      },
+      {
+        "prefix": "llm-wiki/raw/",
+        "records": 0
+      },
+      {
+        "prefix": "llm-wiki/sources/",
+        "records": 0
+      },
+      {
+        "prefix": "llm-wiki/queries/",
+        "records": 0
+      }
+    ],
+    "valueAudit": [
+      {
+        "family": "absolute-user-path",
+        "matchingRecords": 0
+      },
+      {
+        "family": "private-tailnet-host",
+        "matchingRecords": 0
+      },
+      {
+        "family": "credential-pattern",
+        "matchingRecords": 0
+      }
+    ],
+    "exactDuplicateEdges": 0,
+    "unresolvedEndpointEdges": 567,
+    "unresolvedEndpointBoundary": "These567edges have at least one endpoint absent from the exported node list. This audit does not establish their cause or claim complete call/import resolution or semantic verification.",
+    "admittedWikiSources": 10,
+    "unadmittedWikiSources": 0,
+    "canonicalRefreshCodeInCorpus": false,
+    "canonicalPrivacyTestsInCorpus": false,
+    "separatePrivacyReceipt": "artifacts/node-native-workbench/graphify-privacy-verification.json",
+    "privacyTests": {
+      "owner": "Main-run frozen-source receipt",
+      "command": [
+        "python",
+        ".graphify/test_refresh_privacy.py",
+        "-v"
+      ],
+      "exitCode": 0,
+      "tests": 22,
+      "failures": 0,
+      "skipped": 0,
+      "reportedRunSeconds": 30.379,
+      "toolWallSeconds": 32.37
+    },
+    "frozenPrivacySources": [
+      {
+        "path": ".graphify/refresh.py",
+        "sha256": "1137bb032b786b58c49f674871aa8339b34495a14f6c6c856107fd964d37efb9",
+        "matchesReceipt": true
+      },
+      {
+        "path": ".graphify/test_refresh_privacy.py",
+        "sha256": "929693c7aa48d2e094493c732e92839011db092329f688f1cf1fe7b71b70c714",
+        "matchesReceipt": true
+      },
+      {
+        "path": ".gitignore",
+        "sha256": "70b1e45d5fa12ed7df7bffc1bdf0771a79be29d7b92592619dbc2d11510a89a7",
+        "matchesReceipt": true
+      }
+    ],
+    "publication": {
+      "mode": "five existing paths with fsynced rollback snapshots and journal",
+      "receiptIncluded": true,
+      "readerVisibility": "not an atomic multi-file reader switch; failed publication restores prior bytes",
+      "recovery": "python .graphify/refresh.py --recover-publication <private-transaction>"
+    },
+    "initialRetainedSourceHashMismatches": 0,
+    "postWriteChangedSources": [
+      "docs/verification.md"
+    ],
+    "sourceBindingStatus": "TIMESTAMPED_EXPORT_WITH_LATER_DOCUMENTATION_DRIFT"
+  },
+  "wiki": {
+    "receipt": "artifacts/node-native-workbench/wiki-okf-validation.json",
+    "command": "python .mex/verify-knowledge.py",
+    "exitCode": 1,
+    "ok": false,
+    "wikiPages": 1044,
+    "okfAtoms": 338,
+    "errorCount": 6282,
+    "errorCategories": {
+      "unresolved-link": 4594,
+      "missing-OKF-field": 984,
+      "orphan-page": 704
+    },
+    "coreEntityConceptReportFindings": [],
+    "recordedImmutableSourceManifests": 1,
+    "rawManifestIntegrityFailures": 0,
+    "privateFullDiagnosticsRetained": true,
+    "prior5692DiagnosticSnapshotRetained": true
+  },
+  "harness": {
+    "command": "node scripts/version-harness.mjs verify",
+    "exitCode": 0,
+    "ok": true,
+    "currentVersion": "1.7.2",
+    "previousVersion": "1.7.1",
+    "bundleSha256": "86ac9b9af933feec8069a38030d45aa2a5f9953fc7187bd66ad2583aaedf8fcb",
+    "selectionPromotedByThisTask": false,
+    "providerReadinessEstablished": false,
+    "testedImageSelectionIdentityClaimed": false
+  },
+  "knowledgeAdmission": {
+    "indexCommand": "node scripts/knowledge.mjs index --write",
+    "indexExitCode": 0,
+    "indexSha256": "adfb0cfe71884cb54cfd249fe7db5cf0783ab3718d35c766ef6510427a3f9ce8",
+    "indexBytes": 12143,
+    "checkCommand": "node scripts/knowledge.mjs check",
+    "checkExitCode": 0,
+    "checkStatus": "passed",
+    "entries": 10,
+    "corpusBytes": 49668,
+    "indexStatus": "passed",
+    "policy": {
+      "path": "harness/knowledge-policy.json",
+      "schema": "frameforge-knowledge-policy/v1",
+      "sha256": "42c94c3df8fee07b96ed88f2873848d62b85a46d453bab6c170617eb69c40f62"
+    },
+    "approvedEntitySha256": "0bcb3fc20be3a0c3f6df8ed2b9da1b3f7b622dc42291b906c126a4647faa2366",
+    "concurrentEightLineSectionSha256": "05a9b6f6d4ca697f036580d54ed5cf300a9127af3a66a944ac1c830d4138d54f",
+    "concurrentSectionByteExactPreserved": true,
+    "newEntriesAdmitted": false,
+    "newClassificationsAdded": false
+  },
+  "sourcePrivacyFlags": {
+    "rootStateSourcesExcluded": true,
+    "privateRuntimeFamiliesExcluded": true,
+    "unadmittedWikiExcluded": true,
+    "sourceFamilyMatchCount": 0,
+    "nodeEdgePathFamilyMatchCount": 0,
+    "admittedWikiSources": 10,
+    "unadmittedWikiSources": 0,
+    "realPrivateStateBodiesInspectedForPostExportAudit": false,
+    "nativeExtractionReadAvoidanceClaimed": false,
+    "privateSourcePathsExcluded": true,
+    "rawCaptureSourcesExcluded": true,
+    "currentGlobalSourceFreshnessClaimed": false
+  },
+  "historicalPreservation": [
+    "Old1.6/1.7.0/1.7.1 and historical deployment/CI evidence remain dated history, not this task's deployment.",
+    "Prior failed native/privacy/legacy receipts and previous summary bytes are retained checkout-private; no raw/source/query page was deleted.",
+    "The concurrent Reviewed harness knowledge section, metadata/EOL and unrelated selected1.7.2/harness-audit work are preserved."
+  ],
+  "boundaries": [
+    "Only bounded reviewed authored knowledge is admitted; automatic raw/source/query captures and private runtime namespaces are excluded from exported graphs.",
+    "Native extraction can inspect rejected inputs before filtering; no extraction-CPU, billed-token or semantic-verification savings is claimed.",
+    "The primary native-workbench receipt owns candidate UI and scoped original-preserving readability verification; full human narration/comfort/sync, smoothness and owner/creative/API/publication approval are not established.",
+    "This knowledge sync performs no Git, deployment, provider generation, public posting or schedule activation; concurrent separately owned release actions are not attributed to this task.",
+    "Canonical files remain local working-tree artifacts until separately authorized selective commit/push. This timestamped admitted-source check is not a full-vault or whole-checkout readiness assertion."
+  ],
+  "sourceFreshnessBoundary": {
+    "reportedAt": "2026-10-26T14:51:03.962Z",
+    "exportObservedAt": "2026-10-26T14:34:29.979243+00:00",
+    "initialPostExportSourceHashMismatches": 0,
+    "postWriteSourceHashMismatches": 1,
+    "changedSources": [
+      "docs/verification.md"
+    ],
+    "postWriteAdmissionCheck": {
+      "command": "node scripts/knowledge.mjs check",
+      "finishedAt": "2026-10-26T14:48:40.473Z",
+      "exitCode": 0,
+      "ok": true,
+      "entries": 10,
+      "indexStatus": "passed"
+    },
+    "generationFrozenByParent": true,
+    "furtherRebuildOrSourceEditPerformed": false,
+    "currentGlobalSourceFreshnessClaimed": false,
+    "boundary": "The successful exported generation is retained as a timestamped snapshot. A later postwrite audit found only docs/verification.md differs from its recorded export hash; no actor or cause is inferred, and no source is overwritten or re-exported after the parent freeze."
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "schema": "frameforge-knowledge-policy/v1",
+  "indexPath": "llm-wiki/index.md",
+  "admission": "Only these exact authored pages and reviewed byte hashes are searchable. A future durable page or changed source requires an explicit evidence-backed policy/hash review; existence, submitted status and valid frontmatter alone are not admission.",
+  "exclusions": ["llm-wiki/raw/**", "automatic prompt/source-summary/query stubs", "llm-wiki/wiki/queries/**", "generated graph caches", "operational directories", "symlinks", "paths outside this repository"],
+  "historicalBoundary": "All reports remain historical. Authored references preserve product intent and source pointers, not current operational truth. Current harness identity comes only from the selected manifest/bundle identity hash; current runtime readiness and goal completion require separate actual evidence.",
+  "limits": {
+    "maxFiles": 32,
+    "maxFileBytes": 65536,
+    "maxCorpusBytes": 262144,
+    "maxResults": 10,
+    "maxCharacters": 16000,
+    "maxExcerptCharacters": 1200,
+    "maxQueryCharacters": 256
+  },
+  "entries": [
+    {
+      "path": "llm-wiki/wiki/concepts/knowledge-layers.md",
+      "title": "Portable production knowledge",
+      "type": "Concept",
+      "classification": "authored-reference",
+      "sha256": "38190ebd7ac6e5453f27dea224ab163c38e525510a645733c202b92ee90b7dcd",
+      "provenance": { "kind": "authored-synthesis", "evidence": ["llm-wiki/wiki/sources/product-brief.md", "harness/manifest.json"] }
+    },
+    {
+      "path": "llm-wiki/wiki/concepts/production-history.md",
+      "title": "Versioned channel production",
+      "type": "Concept",
+      "classification": "authored-reference",
+      "sha256": "899c58be073c5c736d04cd7af4b5febbd0d9f0652a9ea079cc771b1b8013df5b",
+      "provenance": { "kind": "authored-synthesis", "evidence": ["llm-wiki/wiki/sources/product-brief.md", "server/store.mjs", "server/workflows.mjs"] }
+    },
+    {
+      "path": "llm-wiki/wiki/entities/frameforge-studio.md",
+      "title": "FrameForge Studio",
+      "type": "Entity",
+      "classification": "authored-reference",
+      "sha256": "0bcb3fc20be3a0c3f6df8ed2b9da1b3f7b622dc42291b906c126a4647faa2366",
+      "provenance": { "kind": "authored-synthesis", "evidence": ["llm-wiki/wiki/sources/product-brief.md", "docs/verification.md", "harness/manifest.json"] }
+    },
+    {
+      "path": "llm-wiki/wiki/reports/knowledge-bootstrap.md",
+      "title": "Production knowledge bootstrap",
+      "type": "Report",
+      "classification": "historical",
+      "sha256": "146bc38b8c48f770dfe6065bdae69798545493651692a3009ffb3926bfdef70b",
+      "provenance": { "kind": "historical-report", "evidence": ["llm-wiki/wiki/sources/product-brief.md", ".mex/verification.json"] }
+    },
+    {
+      "path": "llm-wiki/wiki/reports/ops-workspace-2026-10-19.md",
+      "title": "Operational workspace release and deployment boundary",
+      "type": "Report",
+      "classification": "historical",
+      "sha256": "1efaa96cce06bb0b7dd3847269d6a8fca2f9508146c23e5503074722a1ad6168",
+      "provenance": { "kind": "historical-report", "evidence": ["artifacts/ops-workspace-ci-smoke.json", "artifacts/ops-workspace/verification.json"] }
+    },
+    {
+      "path": "llm-wiki/wiki/reports/premiere-workspace-2026-10-20.md",
+      "title": "FRAME Premiere-inspired editing workspace and private HTTPS rollout",
+      "type": "Report",
+      "classification": "historical",
+      "sha256": "9326b75c8eefd683867c62635213cdda6001ef6f9401d91bdea768fd31751766",
+      "provenance": { "kind": "historical-report", "evidence": ["llm-wiki/wiki/sources/premiere-workspace-2026-10-20.md", "artifacts/premiere-workspace-knowledge.json"] }
+    },
+    {
+      "path": "llm-wiki/wiki/reports/runtime-verification-2026-10-18.md",
+      "title": "FrameForge runtime verification on 2026-10-18",
+      "type": "Report",
+      "classification": "historical",
+      "sha256": "7db30eb24b34b4c19d73656e20d30de822afa71c7c14cca9ebb056a3d852fedf",
+      "provenance": { "kind": "historical-report", "evidence": ["artifacts/docker-migration.json", "artifacts/docker-production-smoke.json"] }
+    },
+    {
+      "path": "llm-wiki/wiki/reports/usability-higgsfield-2026-10-18.md",
+      "title": "White studio, production history and Higgsfield verification",
+      "type": "Report",
+      "classification": "historical",
+      "sha256": "91f990e63a5cde98aa23238361ce0088eb941c2a904431482719407e9aebb651",
+      "provenance": { "kind": "historical-report", "evidence": ["artifacts/white-studio-verification.json", "artifacts/higgsfield-live-smoke.json"] }
+    },
+    {
+      "path": "llm-wiki/wiki/sources/premiere-workspace-2026-10-20.md",
+      "title": "Adobe Premiere workspace research through Aside",
+      "type": "Source",
+      "classification": "authored-reference",
+      "sha256": "db4f35f3d389e3cc4e3d3f0788d8219c4e44c1c7e2297a1bbc72b35b0224c5e8",
+      "provenance": { "kind": "authored-source", "evidence": ["llm-wiki/raw/sources/premiere-workspace-2026-10-20.md", "artifacts/premiere-workspace-research.json"] }
+    },
+    {
+      "path": "llm-wiki/wiki/sources/product-brief.md",
+      "title": "FrameForge product brief",
+      "type": "Source",
+      "classification": "authored-reference",
+      "sha256": "695706e1d3aa7b22fe5ae228202f505764fc4a59230c6e31d964a83eec719124",
+      "provenance": { "kind": "authored-source", "evidence": ["llm-wiki/raw/sources/2026-10-18-product-brief-excerpt.md"] }
+    }
+  ]
+}

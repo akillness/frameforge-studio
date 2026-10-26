@@ -9,7 +9,7 @@ edges:
   - target: context/conventions.md
     condition: when related context is needed
 grounds_to: []
-last_updated: 2026-10-19
+last_updated: 2026-10-20
 ---
 
 # Setup
@@ -24,8 +24,8 @@ npm start; npm run bridge; npm run check; npm test; npm run test:render.
 ## Common Issues
 Docker failure may originate in WSL rather than this app. No configured host bridge means external agents are unavailable. Naver source collection is manual and must not be advertised as an automatic real-time ranking feed.
 
-## Historical deployment and latest local attempt
-The 2026-10-18 receipt records a Linux Docker production container on host loopback 4310 behind the existing private Tailscale HTTPS Serve URL; it is historical, not current availability. On 2026-10-19, `scripts/start-docker.ps1` could not complete because Docker Desktop status was `stopped`; `com.docker.service` was `Stopped`, `WslService` was `Running`, no WSL distro was running, and port 4310 had no listener. The launcher could not access the required existing volume and refused to create a replacement. No volume, database, or service data was changed. Start Docker Desktop in the user's session before retrying the guarded launcher. Do not run WSL recovery with `-Apply`, elevate, delete distributions, factory-reset Docker or prune unrelated volumes without separate explicit authorization.
+## Historical deployment and current local verification
+The 2026-10-18 receipt records a Linux Docker production container on host loopback 4310 behind the existing private Tailscale HTTPS Serve URL. The 2026-10-19 launcher attempt failed while Docker Desktop was stopped and correctly refused an empty replacement volume. On 2026-10-20 the Windows Docker engine was available: the existing production service was rebuilt from checkout `adab575699e9436529a4113e53464941f741ecdd` and recreated through the guarded launcher, retaining `frameforge-studio_studio-data`. Local health and authenticated admin reads passed. The pre-update container already matched all 56 runtime source files. A private consistent snapshot preserved 22 referenced media files before replacement; post-update SQLite integrity, table counts, IDs, episode/workflow versions and all media hashes matched. See `artifacts/docker-update-20261020.json` for the image and isolated check/test/render evidence. Host bridge/inbox were already running, not restarted; this observation does not renew external HTTPS, browser-interaction or live-provider evidence. Do not run WSL recovery with `-Apply`, elevate, delete distributions, factory-reset Docker or prune unrelated volumes without separate explicit authorization.
 
 Compose passes `SPEECH_PROVIDER=host-bridge`; its container bridge route uses `HOST_AGENT_BRIDGE_URL`, separate from the Windows process's `AGENT_BRIDGE_URL`. The host bridge authenticates both agent and speech requests. Inspect `/api/speech/voices` for actual availability; a Windows voice is not installed inside Linux. Preserve loopback/private-network exposure and keep credentials in ignored local environment files.
 
@@ -35,7 +35,7 @@ Compose passes `SPEECH_PROVIDER=host-bridge`; its container bridge route uses `H
 
 `artifacts/local-container-smoke.json` verifies render, review and restart persistence. `artifacts/docker-production-smoke.json` verifies actual Korean speech across the container host bridge and an audible final MP4. `artifacts/docker-workflow-smoke.json` verifies real Codex script/storyboard/render through that bridge. Its run did not fetch RSS; earlier RSS evidence is separately scoped in `artifacts/workflow-smoke.json`.
 
-Read `docs/verification.md` and the latest `artifacts/` receipts for browser, live URL and CI results. CI run 39201562842 passed on `0af4b0698abcffb9f719401605fa2a6cdf1fa2ee`, including the isolated Linux Docker build/render/restart smoke; this does not verify the unavailable local Windows production service.
+Read `docs/verification.md` and the latest `artifacts/` receipts for browser, live URL and CI results. CI run 39201562842 passed on `0af4b0698abcffb9f719401605fa2a6cdf1fa2ee`, including isolated Linux Docker build/render/restart smoke. Current local Windows production evidence is separately recorded in `artifacts/docker-update-20261020.json`; it does not renew the older browser or external HTTPS receipts.
 
 ## Native narration and Jev availability
 The Windows host has Microsoft Heami Desktop installed. Original Windows narration evidence remains in `artifacts/production-smoke.json`; container narration uses the same installed voice through the authenticated bridge and returns bounded raw WAV bytes without host filesystem paths. Provider failure is explicit and does not attach partial audio.

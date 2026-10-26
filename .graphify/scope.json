@@ -1,16 +1,39 @@
 {
-  "mode": "source paths observed in native AST output",
+  "mode": "retained native structural source paths after privacy and exact knowledge admission",
   "excluded": [
     "data/",
     "ops/",
     ".env",
     "private media",
     "credentials",
+    "all llm-wiki paths except exact reviewed policy entries",
     ".jeo/",
     ".omc/",
     ".omx/",
+    ".ouroboros/",
+    ".zvec-grep/",
+    ".mcp.json",
+    "artifacts/production-workspace-implementation/native-status/",
+    ".state/",
     "llm-wiki/.graphify/",
     "llm-wiki/.state/"
+  ],
+  "policy": {
+    "path": "harness/knowledge-policy.json",
+    "schema": "frameforge-knowledge-policy/v1",
+    "sha256": "42c94c3df8fee07b96ed88f2873848d62b85a46d453bab6c170617eb69c40f62"
+  },
+  "admittedWikiFiles": [
+    "llm-wiki/wiki/concepts/knowledge-layers.md",
+    "llm-wiki/wiki/concepts/production-history.md",
+    "llm-wiki/wiki/entities/frameforge-studio.md",
+    "llm-wiki/wiki/reports/knowledge-bootstrap.md",
+    "llm-wiki/wiki/reports/ops-workspace-2026-10-19.md",
+    "llm-wiki/wiki/reports/premiere-workspace-2026-10-20.md",
+    "llm-wiki/wiki/reports/runtime-verification-2026-10-18.md",
+    "llm-wiki/wiki/reports/usability-higgsfield-2026-10-18.md",
+    "llm-wiki/wiki/sources/premiere-workspace-2026-10-20.md",
+    "llm-wiki/wiki/sources/product-brief.md"
   ],
   "files": [
     ".agents/skills/mex-inbox/SKILL.md",
@@ -23,7 +46,6 @@
     ".claude/agents/production-reviewer.md",
     ".claude/agents/production-supervisor.md",
     ".claude/skills/production-orchestrator/SKILL.md",
-    ".mcp.json",
     ".mex/AGENTS.md",
     ".mex/ROUTER.md",
     ".mex/SETUP.md",
@@ -41,19 +63,13 @@
     ".mex/patterns/provider-evidence.md",
     ".mex/patterns/workspace-ui-verification.md",
     ".mex/verify-knowledge.py",
-    ".ouroboros/traces/auto_53b2fabc193e/summary.md",
-    ".zvec-grep/manifest.json",
     "AGENTS.md",
     "DESIGN.md",
     "README.md",
-    "artifacts/production-workspace-implementation/native-status/NativeMedia.json",
-    "artifacts/production-workspace-implementation/native-status/NativePublication.json",
-    "artifacts/production-workspace-implementation/native-status/NativeRenderPublication.json",
-    "artifacts/production-workspace-implementation/native-status/NativeSchema.json",
-    "artifacts/production-workspace-implementation/native-status/NativeStudio.json",
     "artifacts/production-workspace-research/verify-workspace-prototype.mjs",
     "artifacts/production-workspace-research/workspace-prototype.js",
     "artifacts/sources-delivery-integration-discovery.md",
+    "docs/blog-workflow.md",
     "docs/contract.md",
     "docs/docker-operations.md",
     "docs/harness-versioning.md",
@@ -104,6 +120,38 @@
     "harness/archive/1.4.0/.claude/skills/production-orchestrator/SKILL.md",
     "harness/archive/1.4.0/docs/harness-versioning.md",
     "harness/archive/1.4.0/docs/harness.md",
+    "harness/archive/1.5.0/.claude/agents/production-director.md",
+    "harness/archive/1.5.0/.claude/agents/production-editor.md",
+    "harness/archive/1.5.0/.claude/agents/production-researcher.md",
+    "harness/archive/1.5.0/.claude/agents/production-reviewer.md",
+    "harness/archive/1.5.0/.claude/agents/production-supervisor.md",
+    "harness/archive/1.5.0/.claude/skills/production-orchestrator/SKILL.md",
+    "harness/archive/1.5.0/docs/harness-versioning.md",
+    "harness/archive/1.5.0/docs/harness.md",
+    "harness/archive/1.6.0/.claude/agents/production-director.md",
+    "harness/archive/1.6.0/.claude/agents/production-editor.md",
+    "harness/archive/1.6.0/.claude/agents/production-researcher.md",
+    "harness/archive/1.6.0/.claude/agents/production-reviewer.md",
+    "harness/archive/1.6.0/.claude/agents/production-supervisor.md",
+    "harness/archive/1.6.0/.claude/skills/production-orchestrator/SKILL.md",
+    "harness/archive/1.6.0/docs/harness-versioning.md",
+    "harness/archive/1.6.0/docs/harness.md",
+    "harness/archive/1.7.0/.claude/agents/production-director.md",
+    "harness/archive/1.7.0/.claude/agents/production-editor.md",
+    "harness/archive/1.7.0/.claude/agents/production-researcher.md",
+    "harness/archive/1.7.0/.claude/agents/production-reviewer.md",
+    "harness/archive/1.7.0/.claude/agents/production-supervisor.md",
+    "harness/archive/1.7.0/.claude/skills/production-orchestrator/SKILL.md",
+    "harness/archive/1.7.0/docs/harness-versioning.md",
+    "harness/archive/1.7.0/docs/harness.md",
+    "harness/archive/1.7.1/.claude/agents/production-director.md",
+    "harness/archive/1.7.1/.claude/agents/production-editor.md",
+    "harness/archive/1.7.1/.claude/agents/production-researcher.md",
+    "harness/archive/1.7.1/.claude/agents/production-reviewer.md",
+    "harness/archive/1.7.1/.claude/agents/production-supervisor.md",
+    "harness/archive/1.7.1/.claude/skills/production-orchestrator/SKILL.md",
+    "harness/archive/1.7.1/docs/harness-versioning.md",
+    "harness/archive/1.7.1/docs/harness.md",
     "harness/archive/README.md",
     "harness/manifest.json",
     "harness/versions/1.0.0/.claude/agents/production-director.md",
@@ -154,176 +202,52 @@
     "harness/versions/1.5.0/.claude/skills/production-orchestrator/SKILL.md",
     "harness/versions/1.5.0/docs/harness-versioning.md",
     "harness/versions/1.5.0/docs/harness.md",
-    "llm-wiki/AGENTS.md",
-    "llm-wiki/index.md",
-    "llm-wiki/log.md",
-    "llm-wiki/raw/sources/2026-10-18-product-brief-excerpt.md",
-    "llm-wiki/raw/sources/premiere-workspace-2026-10-20.md",
-    "llm-wiki/raw/sources/prompts/2026/10/19/063111-616f5077-2a2-read-only-independent-code-security-review-only.md",
-    "llm-wiki/raw/sources/prompts/2026/10/19/233812-0589cc40-79b-review-the-exact-change-in-commit-853bdb57db1ae3.md",
-    "llm-wiki/raw/sources/prompts/2026/10/20/005425-8944ba23-81b-read-only-review-of-commit-533b427-in-this-repos.md",
-    "llm-wiki/raw/sources/prompts/2026/10/20/160808-InstallSafet-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/20/161306-SetupHooks-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/20/161307-SharedTools-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/20/161513-SetupHooks.N-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/20/162746-InstallEvalu-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/20/162826-SetupHooks.H-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/20/163447-SetupHooks.J-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/20/164047-SetupHooks.G-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/21/093400-0d33658f-bbe-independent-frameforge-studio-composition-editor.md",
-    "llm-wiki/raw/sources/prompts/2026/10/21/102441-4f687c33-846-independent-read-only-final-review-of-the-framef.md",
-    "llm-wiki/raw/sources/prompts/2026/10/21/102503-ea171f0e-ec6-independent-read-only-final-review-of-the-framef.md",
-    "llm-wiki/raw/sources/prompts/2026/10/21/121346-40bab42b-54a-frameforge-composition-editor-review-dispatch.md",
-    "llm-wiki/raw/sources/prompts/2026/10/24/155514-ProjectBound-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/24/160124-WorkspaceInt-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/24/162508-WorkspaceRes-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/24/163124-Research_pre-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/24/163125-Research_fra-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/24/163125-Research_lic-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/24/163125-Research_n8n-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/24/163125-Research_res-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/24/163125-Research_you-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/24/164257-ResearchDeli-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/020103-RepeatedRole-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/022406-PrototypeBro-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/022406-PrototypeCod-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/022938-PrototypePos-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/023254-PrototypeVer-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/023654-PrototypeFin-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/023810-PrototypeOra-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/024254-PrototypeDel-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/055722-SourcesDeliv-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/055722-WorkflowEngi-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/055937-GraphRedTest-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/060040-WorkspaceArc-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/060452-CommonsProto-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/060452-YouTubeProto-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/060547-VerifiedComm-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/060547-VerifiedYouT-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/061541-EngineImplem-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/061629-StoreImpleme-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/061742-DeliveryCont-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/061742-EngineContra-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/061742-MediaContrac-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/061742-StoreContrac-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/061828-DeliveryImpl-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/061828-MediaImpleme-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/062017-StudioImplem-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/062018-CanvasImplem-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/062018-SourceDelive-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/062213-HttpContract-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/070440-CandidateImp-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/070440-MediaSchemaC-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/070440-PublicationR-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/070602-CandidateCor-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/070602-PublicationC-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/070602-SchemaCredit-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/070703-OpenAIRouteP-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/075409-FinalJsRevie-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/075409-FinalSecurit-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/raw/sources/prompts/2026/10/25/085704-agent-evalua-complete-the-assignment-below-thoroughly.md",
+    "harness/versions/1.6.0/.claude/agents/production-director.md",
+    "harness/versions/1.6.0/.claude/agents/production-editor.md",
+    "harness/versions/1.6.0/.claude/agents/production-researcher.md",
+    "harness/versions/1.6.0/.claude/agents/production-reviewer.md",
+    "harness/versions/1.6.0/.claude/agents/production-supervisor.md",
+    "harness/versions/1.6.0/.claude/skills/production-orchestrator/SKILL.md",
+    "harness/versions/1.6.0/docs/harness-versioning.md",
+    "harness/versions/1.6.0/docs/harness.md",
+    "harness/versions/1.7.0/.claude/agents/production-director.md",
+    "harness/versions/1.7.0/.claude/agents/production-editor.md",
+    "harness/versions/1.7.0/.claude/agents/production-researcher.md",
+    "harness/versions/1.7.0/.claude/agents/production-reviewer.md",
+    "harness/versions/1.7.0/.claude/agents/production-supervisor.md",
+    "harness/versions/1.7.0/.claude/skills/production-orchestrator/SKILL.md",
+    "harness/versions/1.7.0/docs/harness-versioning.md",
+    "harness/versions/1.7.0/docs/harness.md",
+    "harness/versions/1.7.1/.claude/agents/production-director.md",
+    "harness/versions/1.7.1/.claude/agents/production-editor.md",
+    "harness/versions/1.7.1/.claude/agents/production-researcher.md",
+    "harness/versions/1.7.1/.claude/agents/production-reviewer.md",
+    "harness/versions/1.7.1/.claude/agents/production-supervisor.md",
+    "harness/versions/1.7.1/.claude/skills/production-orchestrator/SKILL.md",
+    "harness/versions/1.7.1/docs/harness-versioning.md",
+    "harness/versions/1.7.1/docs/harness.md",
+    "harness/versions/1.7.2/.claude/agents/production-director.md",
+    "harness/versions/1.7.2/.claude/agents/production-editor.md",
+    "harness/versions/1.7.2/.claude/agents/production-researcher.md",
+    "harness/versions/1.7.2/.claude/agents/production-reviewer.md",
+    "harness/versions/1.7.2/.claude/agents/production-supervisor.md",
+    "harness/versions/1.7.2/.claude/skills/production-orchestrator/SKILL.md",
+    "harness/versions/1.7.2/docs/harness-versioning.md",
+    "harness/versions/1.7.2/docs/harness.md",
     "llm-wiki/wiki/concepts/knowledge-layers.md",
     "llm-wiki/wiki/concepts/production-history.md",
     "llm-wiki/wiki/entities/frameforge-studio.md",
-    "llm-wiki/wiki/queries/2026-10-19-063111-read-only-independent-code-security-review-only.md",
-    "llm-wiki/wiki/queries/2026-10-19-233812-review-the-exact-change-in-commit-853bdb57db1ae3.md",
-    "llm-wiki/wiki/queries/2026-10-20-005425-read-only-review-of-commit-533b427-in-this-repos.md",
-    "llm-wiki/wiki/queries/2026-10-20-160808-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-20-161306-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-20-161307-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-20-161513-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-20-162746-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-20-162826-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-20-163447-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-20-164047-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-21-093400-independent-frameforge-studio-composition-editor.md",
-    "llm-wiki/wiki/queries/2026-10-21-102441-independent-read-only-final-review-of-the-framef.md",
-    "llm-wiki/wiki/queries/2026-10-21-102503-independent-read-only-final-review-of-the-framef.md",
-    "llm-wiki/wiki/queries/2026-10-21-121346-frameforge-composition-editor-review-dispatch.md",
-    "llm-wiki/wiki/queries/2026-10-24-155514-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-24-160124-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-24-162508-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-24-163124-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-24-163125-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-24-164257-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-25-020103-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-25-022406-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-25-022938-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-25-023254-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-25-023654-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-25-023810-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-25-024254-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-25-055722-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-25-055937-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-25-060040-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-25-060452-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-25-060547-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-25-061541-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-25-061629-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-25-061742-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-25-061828-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-25-062017-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-25-062018-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-25-062213-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-25-070440-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-25-070602-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-25-070703-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-25-075409-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/queries/2026-10-25-085704-complete-the-assignment-below-thoroughly.md",
     "llm-wiki/wiki/reports/knowledge-bootstrap.md",
     "llm-wiki/wiki/reports/ops-workspace-2026-10-19.md",
     "llm-wiki/wiki/reports/premiere-workspace-2026-10-20.md",
     "llm-wiki/wiki/reports/runtime-verification-2026-10-18.md",
     "llm-wiki/wiki/reports/usability-higgsfield-2026-10-18.md",
-    "llm-wiki/wiki/sources/2026-10-19-063111-read-only-independent-code-security-review-only.md",
-    "llm-wiki/wiki/sources/2026-10-19-233812-review-the-exact-change-in-commit-853bdb57db1ae3.md",
-    "llm-wiki/wiki/sources/2026-10-20-005425-read-only-review-of-commit-533b427-in-this-repos.md",
-    "llm-wiki/wiki/sources/2026-10-20-160808-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-20-161306-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-20-161307-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-20-161513-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-20-162746-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-20-162826-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-20-163447-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-20-164047-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-21-093400-independent-frameforge-studio-composition-editor.md",
-    "llm-wiki/wiki/sources/2026-10-21-102441-independent-read-only-final-review-of-the-framef.md",
-    "llm-wiki/wiki/sources/2026-10-21-102503-independent-read-only-final-review-of-the-framef.md",
-    "llm-wiki/wiki/sources/2026-10-21-121346-frameforge-composition-editor-review-dispatch.md",
-    "llm-wiki/wiki/sources/2026-10-24-155514-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-24-160124-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-24-162508-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-24-163124-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-24-163125-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-24-164257-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-25-020103-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-25-022406-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-25-022938-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-25-023254-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-25-023654-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-25-023810-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-25-024254-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-25-055722-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-25-055937-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-25-060040-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-25-060452-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-25-060547-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-25-061541-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-25-061629-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-25-061742-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-25-061828-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-25-062017-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-25-062018-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-25-062213-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-25-070440-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-25-070602-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-25-070703-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-25-075409-complete-the-assignment-below-thoroughly.md",
-    "llm-wiki/wiki/sources/2026-10-25-085704-complete-the-assignment-below-thoroughly.md",
     "llm-wiki/wiki/sources/premiere-workspace-2026-10-20.md",
     "llm-wiki/wiki/sources/product-brief.md",
     "package.json",
     "public/app.js",
+    "public/blog.js",
+    "public/context-menu.js",
     "public/history.js",
     "public/production-tools.js",
     "public/workflow.js",
@@ -333,6 +257,8 @@
     "scripts/agent-bridge.mjs",
     "scripts/agent-smoke.mjs",
     "scripts/aside-inbox.mjs",
+    "scripts/blog-workflow.mjs",
+    "scripts/blog-workspace-browser-smoke.mjs",
     "scripts/browser-smoke.py",
     "scripts/check.mjs",
     "scripts/configure.mjs",
@@ -343,12 +269,15 @@
     "scripts/import-snapshot.mjs",
     "scripts/jeo-adapter.mjs",
     "scripts/jev-review.mjs",
+    "scripts/knowledge-benchmark.mjs",
+    "scripts/knowledge.mjs",
     "scripts/media-smoke.mjs",
     "scripts/ops-workspace-browser-smoke.mjs",
     "scripts/premiere-workspace-browser-smoke.mjs",
     "scripts/production-browser-smoke.py",
     "scripts/production-smoke.mjs",
     "scripts/production-workspace-browser-smoke.mjs",
+    "scripts/project-agent.mjs",
     "scripts/render-smoke.mjs",
     "scripts/repair-docker-wsl.ps1",
     "scripts/scene-layout-browser-smoke.mjs",
@@ -365,10 +294,15 @@
     "scripts/workflow-smoke.mjs",
     "scripts/workspace-browser-smoke.py",
     "server/app.mjs",
+    "server/blog-automation.mjs",
+    "server/blog-references.mjs",
+    "server/blog-sources.mjs",
+    "server/blog.mjs",
     "server/candidates.mjs",
     "server/generation-provider.mjs",
     "server/generations.mjs",
     "server/graph.mjs",
+    "server/harness-context.mjs",
     "server/higgsfield-cli.mjs",
     "server/higgsfield.mjs",
     "server/integrations.mjs",
@@ -378,6 +312,7 @@
     "server/platform-session.mjs",
     "server/private-runtime.mjs",
     "server/process.mjs",
+    "server/project-knowledge.mjs",
     "server/publication.mjs",
     "server/render.mjs",
     "server/store.mjs",
@@ -387,9 +322,18 @@
     "server/youtube-oauth.mjs",
     "tests/agent-bridge-parser-performance.test.mjs",
     "tests/api.test.mjs",
+    "tests/blog-automation.test.mjs",
+    "tests/blog-deployment.test.mjs",
+    "tests/blog-git-consent.test.mjs",
+    "tests/blog-git-transport.test.mjs",
+    "tests/blog-references.test.mjs",
+    "tests/blog-schedule.test.mjs",
+    "tests/blog-sources.test.mjs",
+    "tests/blog-workspace.test.mjs",
     "tests/bridge-speech.test.mjs",
     "tests/generation-integration.test.mjs",
     "tests/generations.test.mjs",
+    "tests/harness-context.test.mjs",
     "tests/harness.test.mjs",
     "tests/hermes-bridge.test.mjs",
     "tests/higgsfield-cli.test.mjs",
@@ -400,6 +344,8 @@
     "tests/integrations.test.mjs",
     "tests/layout-pipeline-session.test.mjs",
     "tests/narration.test.mjs",
+    "tests/news-query.test.mjs",
+    "tests/node-workbench.test.mjs",
     "tests/ops-workspace.test.mjs",
     "tests/platform-session.test.mjs",
     "tests/production-branch-regressions.test.mjs",
@@ -413,6 +359,9 @@
     "tests/production-workspace-api.test.mjs",
     "tests/production-workspace-journey.test.mjs",
     "tests/production-workspace-ui.test.mjs",
+    "tests/project-agent.test.mjs",
+    "tests/project-archive.test.mjs",
+    "tests/project-knowledge.test.mjs",
     "tests/render-security.test.mjs",
     "tests/render.test.mjs",
     "tests/reviews.test.mjs",
@@ -422,8 +371,1372 @@
     "tests/trends-api.test.mjs",
     "tests/white-studio-versions.test.mjs",
     "tests/white-studio.test.mjs",
+    "tests/workflow-activity.test.mjs",
+    "tests/workflow-empty-state.test.mjs",
     "tests/workflow-ui-regressions.test.mjs",
     "tests/workflows.test.mjs",
     "tests/workspace-layout.test.mjs"
+  ],
+  "sourceFileHashes": [
+    {
+      "path": ".agents/skills/mex-inbox/SKILL.md",
+      "sha256": "f671cafe415d99b913b9e32c8ba77a9231e681c1b0bae3b97ee64a1972389bb5"
+    },
+    {
+      "path": ".agents/skills/mex-inbox/references/cli-workflows.md",
+      "sha256": "6c91905cc69d8ea47080630ee1551bf1a61ec33605fff01463d4a2ad71f497c6"
+    },
+    {
+      "path": ".agents/skills/mex-relay/SKILL.md",
+      "sha256": "ea34ddae494f23e13a3fab906eb60adc4607933bd7bff7322e9ca313e9df4945"
+    },
+    {
+      "path": ".agents/skills/mex-relay/references/cli-workflows.md",
+      "sha256": "56b6e74129cdc6ddb5121480b03e01fd2f1f65b7b8c0b7899552a4a217d48cf5"
+    },
+    {
+      "path": ".claude/agents/production-director.md",
+      "sha256": "2e35edee6ef4238366ce3fd951cfba0e2fdeea5a2067418aeb36b69d53fdef9d"
+    },
+    {
+      "path": ".claude/agents/production-editor.md",
+      "sha256": "7468205a1180369b078f5ce43e431aeb5b74feb0c782ba8e7924d5f9bdf4b3e6"
+    },
+    {
+      "path": ".claude/agents/production-researcher.md",
+      "sha256": "cc349fa3d9012b09d9d49883ef8ef426a4b112a1cedd03836da01572c986aaa8"
+    },
+    {
+      "path": ".claude/agents/production-reviewer.md",
+      "sha256": "3472af2b4136d21d2694d1d217859bd13329d96d79e5843cf3911f882725be07"
+    },
+    {
+      "path": ".claude/agents/production-supervisor.md",
+      "sha256": "e06f0a288c86d1a4ea1add1689f03718b75ddd68eac7debc23f4322cb011242d"
+    },
+    {
+      "path": ".claude/skills/production-orchestrator/SKILL.md",
+      "sha256": "fc946ad23c18f5afcbf64042c5211925b535717f658bc640ab352a79387badbf"
+    },
+    {
+      "path": ".mex/AGENTS.md",
+      "sha256": "8c6fdbdb521e866dc43c9c440f96826cb8004ff6e275b880122da039522c66e0"
+    },
+    {
+      "path": ".mex/ROUTER.md",
+      "sha256": "28127051ff51f0536219df742719e541047c6c7ec1bd7b9aef603bd4fd118902"
+    },
+    {
+      "path": ".mex/SETUP.md",
+      "sha256": "9f93605a635c45eca7428f5bc29a8336182cd086075d07ad39a9dd648fa25f5d"
+    },
+    {
+      "path": ".mex/SYNC.md",
+      "sha256": "5de6640cdd76c5bd9dfcf49136c4033e8bd3f653145d3529aa45d6f5dbb44c73"
+    },
+    {
+      "path": ".mex/context/architecture.md",
+      "sha256": "60f200617e9bef3be99a04de5e8cf5d9e16244c6a74f45ef31c9875c6e46e2bc"
+    },
+    {
+      "path": ".mex/context/conventions.md",
+      "sha256": "4dd3b828de108fd771b9e9b88e065c6fe8604338f0ce5da97a23326e685a0470"
+    },
+    {
+      "path": ".mex/context/decisions.md",
+      "sha256": "82d2f0f870ec2ba14d699c313c4de67a2b7e1871882213c205308fdca6f093f2"
+    },
+    {
+      "path": ".mex/context/setup.md",
+      "sha256": "89ae57232b7895cc79b343992803111adede4c48ef9cd064a25b91e739b6b6bb"
+    },
+    {
+      "path": ".mex/context/stack.md",
+      "sha256": "9b9331839b834e2b66b52f2cac911d1a257230474841caeeee8e72c238bdba8a"
+    },
+    {
+      "path": ".mex/patterns/INDEX.md",
+      "sha256": "01362d13e8913f39ef496e379b902e2136b97825d0f3f36060cce181f3e59137"
+    },
+    {
+      "path": ".mex/patterns/README.md",
+      "sha256": "7029d81f40c0e86fcd63de92d23b7647c011906eed2aaae293117c5d482e1fe6"
+    },
+    {
+      "path": ".mex/patterns/episode-edits.md",
+      "sha256": "88e92d283a2fa0cb08f4051b6c998f0644b82542cc6444583c518b8b648d439b"
+    },
+    {
+      "path": ".mex/patterns/generation-recovery.md",
+      "sha256": "d9229cf32581a2eebac36bbb94682e6420fbe8489f16e0b52cf42a31b80e7ce2"
+    },
+    {
+      "path": ".mex/patterns/knowledge-refresh.md",
+      "sha256": "a8cd1c502b28cc664c5d4e9f40142d8b282612441bdd46579ccac7f278723890"
+    },
+    {
+      "path": ".mex/patterns/provider-evidence.md",
+      "sha256": "0d5f2aaa2091052d736c695e685021f637631e11e95483f61e4cf08558b646aa"
+    },
+    {
+      "path": ".mex/patterns/workspace-ui-verification.md",
+      "sha256": "81bb8cb5deb7c22447f7bb69a8fd0c77b544753e8de0271687c330e68bb27f6d"
+    },
+    {
+      "path": ".mex/verify-knowledge.py",
+      "sha256": "77780b3142a488921e80f76182d44dd82d09b9d9b10a350b7dc02677e40514ae"
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "644a37aca884e5874e82e9dd12dd09621a4471a158ed4fd491ec7140f306ad8d"
+    },
+    {
+      "path": "DESIGN.md",
+      "sha256": "2c1f8686f6778e5af42b8dc50ba7ed3191a9342e176f75c7c0e28ec7af7425ec"
+    },
+    {
+      "path": "README.md",
+      "sha256": "9b60155930fe511f9c200fd20fe157d4ee0de48a48aed1d94caf13af90bbe77e"
+    },
+    {
+      "path": "artifacts/production-workspace-research/verify-workspace-prototype.mjs",
+      "sha256": "889a5bbe3a208c95cefd2160f9194f7a45895840a63de6336fdb4db5c68b6e4a"
+    },
+    {
+      "path": "artifacts/production-workspace-research/workspace-prototype.js",
+      "sha256": "a54888e44a5c873c82c606a9a26c2aa33e4fe79b696003c0bf509a42724ccfd0"
+    },
+    {
+      "path": "artifacts/sources-delivery-integration-discovery.md",
+      "sha256": "be9bf476c3d724f914d6db7020dd02a2b33ce497b12150d49a03d24fde842b52"
+    },
+    {
+      "path": "docs/blog-workflow.md",
+      "sha256": "edf5c7b957c9370a2dcccc3463b8889b71bae60633ea5d9e2381854f8dffb6a2"
+    },
+    {
+      "path": "docs/contract.md",
+      "sha256": "62453784f08a28c7c1a3e3e68db0f07114991f490cc8c017cd49d160a4240962"
+    },
+    {
+      "path": "docs/docker-operations.md",
+      "sha256": "1b52754c637b45a8509d4ac1b374cb496263d79cbcbba5bb9a60e9018479076a"
+    },
+    {
+      "path": "docs/harness-versioning.md",
+      "sha256": "396723304ef6057115caf9320d34d233787a984c86365e9a05bf817d4957f23b"
+    },
+    {
+      "path": "docs/harness.md",
+      "sha256": "d8e1fdb6ce62a660cf2f96d8f27f3ab92b3ac4f28854e99832e89298c4742013"
+    },
+    {
+      "path": "docs/higgsfield-integration.md",
+      "sha256": "b7c78b6f005ec9c4560ded131ae0df73b61be92e291e7f797521b77b00b09d0c"
+    },
+    {
+      "path": "docs/jev.md",
+      "sha256": "5569f68a91fe3d6f355eedc43feadea0973f68a71167b49606d9d61551fc8d9d"
+    },
+    {
+      "path": "docs/premiere-workspace.md",
+      "sha256": "093cf850b376c64155ba6ec892f2e666d96b33e09d6132a07e94b92d6d68fb0a"
+    },
+    {
+      "path": "docs/research-playbook.md",
+      "sha256": "e7219b0d4b1825fe429821b1872770f7d7de08d79207f29a7914912206a7f760"
+    },
+    {
+      "path": "docs/usability-higgsfield-research.md",
+      "sha256": "a23a24649947674da115557c92b3916e1322474765154c7269cb2a391a875484"
+    },
+    {
+      "path": "docs/verification.md",
+      "sha256": "86bf48c9c5b6bafa4d1b0d62eabc5fc6084f603ddf5849f32391205fe6db116e"
+    },
+    {
+      "path": "harness/archive/1.0.0/.claude/agents/production-director.md",
+      "sha256": "fe31ca4cdf922903b6ad18b2dc50515019b781bfd5858acf3f68022a5505e536"
+    },
+    {
+      "path": "harness/archive/1.0.0/.claude/agents/production-editor.md",
+      "sha256": "3c69eff11fd1987670c7a3d6157c61b8079c7a51c886ced9ad4babd952892f08"
+    },
+    {
+      "path": "harness/archive/1.0.0/.claude/agents/production-researcher.md",
+      "sha256": "bcc220f32ea258ac3e7e241178a656e272e26d7269d28aff18c813ee4d38065f"
+    },
+    {
+      "path": "harness/archive/1.0.0/.claude/agents/production-reviewer.md",
+      "sha256": "7100724ee2eea5afcacce851daa453d35e11e48732b1a905381d499c4c9fd3e3"
+    },
+    {
+      "path": "harness/archive/1.0.0/.claude/agents/production-supervisor.md",
+      "sha256": "ee0823deef986573d1571d076d9658cd10935e961576d09cb20ead45e786ce7b"
+    },
+    {
+      "path": "harness/archive/1.0.0/.claude/skills/production-orchestrator/SKILL.md",
+      "sha256": "c2947468af428c730215ca5c49cb46b8437c8074449252b9442ca93066f41292"
+    },
+    {
+      "path": "harness/archive/1.0.0/docs/harness-versioning.md",
+      "sha256": "eef948f9cb3d7dff886daf6a7a49aa7e23cfa34e769bcc6b3f9f9c2d41c7cec1"
+    },
+    {
+      "path": "harness/archive/1.0.0/docs/harness.md",
+      "sha256": "b0a4582649de8fcd701fdcc00a60debe7c16a3fad8ac15ce797574d5849568c4"
+    },
+    {
+      "path": "harness/archive/1.1.0/.claude/agents/production-director.md",
+      "sha256": "fe31ca4cdf922903b6ad18b2dc50515019b781bfd5858acf3f68022a5505e536"
+    },
+    {
+      "path": "harness/archive/1.1.0/.claude/agents/production-editor.md",
+      "sha256": "d648b2da70f15393a58bca2e9e38273035ebca4ba1f565558688ee9a9382ba78"
+    },
+    {
+      "path": "harness/archive/1.1.0/.claude/agents/production-researcher.md",
+      "sha256": "bcc220f32ea258ac3e7e241178a656e272e26d7269d28aff18c813ee4d38065f"
+    },
+    {
+      "path": "harness/archive/1.1.0/.claude/agents/production-reviewer.md",
+      "sha256": "7100724ee2eea5afcacce851daa453d35e11e48732b1a905381d499c4c9fd3e3"
+    },
+    {
+      "path": "harness/archive/1.1.0/.claude/agents/production-supervisor.md",
+      "sha256": "1f822ef1838e4efd557395751e8a526409d5d24e60f00cf7033923a1a93815d3"
+    },
+    {
+      "path": "harness/archive/1.1.0/.claude/skills/production-orchestrator/SKILL.md",
+      "sha256": "8664d922fab861b97fc4550d5576ab179eb697c53feff4f523777639e696fd82"
+    },
+    {
+      "path": "harness/archive/1.1.0/docs/harness-versioning.md",
+      "sha256": "100d96e1fc78f4c7efbe2c175324987416e98844bd7210641ef4271b4e6824e9"
+    },
+    {
+      "path": "harness/archive/1.1.0/docs/harness.md",
+      "sha256": "7b0d118d8d6b2155fa14e2e8b84d745775cdcf1cc2eb9dee482687cd157f5d30"
+    },
+    {
+      "path": "harness/archive/1.2.0/.claude/agents/production-director.md",
+      "sha256": "fe31ca4cdf922903b6ad18b2dc50515019b781bfd5858acf3f68022a5505e536"
+    },
+    {
+      "path": "harness/archive/1.2.0/.claude/agents/production-editor.md",
+      "sha256": "9689b611e190369e443eaa481095a3498bc98f21bde4f23bdf905464059bda49"
+    },
+    {
+      "path": "harness/archive/1.2.0/.claude/agents/production-researcher.md",
+      "sha256": "bcc220f32ea258ac3e7e241178a656e272e26d7269d28aff18c813ee4d38065f"
+    },
+    {
+      "path": "harness/archive/1.2.0/.claude/agents/production-reviewer.md",
+      "sha256": "ea0eb5d16b624ed06d5b3a28cb1993ed5019c419f449b22ffc73389e279d826b"
+    },
+    {
+      "path": "harness/archive/1.2.0/.claude/agents/production-supervisor.md",
+      "sha256": "1f822ef1838e4efd557395751e8a526409d5d24e60f00cf7033923a1a93815d3"
+    },
+    {
+      "path": "harness/archive/1.2.0/.claude/skills/production-orchestrator/SKILL.md",
+      "sha256": "ffaeb0358eba4dff35e2a1ac1bb08cbb5e14e2ebc531dd6cabcd7d2c6b1bf827"
+    },
+    {
+      "path": "harness/archive/1.2.0/docs/harness-versioning.md",
+      "sha256": "ce20569fbfc1a32d230e5c1120f3fabb970d6bdc0f64ac2b4b3a1e7ce59dfc22"
+    },
+    {
+      "path": "harness/archive/1.2.0/docs/harness.md",
+      "sha256": "e940193c394a102be55cc8d2d8b2391ed278e97d8d0184c9bd87b3fb3f35613d"
+    },
+    {
+      "path": "harness/archive/1.3.0/.claude/agents/production-director.md",
+      "sha256": "fe31ca4cdf922903b6ad18b2dc50515019b781bfd5858acf3f68022a5505e536"
+    },
+    {
+      "path": "harness/archive/1.3.0/.claude/agents/production-editor.md",
+      "sha256": "7da372884819944182b2a231757696bd3b4305f7bdb6d287b0fd2314700fc61c"
+    },
+    {
+      "path": "harness/archive/1.3.0/.claude/agents/production-researcher.md",
+      "sha256": "bcc220f32ea258ac3e7e241178a656e272e26d7269d28aff18c813ee4d38065f"
+    },
+    {
+      "path": "harness/archive/1.3.0/.claude/agents/production-reviewer.md",
+      "sha256": "ea0eb5d16b624ed06d5b3a28cb1993ed5019c419f449b22ffc73389e279d826b"
+    },
+    {
+      "path": "harness/archive/1.3.0/.claude/agents/production-supervisor.md",
+      "sha256": "1f822ef1838e4efd557395751e8a526409d5d24e60f00cf7033923a1a93815d3"
+    },
+    {
+      "path": "harness/archive/1.3.0/.claude/skills/production-orchestrator/SKILL.md",
+      "sha256": "d45b2d4b9b3e4ef2dd155716d5ba694c0dbc6ade92e96ae58d7da9c23ca3819c"
+    },
+    {
+      "path": "harness/archive/1.3.0/docs/harness-versioning.md",
+      "sha256": "856ac7af1a0d62b2aec720d5b73ab67889b69ce1052936e60774af18d1eed9a1"
+    },
+    {
+      "path": "harness/archive/1.3.0/docs/harness.md",
+      "sha256": "f5463408ac688a1c3273749ed73d9cff69bff17e100eeec2421da7ba45f20ff7"
+    },
+    {
+      "path": "harness/archive/1.4.0/.claude/agents/production-director.md",
+      "sha256": "fe31ca4cdf922903b6ad18b2dc50515019b781bfd5858acf3f68022a5505e536"
+    },
+    {
+      "path": "harness/archive/1.4.0/.claude/agents/production-editor.md",
+      "sha256": "b954201037f84b3db9ef0c4d3216d29d2f89d11e4b19bc2a0260a470cb320545"
+    },
+    {
+      "path": "harness/archive/1.4.0/.claude/agents/production-researcher.md",
+      "sha256": "bcc220f32ea258ac3e7e241178a656e272e26d7269d28aff18c813ee4d38065f"
+    },
+    {
+      "path": "harness/archive/1.4.0/.claude/agents/production-reviewer.md",
+      "sha256": "ea0eb5d16b624ed06d5b3a28cb1993ed5019c419f449b22ffc73389e279d826b"
+    },
+    {
+      "path": "harness/archive/1.4.0/.claude/agents/production-supervisor.md",
+      "sha256": "1f822ef1838e4efd557395751e8a526409d5d24e60f00cf7033923a1a93815d3"
+    },
+    {
+      "path": "harness/archive/1.4.0/.claude/skills/production-orchestrator/SKILL.md",
+      "sha256": "717ac69d5fa738fc4b742f1dfbdd10779b07c8fe77c77b52ad6f7f1df506f18e"
+    },
+    {
+      "path": "harness/archive/1.4.0/docs/harness-versioning.md",
+      "sha256": "ba71b8db2158483a1de466d22b2bc49a72ffc719d7640bc5fab619fd8febfa72"
+    },
+    {
+      "path": "harness/archive/1.4.0/docs/harness.md",
+      "sha256": "abace83ad98635802f4353929ba76cd541513226690af80d32c05a9bf96764f1"
+    },
+    {
+      "path": "harness/archive/1.5.0/.claude/agents/production-director.md",
+      "sha256": "fe31ca4cdf922903b6ad18b2dc50515019b781bfd5858acf3f68022a5505e536"
+    },
+    {
+      "path": "harness/archive/1.5.0/.claude/agents/production-editor.md",
+      "sha256": "0d5dbf533923d851e5622620ae9614fe737e8f6035c2c7414118c0d7158d278d"
+    },
+    {
+      "path": "harness/archive/1.5.0/.claude/agents/production-researcher.md",
+      "sha256": "bcc220f32ea258ac3e7e241178a656e272e26d7269d28aff18c813ee4d38065f"
+    },
+    {
+      "path": "harness/archive/1.5.0/.claude/agents/production-reviewer.md",
+      "sha256": "cfed779f796170bb116d9e90cd4bbe449ee425c912e989ebb1910313adaddd6e"
+    },
+    {
+      "path": "harness/archive/1.5.0/.claude/agents/production-supervisor.md",
+      "sha256": "ad9f898b412d6415a6b46c984b503714ff12d96e4285b1a3a604a3f404d4fd92"
+    },
+    {
+      "path": "harness/archive/1.5.0/.claude/skills/production-orchestrator/SKILL.md",
+      "sha256": "e61c99031ced84d121899627266fa711b44f881828448b843ba70dbca6c7fdd0"
+    },
+    {
+      "path": "harness/archive/1.5.0/docs/harness-versioning.md",
+      "sha256": "ad877f6683aa93389010769cf75bcb61c5c89398e92d252aa5a16ee5b1b7e2db"
+    },
+    {
+      "path": "harness/archive/1.5.0/docs/harness.md",
+      "sha256": "568df021cf0ce142b93a6e7e4d332ea064438db86c699e74dae6bfaf5084ad9e"
+    },
+    {
+      "path": "harness/archive/1.6.0/.claude/agents/production-director.md",
+      "sha256": "7db90534c09df52134c7fa7ea6d3e5b53e4380d6f7b69e55dfb583f2676cdfb8"
+    },
+    {
+      "path": "harness/archive/1.6.0/.claude/agents/production-editor.md",
+      "sha256": "dda41cbded588654b80f74782038549a701f70e86562d0e370639315dcd481f8"
+    },
+    {
+      "path": "harness/archive/1.6.0/.claude/agents/production-researcher.md",
+      "sha256": "0bb75e427f0c817604996f2247ec0cc2a631f4c8a40ea9f6d4a1652ff1f436d2"
+    },
+    {
+      "path": "harness/archive/1.6.0/.claude/agents/production-reviewer.md",
+      "sha256": "ead64ec8d6c43e3ee698b3a65c0c5225e9432a1aaa64341c23acd0402824040f"
+    },
+    {
+      "path": "harness/archive/1.6.0/.claude/agents/production-supervisor.md",
+      "sha256": "586e63d6b20443252eab465a6adb1f1fb9a12e3589ba75d0a2eb208c9067adba"
+    },
+    {
+      "path": "harness/archive/1.6.0/.claude/skills/production-orchestrator/SKILL.md",
+      "sha256": "4417d8c2d9b6ab95a9252618df4e34f9f8aceec828788880265b7a9a58d8ebe3"
+    },
+    {
+      "path": "harness/archive/1.6.0/docs/harness-versioning.md",
+      "sha256": "0a2c1bd8d98b0fc855106f46323b36aa61f6c2a1904fcbacb9731f86bfaac2d4"
+    },
+    {
+      "path": "harness/archive/1.6.0/docs/harness.md",
+      "sha256": "a5f54cef70125ee0b89bf0891d3758d6ceb32d95ff9c52d2dda1d544046cda41"
+    },
+    {
+      "path": "harness/archive/1.7.0/.claude/agents/production-director.md",
+      "sha256": "2e35edee6ef4238366ce3fd951cfba0e2fdeea5a2067418aeb36b69d53fdef9d"
+    },
+    {
+      "path": "harness/archive/1.7.0/.claude/agents/production-editor.md",
+      "sha256": "7468205a1180369b078f5ce43e431aeb5b74feb0c782ba8e7924d5f9bdf4b3e6"
+    },
+    {
+      "path": "harness/archive/1.7.0/.claude/agents/production-researcher.md",
+      "sha256": "cc349fa3d9012b09d9d49883ef8ef426a4b112a1cedd03836da01572c986aaa8"
+    },
+    {
+      "path": "harness/archive/1.7.0/.claude/agents/production-reviewer.md",
+      "sha256": "3472af2b4136d21d2694d1d217859bd13329d96d79e5843cf3911f882725be07"
+    },
+    {
+      "path": "harness/archive/1.7.0/.claude/agents/production-supervisor.md",
+      "sha256": "e06f0a288c86d1a4ea1add1689f03718b75ddd68eac7debc23f4322cb011242d"
+    },
+    {
+      "path": "harness/archive/1.7.0/.claude/skills/production-orchestrator/SKILL.md",
+      "sha256": "fc946ad23c18f5afcbf64042c5211925b535717f658bc640ab352a79387badbf"
+    },
+    {
+      "path": "harness/archive/1.7.0/docs/harness-versioning.md",
+      "sha256": "396723304ef6057115caf9320d34d233787a984c86365e9a05bf817d4957f23b"
+    },
+    {
+      "path": "harness/archive/1.7.0/docs/harness.md",
+      "sha256": "19a676225fc1db87b9fd4c414aecaaa00fe381180b0cc62a6cc375f1758650ca"
+    },
+    {
+      "path": "harness/archive/1.7.1/.claude/agents/production-director.md",
+      "sha256": "2e35edee6ef4238366ce3fd951cfba0e2fdeea5a2067418aeb36b69d53fdef9d"
+    },
+    {
+      "path": "harness/archive/1.7.1/.claude/agents/production-editor.md",
+      "sha256": "7468205a1180369b078f5ce43e431aeb5b74feb0c782ba8e7924d5f9bdf4b3e6"
+    },
+    {
+      "path": "harness/archive/1.7.1/.claude/agents/production-researcher.md",
+      "sha256": "cc349fa3d9012b09d9d49883ef8ef426a4b112a1cedd03836da01572c986aaa8"
+    },
+    {
+      "path": "harness/archive/1.7.1/.claude/agents/production-reviewer.md",
+      "sha256": "3472af2b4136d21d2694d1d217859bd13329d96d79e5843cf3911f882725be07"
+    },
+    {
+      "path": "harness/archive/1.7.1/.claude/agents/production-supervisor.md",
+      "sha256": "e06f0a288c86d1a4ea1add1689f03718b75ddd68eac7debc23f4322cb011242d"
+    },
+    {
+      "path": "harness/archive/1.7.1/.claude/skills/production-orchestrator/SKILL.md",
+      "sha256": "fc946ad23c18f5afcbf64042c5211925b535717f658bc640ab352a79387badbf"
+    },
+    {
+      "path": "harness/archive/1.7.1/docs/harness-versioning.md",
+      "sha256": "396723304ef6057115caf9320d34d233787a984c86365e9a05bf817d4957f23b"
+    },
+    {
+      "path": "harness/archive/1.7.1/docs/harness.md",
+      "sha256": "da0c305c53f73df84549bc4bdfd424a33340def3b6c848b104aeb11a15146c72"
+    },
+    {
+      "path": "harness/archive/README.md",
+      "sha256": "e238be4d96dcfd828fb356a84f65b5f58a94ba80888bfa7af526da7f53823ad1"
+    },
+    {
+      "path": "harness/manifest.json",
+      "sha256": "d8b4e95448d4191c48c114d93b4b0bbdd1f07003b201a04a43a3e3744e2c7094"
+    },
+    {
+      "path": "harness/versions/1.0.0/.claude/agents/production-director.md",
+      "sha256": "fe31ca4cdf922903b6ad18b2dc50515019b781bfd5858acf3f68022a5505e536"
+    },
+    {
+      "path": "harness/versions/1.0.0/.claude/agents/production-editor.md",
+      "sha256": "3c69eff11fd1987670c7a3d6157c61b8079c7a51c886ced9ad4babd952892f08"
+    },
+    {
+      "path": "harness/versions/1.0.0/.claude/agents/production-researcher.md",
+      "sha256": "bcc220f32ea258ac3e7e241178a656e272e26d7269d28aff18c813ee4d38065f"
+    },
+    {
+      "path": "harness/versions/1.0.0/.claude/agents/production-reviewer.md",
+      "sha256": "7100724ee2eea5afcacce851daa453d35e11e48732b1a905381d499c4c9fd3e3"
+    },
+    {
+      "path": "harness/versions/1.0.0/.claude/agents/production-supervisor.md",
+      "sha256": "ee0823deef986573d1571d076d9658cd10935e961576d09cb20ead45e786ce7b"
+    },
+    {
+      "path": "harness/versions/1.0.0/.claude/skills/production-orchestrator/SKILL.md",
+      "sha256": "c2947468af428c730215ca5c49cb46b8437c8074449252b9442ca93066f41292"
+    },
+    {
+      "path": "harness/versions/1.0.0/docs/harness-versioning.md",
+      "sha256": "eef948f9cb3d7dff886daf6a7a49aa7e23cfa34e769bcc6b3f9f9c2d41c7cec1"
+    },
+    {
+      "path": "harness/versions/1.0.0/docs/harness.md",
+      "sha256": "b0a4582649de8fcd701fdcc00a60debe7c16a3fad8ac15ce797574d5849568c4"
+    },
+    {
+      "path": "harness/versions/1.1.0/.claude/agents/production-director.md",
+      "sha256": "fe31ca4cdf922903b6ad18b2dc50515019b781bfd5858acf3f68022a5505e536"
+    },
+    {
+      "path": "harness/versions/1.1.0/.claude/agents/production-editor.md",
+      "sha256": "d648b2da70f15393a58bca2e9e38273035ebca4ba1f565558688ee9a9382ba78"
+    },
+    {
+      "path": "harness/versions/1.1.0/.claude/agents/production-researcher.md",
+      "sha256": "bcc220f32ea258ac3e7e241178a656e272e26d7269d28aff18c813ee4d38065f"
+    },
+    {
+      "path": "harness/versions/1.1.0/.claude/agents/production-reviewer.md",
+      "sha256": "7100724ee2eea5afcacce851daa453d35e11e48732b1a905381d499c4c9fd3e3"
+    },
+    {
+      "path": "harness/versions/1.1.0/.claude/agents/production-supervisor.md",
+      "sha256": "1f822ef1838e4efd557395751e8a526409d5d24e60f00cf7033923a1a93815d3"
+    },
+    {
+      "path": "harness/versions/1.1.0/.claude/skills/production-orchestrator/SKILL.md",
+      "sha256": "8664d922fab861b97fc4550d5576ab179eb697c53feff4f523777639e696fd82"
+    },
+    {
+      "path": "harness/versions/1.1.0/docs/harness-versioning.md",
+      "sha256": "100d96e1fc78f4c7efbe2c175324987416e98844bd7210641ef4271b4e6824e9"
+    },
+    {
+      "path": "harness/versions/1.1.0/docs/harness.md",
+      "sha256": "7b0d118d8d6b2155fa14e2e8b84d745775cdcf1cc2eb9dee482687cd157f5d30"
+    },
+    {
+      "path": "harness/versions/1.2.0/.claude/agents/production-director.md",
+      "sha256": "fe31ca4cdf922903b6ad18b2dc50515019b781bfd5858acf3f68022a5505e536"
+    },
+    {
+      "path": "harness/versions/1.2.0/.claude/agents/production-editor.md",
+      "sha256": "9689b611e190369e443eaa481095a3498bc98f21bde4f23bdf905464059bda49"
+    },
+    {
+      "path": "harness/versions/1.2.0/.claude/agents/production-researcher.md",
+      "sha256": "bcc220f32ea258ac3e7e241178a656e272e26d7269d28aff18c813ee4d38065f"
+    },
+    {
+      "path": "harness/versions/1.2.0/.claude/agents/production-reviewer.md",
+      "sha256": "ea0eb5d16b624ed06d5b3a28cb1993ed5019c419f449b22ffc73389e279d826b"
+    },
+    {
+      "path": "harness/versions/1.2.0/.claude/agents/production-supervisor.md",
+      "sha256": "1f822ef1838e4efd557395751e8a526409d5d24e60f00cf7033923a1a93815d3"
+    },
+    {
+      "path": "harness/versions/1.2.0/.claude/skills/production-orchestrator/SKILL.md",
+      "sha256": "ffaeb0358eba4dff35e2a1ac1bb08cbb5e14e2ebc531dd6cabcd7d2c6b1bf827"
+    },
+    {
+      "path": "harness/versions/1.2.0/docs/harness-versioning.md",
+      "sha256": "ce20569fbfc1a32d230e5c1120f3fabb970d6bdc0f64ac2b4b3a1e7ce59dfc22"
+    },
+    {
+      "path": "harness/versions/1.2.0/docs/harness.md",
+      "sha256": "e940193c394a102be55cc8d2d8b2391ed278e97d8d0184c9bd87b3fb3f35613d"
+    },
+    {
+      "path": "harness/versions/1.3.0/.claude/agents/production-director.md",
+      "sha256": "fe31ca4cdf922903b6ad18b2dc50515019b781bfd5858acf3f68022a5505e536"
+    },
+    {
+      "path": "harness/versions/1.3.0/.claude/agents/production-editor.md",
+      "sha256": "7da372884819944182b2a231757696bd3b4305f7bdb6d287b0fd2314700fc61c"
+    },
+    {
+      "path": "harness/versions/1.3.0/.claude/agents/production-researcher.md",
+      "sha256": "bcc220f32ea258ac3e7e241178a656e272e26d7269d28aff18c813ee4d38065f"
+    },
+    {
+      "path": "harness/versions/1.3.0/.claude/agents/production-reviewer.md",
+      "sha256": "ea0eb5d16b624ed06d5b3a28cb1993ed5019c419f449b22ffc73389e279d826b"
+    },
+    {
+      "path": "harness/versions/1.3.0/.claude/agents/production-supervisor.md",
+      "sha256": "1f822ef1838e4efd557395751e8a526409d5d24e60f00cf7033923a1a93815d3"
+    },
+    {
+      "path": "harness/versions/1.3.0/.claude/skills/production-orchestrator/SKILL.md",
+      "sha256": "d45b2d4b9b3e4ef2dd155716d5ba694c0dbc6ade92e96ae58d7da9c23ca3819c"
+    },
+    {
+      "path": "harness/versions/1.3.0/docs/harness-versioning.md",
+      "sha256": "856ac7af1a0d62b2aec720d5b73ab67889b69ce1052936e60774af18d1eed9a1"
+    },
+    {
+      "path": "harness/versions/1.3.0/docs/harness.md",
+      "sha256": "f5463408ac688a1c3273749ed73d9cff69bff17e100eeec2421da7ba45f20ff7"
+    },
+    {
+      "path": "harness/versions/1.4.0/.claude/agents/production-director.md",
+      "sha256": "fe31ca4cdf922903b6ad18b2dc50515019b781bfd5858acf3f68022a5505e536"
+    },
+    {
+      "path": "harness/versions/1.4.0/.claude/agents/production-editor.md",
+      "sha256": "b954201037f84b3db9ef0c4d3216d29d2f89d11e4b19bc2a0260a470cb320545"
+    },
+    {
+      "path": "harness/versions/1.4.0/.claude/agents/production-researcher.md",
+      "sha256": "bcc220f32ea258ac3e7e241178a656e272e26d7269d28aff18c813ee4d38065f"
+    },
+    {
+      "path": "harness/versions/1.4.0/.claude/agents/production-reviewer.md",
+      "sha256": "ea0eb5d16b624ed06d5b3a28cb1993ed5019c419f449b22ffc73389e279d826b"
+    },
+    {
+      "path": "harness/versions/1.4.0/.claude/agents/production-supervisor.md",
+      "sha256": "1f822ef1838e4efd557395751e8a526409d5d24e60f00cf7033923a1a93815d3"
+    },
+    {
+      "path": "harness/versions/1.4.0/.claude/skills/production-orchestrator/SKILL.md",
+      "sha256": "717ac69d5fa738fc4b742f1dfbdd10779b07c8fe77c77b52ad6f7f1df506f18e"
+    },
+    {
+      "path": "harness/versions/1.4.0/docs/harness-versioning.md",
+      "sha256": "ba71b8db2158483a1de466d22b2bc49a72ffc719d7640bc5fab619fd8febfa72"
+    },
+    {
+      "path": "harness/versions/1.4.0/docs/harness.md",
+      "sha256": "abace83ad98635802f4353929ba76cd541513226690af80d32c05a9bf96764f1"
+    },
+    {
+      "path": "harness/versions/1.5.0/.claude/agents/production-director.md",
+      "sha256": "fe31ca4cdf922903b6ad18b2dc50515019b781bfd5858acf3f68022a5505e536"
+    },
+    {
+      "path": "harness/versions/1.5.0/.claude/agents/production-editor.md",
+      "sha256": "0d5dbf533923d851e5622620ae9614fe737e8f6035c2c7414118c0d7158d278d"
+    },
+    {
+      "path": "harness/versions/1.5.0/.claude/agents/production-researcher.md",
+      "sha256": "bcc220f32ea258ac3e7e241178a656e272e26d7269d28aff18c813ee4d38065f"
+    },
+    {
+      "path": "harness/versions/1.5.0/.claude/agents/production-reviewer.md",
+      "sha256": "cfed779f796170bb116d9e90cd4bbe449ee425c912e989ebb1910313adaddd6e"
+    },
+    {
+      "path": "harness/versions/1.5.0/.claude/agents/production-supervisor.md",
+      "sha256": "ad9f898b412d6415a6b46c984b503714ff12d96e4285b1a3a604a3f404d4fd92"
+    },
+    {
+      "path": "harness/versions/1.5.0/.claude/skills/production-orchestrator/SKILL.md",
+      "sha256": "e61c99031ced84d121899627266fa711b44f881828448b843ba70dbca6c7fdd0"
+    },
+    {
+      "path": "harness/versions/1.5.0/docs/harness-versioning.md",
+      "sha256": "ad877f6683aa93389010769cf75bcb61c5c89398e92d252aa5a16ee5b1b7e2db"
+    },
+    {
+      "path": "harness/versions/1.5.0/docs/harness.md",
+      "sha256": "568df021cf0ce142b93a6e7e4d332ea064438db86c699e74dae6bfaf5084ad9e"
+    },
+    {
+      "path": "harness/versions/1.6.0/.claude/agents/production-director.md",
+      "sha256": "7db90534c09df52134c7fa7ea6d3e5b53e4380d6f7b69e55dfb583f2676cdfb8"
+    },
+    {
+      "path": "harness/versions/1.6.0/.claude/agents/production-editor.md",
+      "sha256": "dda41cbded588654b80f74782038549a701f70e86562d0e370639315dcd481f8"
+    },
+    {
+      "path": "harness/versions/1.6.0/.claude/agents/production-researcher.md",
+      "sha256": "0bb75e427f0c817604996f2247ec0cc2a631f4c8a40ea9f6d4a1652ff1f436d2"
+    },
+    {
+      "path": "harness/versions/1.6.0/.claude/agents/production-reviewer.md",
+      "sha256": "ead64ec8d6c43e3ee698b3a65c0c5225e9432a1aaa64341c23acd0402824040f"
+    },
+    {
+      "path": "harness/versions/1.6.0/.claude/agents/production-supervisor.md",
+      "sha256": "586e63d6b20443252eab465a6adb1f1fb9a12e3589ba75d0a2eb208c9067adba"
+    },
+    {
+      "path": "harness/versions/1.6.0/.claude/skills/production-orchestrator/SKILL.md",
+      "sha256": "4417d8c2d9b6ab95a9252618df4e34f9f8aceec828788880265b7a9a58d8ebe3"
+    },
+    {
+      "path": "harness/versions/1.6.0/docs/harness-versioning.md",
+      "sha256": "0a2c1bd8d98b0fc855106f46323b36aa61f6c2a1904fcbacb9731f86bfaac2d4"
+    },
+    {
+      "path": "harness/versions/1.6.0/docs/harness.md",
+      "sha256": "a5f54cef70125ee0b89bf0891d3758d6ceb32d95ff9c52d2dda1d544046cda41"
+    },
+    {
+      "path": "harness/versions/1.7.0/.claude/agents/production-director.md",
+      "sha256": "2e35edee6ef4238366ce3fd951cfba0e2fdeea5a2067418aeb36b69d53fdef9d"
+    },
+    {
+      "path": "harness/versions/1.7.0/.claude/agents/production-editor.md",
+      "sha256": "7468205a1180369b078f5ce43e431aeb5b74feb0c782ba8e7924d5f9bdf4b3e6"
+    },
+    {
+      "path": "harness/versions/1.7.0/.claude/agents/production-researcher.md",
+      "sha256": "cc349fa3d9012b09d9d49883ef8ef426a4b112a1cedd03836da01572c986aaa8"
+    },
+    {
+      "path": "harness/versions/1.7.0/.claude/agents/production-reviewer.md",
+      "sha256": "3472af2b4136d21d2694d1d217859bd13329d96d79e5843cf3911f882725be07"
+    },
+    {
+      "path": "harness/versions/1.7.0/.claude/agents/production-supervisor.md",
+      "sha256": "e06f0a288c86d1a4ea1add1689f03718b75ddd68eac7debc23f4322cb011242d"
+    },
+    {
+      "path": "harness/versions/1.7.0/.claude/skills/production-orchestrator/SKILL.md",
+      "sha256": "fc946ad23c18f5afcbf64042c5211925b535717f658bc640ab352a79387badbf"
+    },
+    {
+      "path": "harness/versions/1.7.0/docs/harness-versioning.md",
+      "sha256": "396723304ef6057115caf9320d34d233787a984c86365e9a05bf817d4957f23b"
+    },
+    {
+      "path": "harness/versions/1.7.0/docs/harness.md",
+      "sha256": "19a676225fc1db87b9fd4c414aecaaa00fe381180b0cc62a6cc375f1758650ca"
+    },
+    {
+      "path": "harness/versions/1.7.1/.claude/agents/production-director.md",
+      "sha256": "2e35edee6ef4238366ce3fd951cfba0e2fdeea5a2067418aeb36b69d53fdef9d"
+    },
+    {
+      "path": "harness/versions/1.7.1/.claude/agents/production-editor.md",
+      "sha256": "7468205a1180369b078f5ce43e431aeb5b74feb0c782ba8e7924d5f9bdf4b3e6"
+    },
+    {
+      "path": "harness/versions/1.7.1/.claude/agents/production-researcher.md",
+      "sha256": "cc349fa3d9012b09d9d49883ef8ef426a4b112a1cedd03836da01572c986aaa8"
+    },
+    {
+      "path": "harness/versions/1.7.1/.claude/agents/production-reviewer.md",
+      "sha256": "3472af2b4136d21d2694d1d217859bd13329d96d79e5843cf3911f882725be07"
+    },
+    {
+      "path": "harness/versions/1.7.1/.claude/agents/production-supervisor.md",
+      "sha256": "e06f0a288c86d1a4ea1add1689f03718b75ddd68eac7debc23f4322cb011242d"
+    },
+    {
+      "path": "harness/versions/1.7.1/.claude/skills/production-orchestrator/SKILL.md",
+      "sha256": "fc946ad23c18f5afcbf64042c5211925b535717f658bc640ab352a79387badbf"
+    },
+    {
+      "path": "harness/versions/1.7.1/docs/harness-versioning.md",
+      "sha256": "396723304ef6057115caf9320d34d233787a984c86365e9a05bf817d4957f23b"
+    },
+    {
+      "path": "harness/versions/1.7.1/docs/harness.md",
+      "sha256": "da0c305c53f73df84549bc4bdfd424a33340def3b6c848b104aeb11a15146c72"
+    },
+    {
+      "path": "harness/versions/1.7.2/.claude/agents/production-director.md",
+      "sha256": "2e35edee6ef4238366ce3fd951cfba0e2fdeea5a2067418aeb36b69d53fdef9d"
+    },
+    {
+      "path": "harness/versions/1.7.2/.claude/agents/production-editor.md",
+      "sha256": "7468205a1180369b078f5ce43e431aeb5b74feb0c782ba8e7924d5f9bdf4b3e6"
+    },
+    {
+      "path": "harness/versions/1.7.2/.claude/agents/production-researcher.md",
+      "sha256": "cc349fa3d9012b09d9d49883ef8ef426a4b112a1cedd03836da01572c986aaa8"
+    },
+    {
+      "path": "harness/versions/1.7.2/.claude/agents/production-reviewer.md",
+      "sha256": "3472af2b4136d21d2694d1d217859bd13329d96d79e5843cf3911f882725be07"
+    },
+    {
+      "path": "harness/versions/1.7.2/.claude/agents/production-supervisor.md",
+      "sha256": "e06f0a288c86d1a4ea1add1689f03718b75ddd68eac7debc23f4322cb011242d"
+    },
+    {
+      "path": "harness/versions/1.7.2/.claude/skills/production-orchestrator/SKILL.md",
+      "sha256": "fc946ad23c18f5afcbf64042c5211925b535717f658bc640ab352a79387badbf"
+    },
+    {
+      "path": "harness/versions/1.7.2/docs/harness-versioning.md",
+      "sha256": "396723304ef6057115caf9320d34d233787a984c86365e9a05bf817d4957f23b"
+    },
+    {
+      "path": "harness/versions/1.7.2/docs/harness.md",
+      "sha256": "d8e1fdb6ce62a660cf2f96d8f27f3ab92b3ac4f28854e99832e89298c4742013"
+    },
+    {
+      "path": "llm-wiki/wiki/concepts/knowledge-layers.md",
+      "sha256": "38190ebd7ac6e5453f27dea224ab163c38e525510a645733c202b92ee90b7dcd"
+    },
+    {
+      "path": "llm-wiki/wiki/concepts/production-history.md",
+      "sha256": "899c58be073c5c736d04cd7af4b5febbd0d9f0652a9ea079cc771b1b8013df5b"
+    },
+    {
+      "path": "llm-wiki/wiki/entities/frameforge-studio.md",
+      "sha256": "0bcb3fc20be3a0c3f6df8ed2b9da1b3f7b622dc42291b906c126a4647faa2366"
+    },
+    {
+      "path": "llm-wiki/wiki/reports/knowledge-bootstrap.md",
+      "sha256": "146bc38b8c48f770dfe6065bdae69798545493651692a3009ffb3926bfdef70b"
+    },
+    {
+      "path": "llm-wiki/wiki/reports/ops-workspace-2026-10-19.md",
+      "sha256": "1efaa96cce06bb0b7dd3847269d6a8fca2f9508146c23e5503074722a1ad6168"
+    },
+    {
+      "path": "llm-wiki/wiki/reports/premiere-workspace-2026-10-20.md",
+      "sha256": "9326b75c8eefd683867c62635213cdda6001ef6f9401d91bdea768fd31751766"
+    },
+    {
+      "path": "llm-wiki/wiki/reports/runtime-verification-2026-10-18.md",
+      "sha256": "7db30eb24b34b4c19d73656e20d30de822afa71c7c14cca9ebb056a3d852fedf"
+    },
+    {
+      "path": "llm-wiki/wiki/reports/usability-higgsfield-2026-10-18.md",
+      "sha256": "91f990e63a5cde98aa23238361ce0088eb941c2a904431482719407e9aebb651"
+    },
+    {
+      "path": "llm-wiki/wiki/sources/premiere-workspace-2026-10-20.md",
+      "sha256": "db4f35f3d389e3cc4e3d3f0788d8219c4e44c1c7e2297a1bbc72b35b0224c5e8"
+    },
+    {
+      "path": "llm-wiki/wiki/sources/product-brief.md",
+      "sha256": "695706e1d3aa7b22fe5ae228202f505764fc4a59230c6e31d964a83eec719124"
+    },
+    {
+      "path": "package.json",
+      "sha256": "b0cf8f4cc58e59a387129a615fbf28bff426b0a90456cd5868cb5b5f148f232e"
+    },
+    {
+      "path": "public/app.js",
+      "sha256": "7a2d6bd2f448db21255ec6060d2606b106e5929f2e5731766276f164d31e462e"
+    },
+    {
+      "path": "public/blog.js",
+      "sha256": "e3420acf4e9a475ded94384e2e51253f7ff69a30f09cee4b7ad2a92dce99f179"
+    },
+    {
+      "path": "public/context-menu.js",
+      "sha256": "8139cb1068a2820cce6645f850f409aa46dbb0313b84697a579f08c563145ddb"
+    },
+    {
+      "path": "public/history.js",
+      "sha256": "b9f52a9c52c684ac6acb1c8657eb259709c7ef534858d1d1f5d842047f2c9399"
+    },
+    {
+      "path": "public/production-tools.js",
+      "sha256": "2b495ecb55b00584b5fa8dd8d6d6ad0721c08db4abacb04cca4c922d5809f4d4"
+    },
+    {
+      "path": "public/workflow.js",
+      "sha256": "99a516fae3d8fd35949d4b933c2bf939d93668f6b4707f83a91fe87fc97dc444"
+    },
+    {
+      "path": "public/workspace-state.js",
+      "sha256": "22f68d61849891d055870252e849f3b7bb14eb073a5e7a348a61529d63ddb29e"
+    },
+    {
+      "path": "public/workspace.js",
+      "sha256": "d6e28b496af8bfad6c47e160fbc58d0dab0eba4ce2c66d9299615c99933569c4"
+    },
+    {
+      "path": "scripts/acceptance.mjs",
+      "sha256": "9eee55df42b5af589fb003e10f395fcaf1bff55179403e3b9292197aead63641"
+    },
+    {
+      "path": "scripts/agent-bridge.mjs",
+      "sha256": "e8a1a590a17c4cab4eaf308d7149e2ffae930f0c93a1aa72e8d72b09b43c0bd6"
+    },
+    {
+      "path": "scripts/agent-smoke.mjs",
+      "sha256": "f2eb11b1b923babc75e75bbff59772ff74196f8146faa7c155d186f71dfb5573"
+    },
+    {
+      "path": "scripts/aside-inbox.mjs",
+      "sha256": "c70e2fa4cf6232f94ab2eff14b02c7ab484ace72bc413f2df65a34fe3149b2f1"
+    },
+    {
+      "path": "scripts/blog-workflow.mjs",
+      "sha256": "5a821093631e29b790008c1605be35d5b23392d1d77ab7ddd446be7926705114"
+    },
+    {
+      "path": "scripts/blog-workspace-browser-smoke.mjs",
+      "sha256": "593707d8447b6a9b5b5215448305240c043eaddee76d5117b20d368d70c66310"
+    },
+    {
+      "path": "scripts/browser-smoke.py",
+      "sha256": "6f88645d43e6b0fc3745f558b07296b44e576a03e108905cc3bebe25f78a4799"
+    },
+    {
+      "path": "scripts/check.mjs",
+      "sha256": "c9fd8233c646ac26fbfe8049d637ecd1bb694027386684a4d341a46abcc67dec"
+    },
+    {
+      "path": "scripts/configure.mjs",
+      "sha256": "21aecb1d7acaae409271e1292dd7ecb1b056c0e2f8116193c933d62a492b8a35"
+    },
+    {
+      "path": "scripts/container-smoke.mjs",
+      "sha256": "c865f33256586102824c275e09c375dabfd8c07b1b3e5198c3dda8a778e74f6a"
+    },
+    {
+      "path": "scripts/higgsfield-browser-smoke.py",
+      "sha256": "c34aa99b2d13faf3600c61298aa135bc0008b37f16da3867dc6efdc99e3fa4df"
+    },
+    {
+      "path": "scripts/higgsfield-mcp.mjs",
+      "sha256": "0298db5d3fed7e49016ba63dddc0ce4e2579e9db22fc91e167b269747f4f4ca6"
+    },
+    {
+      "path": "scripts/import-research.mjs",
+      "sha256": "5d432254252310b323cd946feca41aaf21329d9af9453ddfb88dba13b25a3c08"
+    },
+    {
+      "path": "scripts/import-snapshot.mjs",
+      "sha256": "3513c602bf51c7de282b57059056ef4744a5f2bf8738827865ce1fb5c7f8fcc0"
+    },
+    {
+      "path": "scripts/jeo-adapter.mjs",
+      "sha256": "2d00671bbe24ba94fbb41e5d9168f7b54c43b30d4033ef3462fc362e48bbdd61"
+    },
+    {
+      "path": "scripts/jev-review.mjs",
+      "sha256": "53747f09bef122b9f3ed889bd715ce3c7a3c3a56a2c01c2ad2e124cf4de2b827"
+    },
+    {
+      "path": "scripts/knowledge-benchmark.mjs",
+      "sha256": "2fc9dcedfe0731db6bbd37f5104453830e15cdd7e5c538c5489c73c800e39f98"
+    },
+    {
+      "path": "scripts/knowledge.mjs",
+      "sha256": "54276dcb2dcb9359caf9c0774ffa85b97265010b4535a50cc5ab6607802a67fb"
+    },
+    {
+      "path": "scripts/media-smoke.mjs",
+      "sha256": "26258091147d1f7cd7cab4c2613cd06f56cf0a40a723f1771009a7bd6e8082c0"
+    },
+    {
+      "path": "scripts/ops-workspace-browser-smoke.mjs",
+      "sha256": "787d09f6cbec6012e6d19ecb005d9250db12e3b61849e6b428f56fd426b520df"
+    },
+    {
+      "path": "scripts/premiere-workspace-browser-smoke.mjs",
+      "sha256": "22b1bfccf2e6bfab7033a394078fa7107d6c6a76de36cb4e49bd3221fb94c2bc"
+    },
+    {
+      "path": "scripts/production-browser-smoke.py",
+      "sha256": "87b12b5448ed2a48fb7dbc528efd780032df0c51f7c488699f3b9985be373740"
+    },
+    {
+      "path": "scripts/production-smoke.mjs",
+      "sha256": "9310b89607158dd729b49fe07ba6efc2ae25b3ac2144f2e427165485e61cc249"
+    },
+    {
+      "path": "scripts/production-workspace-browser-smoke.mjs",
+      "sha256": "d131172d7efd7d5df6add8994faf5b406e5981f8d384d9c691392672583633f0"
+    },
+    {
+      "path": "scripts/project-agent.mjs",
+      "sha256": "a286f1f3a26a6395ab88036c29a3ce7b89ba14dae6241103730fbb7763c5fc3c"
+    },
+    {
+      "path": "scripts/render-smoke.mjs",
+      "sha256": "31974d7e389af48b66ce6381d0d486ea2f4195fd37f61ac5c3459280294114f7"
+    },
+    {
+      "path": "scripts/repair-docker-wsl.ps1",
+      "sha256": "2af2b4b40be520feb51b6e47ed07bad50471ecc85bd6bf36d9eabca468d60ad2"
+    },
+    {
+      "path": "scripts/scene-layout-browser-smoke.mjs",
+      "sha256": "720ad0f18034bbae7fe0596010f23b54ec4059cbfc446d0830955562af934c7d"
+    },
+    {
+      "path": "scripts/snapshot-data.mjs",
+      "sha256": "51e88c06f3a67870f02720aae7e4af44c1274de901cbe1b4c9fe57195b8be30d"
+    },
+    {
+      "path": "scripts/speech.ps1",
+      "sha256": "f55dac2a5ee10d1afb0e3c76a816b74805424554695fad2e5b0163732c208820"
+    },
+    {
+      "path": "scripts/start-docker.ps1",
+      "sha256": "f8e2f01f9568c3da39a758e4edde0de173deaa71deb9a1996de715c81b2e193d"
+    },
+    {
+      "path": "scripts/start-local.ps1",
+      "sha256": "e807988de31dace4451fbd53e20053025483795e242036600520ae6e0763a9cb"
+    },
+    {
+      "path": "scripts/stop-local.ps1",
+      "sha256": "91c8d2c5d0b4aaaa116589f8f8f7cbf54a9dd450dbc8eff984feb1f7ca6273cb"
+    },
+    {
+      "path": "scripts/trends-browser-smoke.py",
+      "sha256": "e537b8ae1d9f6b3fd65ef172fad086a9e5ef792854fbcfa86c1e34a8587b593d"
+    },
+    {
+      "path": "scripts/usability-browser-smoke.py",
+      "sha256": "3ca75e1842ae4a806bd34d9555378b8fcc472c5d61c88837934185a88d389ede"
+    },
+    {
+      "path": "scripts/version-harness.mjs",
+      "sha256": "fa7acda74dfc4cdbbf1a636b9bef30e431e94f78d0354b7b044d9a9f43bd3b3e"
+    },
+    {
+      "path": "scripts/white-studio-browser-smoke.py",
+      "sha256": "b0ff6d041ccab0db29d2b3c9dbf5fb0b050b753c2ab3f8d9b5a268ba45867157"
+    },
+    {
+      "path": "scripts/workflow-browser-smoke.py",
+      "sha256": "b62153efc25af29aa5109b42e0a2aa20aa6e25b94020a4aa7cec8553d513adc6"
+    },
+    {
+      "path": "scripts/workflow-smoke.mjs",
+      "sha256": "6196e935d460391e252001549ad0c1119cec357c659ad4ed4abdbff47d9d0c18"
+    },
+    {
+      "path": "scripts/workspace-browser-smoke.py",
+      "sha256": "3aec63557a2e8580967479d77f0e253025274f1d2cda417a1f2269f8f5e7b914"
+    },
+    {
+      "path": "server/app.mjs",
+      "sha256": "2557b4a19181820b71536846d19b6f1ebfcb2a56bc1d6d06051c44449c31bae7"
+    },
+    {
+      "path": "server/blog-automation.mjs",
+      "sha256": "3e4790d32f80ba5e373f16caa7c7721a21cc09486d64a3a87065ff34324a2a5b"
+    },
+    {
+      "path": "server/blog-references.mjs",
+      "sha256": "79b276091518325ac4097612c457c9a48765f40265c91ebbabc4bbf16ea4c6e8"
+    },
+    {
+      "path": "server/blog-sources.mjs",
+      "sha256": "107ca8728f5eb79609af43a4cd86c0c77eece2cf8ebbe2607a6b9aecdbc057f6"
+    },
+    {
+      "path": "server/blog.mjs",
+      "sha256": "18c874db40b2e1ebc0f5eca152038fe2b5a1a45ae15cd9611058490ae80940ae"
+    },
+    {
+      "path": "server/candidates.mjs",
+      "sha256": "e361e4fdd8fc86c8705cc7b411cbd48990a9a19cc0b2ba6fea17f53184f84f34"
+    },
+    {
+      "path": "server/generation-provider.mjs",
+      "sha256": "650bd5cdd2559b86a31cb46367bef418c273f569e3e912196d88ec9178a57c98"
+    },
+    {
+      "path": "server/generations.mjs",
+      "sha256": "768513840e697f77409a8488ad1a911cf76b7edcd5c603a34e828d0f317d9f53"
+    },
+    {
+      "path": "server/graph.mjs",
+      "sha256": "e131ae0f2c918c48b3fcb31a7efc5897a06b363579855075e52b6af3a48a95e0"
+    },
+    {
+      "path": "server/harness-context.mjs",
+      "sha256": "983962737a9e3b06d2a4ee491d9f2f23809b88bd0c4a31fd3af2fb15a037d6dc"
+    },
+    {
+      "path": "server/higgsfield-cli.mjs",
+      "sha256": "fb27ea122bfb2cdf52456f0c02230e364fae58746924709c691472d0f9b706a7"
+    },
+    {
+      "path": "server/higgsfield.mjs",
+      "sha256": "68779d8f4c3c399ba1f3c3a6fbc0972e61542195fd13dd9f0f73975d37a14968"
+    },
+    {
+      "path": "server/integrations.mjs",
+      "sha256": "9f5de7db4c5bb9d4734fd9e1db280edc78499b7c300ea8b14d6cb4a1faa6dad8"
+    },
+    {
+      "path": "server/media-credits.mjs",
+      "sha256": "3ff19043be55dab4109d39948f7f75d8b5abc83d742874e588c6a463d600d134"
+    },
+    {
+      "path": "server/media-sources.mjs",
+      "sha256": "c67789ea91b376aaadfc3457a34f9662dac5f8d9dd97fbaf835056b713ea4056"
+    },
+    {
+      "path": "server/narration.mjs",
+      "sha256": "5c19269ccc3f5ac3f29515013abe2257fc9bbb78e7b05c028ba5b046e6f9868a"
+    },
+    {
+      "path": "server/platform-session.mjs",
+      "sha256": "a5eaa71a39564e1b7fdc43b33186b67050a69a4c366e0e232e7450db4eb9f745"
+    },
+    {
+      "path": "server/private-runtime.mjs",
+      "sha256": "afb582a18130330707e034e213832514a7e6644a175358ce4553b7ef06d1b814"
+    },
+    {
+      "path": "server/process.mjs",
+      "sha256": "8f60a127601c719dbc510610e350f2637fa5eed98d5c026c93675e1a55f0408a"
+    },
+    {
+      "path": "server/project-knowledge.mjs",
+      "sha256": "850db922c6ee6e1b1e7665bcee0ce40ba1d92fdcecd763584fd3ea98d054a9d3"
+    },
+    {
+      "path": "server/publication.mjs",
+      "sha256": "9e8773fa72070f1344cda0870cc63a11b0ded59d5fb2d4cac0d78ca545e3a525"
+    },
+    {
+      "path": "server/render.mjs",
+      "sha256": "10a3abedf3fe3f6946f568578f64237a071e14fb7f8f238fa067626cab4dc1ee"
+    },
+    {
+      "path": "server/store.mjs",
+      "sha256": "f35495a9a406268238752f4b1181a4009ebab17b31f465d1f056a95723007aec"
+    },
+    {
+      "path": "server/trend-collector.mjs",
+      "sha256": "58ea30fd0ce583983c01448ebdcdc711e103170b04030289883a79e5d75d4720"
+    },
+    {
+      "path": "server/validation.mjs",
+      "sha256": "ef0bf25e33bd16ae43fdf59c1491379e9fb61f05bf6c3e9cd0daf5ec19fe83cc"
+    },
+    {
+      "path": "server/workflows.mjs",
+      "sha256": "b9b14b1b13fd28a883ebd1fb37d2230a0017affb20c5a4a61c6b1bb62c77ae66"
+    },
+    {
+      "path": "server/youtube-oauth.mjs",
+      "sha256": "7fd9c4d4481b964e1db5b06b893720631e93f13c97886450259f5e7b82c538ff"
+    },
+    {
+      "path": "tests/agent-bridge-parser-performance.test.mjs",
+      "sha256": "0f6b28ee643e2b0d51376d89c343feca14c211c56931e8aff2c199954e3e6cfb"
+    },
+    {
+      "path": "tests/api.test.mjs",
+      "sha256": "9fcceecce9ff04113bdb2eeb1b30678dacaa9c25cae9fae39f20005675bce233"
+    },
+    {
+      "path": "tests/blog-automation.test.mjs",
+      "sha256": "4b6e45c682dee4937f080ecd4e3fae5b90b17eaac4d85bb3cff1b85b7f83893a"
+    },
+    {
+      "path": "tests/blog-deployment.test.mjs",
+      "sha256": "636752d949787118bedc44f2577c21d69dabf2a2c9ba0520bbc9ce394251e47c"
+    },
+    {
+      "path": "tests/blog-git-consent.test.mjs",
+      "sha256": "ba8ee99a23610f2e4d68a5c5ff57fc29d878b3cf22a475ab0fbe78bc5f8d5702"
+    },
+    {
+      "path": "tests/blog-git-transport.test.mjs",
+      "sha256": "f510f76b9d06126698f1eedd8d344f01b02a2150ef8700201116fe6160e1093f"
+    },
+    {
+      "path": "tests/blog-references.test.mjs",
+      "sha256": "28918fe1d148a8503be8d2e942e23c8ff8e5741d6b70fac4f274ecfd1fe4b055"
+    },
+    {
+      "path": "tests/blog-schedule.test.mjs",
+      "sha256": "75444f87739f9f109bfa8bc5859dda237a4b05cfe64bac28f3de267db5270805"
+    },
+    {
+      "path": "tests/blog-sources.test.mjs",
+      "sha256": "30a464c973b3577d775d9856e714b5ea1968d9dce14093e44f6a3ca25456d009"
+    },
+    {
+      "path": "tests/blog-workspace.test.mjs",
+      "sha256": "07ce2bb5fa855558a6f57beb509f7ea8c07d68273a65931ce3a2cd5ad12bf224"
+    },
+    {
+      "path": "tests/bridge-speech.test.mjs",
+      "sha256": "a6eeea9912dfc96674f1f61e2549ade3ef1442d6a3f4326669782458e675aa0e"
+    },
+    {
+      "path": "tests/generation-integration.test.mjs",
+      "sha256": "14a7029d0e205eb653cc1f6894fed13d804095a82f0e23cdfc0c581576cccd8c"
+    },
+    {
+      "path": "tests/generations.test.mjs",
+      "sha256": "1901a9a02f1a0f2d5081350af091189b8cc2384b0c9b4b62abf55fefa27c162f"
+    },
+    {
+      "path": "tests/harness-context.test.mjs",
+      "sha256": "8b0b37020a0c284a1a72509b55aba0ffb92a25eea56f6437bfb171ed10fa8201"
+    },
+    {
+      "path": "tests/harness.test.mjs",
+      "sha256": "fe81841dcb92448d8ac4dd4af3736b784d5d6563079d084a1fa5f3d5d0c65a45"
+    },
+    {
+      "path": "tests/hermes-bridge.test.mjs",
+      "sha256": "e70b36adc3f757d8f26388b04e29a159d276ff5817561119aca02207b90b0e04"
+    },
+    {
+      "path": "tests/higgsfield-cli.test.mjs",
+      "sha256": "a2ce55f2c9ea6c8f948475b35468f6ab8693701f9c67d59039d7d4f75a43753d"
+    },
+    {
+      "path": "tests/higgsfield.test.mjs",
+      "sha256": "ee2c77065d9756b6d75c5258f1c1dbe2b983fb0de83687d83cf9311497802fe0"
+    },
+    {
+      "path": "tests/history-diff.test.mjs",
+      "sha256": "98c51767c53676b60bf905e26b0ae697c720a9e56bf713b29f4d5b8dc20a4798"
+    },
+    {
+      "path": "tests/history-restore.test.mjs",
+      "sha256": "f331ec710e1051248c483971b9cad36b55f380cc062fcbc4a55d9ef5d8e3765d"
+    },
+    {
+      "path": "tests/import-snapshot.test.mjs",
+      "sha256": "fb125b0c3c048bd463af1a9d534c7de2f0e030241cf8ff74ddea636f0d49a992"
+    },
+    {
+      "path": "tests/integrations.test.mjs",
+      "sha256": "02e05bc652d64bc76a177454fca1365a471aed514cdbbf7c6d65cea9b37bcdee"
+    },
+    {
+      "path": "tests/layout-pipeline-session.test.mjs",
+      "sha256": "9f50a2b8e4c4c17b7247c6bfd581c922faba96ab3ef8139759e1a0536ef2d864"
+    },
+    {
+      "path": "tests/narration.test.mjs",
+      "sha256": "01ad3524bbf8f565648d707cb1460278a1b5267b7bc157efb5db717595cd9a62"
+    },
+    {
+      "path": "tests/news-query.test.mjs",
+      "sha256": "8c4f72343547c46d9af3e75aadfbe480fb922d5773402858856559fbeae8919d"
+    },
+    {
+      "path": "tests/node-workbench.test.mjs",
+      "sha256": "bd5c22959abd61b6027d967f7da8eee8720a0fcf02393a5e6690ad9c54fa9e6a"
+    },
+    {
+      "path": "tests/ops-workspace.test.mjs",
+      "sha256": "4d32f6c3d0c82f4ca332d46ad91f5d0b46d299bbbf2eceb09490601f159f6a0f"
+    },
+    {
+      "path": "tests/platform-session.test.mjs",
+      "sha256": "ffbd82759482ac0bb054458c7a7a02554b299bff3810c457de34303628e8a3aa"
+    },
+    {
+      "path": "tests/production-branch-regressions.test.mjs",
+      "sha256": "e9d21f4044a94dd2a1cd99c16e94ffd48e39d2688af25dc287b40d79cfd28a8e"
+    },
+    {
+      "path": "tests/production-generation-plan.test.mjs",
+      "sha256": "c1e98865badb211f9a8ebd1a7f0e68db30293414c8fcaaad5bfaec968fa8599b"
+    },
+    {
+      "path": "tests/production-local-guards.test.mjs",
+      "sha256": "c8afc67b74b6fda39bd44268119e0065f95dc1d4cc42a4bc7dec9ced94451cda"
+    },
+    {
+      "path": "tests/production-media-credits.test.mjs",
+      "sha256": "5db54abc18a6a47afbc3a10fdc59f7e52bf15db1c97952b56517975dbdb9d9b8"
+    },
+    {
+      "path": "tests/production-project-store.test.mjs",
+      "sha256": "7f23bcc5c384378851ee83e748a3820bcf24721bcf24737559731ab9f2ec0b55"
+    },
+    {
+      "path": "tests/production-publication.test.mjs",
+      "sha256": "a18d5e864807c9bbc3413d9ee237fd412b6163a4322ae56c37254db6c8f4f8a8"
+    },
+    {
+      "path": "tests/production-source-media.test.mjs",
+      "sha256": "a35b755704dcdbd07b03f525cd6e0f224cb7e7e0c8f0f53fa98f8fdec36f637e"
+    },
+    {
+      "path": "tests/production-workflow-graph.test.mjs",
+      "sha256": "12090d357e7261a5dd3753c31505bf9ee655a8cb8ccae2d7216d499c3b648034"
+    },
+    {
+      "path": "tests/production-workspace-api.test.mjs",
+      "sha256": "2f7ff813868dc6cff4d13e0151768001f2baf597e350bb9744dbc2b23192f813"
+    },
+    {
+      "path": "tests/production-workspace-journey.test.mjs",
+      "sha256": "5d6d9dcc32b73c1105e664c311c78a19a0faa6a2f453de4b4cbcc26cfa384bb2"
+    },
+    {
+      "path": "tests/production-workspace-ui.test.mjs",
+      "sha256": "a187ad622cc832b30ec0ce2e3f73f9bd5ff9506ade990d709ba14e00e0c6556e"
+    },
+    {
+      "path": "tests/project-agent.test.mjs",
+      "sha256": "7a5741ebc21d281098ed861babbbb0fee28d146a8fdc90a117f8191a3a4756d8"
+    },
+    {
+      "path": "tests/project-archive.test.mjs",
+      "sha256": "820543a7d9dcdc3e40cb350903a2ae37f5994fdced243c49af740a9d5aaa6f1b"
+    },
+    {
+      "path": "tests/project-knowledge.test.mjs",
+      "sha256": "0d22bc446fb6af5864f31b50092e633f9050f1585ee5ad18017503d55e627504"
+    },
+    {
+      "path": "tests/render-security.test.mjs",
+      "sha256": "d3991398930eebc98a05e3848f39aa0b2965ae0c5db7d5c84b914f70b6ba8266"
+    },
+    {
+      "path": "tests/render.test.mjs",
+      "sha256": "a77254e7b20b7336207534528acfc0b641c20b1699b682d9ef210c5bcee264b5"
+    },
+    {
+      "path": "tests/reviews.test.mjs",
+      "sha256": "642c0667e8648c7df8f48e2fe866238cf4ec32c6c20fb35aa2c3aa13edf8904b"
+    },
+    {
+      "path": "tests/snapshot-data.test.mjs",
+      "sha256": "003bfaee1c9ddbbafbad551dc71482fade342b34deb2f82bfe52537fc1a8ff20"
+    },
+    {
+      "path": "tests/store-knowledge.test.mjs",
+      "sha256": "3575dfd2e1802750346c4273806f8633b1ff4c6feed6a078125433b65f9e7fc3"
+    },
+    {
+      "path": "tests/trend-collector.test.mjs",
+      "sha256": "d250cc1df6833807145cea3f2dd7ac65b1b4ba2dd352e63b8d070878c8b8d125"
+    },
+    {
+      "path": "tests/trends-api.test.mjs",
+      "sha256": "a5f6d0b1b4db13ec4581eb3b8d71d3596616c62037b61780b234d497703abadf"
+    },
+    {
+      "path": "tests/white-studio-versions.test.mjs",
+      "sha256": "63cd04fb256645ca5786f70cccbe00bd6a51a5efd948f37a535c515e3eaf3d9f"
+    },
+    {
+      "path": "tests/white-studio.test.mjs",
+      "sha256": "4528a0032751d77885711a95b16aa3e8c313b91e3094941961af9cf07fe57887"
+    },
+    {
+      "path": "tests/workflow-activity.test.mjs",
+      "sha256": "9cad8541fa464df3af74504e106e82bfb4fc0f37fe2fc710bbaf4a1aaa0c27ee"
+    },
+    {
+      "path": "tests/workflow-empty-state.test.mjs",
+      "sha256": "5d2b8b55cdc83cb911dc68e38ef6b8b44431251108f47ae1695414fbbf00f8f2"
+    },
+    {
+      "path": "tests/workflow-ui-regressions.test.mjs",
+      "sha256": "c392610c4999de233f4197b6ddbf00a796475215617cbee62c34e75b28ac1dcd"
+    },
+    {
+      "path": "tests/workflows.test.mjs",
+      "sha256": "f176fcdfc985ac1d90c552b7808d9f5593c0318f3cee992102166d361859bd34"
+    },
+    {
+      "path": "tests/workspace-layout.test.mjs",
+      "sha256": "9f1069d1e3e89b8a984798907e2e6dcbb1ded5f8dd77b89da99428ec97a8de0d"
+    }
   ]
 }

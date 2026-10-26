@@ -11,7 +11,10 @@
     "bridge": "node scripts/agent-bridge.mjs",
     "test": "node --test tests/*.test.mjs",
     "check": "node scripts/check.mjs",
-    "test:render": "node scripts/render-smoke.mjs"
+    "test:render": "node scripts/render-smoke.mjs",
+    "knowledge": "node scripts/knowledge.mjs",
+    "agent:project": "node scripts/project-agent.mjs",
+    "benchmark:knowledge": "node scripts/knowledge-benchmark.mjs"
   },
   "dependencies": {
     "playwright": "1.58.2"

@@ -24,11 +24,12 @@ const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const receipt = { schema: 'frameforge-real-journey/v2', command: 'node --test tests/production-workspace-journey.test.mjs', startedAt: new Date().toISOString(), scenarios: [], screenshots: [], network: [], boundary: 'Temporary SQLite, ephemeral loopback HTTP, actual public app; fixture-only external transport. No live consent, credentials, generation or publication.' };
 after(async () => {
   receipt.finishedAt = new Date().toISOString();
-  receipt.counts = { expected: 11, executed: receipt.scenarios.length, passed: receipt.scenarios.filter(s => s.status === 'passed').length, failed: receipt.scenarios.filter(s => s.status === 'failed').length };
+  receipt.counts = { expected: 12, executed: receipt.scenarios.length, passed: receipt.scenarios.filter(s => s.status === 'passed').length, failed: receipt.scenarios.filter(s => s.status === 'failed').length };
   receipt.fullJourney = receipt.counts.executed === receipt.counts.expected;
   receipt.verdict = receipt.counts.failed ? 'FAILED_OR_BLOCKED' : receipt.fullJourney ? 'PASS' : 'FOCUSED_ONLY';
   receipt.sources = await Promise.all(['public/app.js', 'public/workflow.js', 'public/production-tools.js', 'public/styles.css', 'public/workspace.css', 'server/app.mjs', 'server/publication.mjs', 'server/media-sources.mjs', 'tests/production-workspace-journey.test.mjs'].map(async path => ({ path, sha256: hash(await readFile(join(root, path))) })));
   const filename = receipt.fullJourney ? 'journey-receipt.json' : 'journey-focused-receipt.json';
+  await mkdir(join(root, 'artifacts/production-workspace-implementation'), { recursive: true });
   await writeFile(join(root, 'artifacts/production-workspace-implementation', filename), JSON.stringify(receipt, null, 2) + '\n');
 });
 function scenario(name, criteria, run) { test(name, { timeout: 180000 }, async t => { const record = { name, criteria, status: 'running' }; receipt.scenarios.push(record); try { await run(t); record.status = 'passed'; } catch (e) { record.status = 'failed'; record.error = e.message; throw e; } }); }
@@ -62,9 +63,45 @@ async function project(f, name = 'A', template) {
   const workflow = await f.api(`/api/workflows/${template.id}/copies`, 'POST', { channelId: channel.id, episodeId: episode.id, expectedTemplateVersion: template.version });
   return { channel, episode, workflow, template };
 }
-async function selectChannel(page, channelId) { const b = page.locator(`[data-action=channel][data-id="${channelId}"]`), group = b.locator('xpath=ancestor::details[1]'); if (await group.count() && !await group.evaluate(e => e.open)) await group.locator('summary').click(); await b.click(); }
-async function openProject(f, p) { await f.page.reload(); await selectChannel(f.page, p.channel.id); const b = f.page.locator(`[data-action=episode][data-id="${p.episode.id}"]`); if (await b.count()) await b.click(); await f.page.locator('#preview').waitFor(); }
-async function mode(page, view) { await page.locator(`.task-nav [data-view=${view}]`).focus(); await page.keyboard.press('Enter'); await page.locator(view === 'studio' ? '#preview' : '#workflow-canvas').waitFor(); assert.equal(await page.locator('#main').evaluate(e => e === document.activeElement), true, 'mode navigation transfers keyboard focus'); }
+async function closeProjectOverlay(page) {
+  for (const selector of ['#project-scene-dialog', '#project-tool-dialog']) {
+    if (await page.locator(`${selector}[open]`).count()) {
+      await page.keyboard.press('Escape');
+      await page.locator(`${selector}[open]`).waitFor({ state: 'hidden' });
+    }
+  }
+}
+async function selectChannel(page, channelId) {
+  await closeProjectOverlay(page);
+  const b = page.locator(`[data-action=channel][data-id="${channelId}"]`), group = b.locator('xpath=ancestor::details[1]');
+  if (await group.count() && !await group.evaluate(e => e.open)) await group.locator('summary').click();
+  await b.click();
+}
+async function openProject(f, p) {
+  await f.page.reload(); await selectChannel(f.page, p.channel.id);
+  await f.page.locator(`[data-action=episode][data-id="${p.episode.id}"]`).click();
+  await mode(f.page, 'studio');
+}
+async function mode(page, view) {
+  const sceneWasOpen = await page.locator('#project-scene-dialog[open]').count();
+  await closeProjectOverlay(page);
+  assert.equal(await page.locator('.task-nav [data-view=studio], .project-modes').count(), 0, 'single workbench has no A/B split');
+  if (view === 'studio') {
+    await page.locator('[data-action=open-scene-editor]').first().focus(); await page.keyboard.press('Enter');
+    await page.locator('#project-scene-dialog[open] #preview').waitFor();
+    assert.equal(await page.locator('#project-scene-dialog').evaluate(e => e.contains(document.activeElement)), true, 'native scene overlay receives keyboard focus');
+  } else {
+    await page.locator('#workflow-canvas').waitFor();
+    if (sceneWasOpen) assert.equal(await page.locator('[data-action=open-scene-editor]').first().evaluate(e => e === document.activeElement), true, 'native scene close restores its keyboard opener');
+  }
+}
+async function tool(page, key) {
+  await closeProjectOverlay(page);
+  await page.locator('[data-action=project-tools]').click();
+  const names = { source: '소스 · 이용 권리', delivery: '검토 · 공개' };
+  await page.getByRole('menuitem', { name: names[key], exact: true }).click();
+  await page.locator(`#project-tool-dialog[open] [data-production-tools][data-mode=${key}]`).waitFor();
+}
 async function screenshot(page, name, target) {
   const dir = join(root, 'artifacts/production-workspace-implementation/journey-evidence'); await mkdir(dir, { recursive: true });
   for (const width of [1600, 1024, 375, 320]) { await page.setViewportSize({ width, height: width >= 1024 ? 1120 : 844 }); if (target) await target.scrollIntoViewIfNeeded(); const geometry = await page.evaluate(() => ({ client: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth, reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches })); const path = join(dir, `${name}-${width}.png`); const bytes = await page.screenshot({ path, fullPage: true, animations: 'disabled' }); receipt.screenshots.push({ name, width, path: path.slice(root.length + 1).replaceAll('\\', '/'), sha256: hash(bytes), geometry }); assert.equal(geometry.reducedMotion, true); assert.ok(geometry.scroll <= geometry.client, `${name} overflow ${width}: ${JSON.stringify(geometry)}`); }
@@ -80,16 +117,16 @@ scenario('two channels own independent copied graphs, histories and versions wit
   const history = await f.api(`/api/workflows/${a.workflow.id}/history`); assert.ok(history.some(h => h.version === a.workflow.version)); assert.ok(history.some(h => h.version === updated.version));
   const state = await f.api('/api/state'); for (const type of ['jobs', 'generationJobs', 'workflowRuns', 'platformSessions']) assert.equal((state[type] || []).length, 0, `copy/edit created ${type}`);
 });
-scenario('A/B and every stage preserve hidden episode and graph drafts, beforeunload and original stale 409 base', ['PW-01', 'PW-02', 'PW-07'], async t => {
+scenario('native scene and stage overlays preserve hidden episode and graph drafts, beforeunload and original stale 409 base', ['PW-01', 'PW-02', 'PW-07'], async t => {
   const f = await fixture(t), a = await project(f), b = await project(f, 'B', a.template); await openProject(f, a);
   await f.page.locator('[data-scene=title]').fill('Unsaved A scene'); await mode(f.page, 'workflow');
   assert.equal(await f.page.locator('#wf-episode').inputValue(), a.episode.id); assert.equal(await f.page.locator('#wf-select').inputValue(), a.workflow.id);
   await f.page.locator('[data-wf-action=open-workflow-settings]').click(); await f.page.locator('#wf-workflow-name').fill('Unsaved A graph'); await f.page.keyboard.press('Escape');
   for (const node of a.workflow.nodes) { await f.page.locator(`.wf-node-header[data-id="${node.id}"]`).click(); for (const action of ['open-tools', 'open-results', 'open-stage-overlay']) { await f.page.locator(`[data-wf-action=${action}]`).first().click(); await f.page.locator('dialog[open]').waitFor(); assert.ok(await f.page.locator('dialog[open]').evaluate(e => e.contains(document.activeElement)), 'dialog focus'); await f.page.keyboard.press('Escape'); } }
   await screenshot(f.page, 'B'); await mode(f.page, 'studio'); assert.equal(await f.page.locator('[data-scene=title]').inputValue(), 'Unsaved A scene'); await screenshot(f.page, 'A');
-  await selectChannel(f.page, b.channel.id); assert.equal(await f.page.locator('[data-scene=title]').inputValue(), b.episode.scenes[0].title); assert.deepEqual(f.writes, [], 'navigation cannot write');
+  await selectChannel(f.page, b.channel.id); await mode(f.page, 'studio'); assert.equal(await f.page.locator('[data-scene=title]').inputValue(), b.episode.scenes[0].title); assert.deepEqual(f.writes, [], 'navigation cannot write');
   let warning; f.page.once('dialog', async d => { warning = d.type(); await d.dismiss(); }); await f.page.reload({ waitUntil: 'commit' }).catch(() => {}); assert.equal(warning, 'beforeunload', 'hidden dirty A must protect clean active B');
-  await f.api(`/api/episodes/${a.episode.id}`, 'PUT', { ...a.episode, title: 'Concurrent A', expectedVersion: a.episode.version }); await selectChannel(f.page, a.channel.id);
+  await f.api(`/api/episodes/${a.episode.id}`, 'PUT', { ...a.episode, title: 'Concurrent A', expectedVersion: a.episode.version }); await selectChannel(f.page, a.channel.id); await mode(f.page, 'studio');
   const pending = f.page.waitForResponse(r => r.url() === `${f.base}/api/episodes/${a.episode.id}` && r.request().method() === 'PUT'); await f.page.locator('#save-button').click(); const response = await pending;
   assert.equal(response.request().postDataJSON().expectedVersion, a.episode.version); assert.equal(response.status(), 409); assert.equal(await f.page.locator('[data-scene=title]').inputValue(), 'Unsaved A scene'); assert.equal(await f.page.locator('#save-status').getAttribute('class'), 'unsaved');
   await mode(f.page, 'workflow'); await f.page.locator('[data-wf-action=open-workflow-settings]').click(); assert.equal(await f.page.locator('#wf-workflow-name').inputValue(), 'Unsaved A graph');
@@ -111,7 +148,13 @@ scenario('128-node/256-edge owned canvas fits, pans, inspects and saves the last
   const before = await f.page.locator('#wf-world').getAttribute('style'); await f.page.locator('#wf-minimap').focus(); await f.page.keyboard.press('ArrowRight'); assert.notEqual(await f.page.locator('#wf-world').getAttribute('style'), before); assert.deepEqual(f.writes, []); await f.page.locator('[data-wf-action=fit]').click();
   const last = f.page.locator('.wf-node-header[data-id="node-127"]'); await last.focus(); await f.page.keyboard.press('Enter'); await f.page.locator('[data-wf-action=open-tools]').click(); assert.equal(await f.page.locator('dialog[open] [data-wf-field=label]').inputValue(), 'Unique node 127'); assert.equal(await f.page.locator('.wf-node.selected').getAttribute('data-node-id'), 'node-127'); await f.page.keyboard.press('Escape'); await last.focus(); await f.page.keyboard.press('ArrowRight');
   const pending = f.page.waitForResponse(r => r.url() === `${f.base}/api/workflows/${p.workflow.id}` && r.request().method() === 'PUT'); await f.page.locator('[data-wf-action=save]').click(); assert.equal((await pending).status(), 200);
-  const saved = (await f.api('/api/workflows')).find(w => w.id === p.workflow.id); assert.equal(saved.nodes.length, 128); assert.equal(saved.edges.length, 256); assert.equal(saved.nodes.find(n => n.id === 'node-127').x, nodes[127].x + 10); await screenshot(f.page, 'B-large');
+  const saved = (await f.api('/api/workflows')).find(w => w.id === p.workflow.id); assert.equal(saved.nodes.length, 128); assert.equal(saved.edges.length, 256); assert.equal(saved.nodes.find(n => n.id === 'node-127').x, nodes[127].x + 10);
+  await f.page.waitForFunction(({ id, version }) => {
+    const selected = document.querySelector('#wf-select'), status = document.querySelector('#wf-save-status'), save = document.querySelector('[data-wf-action="save"]');
+    const history = document.querySelector(`#wf-history [data-wf-action="history-version"][data-version="${version}"]`);
+    return selected?.value === id && status?.textContent?.trim() === `✓ 버전 ${version} · 저장됨` && save?.disabled === true && history?.isConnected === true && history.querySelector('strong')?.textContent?.trim() === `v${version} · 현재`;
+  }, { id: saved.id, version: saved.version });
+  await screenshot(f.page, 'B-large');
 });
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64');
 function commonsTransport(assets, calls) { return async (raw, options = {}) => { const url = new URL(raw); calls.push(url.href); assert.match(new Headers(options.headers).get('user-agent') || '', /FrameForge-Fixture/); if (url.origin === 'https://commons.wikimedia.org' && url.pathname === '/w/api.php') { const id = Number(url.searchParams.get('pageids')), kind = /video/.test(url.searchParams.get('gsrsearch') || '') ? 'video' : 'image'; return Response.json({ batchcomplete: true, query: { pages: assets.filter(a => id ? a.pageid === id : a.kind === kind).map(a => ({ pageid: a.pageid, ns: 6, title: `File:${a.name}`, imageinfo: [{ url: `https://upload.wikimedia.org/wikipedia/commons/a/ab/${a.name}`, descriptionurl: `https://commons.wikimedia.org/wiki/File:${a.name}`, mime: a.mime, mediatype: a.kind === 'video' ? 'VIDEO' : 'BITMAP', size: a.bytes.length, width: 320, height: 180, sha1: createHash('sha1').update(a.bytes).digest('hex'), timestamp: '2026-01-01T00:00:00Z', extmetadata: { Artist: { value: a.author }, Attribution: { value: a.author }, LicenseShortName: { value: 'CC BY 4.0' }, LicenseUrl: { value: 'https://creativecommons.org/licenses/by/4.0/' }, AttributionRequired: { value: 'true' } } }] })) } }); } const a = assets.find(a => url.href === `https://upload.wikimedia.org/wikipedia/commons/a/ab/${a.name}`); assert.ok(a, `unexpected Commons transport: ${url.href}`); return new Response(a.bytes, { headers: { 'content-type': a.mime } }); }; }
@@ -146,16 +189,19 @@ async function importUi(f, asset, sceneId) {
 scenario('real Commons video/still import, rights, attach and original card retain story without generation', ['PW-03', 'PW-07'], async t => {
   const dir = await mkdtemp(join(tmpdir(), 'frameforge-fixture-video-')); t.after(() => rm(dir, { recursive: true, force: true })); await execute(process.env.FFMPEG_PATH || 'ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=black:s=320x180:r=12', '-t', '1', '-c:v', 'libvpx-vp9', join(dir, 'fixture.webm')]);
   const assets = [{ pageid: 601, name: 'Fixture.webm', mime: 'video/webm', kind: 'video', author: 'Video Fixture Author', bytes: await readFile(join(dir, 'fixture.webm')) }, { pageid: 602, name: 'Fixture.png', mime: 'image/png', kind: 'image', author: 'Still Fixture Author', bytes: PNG }], calls = [];
-  const f = await fixture(t, { mediaOptions: { userAgent: 'FrameForge-Fixture/1.0 (+https://fixture.invalid/contact)', fetchImpl: commonsTransport(assets, calls) } }), p = await project(f); await openProject(f, p); await screenshot(f.page, 'source-initial', f.page.locator('[data-production-tools][data-mode=source]'));
+  const f = await fixture(t, { mediaOptions: { userAgent: 'FrameForge-Fixture/1.0 (+https://fixture.invalid/contact)', fetchImpl: commonsTransport(assets, calls) } }), p = await project(f); await openProject(f, p); await tool(f.page, 'source'); await screenshot(f.page, 'source-initial', f.page.locator('[data-production-tools][data-mode=source]'));
+  await tool(f.page, 'source');
   for (const asset of assets) { await importUi(f, asset, p.episode.scenes[0].id); const current = (await f.api('/api/state')).episodes.find(e => e.id === p.episode.id); assert.equal(current.scenes[0].source.attribution, asset.author); assert.equal(current.scenes[0].source.sha256, hash(asset.bytes)); assert.equal(current.topic, p.episode.topic); }
   await screenshot(f.page, 'source', f.page.locator('[data-production-tools][data-mode=source]'));
-  const before = (await f.api('/api/state')).episodes.find(e => e.id === p.episode.id), count = calls.length; await f.page.locator('[data-pt-action=open-card]').click(); await f.page.locator('#pt-card-form [name=sceneId]').selectOption(p.episode.scenes[0].id); await f.page.locator('#pt-card-form button[type=submit]').click(); await f.page.locator('dialog[open]').waitFor({ state: 'hidden' });
+  await tool(f.page, 'source');
+  const before = (await f.api('/api/state')).episodes.find(e => e.id === p.episode.id), count = calls.length; await f.page.locator('[data-pt-action=open-card]').click(); await f.page.locator('#pt-card-form [name=sceneId]').selectOption(p.episode.scenes[0].id); await f.page.locator('#pt-card-form button[type=submit]').click(); await f.page.locator('dialog[data-pt-dialog][open]').waitFor({ state: 'hidden' });
   const state = await f.api('/api/state'), current = state.episodes.find(e => e.id === p.episode.id); assert.equal(current.scenes[0].kind, 'title'); assert.ok(!current.scenes[0].assetUrl); assert.equal(current.scenes[0].text, before.scenes[0].text); assert.equal(current.topic, before.topic); assert.equal(calls.length, count); assert.equal((state.generationJobs || []).length, 0); const history = JSON.stringify(await f.api(`/api/episodes/${p.episode.id}/history`)); assert.ok(history.includes('Video Fixture Author') && history.includes('Still Fixture Author'));
 });
 scenario('unknown media origin, audience and disclosure are initially unanswered; source and delivery reflow', ['PW-03', 'PW-04', 'PW-07'], async t => {
   const f = await fixture(t), p = await project(f); await openProject(f, p); const delivery = f.page.locator('[data-production-tools][data-mode=delivery]');
+  await tool(f.page, 'delivery');
   for (const name of ['selfDeclaredMadeForKids', 'containsSyntheticMedia']) { const controls = delivery.locator(`[name=${name}]`); assert.ok(await controls.count(), `missing ${name} control`); assert.equal(await controls.first().evaluate(e => e.type === 'radio' ? [...e.form.elements].some(n => n.name === e.name && n.checked) : e.value !== ''), false, `${name} cannot silently default false`); }
-  const r = await f.context.request.post(`${f.base}/api/uploads?name=unknown.png`, { headers: { origin: f.base, 'content-type': 'image/png', 'x-file-name': 'unknown.png' }, data: PNG }); assert.ok(r.ok(), `real upload: ${r.status()} ${await r.text()}`); await f.page.locator('[data-pt-action=reload-uploads]').click(); await f.page.locator('[data-pt-action=open-rights]').last().click(); assert.equal(await f.page.locator('#pt-rights-form [name=origin]:checked').count(), 0, 'unknown origin cannot auto-select own'); await f.page.keyboard.press('Escape'); await screenshot(f.page, 'delivery', delivery); assert.deepEqual(f.writes, []);
+  const r = await f.context.request.post(`${f.base}/api/uploads?name=unknown.png`, { headers: { origin: f.base, 'content-type': 'image/png', 'x-file-name': 'unknown.png' }, data: PNG }); assert.ok(r.ok(), `real upload: ${r.status()} ${await r.text()}`); await tool(f.page, 'source'); await f.page.locator('[data-pt-action=reload-uploads]').click(); await f.page.locator('[data-pt-action=open-rights]').last().click(); assert.equal(await f.page.locator('#pt-rights-form [name=origin]:checked').count(), 0, 'unknown origin cannot auto-select own'); await f.page.keyboard.press('Escape'); await tool(f.page, 'delivery'); await screenshot(f.page, 'delivery', delivery); assert.deepEqual(f.writes, []);
 });
 scenario('real FFmpeg render and exact review precede server manifest preview and fixture Google public readback', ['PW-03', 'PW-04', 'PW-05', 'PW-07'], async t => {
   const google = [], remoteId = 'fixture-video-001', externalId = `UC${'A'.repeat(22)}`; let snippet, status = { privacyStatus: 'private', selfDeclaredMadeForKids: false, containsSyntheticMedia: false }; const sessionUrl = 'https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&upload_id=fixture-private-session';
@@ -168,7 +214,7 @@ scenario('real FFmpeg render and exact review precede server manifest preview an
 
   await f.api(`/api/channels/${p.channel.id}/youtube`, 'PUT', { externalId, expectedUpdatedAt: p.channel.updatedAt }); const auth = await f.api(`/api/channels/${p.channel.id}/youtube/authorize`, 'POST', {}); const state = new URL(auth.authUrl).searchParams.get('state'); const callback = await f.context.request.get(`${f.base}/oauth/youtube/callback?state=${encodeURIComponent(state)}&code=fixture-code`, { maxRedirects: 0 }); assert.ok([302, 303].includes(callback.status()));
   const run = await f.api(`/api/workflows/${p.workflow.id}/run`, 'POST', { episodeId: p.episode.id, expectedEpisodeVersion: p.episode.version, expectedWorkflowVersion: p.workflow.version, selectedStages: ['script', 'storyboard', 'render', 'review'] }); const done = await terminal(f, p.workflow.id, run.id); assert.equal(done.status, 'awaiting_review', done.error); const current = (await f.api('/api/state')).episodes.find(e => e.id === p.episode.id); await f.api(`/api/workflows/${p.workflow.id}/runs/${run.id}/review`, 'POST', { reviewNodeId: 'review', decision: 'approved', notes: 'Fixture exact local render technical review', expectedEpisodeVersion: current.version });
-  await openProject(f, p); await mode(f.page, 'workflow'); await f.page.locator('.wf-node-header[data-id=review]').click(); await mode(f.page, 'studio'); const delivery = f.page.locator('[data-production-tools][data-mode=delivery]'), form = delivery.locator('#pt-approval-form'); await form.locator('[name=title]').fill('Fixture approved title'); await form.locator('[name=description]').fill('Fixture final description'); await form.locator('[name=categoryId]').selectOption('25'); for (const name of ['selfDeclaredMadeForKids', 'containsSyntheticMedia']) { const control = form.locator(`[name=${name}]`).first(); if (await control.evaluate(e => e.tagName === 'SELECT')) await control.selectOption('false'); else await form.locator(`[name=${name}][value=false]`).check(); } await form.locator('[name=disclosureRationale]').fill('Original factual cards, no realistic synthetic evidence'); await form.locator('[name=rightsAcknowledged]').check();
+  await openProject(f, p); await mode(f.page, 'workflow'); await f.page.locator('.wf-node-header[data-id=review]').click(); await tool(f.page, 'delivery'); const delivery = f.page.locator('[data-production-tools][data-mode=delivery]'), form = delivery.locator('#pt-approval-form'); await form.locator('[name=title]').fill('Fixture approved title'); await form.locator('[name=description]').fill('Fixture final description'); await form.locator('[name=categoryId]').selectOption('25'); for (const name of ['selfDeclaredMadeForKids', 'containsSyntheticMedia']) { const control = form.locator(`[name=${name}]`).first(); if (await control.evaluate(e => e.tagName === 'SELECT')) await control.selectOption('false'); else await form.locator(`[name=${name}][value=false]`).check(); } await form.locator('[name=disclosureRationale]').fill('Original factual cards, no realistic synthetic evidence'); await form.locator('[name=rightsAcknowledged]').check();
   const before = google.length, pending = f.page.waitForResponse(r => r.url() === `${f.base}/api/publication/approvals` && r.request().method() === 'POST'); await form.locator('button[type=submit]').click(); const previewResponse = await pending; assert.equal(previewResponse.status(), 201, await previewResponse.text()); const preview = await previewResponse.json(); assert.equal(google.length, before, 'preview cannot contact provider'); const { candidateFingerprint } = await import('../server/graph.mjs'); assert.ok(preview.manifest, 'show complete server manifest'); assert.equal(preview.fingerprint, candidateFingerprint(preview.manifest)); const displayed = await delivery.innerText(); assert.ok(displayed.includes(preview.fingerprint) && displayed.includes('Fixture final description')); assert.ok(preview.manifest.credits.includes('Delivery Fixture Artist'));
   assert.ok(displayed.includes('Delivery Fixture Artist') && displayed.includes('CC-BY-4.0'));
   await screenshot(f.page, 'delivery-preview', delivery);
@@ -361,4 +407,53 @@ scenario('sequential reviewed producers enable the next render in the UI while p
   dialog = f.page.locator('#wf-stage-dialog'); assert.equal(await dialog.locator('#wf-stage-status').getAttribute('data-stage-state'), 'idle'); assert.equal(await dialog.locator('#wf-stage-start').isEnabled(), true);
   assert.equal(f.writes.filter(w => w.path.startsWith('/api/publication/')).length, 0, 'readiness does not publish');
   await screenshot(f.page, 'sequential-readiness', dialog);
+});
+
+scenario('browser-local custom workspace profiles survive graph remount and settings reopen with drafts and fit intact', ['PW-02', 'PW-07'], async t => {
+  const f = await fixture(t), p = await project(f, 'Custom mount composition');
+  await openProject(f, p);
+  await f.page.locator('[data-scene=title]').fill('Scene draft survives custom graph mount');
+  await mode(f.page, 'workflow');
+  await f.page.locator('[data-wf-action=open-workflow-settings]').click();
+  await f.page.locator('#wf-workflow-name').fill('Graph draft survives custom graph mount');
+  await f.page.keyboard.press('Escape');
+  const settingsButton = f.page.locator('[data-workspace-action=settings]');
+  await settingsButton.focus(); await f.page.keyboard.press('Enter');
+  const settings = f.page.locator('#workspace-settings-dialog');
+  assert.equal(await settings.evaluate(element => element.open && element.contains(document.activeElement)), true, 'custom sizing opens as a keyboard-owned native dialog');
+  await f.page.locator('#workspace-width').fill('1173');
+  await f.page.locator('#workspace-height').fill('673');
+  await f.page.locator('#workspace-inspector-width').fill('347');
+  await f.page.locator('#workspace-tools-mode').selectOption('overlay');
+  await f.page.locator('#workspace-profile-name').fill('Mount composition profile');
+  await f.page.locator('#workspace-profile-form button[type=submit]').click();
+  const profileId = await f.page.locator('#workspace-profile-select').inputValue();
+  await settings.locator('[data-workspace-action=close-settings]').click();
+  assert.equal(await settingsButton.evaluate(element => element === document.activeElement), true, 'closing sizing settings restores the actual opener');
+  await selectChannel(f.page, p.channel.id);
+  await f.page.locator('#workflow-canvas').waitFor();
+  await settingsButton.focus(); await f.page.keyboard.press('Enter');
+  assert.equal(await settings.evaluate(element => element.open && element.contains(document.activeElement)), true, 'settings remain keyboard-usable after the owned graph remount');
+  assert.equal(await f.page.locator('#workspace-profile-select').inputValue(), profileId);
+  assert.equal(await f.page.locator('#workspace-profile-select option:checked').innerText(), 'Mount composition profile');
+  for (const [id, value] of [['workspace-width', '1173'], ['workspace-height', '673'], ['workspace-inspector-width', '347'], ['workspace-tools-mode', 'overlay']]) assert.equal(await f.page.locator(`#${id}`).inputValue(), value, `${id} survives graph remount and settings reopen`);
+  await f.page.locator('#workspace-width').fill('842'); await f.page.locator('#workspace-height').focus();
+  await f.page.locator('#workspace-profile-select').selectOption(profileId);
+  await settings.locator('[data-workspace-action=close-settings]').click();
+  assert.ok(Math.abs(await f.page.locator('#workspace-window').evaluate(element => element.getBoundingClientRect().width) - 1173) <= 2, 'restoring the browser profile controls actual workbench geometry, not just settings fields');
+  await f.page.waitForFunction(() => {
+    const canvas = document.querySelector('#workflow-canvas'), bounds = canvas?.getBoundingClientRect();
+    const nodes = [...document.querySelectorAll('#workflow-canvas .wf-node')];
+    return bounds && nodes.length === 4 && nodes.every(node => { const rect = node.getBoundingClientRect(); return rect.left >= bounds.left - 2 && rect.right <= bounds.right + 2 && rect.top >= bounds.top - 2 && rect.bottom <= bounds.bottom + 2; });
+  });
+  assert.equal(await f.page.locator('#wf-save-status').getAttribute('class'), 'unsaved');
+  await f.page.locator('[data-wf-action=open-workflow-settings]').click();
+  assert.equal(await f.page.locator('#wf-workflow-name').inputValue(), 'Graph draft survives custom graph mount');
+  await f.page.keyboard.press('Escape');
+  await mode(f.page, 'studio');
+  assert.equal(await f.page.locator('[data-scene=title]').inputValue(), 'Scene draft survives custom graph mount');
+  assert.equal(await f.page.locator('#save-status').getAttribute('class'), 'unsaved');
+  assert.deepEqual(f.writes, [], 'local profile, native settings, graph remount and draft restoration never save or execute');
+  assert.deepEqual((await f.api('/api/state')).episodes.find(episode => episode.id === p.episode.id), p.episode, 'episode source and original saved version remain intact');
+  assert.deepEqual((await f.api('/api/workflows')).find(workflow => workflow.id === p.workflow.id), p.workflow, 'owned graph source and original saved version remain intact');
 });

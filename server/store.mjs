@@ -115,6 +115,31 @@ export class Store {
     if (!row) throw new HttpError(404, `${kind} item not found`);
     return JSON.parse(row.data);
   }
+
+  assertEpisodeActive(id) {
+    const episode = this.get('episodes', id);
+    if (episode.status === 'archived' || episode.archivedAt) throw new HttpError(409, 'Episode is archived. Unarchive it before editing or production.');
+    return episode;
+  }
+
+  setEpisodeArchived(id, archived, expectedVersion) {
+    if (typeof archived !== 'boolean' || !Number.isSafeInteger(expectedVersion) || expectedVersion < 1) throw new HttpError(400, 'Archive changes require a positive expectedVersion');
+    return this._updateEpisode(id, (previous) => {
+      if ((previous.status === 'archived' || Boolean(previous.archivedAt)) === archived) throw new HttpError(409, archived ? 'Episode is already archived' : 'Episode is not archived');
+      if (archived) {
+        for (const [kind, statuses] of [
+          ['jobs', ['queued', 'running']], ['narrationJobs', ['queued', 'running']],
+          ['workflowRuns', ['queued', 'running']],
+          ['generationJobs', ['queued', 'submitting', 'pending', 'in_progress', 'downloading']],
+          ['publicationIntents', ['queued', 'running', 'processing']],
+        ]) for (const job of this.iterate(kind)) if (job.episodeId === id && statuses.includes(job.status)) throw new HttpError(409, 'Episode has active production work. Wait for it to finish before archiving.');
+      }
+      const next = { ...previous, status: archived ? 'archived' : 'draft' };
+      if (archived) next.archivedAt = now();
+      else delete next.archivedAt;
+      return next;
+    }, expectedVersion, archived ? 'archived' : 'unarchived');
+  }
   listWorkflowRunHistory({ page = 1, limit = 20, query = '' } = {}) {
     const offset = (page - 1) * limit;
     const where = query ? ' AND instr(lower(data), lower(?)) > 0' : '';
@@ -313,12 +338,20 @@ export class Store {
   }
 
   updateEpisode(id, patch, expectedVersion, reason = 'edited') {
+    return this._updateEpisode(id, (previous) => {
+      this.assertEpisodeActive(id);
+      if ('archivedAt' in patch || patch.status === 'archived') throw new HttpError(400, 'Use the versioned archive or unarchive action');
+      return { ...previous, ...patch };
+    }, expectedVersion, reason);
+  }
+
+  _updateEpisode(id, revise, expectedVersion, reason) {
     this.db.exec('BEGIN IMMEDIATE');
     let next;
     try {
       const previous = this.get('episodes', id);
       if (expectedVersion !== undefined && previous.version !== expectedVersion) throw new HttpError(409, `Episode changed: current version is ${previous.version}. Reload before saving.`);
-      next = { ...previous, ...patch, version: previous.version + 1, updatedAt: now() };
+      next = { ...revise(previous), version: previous.version + 1, updatedAt: now() };
       this.save('episodes', next);
       this.snapshot(next, reason);
       this.record('episodes.updated', { entityId: id, version: next.version, reason, ...(reason === 'knowledge edited' ? { actorRole: 'admin' } : {}) });
@@ -341,7 +374,7 @@ export class Store {
     this.db.exec('BEGIN IMMEDIATE');
     let next;
     try {
-      const previous = this.get('episodes', id);
+      const previous = this.assertEpisodeActive(id);
       if (previous.version !== expectedVersion) throw new HttpError(409, `Episode changed: current version is ${previous.version}. Reload before attaching narration.`);
       const existingIds = new Set();
       const existingFilenames = new Set();
@@ -377,6 +410,7 @@ export class Store {
     let next;
     try {
       const job = this.get('generationJobs', id);
+      this.assertEpisodeActive(job.episodeId);
       if (job.status !== 'downloading' || !job.providerRequestId) throw new HttpError(409, 'Generation is not awaiting imported output');
       if (uploads.some((upload) => this.db.prepare('SELECT 1 FROM entities WHERE kind=? AND id=?').get('uploads', upload.id))) throw new HttpError(409, 'Generated upload already exists');
       for (const upload of uploads) this.save('uploads', upload);
@@ -395,6 +429,7 @@ export class Store {
     let next;
     try {
       const job = this.get('generationJobs', id);
+      this.assertEpisodeActive(job.episodeId);
       if (job.status !== 'completed' || JSON.stringify(job.outputs) !== JSON.stringify(expectedOutputs)) throw new HttpError(409, 'Generation output changed during normalization');
       const byOriginal = new Map();
       for (const { original, browser } of replacements) {
@@ -423,7 +458,7 @@ export class Store {
       if (job.status !== 'completed') throw new HttpError(409, 'Generation output is not ready to apply');
       if (job.applied) throw new HttpError(409, 'Generation output has already been applied');
       if (job.sceneId !== sceneId) throw new HttpError(400, 'Generation belongs to a different scene');
-      const previous = this.get('episodes', job.episodeId);
+      const previous = this.assertEpisodeActive(job.episodeId);
       if (previous.version !== expectedVersion) throw new HttpError(409, `Episode changed: current version is ${previous.version}. Reload before applying generation.`);
       const currentScene = previous.scenes.find((scene) => scene.id === sceneId);
       if (!currentScene) throw new HttpError(409, 'The generation target scene no longer exists');
@@ -478,6 +513,7 @@ export class Store {
     let next;
     try {
       const previous = this.get('workflows', id);
+      if (previous.episodeId) this.assertEpisodeActive(previous.episodeId);
       if (expectedVersion !== undefined && previous.version !== expectedVersion) throw new HttpError(409, `Workflow changed: current version is ${previous.version}. Reload before saving.`);
       for (const field of ['episodeId', 'channelId', 'templateId', 'templateVersion']) if (field in patch && patch[field] !== previous[field]) throw new HttpError(400, `${field} is immutable once a workflow is owned by a project`);
       next = { ...previous, ...patch, version: previous.version + 1, updatedAt: now() };
@@ -500,7 +536,7 @@ export class Store {
       const template = this.get('workflows', templateIdValue);
       if (template.version !== expectedTemplateVersion) throw new HttpError(409, `Template changed: current version is ${template.version}. Reload before copying.`);
       const channel = this.get('channels', channelIdValue);
-      const episode = this.get('episodes', episodeIdValue);
+      const episode = this.assertEpisodeActive(episodeIdValue);
       if (episode.channelId !== channel.id) throw new HttpError(400, 'episodeId does not belong to channelId');
       const nodes = template.nodes.map((node) => ({ ...node, config: node.type === 'publish' ? { ...node.config, channelId: channel.id } : { ...node.config } }));
       const edges = template.edges.map((edge) => ({ ...edge }));
@@ -520,7 +556,7 @@ export class Store {
     const reviewNode = run.nodeRuns.find((node) => node.nodeId === reviewNodeId);
     if (!reviewNode || reviewNode.type !== 'review') throw new HttpError(404, 'Unknown workflow review node');
     if (reviewNode.status !== 'awaiting_review') throw new HttpError(409, 'This review node already has a decision or is not ready for review');
-    const episode = this.get('episodes', run.episodeId);
+    const episode = this.assertEpisodeActive(run.episodeId);
     if (expectedEpisodeVersion !== run.episodeVersion || episode.version !== run.episodeVersion) throw new HttpError(409, 'Episode changed since this render. Render the current version before review.');
     const snapshot = run.workflowSnapshot;
     if (!Array.isArray(snapshot?.nodes) || !Array.isArray(snapshot?.edges)) throw new HttpError(409, 'Workflow run has no recorded graph snapshot');
@@ -659,13 +695,18 @@ export class Store {
       if (node.type === 'channel') node.edit = { fields: ['label'], expectedRecord: recordToken(this.get('channels', node.id)) };
       else if (node.type === 'episode') {
         const episode = this.get('episodes', node.id);
+        if (episode.status === 'archived' || episode.archivedAt) {
+          node.editable = false;
+          node.readOnlyReason = 'Archived project; unarchive before editing.';
+          continue;
+        }
         node.edit = { fields: ['label', 'topic', 'channelId'], expectedVersion: episode.version, topic: episode.topic, channelId: episode.channelId };
       } else node.readOnlyReason = node.type === 'topic' ? 'Derived from episode.topic; edit the episode topic instead.' : node.type === 'reference' ? 'Reference updates have no versioned concurrency path.' : 'Derived record; no canonical editable source.';
     }
     const byId = new Map(nodes.map((node) => [node.id, node]));
     for (const edge of edges) {
       const source = byId.get(edge.source), target = byId.get(edge.target);
-      edge.editable = source?.type === 'episode' && edge.relation === 'belongs_to' && ['channel', 'topic'].includes(target?.type);
+      edge.editable = source?.type === 'episode' && source.editable && edge.relation === 'belongs_to' && ['channel', 'topic'].includes(target?.type);
       if (edge.editable) edge.edit = { expectedVersion: source.edit.expectedVersion, field: target.type === 'channel' ? 'channelId' : 'topic' };
       else edge.readOnlyReason = 'Derived relation; no canonical editable source.';
     }

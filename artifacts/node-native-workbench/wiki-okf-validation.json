@@ -1,0 +1,22 @@
+{
+  "schema": "frameforge-strict-legacy-knowledge-validation/v1",
+  "command": "python .mex/verify-knowledge.py",
+  "startedAt": "2026-10-26T14:34:29.471Z",
+  "finishedAt": "2026-10-26T14:34:41.041Z",
+  "exitCode": 1,
+  "ok": false,
+  "wikiPages": 1044,
+  "okfAtoms": 338,
+  "agentContracts": 5,
+  "immutableSources": 1,
+  "errorCount": 6282,
+  "errorCategories": {
+    "unresolved-link": 4594,
+    "missing-OKF-field": 984,
+    "orphan-page": 704
+  },
+  "rawManifestIntegrityFailures": 0,
+  "coreEntityConceptReportFindings": [],
+  "privateFullDiagnosticsRetained": true,
+  "boundary": "Unchanged strict full-vault validation failed. This snapshot validates its one recorded immutable source manifest, not every unrelated raw baseline; zero curated-core findings does not clear6282legacy diagnostics."
+}

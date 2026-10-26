@@ -1,0 +1,733 @@
+{
+  "schema": "frameforge-blog-workflow-verification/v1",
+  "observedAt": "2026-10-25T15:30:54.533Z",
+  "scope": "Implemented and privately deployed multi-account workspace; real routing, model drafting and public publication remain blocked by missing prerequisites",
+  "selectedHarness": {
+    "version": "1.7.1",
+    "bundleSha256": "960f256f33f75dd0de01904bbfefefef3a33932db66867c1a4804b9c461fb174",
+    "command": "node scripts/version-harness.mjs verify",
+    "ok": true,
+    "boundary": "Selected immutable host contract; not a claim that every bundle file is Docker-packaged"
+  },
+  "commands": [
+    {
+      "command": "npm run check",
+      "exitCode": 0,
+      "modules": 109
+    },
+    {
+      "command": "node --test tests/blog-workspace.test.mjs tests/blog-deployment.test.mjs tests/blog-sources.test.mjs tests/blog-automation.test.mjs tests/blog-schedule.test.mjs tests/blog-git-consent.test.mjs tests/blog-git-transport.test.mjs tests/blog-references.test.mjs",
+      "exitCode": 0,
+      "tests": 119,
+      "passed": 119,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "command": "node scripts/blog-workspace-browser-smoke.mjs",
+      "exitCode": 0,
+      "checks": 85,
+      "evidence": "browser-smoke.json",
+      "scope": "Synthetic isolated temporary DATA_DIR; no real account, model, Git or publication effects"
+    },
+    {
+      "command": "node --test --test-name-pattern=\"^regression:\" tests/blog-automation.test.mjs tests/blog-git-transport.test.mjs",
+      "beforeFix": {
+        "exitCode": 1,
+        "tests": 9,
+        "passedControls": 3,
+        "failed": 6
+      },
+      "afterFix": {
+        "exitCode": 0,
+        "tests": 9,
+        "passed": 9,
+        "failed": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "command": "docker run --rm --network none --read-only --tmpfs /tmp:rw,noexec,nosuid,size=64m --mount type=bind,source=<checkout>/tests,target=/app/tests,readonly --entrypoint node sha256:4d9456675edf179bedd9f1c80e31525b007b5503d607f4e4b1bdf870925930df --test --test-name-pattern=\"^regression:\" tests/blog-automation.test.mjs tests/blog-git-transport.test.mjs",
+      "exitCode": 0,
+      "tests": 9,
+      "passed": 9,
+      "skipped": 0,
+      "boundary": "The run used the candidate tag, subsequently verified to equal this immutable image ID; no production volume or network was mounted"
+    },
+    {
+      "command": "powershell.exe -NoProfile -File scripts/start-docker.ps1",
+      "exitCode": 0,
+      "healthy": true
+    }
+  ],
+  "review": {
+    "presetSpecialist": {
+      "status": "unavailable",
+      "reason": "Provider model quota exhausted; no result was counted as a pass"
+    },
+    "activeHostDefaultModel": {
+      "roles": [
+        "typescript-reviewer",
+        "security-reviewer"
+      ],
+      "findings": [
+        "Process-global latest routing receipt invalidated other account operations",
+        "Whitespace-collapsed public HTML could falsely match an altered approved body",
+        "Writer category number could come from canonical rather than effective selected menu"
+      ],
+      "regressionFailuresReproduced": 6,
+      "corrected": true,
+      "scopedCorrectionReview": "No blocking findings",
+      "boundary": "Independent static review; live providers/publication were not exercised"
+    }
+  },
+  "deployment": {
+    "image": "sha256:4d9456675edf179bedd9f1c80e31525b007b5503d607f4e4b1bdf870925930df",
+    "path": "/blog.html",
+    "originScope": "Existing configured private Tailscale HTTPS origin; authenticated studio access required",
+    "healthy": true,
+    "sourceHashes": {
+      "server/app.mjs": "2557b4a19181820b71536846d19b6f1ebfcb2a56bc1d6d06051c44449c31bae7",
+      "server/workflows.mjs": "b9b14b1b13fd28a883ebd1fb37d2230a0017affb20c5a4a61c6b1bb62c77ae66",
+      "server/blog.mjs": "18c874db40b2e1ebc0f5eca152038fe2b5a1a45ae15cd9611058490ae80940ae",
+      "server/blog-automation.mjs": "3e4790d32f80ba5e373f16caa7c7721a21cc09486d64a3a87065ff34324a2a5b",
+      "server/blog-sources.mjs": "107ca8728f5eb79609af43a4cd86c0c77eece2cf8ebbe2607a6b9aecdbc057f6",
+      "server/blog-references.mjs": "79b276091518325ac4097612c457c9a48765f40265c91ebbabc4bbf16ea4c6e8",
+      "public/app.js": "13e315359e409dff274a70f72ab1ce7009e5b01c144a158d280ff882a4fe8177",
+      "public/blog.html": "62bcd42058c9ba165d985ad07f25e9e9b22445e712842e25f1553185ecbf621b",
+      "public/blog.js": "e3420acf4e9a475ded94384e2e51253f7ff69a30f09cee4b7ad2a92dce99f179",
+      "public/blog.css": "7a8d95f1b61d7f7dd4fd6134f9a113abd073f64e8b433300df8c338d8a239baf",
+      "scripts/agent-bridge.mjs": "fea2edfbce6912e12051fd68d3555dd2243b53d7656f097c795bc281107a28b4",
+      "scripts/blog-workflow.mjs": "5a821093631e29b790008c1605be35d5b23392d1d77ab7ddd446be7926705114"
+    },
+    "sourceHashMatches": 12,
+    "privateHttpsBrowser": {
+      "authHttpStatus": 200,
+      "accountTabs": 5,
+      "secureHttpOnlyStrictSessionCookie": true,
+      "horizontalOverflow": false,
+      "storedReferenceVisibleBeforeDraft": true
+    },
+    "preservation": {
+      "integrity": "ok",
+      "initialRolloutEntitiesPreserved": 390,
+      "correctionRolloutEntitiesPreserved": 441,
+      "tables": {
+        "entities": {
+          "before": 441,
+          "after": 441,
+          "missingOrChanged": 0
+        },
+        "history": {
+          "before": 46,
+          "after": 46,
+          "missingOrChanged": 0
+        },
+        "settings": {
+          "before": 2,
+          "after": 2,
+          "missingOrChanged": 0
+        },
+        "workflow_history": {
+          "before": 21,
+          "after": 21,
+          "missingOrChanged": 0
+        },
+        "workflow_node_reviews": {
+          "before": 0,
+          "after": 0,
+          "missingOrChanged": 0
+        },
+        "workflow_reviews": {
+          "before": 6,
+          "after": 6,
+          "missingOrChanged": 0
+        }
+      },
+      "media": {
+        "mediaCount": 29,
+        "matched": 29
+      },
+      "boundary": "Compared immediately after rollout, before the subsequent intentional identity-check updates to blog run/account connection history"
+    },
+    "privateSnapshot": {
+      "directoryScope": "Checkout-private data/blog-release-snapshots; raw databases/media were not copied into this artifact",
+      "createdAt": "2026-10-25T15:13:48.479Z",
+      "integrity": "ok",
+      "mediaCount": 29
+    },
+    "disposableStagingRemoved": true
+  },
+  "actualIdentityChecks": {
+    "scope": "Existing account-bound sessions via inspected MyInfo script; not password/MFA automation or fresh credential login",
+    "checks": [
+      {
+        "accountId": "naver-banggujin",
+        "status": "verified",
+        "evidence": {
+          "targetAccountId": "banggujin",
+          "identityVerified": true,
+          "actingTabRestored": true,
+          "observedAt": "2026-10-25T15:17:48.371Z"
+        }
+      },
+      {
+        "accountId": "naver-jelly_ggumi",
+        "status": "verified",
+        "evidence": {
+          "targetAccountId": "jelly_ggumi",
+          "identityVerified": true,
+          "actingTabRestored": true,
+          "observedAt": "2026-10-25T15:17:59.049Z"
+        }
+      },
+      {
+        "accountId": "naver-jennie_p",
+        "status": "verified",
+        "evidence": {
+          "targetAccountId": "jennie_p",
+          "identityVerified": true,
+          "actingTabRestored": true,
+          "observedAt": "2026-10-25T15:18:10.411Z"
+        }
+      }
+    ]
+  },
+  "actualPublicReferences": [
+    {
+      "accountId": "naver-jennie_p",
+      "status": "analyzed",
+      "current": true,
+      "category": "우당탕탕 육아일기",
+      "observedAt": "2026-10-25T14:46:55.501Z",
+      "metricEvidence": {
+        "kind": "neighbors",
+        "count": 178000,
+        "audienceOwnerId": "dbwlsl0307",
+        "url": "https://in.naver.com/dbwlsl0307",
+        "observedAt": "2026-10-25T14:46:55.501Z",
+        "excerpt": "이웃 17.8만+",
+        "sha256": "5a32b3fd9c95c273a59885043de9f26110491d23ad77b2dbfa643039f1d29d6b",
+        "precision": "displayed-lower-bound"
+      },
+      "fingerprint": "940871819eb31d926792790b3e393ed381a51793d42e2fd1378183f13ac20fdf",
+      "contextFingerprint": "d568d4933a129f2a855c62424857acea442b8f8d569ee07d7676cebfd8e6353b",
+      "analysisKinds": [
+        "layout",
+        "images",
+        "formatting",
+        "adaptation"
+      ],
+      "articles": [
+        {
+          "url": "https://m.blog.naver.com/dbwlsl0307/224446981473",
+          "sourceUrl": "https://m.blog.naver.com/dbwlsl0307/224446981473",
+          "sha256": "41098e4feb5c7b7914fb1bbd6848ffd153f04c9b3932fd520e6ca80ac0b9e865",
+          "observedAt": "2026-10-25T14:46:55.501Z",
+          "authorId": "dbwlsl0307",
+          "measurements": {
+            "headings": {
+              "count": 0,
+              "levels": [],
+              "omittedLevels": 0,
+              "titleCharacters": null
+            },
+            "paragraphs": {
+              "count": 22,
+              "minCharacters": 2,
+              "medianCharacters": 13,
+              "maxCharacters": 21,
+              "meanCharacters": 12,
+              "blankParagraphs": 9,
+              "explicitLineBreaks": 0
+            },
+            "images": {
+              "count": 13,
+              "positions": [
+                {
+                  "index": 1,
+                  "blockIndex": 0,
+                  "paragraphsBefore": 0,
+                  "relativePosition": 0,
+                  "width": 400,
+                  "height": 500,
+                  "aspectRatio": 0.8,
+                  "captionPresent": false
+                },
+                {
+                  "index": 2,
+                  "blockIndex": 1,
+                  "paragraphsBefore": 0,
+                  "relativePosition": 0.023,
+                  "width": 400,
+                  "height": 499,
+                  "aspectRatio": 0.802,
+                  "captionPresent": false
+                },
+                {
+                  "index": 3,
+                  "blockIndex": 2,
+                  "paragraphsBefore": 0,
+                  "relativePosition": 0.047,
+                  "width": 400,
+                  "height": 499,
+                  "aspectRatio": 0.802,
+                  "captionPresent": false
+                },
+                {
+                  "index": 4,
+                  "blockIndex": 3,
+                  "paragraphsBefore": 0,
+                  "relativePosition": 0.07,
+                  "width": 400,
+                  "height": 499,
+                  "aspectRatio": 0.802,
+                  "captionPresent": false
+                },
+                {
+                  "index": 5,
+                  "blockIndex": 4,
+                  "paragraphsBefore": 0,
+                  "relativePosition": 0.093,
+                  "width": 400,
+                  "height": 499,
+                  "aspectRatio": 0.802,
+                  "captionPresent": false
+                },
+                {
+                  "index": 6,
+                  "blockIndex": 5,
+                  "paragraphsBefore": 0,
+                  "relativePosition": 0.116,
+                  "width": 400,
+                  "height": 499,
+                  "aspectRatio": 0.802,
+                  "captionPresent": false
+                },
+                {
+                  "index": 7,
+                  "blockIndex": 6,
+                  "paragraphsBefore": 0,
+                  "relativePosition": 0.14,
+                  "width": 400,
+                  "height": 499,
+                  "aspectRatio": 0.802,
+                  "captionPresent": false
+                },
+                {
+                  "index": 8,
+                  "blockIndex": 7,
+                  "paragraphsBefore": 0,
+                  "relativePosition": 0.163,
+                  "width": 400,
+                  "height": 499,
+                  "aspectRatio": 0.802,
+                  "captionPresent": false
+                },
+                {
+                  "index": 9,
+                  "blockIndex": 8,
+                  "paragraphsBefore": 0,
+                  "relativePosition": 0.186,
+                  "width": 400,
+                  "height": 499,
+                  "aspectRatio": 0.802,
+                  "captionPresent": false
+                },
+                {
+                  "index": 10,
+                  "blockIndex": 9,
+                  "paragraphsBefore": 0,
+                  "relativePosition": 0.209,
+                  "width": 400,
+                  "height": 499,
+                  "aspectRatio": 0.802,
+                  "captionPresent": false
+                },
+                {
+                  "index": 11,
+                  "blockIndex": 10,
+                  "paragraphsBefore": 0,
+                  "relativePosition": 0.233,
+                  "width": 400,
+                  "height": 499,
+                  "aspectRatio": 0.802,
+                  "captionPresent": false
+                },
+                {
+                  "index": 12,
+                  "blockIndex": 11,
+                  "paragraphsBefore": 0,
+                  "relativePosition": 0.256,
+                  "width": 400,
+                  "height": 499,
+                  "aspectRatio": 0.802,
+                  "captionPresent": false
+                },
+                {
+                  "index": 13,
+                  "blockIndex": 18,
+                  "paragraphsBefore": 4,
+                  "relativePosition": 0.419,
+                  "width": 400,
+                  "height": 548,
+                  "aspectRatio": 0.73,
+                  "captionPresent": false
+                }
+              ],
+              "dimensionsObserved": 13,
+              "omittedPositions": 0
+            },
+            "formatting": {
+              "boldRuns": 0,
+              "lists": 0,
+              "quotes": 0,
+              "inlineTextAlign": [],
+              "inlineLineHeight": [],
+              "inlineMarginBottom": [],
+              "externalCss": "not-fetched; computed spacing/font sizes are unverified"
+            },
+            "flow": {
+              "introParagraphsBeforeFirstSection": null,
+              "bodySectionHeadings": 0,
+              "finalParagraphCharacters": 8,
+              "closingLabelObserved": false,
+              "semanticIntent": "Positions and lengths observed; intro/closing rhetorical intent is not inferred when not labelled."
+            }
+          }
+        }
+      ]
+    },
+    {
+      "accountId": "naver-jelly_ggumi",
+      "status": "analyzed",
+      "current": true,
+      "category": "육아지식",
+      "observedAt": "2026-10-25T14:46:54.506Z",
+      "metricEvidence": {
+        "kind": "neighbors",
+        "count": 178000,
+        "audienceOwnerId": "dbwlsl0307",
+        "url": "https://in.naver.com/dbwlsl0307",
+        "observedAt": "2026-10-25T14:46:54.506Z",
+        "excerpt": "이웃 17.8만+",
+        "sha256": "ba2b0597a7b1293f16f172fef926072f265c57fb0e7a177469a8e83e4e483338",
+        "precision": "displayed-lower-bound"
+      },
+      "fingerprint": "0c5b494221c0192329be52638db119e16da1e5da326f3cbfbf24e9e62c82658a",
+      "contextFingerprint": "e858f66b524ab8ac9b5ae834aad744798bf0a76669f41a11336beeb6095b06c5",
+      "analysisKinds": [
+        "layout",
+        "images",
+        "formatting",
+        "adaptation"
+      ],
+      "articles": [
+        {
+          "url": "https://m.blog.naver.com/dbwlsl0307/224446981473",
+          "sourceUrl": "https://m.blog.naver.com/dbwlsl0307/224446981473",
+          "sha256": "8e88e3b362b2e9e58aa2a25eeccb83dc1eea99ec5c23896106ab998798a97f1a",
+          "observedAt": "2026-10-25T14:46:54.506Z",
+          "authorId": "dbwlsl0307",
+          "measurements": {
+            "headings": {
+              "count": 0,
+              "levels": [],
+              "omittedLevels": 0,
+              "titleCharacters": null
+            },
+            "paragraphs": {
+              "count": 22,
+              "minCharacters": 2,
+              "medianCharacters": 13,
+              "maxCharacters": 21,
+              "meanCharacters": 12,
+              "blankParagraphs": 9,
+              "explicitLineBreaks": 0
+            },
+            "images": {
+              "count": 13,
+              "positions": [
+                {
+                  "index": 1,
+                  "blockIndex": 0,
+                  "paragraphsBefore": 0,
+                  "relativePosition": 0,
+                  "width": 400,
+                  "height": 500,
+                  "aspectRatio": 0.8,
+                  "captionPresent": false
+                },
+                {
+                  "index": 2,
+                  "blockIndex": 1,
+                  "paragraphsBefore": 0,
+                  "relativePosition": 0.023,
+                  "width": 400,
+                  "height": 499,
+                  "aspectRatio": 0.802,
+                  "captionPresent": false
+                },
+                {
+                  "index": 3,
+                  "blockIndex": 2,
+                  "paragraphsBefore": 0,
+                  "relativePosition": 0.047,
+                  "width": 400,
+                  "height": 499,
+                  "aspectRatio": 0.802,
+                  "captionPresent": false
+                },
+                {
+                  "index": 4,
+                  "blockIndex": 3,
+                  "paragraphsBefore": 0,
+                  "relativePosition": 0.07,
+                  "width": 400,
+                  "height": 499,
+                  "aspectRatio": 0.802,
+                  "captionPresent": false
+                },
+                {
+                  "index": 5,
+                  "blockIndex": 4,
+                  "paragraphsBefore": 0,
+                  "relativePosition": 0.093,
+                  "width": 400,
+                  "height": 499,
+                  "aspectRatio": 0.802,
+                  "captionPresent": false
+                },
+                {
+                  "index": 6,
+                  "blockIndex": 5,
+                  "paragraphsBefore": 0,
+                  "relativePosition": 0.116,
+                  "width": 400,
+                  "height": 499,
+                  "aspectRatio": 0.802,
+                  "captionPresent": false
+                },
+                {
+                  "index": 7,
+                  "blockIndex": 6,
+                  "paragraphsBefore": 0,
+                  "relativePosition": 0.14,
+                  "width": 400,
+                  "height": 499,
+                  "aspectRatio": 0.802,
+                  "captionPresent": false
+                },
+                {
+                  "index": 8,
+                  "blockIndex": 7,
+                  "paragraphsBefore": 0,
+                  "relativePosition": 0.163,
+                  "width": 400,
+                  "height": 499,
+                  "aspectRatio": 0.802,
+                  "captionPresent": false
+                },
+                {
+                  "index": 9,
+                  "blockIndex": 8,
+                  "paragraphsBefore": 0,
+                  "relativePosition": 0.186,
+                  "width": 400,
+                  "height": 499,
+                  "aspectRatio": 0.802,
+                  "captionPresent": false
+                },
+                {
+                  "index": 10,
+                  "blockIndex": 9,
+                  "paragraphsBefore": 0,
+                  "relativePosition": 0.209,
+                  "width": 400,
+                  "height": 499,
+                  "aspectRatio": 0.802,
+                  "captionPresent": false
+                },
+                {
+                  "index": 11,
+                  "blockIndex": 10,
+                  "paragraphsBefore": 0,
+                  "relativePosition": 0.233,
+                  "width": 400,
+                  "height": 499,
+                  "aspectRatio": 0.802,
+                  "captionPresent": false
+                },
+                {
+                  "index": 12,
+                  "blockIndex": 11,
+                  "paragraphsBefore": 0,
+                  "relativePosition": 0.256,
+                  "width": 400,
+                  "height": 499,
+                  "aspectRatio": 0.802,
+                  "captionPresent": false
+                },
+                {
+                  "index": 13,
+                  "blockIndex": 18,
+                  "paragraphsBefore": 4,
+                  "relativePosition": 0.419,
+                  "width": 400,
+                  "height": 548,
+                  "aspectRatio": 0.73,
+                  "captionPresent": false
+                }
+              ],
+              "dimensionsObserved": 13,
+              "omittedPositions": 0
+            },
+            "formatting": {
+              "boldRuns": 0,
+              "lists": 0,
+              "quotes": 0,
+              "inlineTextAlign": [],
+              "inlineLineHeight": [],
+              "inlineMarginBottom": [],
+              "externalCss": "not-fetched; computed spacing/font sizes are unverified"
+            },
+            "flow": {
+              "introParagraphsBeforeFirstSection": null,
+              "bodySectionHeadings": 0,
+              "finalParagraphCharacters": 8,
+              "closingLabelObserved": false,
+              "semanticIntent": "Positions and lengths observed; intro/closing rhetorical intent is not inferred when not labelled."
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "actualResearch": {
+    "scope": "Real RSS collection in disposable staging, not production editorial approval or full-text fact checking",
+    "query": "육아",
+    "articles": 8,
+    "evidenceUrls": 8,
+    "source": "Google News RSS"
+  },
+  "actualEffects": {
+    "modelAuthoredDrafts": 0,
+    "publicBlogPosts": 0,
+    "gitCommits": 0,
+    "gitPushes": 0,
+    "paidGenerationRequests": 0,
+    "enabledSchedules": 0,
+    "osRoutinesActivated": 0
+  },
+  "unmetPrerequisites": [
+    "Current jeopi Jev API profile is disabled and lacks its own configured key; no alternate profile/backend was used",
+    "Naver/Tistory have no complete inspected common approved publisher/readback transport",
+    "Tistory requires its own confirmed canonical persona/menu/drafting policy",
+    "GitHub requires the real configured checkout, approved editorial/media package, current authenticated permission and separate exact plan-bound Git consent",
+    "Antigravity installation/contract and actual review execution remain unobserved"
+  ],
+  "knowledge": {
+    "runbook": "docs/blog-workflow.md",
+    "mexContext": [
+      ".mex/ROUTER.md",
+      ".mex/context/architecture.md"
+    ],
+    "canonicalLatestPointers": "Three existing external LATEST.md files separate current source from preserved historical text; their changes are local-only",
+    "graphReceipts": [
+      ".mex/verification.json",
+      ".graphify/verification.json"
+    ],
+    "boundary": "Structural graphs do not prove provider or publication behavior; no claim that historical full-vault wiki diagnostics were repaired",
+    "mexGraph": {
+      "command": "mex graph refresh --json",
+      "exitCode": 0,
+      "status": "fresh",
+      "observedAt": "2026-10-25T15:23:38.045Z",
+      "supportedFilesParsed": 119,
+      "failedPaths": 0,
+      "sourceChanges": 0,
+      "diagnostics": []
+    },
+    "graphify": {
+      "command": "python .graphify/refresh.py",
+      "exitCode": 0,
+      "nodes": 4333,
+      "edges": 9640,
+      "sourceFiles": 621,
+      "mode": "Native deterministic extraction; no semantic enrichment or provider call"
+    },
+    "mexCheck": {
+      "command": "mex check --json",
+      "exitCode": 1,
+      "score": 77,
+      "filesChecked": 16,
+      "observedAt": "2026-10-25T15:26:50.721Z",
+      "issues": [
+        {
+          "code": "BROKEN_LINK",
+          "severity": "error",
+          "file": ".mex/context/architecture.md",
+          "line": 62,
+          "target": "../../artifacts/node-native-workbench/verification.json"
+        },
+        {
+          "code": "BROKEN_LINK",
+          "severity": "warning",
+          "file": ".mex/patterns/workspace-ui-verification.md",
+          "line": 25,
+          "target": "../../artifacts/node-native-workbench/verification.json"
+        },
+        {
+          "code": "BROKEN_LINK",
+          "severity": "error",
+          "file": ".mex/ROUTER.md",
+          "line": 38,
+          "target": "../artifacts/node-native-workbench/verification.json"
+        }
+      ],
+      "boundary": "The referenced separate node-workbench receipt is marked parent-owned/pending. This task did not fabricate its evidence, remove its links, or count the failed scaffold check as passed."
+    }
+  },
+  "screenshots": [
+    {
+      "file": "blog-1440.png",
+      "bytes": 559520,
+      "sha256": "4762666ebec122c37590da2bb719ee6d74af5f0b0bd4d99b866f6549febb897f"
+    },
+    {
+      "file": "blog-375.png",
+      "bytes": 529830,
+      "sha256": "6d061f64720f96e327c721d4fe083d4d432b89b6b1262b9f89655423e688cde5"
+    },
+    {
+      "file": "blog-320.png",
+      "bytes": 534510,
+      "sha256": "11398f3fe0c63abf937ff242dda6f07f2a3ae41349b02e7bece9b4322d5c4a94"
+    }
+  ],
+  "sharingBoundary": "Working-tree-only source/docs/knowledge edits; no commit/push or external publication was performed",
+  "selfEvaluation": {
+    "scores": {
+      "accuracy": 5,
+      "completeness": 3,
+      "clarity": 4,
+      "actionability": 3,
+      "conciseness": 4,
+      "average": 3.8
+    },
+    "evidence": "Independent agent-evaluator read the receipt/runbook. It credits the deployed workspace, safe gates, real identity/reference checks and exact tests while finding the full live automation objective incomplete.",
+    "remainingOwnerPrerequisites": [
+      "Current jeopi Jev API profile is disabled and lacks its own configured key; no alternate profile/backend was used",
+      "Naver/Tistory have no complete inspected common approved publisher/readback transport",
+      "Tistory requires its own confirmed canonical persona/menu/drafting policy",
+      "GitHub requires the real configured checkout, approved editorial/media package, current authenticated permission and separate exact plan-bound Git consent",
+      "Antigravity installation/contract and actual review execution remain unobserved"
+    ],
+    "improvements": [
+      "Lead user handoff with the already-observed private HTTPS workspace URL",
+      "Separate usable source/reference/manual-draft work from blocked automated drafting and publication",
+      "Retain explicit owner-specific credentials/policy/package/consent gates; do not substitute providers or activate schedules"
+    ],
+    "selfCheck": "The user should agree only with a deployed-workspace claim, not a completed autonomous-writing/publication claim."
+  }
+}

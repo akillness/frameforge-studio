@@ -144,7 +144,7 @@ export class PublicationService {
     const workflow = this.store.get('workflows', body.workflowId);
     const run = this.store.get('workflowRuns', body.runId);
     if (run.workflowId !== workflow.id) throw new HttpError(404, 'Workflow run not found');
-    const episode = this.store.get('episodes', run.episodeId);
+    const episode = this.store.assertEpisodeActive(run.episodeId);
     const channel = this.store.get('channels', episode.channelId);
     if (workflow.episodeId !== episode.id || workflow.channelId !== channel.id) conflict('Publication requires the exact project-owned workflow');
     if (!CHANNEL_ID.test(channel.externalId || '') || String(channel.platform).toLowerCase() !== 'youtube') conflict('An explicitly bound YouTube channel is required');
@@ -254,6 +254,7 @@ export class PublicationService {
     this._open();
     const approval = this.store.get(APPROVALS, approvalId);
     this._owner(approval, ownerId);
+    this.store.assertEpisodeActive(approval.episodeId);
     if (this._intent(approvalId)) conflict('Publication already has an intent; resume that intent');
     const manifest = await this._revalidate(approval);
     this._open();
@@ -278,6 +279,7 @@ export class PublicationService {
     this._open();
     const intent = this.store.get(INTENTS, intentId);
     this._owner(intent, ownerId);
+    this.store.assertEpisodeActive(intent.episodeId);
     if (intent.status === 'completed' || this.jobs.has(intentId)) return intent;
     if (intent.retryAt && Date.parse(intent.retryAt) > Date.now()) conflict('The provider retry interval has not elapsed');
     const approval = this.store.get(APPROVALS, intent.approvalId);
@@ -334,13 +336,15 @@ export class PublicationService {
     this.polls.set(intentId, timer);
   }
 
-  async _fetch(url, options, channelId, beforeSend) {
+  async _fetch(url, options, channelId, beforeSend, episodeId) {
     this._open();
+    if (episodeId) this.store.assertEpisodeActive(episodeId);
     const target = trustedUrl(url);
     if (!this.oauth || typeof this.oauth.accessToken !== 'function') throw new HttpError(503, 'Channel OAuth is not configured');
     const token = await this.oauth.accessToken(channelId);
     const manifest = beforeSend ? await beforeSend() : null;
     this._open();
+    if (episodeId) this.store.assertEpisodeActive(episodeId);
     // This check runs in the dispatch turn, after OAuth and all validation promises.
     if (manifest) this._assertCurrent(manifest);
     // Keep the abort signal alive through response-body reads as well as response headers.
@@ -396,7 +400,7 @@ export class PublicationService {
       const response = await this._fetch(INSERT, {
         method: 'POST', headers: { 'Content-Type': 'application/json; charset=UTF-8', 'X-Upload-Content-Length': String(manifest.render.size), 'X-Upload-Content-Type': 'video/mp4' },
         body: JSON.stringify({ snippet: this._snippet(manifest), status: this._status(manifest, 'private') }),
-      }, manifest.channelId, () => this._revalidate(approval));
+      }, manifest.channelId, () => this._revalidate(approval), approval.episodeId);
       if (response.status !== 200) { this._failure(intentId, response, 'initiating'); return null; }
       const sessionUrl = trustedUrl(response.headers.get('location'), true);
       saved = { sessionUrl, total: manifest.render.size };
@@ -412,7 +416,7 @@ export class PublicationService {
     let offset = 0;
     if (!fresh) {
       this._save(intentId, { status: 'running', phase: 'reconciling_upload', privacyStatus: 'unknown' });
-      const response = await this._fetch(session, { method: 'PUT', headers: { 'Content-Length': '0', 'Content-Range': `bytes */${saved.total}` } }, manifest.channelId);
+      const response = await this._fetch(session, { method: 'PUT', headers: { 'Content-Length': '0', 'Content-Range': `bytes */${saved.total}` } }, manifest.channelId, undefined, approval.episodeId);
       if ([200, 201].includes(response.status)) return this._videoId(intentId, response);
       if (response.status !== 308) { this._failure(intentId, response, 'reconciling_upload'); return null; }
       offset = this._offset(response, saved.total);
@@ -430,7 +434,7 @@ export class PublicationService {
       this._save(intentId, { phase: 'transferring', status: 'running' });
       const response = await this._fetch(session, {
         method: 'PUT', headers: { 'Content-Type': 'video/mp4', 'Content-Length': String(end - offset), 'Content-Range': `bytes ${offset}-${end - 1}/${bytes.length}` }, body: bytes.subarray(offset, end),
-      }, manifest.channelId, () => this._revalidate(approval));
+      }, manifest.channelId, () => this._revalidate(approval), approval.episodeId);
       if ([200, 201].includes(response.status)) {
         const id = await this._videoId(intentId, response);
         if (end !== bytes.length) {
@@ -465,7 +469,7 @@ export class PublicationService {
 
   async _readback(intentId, approval) {
     const intent = this.store.get(INTENTS, intentId);
-    const response = await this._fetch(`${VIDEOS}?part=snippet,status,processingDetails&id=${encodeURIComponent(intent.videoId)}`, { method: 'GET' }, approval.channelId);
+    const response = await this._fetch(`${VIDEOS}?part=snippet,status,processingDetails&id=${encodeURIComponent(intent.videoId)}`, { method: 'GET' }, approval.channelId, undefined, approval.episodeId);
     if (!response.ok) { this._failure(intentId, response, intent.phase); return null; }
     const result = await jsonResponse(response);
     const matches = Array.isArray(result.items) ? result.items.filter((item) => item.id === intent.videoId) : [];
@@ -540,7 +544,7 @@ export class PublicationService {
         // media bytes, initiate another insert, or change visibility on this path.
         const response = await this._fetch(trustedUrl(saved.sessionUrl, true), {
           method: 'PUT', headers: { 'Content-Length': '0', 'Content-Range': `bytes */${saved.total}` },
-        }, approval.channelId);
+        }, approval.channelId, undefined, approval.episodeId);
         if ([200, 201].includes(response.status)) await this._videoId(intentId, response);
         else {
           stale({ status: response.status === 308 ? 'blocked' : 'unknown', providerStatus: response.status, retryAt: retryAt(response), message: response.status === 308 ? 'Final approval is stale; the known session is incomplete and byte transfer remains blocked' : 'Final approval is stale; the known session outcome remains unknown' });
@@ -568,6 +572,7 @@ export class PublicationService {
     this._open();
     let intent = this.store.get(INTENTS, intentId);
     const approval = this.store.get(APPROVALS, intent.approvalId);
+    this.store.assertEpisodeActive(intent.episodeId);
     try {
       if (!await this._fresh(approval)) { await this._reconcileStale(intentId, approval); return; }
       const fresh = intent.phase === 'queued';
@@ -592,7 +597,7 @@ export class PublicationService {
       this._save(intentId, { status: 'running', phase: 'public_update', privacyStatus: 'unknown' });
       let updateResponse = null;
       try {
-        updateResponse = await this._fetch(`${VIDEOS}?part=status`, { method: 'PUT', headers: { 'Content-Type': 'application/json; charset=UTF-8' }, body: JSON.stringify({ id: intent.videoId, status: this._status(approval.manifest, 'public', video.status) }) }, approval.channelId, () => this._revalidate(approval));
+        updateResponse = await this._fetch(`${VIDEOS}?part=status`, { method: 'PUT', headers: { 'Content-Type': 'application/json; charset=UTF-8' }, body: JSON.stringify({ id: intent.videoId, status: this._status(approval.manifest, 'public', video.status) }) }, approval.channelId, () => this._revalidate(approval), approval.episodeId);
       } catch (error) {
         this._open();
         if (error instanceof HttpError && error.status === 409) throw error;

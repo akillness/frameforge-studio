@@ -7,6 +7,9 @@ RUN npm ci --omit=dev --ignore-scripts
 COPY server ./server
 COPY public ./public
 COPY scripts ./scripts
+COPY harness/manifest.json ./harness/manifest.json
+COPY harness/versions ./harness/versions
+RUN node scripts/version-harness.mjs verify
 RUN mkdir -p /data && chown node:node /data
 USER node
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=4310 DATA_DIR=/data PLATFORM_CHROMIUM_PATH=/usr/bin/chromium

@@ -30,9 +30,9 @@ function parseNewsRss(xml, maxArticles) {
     return { id: `news-${createHash('sha256').update(`${url}:${headline}`).digest('hex').slice(0, 16)}`, headline, source, url, ...(summary ? { summary } : {}), capturedAt: Number.isFinite(Date.parse(publishedAt)) ? new Date(publishedAt).toISOString() : timestamp(), evidence: { source, url, ...(publishedAt ? { publishedAt } : {}) } };
   }).filter(Boolean);
 }
-async function fetchGoogleNews(query, maxArticles) {
+export async function fetchGoogleNews(query, maxArticles, fetchImpl) {
   const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ko&gl=KR&ceid=KR:ko`;
-  const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
+  const response = await fetchImpl(url, { signal: AbortSignal.timeout(5000) });
   if (!response.ok) throw new Error(`News source HTTP ${response.status}`);
   const xml = await response.text();
   const articles = parseNewsRss(xml, maxArticles);
@@ -305,6 +305,7 @@ function assertVersions(workflow, episode, options) {
 }
 
 function assertOwnership(store, workflow, episode) {
+  store.assertEpisodeActive(episode.id);
   if (workflow.episodeId !== episode.id || workflow.channelId !== episode.channelId || !workflow.templateId || !Number.isInteger(workflow.templateVersion)) throw new HttpError(409, 'Execution requires a project-owned workflow copy for this exact episode and channel');
   store.get('channels', episode.channelId);
   for (const node of workflow.nodes) if (node.type === 'publish' && node.config.channelId && node.config.channelId !== episode.channelId) throw new HttpError(409, 'Publish destination differs from the project channel');
@@ -411,9 +412,10 @@ function reviewStatus(nodeRuns) {
 }
 
 export class WorkflowEngine {
-  constructor({ store, fetchTrends, runAgent, render, validateAssets, generations, platformSessions, publication }) {
+  constructor({ store, fetchTrends, runAgent, render, validateAssets, generations, platformSessions, publication, fetchImpl = fetch }) {
     this.store = store;
     this.fetchTrends = fetchTrends;
+    this.fetchImpl = fetchImpl;
     this.runAgent = runAgent;
     this.render = render;
     this.validateAssets = validateAssets;
@@ -421,6 +423,7 @@ export class WorkflowEngine {
     this.publication = publication;
     this.closed = false;
     this.activeExecutions = new Map();
+    this.activeQuoteEpisodes = new Map();
     if (!store.list('workflows').length) store.create('workflows', defaultWorkflow());
     for (const run of store.list('workflowRuns')) if (['queued', 'running'].includes(run.status)) {
       store.save('workflowRuns', { ...run, status: 'failed', error: 'Server restarted before workflow completed', updatedAt: timestamp(), nodeRuns: run.nodeRuns.map((node) => ['running', 'queued'].includes(node.status) ? { ...node, status: 'failed', error: 'Execution interrupted by server restart' } : node) });
@@ -441,6 +444,17 @@ export class WorkflowEngine {
   copy(templateId, body) { return this.store.createWorkflowCopy({ ...object(body), templateId }); }
 
   async quote(id, episodeId, options = {}) {
+    const targetId = text(episodeId, 'episodeId', 80);
+    this.activeQuoteEpisodes.set(targetId, (this.activeQuoteEpisodes.get(targetId) || 0) + 1);
+    try { return await this._quote(id, targetId, options); }
+    finally {
+      const remaining = this.activeQuoteEpisodes.get(targetId) - 1;
+      if (remaining) this.activeQuoteEpisodes.set(targetId, remaining);
+      else this.activeQuoteEpisodes.delete(targetId);
+    }
+  }
+
+  async _quote(id, episodeId, options = {}) {
     const workflow = this.store.get('workflows', id);
     validateWorkflow(workflow);
     const episode = this.store.get('episodes', text(episodeId, 'episodeId', 80));
@@ -455,6 +469,7 @@ export class WorkflowEngine {
     const nodes = [];
     const provider = this.generations?.provider;
     for (const node of candidate.nodes) {
+      assertOwnership(this.store, workflow, episode);
       let input = { model: node.model, prompt: node.prompt, params: node.params || {} };
       // Validate against the same schema used by the submission queue. Missing schema
       // availability cannot be silently replaced by invented defaults.
@@ -474,6 +489,7 @@ export class WorkflowEngine {
         input = { model: node.model, prompt, params };
       }
       let estimate = null;
+      assertOwnership(this.store, workflow, episode);
       try { if (provider?.estimate) estimate = await provider.estimate(input); } catch { /* explicit unquoted estimate below */ }
       const cost = estimate?.cost ?? estimate?.usd;
       const currency = typeof estimate?.currency === 'string' && estimate.currency.trim() ? estimate.currency : (estimate?.cost === undefined && estimate?.usd !== undefined ? 'USD' : null);
@@ -707,6 +723,7 @@ export class WorkflowEngine {
     try {
       const initial = this.current(id);
       if (!initial) return;
+      this.store.assertEpisodeActive(initial.episodeId);
       this.store.save('workflowRuns', { ...initial, status: 'running', startedAt: timestamp(), updatedAt: timestamp() });
       const run = this.store.get('workflowRuns', id);
       const workflow = run.workflowSnapshot;
@@ -763,10 +780,10 @@ export class WorkflowEngine {
               episode.title,
             ].filter(Boolean);
             const uniqueKeywords = [...new Set(baseKeywords)].slice(0, 8);
-            const query = uniqueKeywords.join(' OR ').slice(0, 200) || episode.topic;
+            const query = node.config.query || uniqueKeywords.join(' OR ').slice(0, 200) || episode.topic;
             const maxArticles = node.config.maxArticles ?? 5;
             const trendArticles = storedNewsArticles(this.store, node.config);
-            const google = node.config.source === 'trend_news' ? null : await fetchGoogleNews(query, maxArticles);
+            const google = node.config.source === 'trend_news' ? null : await fetchGoogleNews(query, maxArticles, this.fetchImpl);
             const articles = [...trendArticles, ...(google?.articles || [])].slice(0, maxArticles);
             if (!articles.length) throw new Error('News stage could not obtain source-backed articles; no fabricated output was created');
             output = {

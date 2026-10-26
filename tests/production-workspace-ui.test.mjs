@@ -1,10 +1,6 @@
-/** Isolated browser regression for the Studio (A) <-> Workflow (B) context/draft switch.
- * Canonical contract: .mex/context/decisions.md PW-01, PW-07 and the 2026-10-25 A+B approval.
- * Reuses the real production Studio/Workflow modules (public/app.js, public/workflow.js) through
- * the actual task-nav `[data-action=view][data-view=studio|workflow]` controls -- never the
- * disposable artifacts/production-workspace-research/workspace-prototype.html fixtures.
- * Uses disposable per-test API fixtures, blocks external/provider traffic, and never spends,
- * renders, generates or publishes. Node:test + a real Playwright Chromium page -- not a DOM mock.
+/** Real HTTP + Chromium coverage for one project canvas with native scene overlays.
+ * Independent scene and graph drafts retain their own Save/version/unload contracts.
+ * Only external transports are fixtures; opening and navigating never spends or publishes.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -97,16 +93,16 @@ test('a hidden dirty graph alone protects a different clean active project from 
   const e2 = await api('/api/episodes', 'POST', { channelId: b.id, title: 'Clean B episode', topic: 'B' });
   const template = await api('/api/workflows', 'POST', trendNodeGraph('Shared graph'));
   for (const episode of [e1, e2]) await api(`/api/workflows/${template.id}/copies`, 'POST', { channelId: episode.channelId, episodeId: episode.id, expectedTemplateVersion: template.version });
-  await page.reload(); await openChannel(page, a.id); await switchView(page, 'workflow');
+  await page.reload(); await openChannel(page, a.id); await workbenchPanel(page, 'workflow');
   await page.locator('[data-wf-action=open-workflow-settings]').click();
   await page.locator('#wf-workflow-name').fill('Only graph A is dirty'); await page.keyboard.press('Escape');
-  await switchView(page, 'studio'); await openChannel(page, b.id);
+  await workbenchPanel(page, 'studio'); await openChannel(page, b.id);
   assert.equal(await page.locator('#save-status').evaluate(e => e.className === 'unsaved'), false, 'active B episode is clean');
   let warning;
   page.once('dialog', async dialog => { warning = dialog.type(); await dialog.dismiss(); });
   await page.reload({ waitUntil: 'commit' }).catch(() => {});
   assert.equal(warning, 'beforeunload', 'hidden graph dirtiness is checked independently of episode dirtiness');
-  await openChannel(page, a.id); await switchView(page, 'workflow');
+  await openChannel(page, a.id); await workbenchPanel(page, 'workflow');
   await page.locator('[data-wf-action=open-workflow-settings]').click();
   assert.equal(await page.locator('#wf-workflow-name').inputValue(), 'Only graph A is dirty');
   assert.deepEqual(writes, []);
@@ -115,10 +111,26 @@ test('a hidden dirty graph alone protects a different clean active project from 
 });
 
 async function openChannel(page, channelId) {
+  await closeProjectOverlay(page);
   const group = page.locator('.platform-group').filter({ has: page.locator(`[data-action=channel][data-id="${channelId}"]`) });
   if (!(await group.evaluate((element) => element.open))) await group.locator('summary').click();
   await group.locator(`[data-action=channel][data-id="${channelId}"]`).click();
-  await page.locator('#preview').waitFor();
+  await workbenchPanel(page, 'studio');
+}
+
+async function closeProjectOverlay(page) {
+  for (const selector of ['#project-scene-dialog', '#project-tool-dialog']) {
+    if (await page.locator(`${selector}[open]`).count()) {
+      await page.keyboard.press('Escape');
+      await page.locator(`${selector}[open]`).waitFor({ state: 'hidden' });
+    }
+  }
+}
+
+async function selectEpisode(page, episodeId) {
+  await closeProjectOverlay(page);
+  await page.locator(`[data-action=episode][data-id="${episodeId}"]`).click();
+  await workbenchPanel(page, 'studio');
 }
 
 /** Opens the "에피소드 설정" disclosure in the inspector so [data-episode=title] becomes fillable.
@@ -129,13 +141,23 @@ async function openEpisodeSettings(page) {
   await page.locator('[data-episode=title]').waitFor();
 }
 
-async function switchView(page, view, { keyboard = false } = {}) {
-  const button = page.locator(`.task-nav [data-view=${view}]`);
-  if (keyboard) { await button.focus(); await page.keyboard.press('Enter'); }
-  else await button.click();
+async function workbenchPanel(page, view, { keyboard = false } = {}) {
+  const sceneWasOpen = await page.locator('#project-scene-dialog[open]').count();
+  await closeProjectOverlay(page);
+  if (view === 'studio') {
+    const button = page.locator('[data-action=open-scene-editor]').first();
+    if (keyboard) { await button.focus(); await page.keyboard.press('Enter'); }
+    else await button.click();
+    await page.locator('#project-scene-dialog[open] #preview').waitFor();
+    assert.equal(await page.locator('#project-scene-dialog').evaluate(e => e.contains(document.activeElement)), true, 'scene overlay receives focus');
+  } else {
+    await page.locator('#workflow-canvas').waitFor();
+    if (sceneWasOpen) assert.equal(await page.locator('[data-action=open-scene-editor]').first().evaluate(e => e === document.activeElement), true, 'closing the native scene overlay restores its opener');
+  }
+  assert.equal(await page.locator('.task-nav [data-view=studio], .project-modes').count(), 0, 'there is no separate A/B workspace');
 }
 
-test('Studio<->Workflow mode toggle on the same project preserves both drafts and causes zero state-changing requests', async (t) => {
+test('native scene overlay and canvas on the same project preserve both drafts and cause zero state-changing requests', async (t) => {
   const fixture = await workspaceFixture(t);
   const { page, api, writes, pageErrors, externalRequests } = fixture;
   const check = (name, condition, detail) => assert.ok(condition, `${name} :: ${JSON.stringify(detail ?? null)}`);
@@ -154,10 +176,10 @@ test('Studio<->Workflow mode toggle on the same project preserves both drafts an
   check('studio marks the draft unsaved before any mode switch', await page.locator('#save-status').evaluate((e) => e.className === 'unsaved'));
   check('no request has been issued by the page yet', writes.length === 0, writes);
 
-  await switchView(page, 'workflow', { keyboard: true });
+  await workbenchPanel(page, 'workflow', { keyboard: true });
   await page.locator('#workflow-canvas').waitFor();
   check('switching to workflow mode alone must not save the studio draft (PW-01 / 2026-10-25 approval: toggling alone must not save)', writes.length === 0, writes);
-  check('keyboard mode switch transfers focus into the new main content', await page.locator('#main').evaluate((e) => e === document.activeElement));
+  check('keyboard return restores focus to the native scene overlay opener', await page.locator('[data-action=open-scene-editor]').first().evaluate((e) => e === document.activeElement));
 
   await page.locator('[data-wf-action=open-workflow-settings]').click();
   await page.locator('#wf-workflow-name').fill('워크플로우 드래프트 이름');
@@ -165,13 +187,13 @@ test('Studio<->Workflow mode toggle on the same project preserves both drafts an
   await page.keyboard.press('Escape');
   const writesAfterWorkflowEdit = writes.length;
 
-  await switchView(page, 'studio', { keyboard: true });
+  await workbenchPanel(page, 'studio', { keyboard: true });
   await page.locator('#preview').waitFor();
   check('switching back to studio mode alone must not save the workflow draft', writes.length === writesAfterWorkflowEdit, writes);
   check('studio scene draft survives the round trip instead of being reloaded from the server', await page.locator('[data-scene=title]').inputValue() === '장면 드래프트 제목');
   check('studio save status is still unsaved after the round trip (no silent save happened)', await page.locator('#save-status').evaluate((e) => e.className === 'unsaved'));
 
-  await switchView(page, 'workflow');
+  await workbenchPanel(page, 'workflow');
   await page.locator('#workflow-canvas').waitFor();
   check('workflow name draft survives a second round trip without reopening the settings dialog', await page.locator('#wf-save-status').evaluate((e) => e.className === 'unsaved' && e.textContent.includes('저장되지 않은')));
   check('still zero state-changing requests after two full round trips', writes.length === 0, writes);
@@ -179,7 +201,7 @@ test('Studio<->Workflow mode toggle on the same project preserves both drafts an
   await page.setViewportSize({ width: 375, height: 844 });
   const geometry = await page.evaluate(() => ({ client: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth }));
   check('mode controls do not overflow a narrow viewport', geometry.scroll <= geometry.client, geometry);
-  await switchView(page, 'studio');
+  await workbenchPanel(page, 'studio');
   await page.locator('#preview').waitFor();
   check('narrow-viewport mode switch also causes zero state-changing requests', writes.length === 0, writes);
   check('narrow-viewport switch preserves the episode/scene draft', await page.locator('[data-scene=title]').inputValue() === '장면 드래프트 제목');
@@ -210,7 +232,7 @@ test('switching modes targets the Workflow editor at the actually selected episo
   await openChannel(page, c1.id);
   check('studio is actually showing the selected episode', await page.locator('.source-heading strong').innerText() === e1.title);
 
-  await switchView(page, 'workflow');
+  await workbenchPanel(page, 'workflow');
   await page.locator('#workflow-canvas').waitFor();
   const selectedOption = await page.locator('#wf-episode').evaluate((select) => select.value);
   check(
@@ -231,26 +253,26 @@ test('switching episodes within a channel stashes each draft instead of saving o
   await page.reload();
   await page.locator('#app .shell').waitFor();
   await openChannel(page, channel.id);
-  await page.locator(`[data-action=episode][data-id="${e1.id}"]`).click();
+  await selectEpisode(page, e1.id);
   await page.locator('#preview').waitFor();
   check('studio targets the first episode once explicitly selected', await page.locator('.source-heading strong').innerText() === e1.title);
 
   await openEpisodeSettings(page);
   await page.locator('[data-episode=title]').fill('E1 드래프트');
-  await page.locator(`[data-action=episode][data-id="${e2.id}"]`).click();
+  await selectEpisode(page, e2.id);
   check('switching episodes alone must not save the departing draft', writes.length === 0, writes);
   await page.locator('#preview').waitFor();
   check('studio now targets the second episode', await page.locator('.source-heading strong').innerText() === e2.title);
 
   await openEpisodeSettings(page);
   await page.locator('[data-episode=title]').fill('E2 드래프트');
-  await page.locator(`[data-action=episode][data-id="${e1.id}"]`).click();
+  await selectEpisode(page, e1.id);
   check('switching back still causes zero writes', writes.length === 0, writes);
   await page.locator('#preview').waitFor();
   check('E1 draft is restored intact after the round trip, not reverted to its saved server title', await page.locator('.source-heading strong').innerText() === 'E1 드래프트');
   check('E1 is still marked unsaved after being restored', await page.locator('#save-status').evaluate((e) => e.className === 'unsaved'));
 
-  await page.locator(`[data-action=episode][data-id="${e2.id}"]`).click();
+  await selectEpisode(page, e2.id);
   await page.locator('#preview').waitFor();
   check('E2 draft also survived the round trip through E1', await page.locator('.source-heading strong').innerText() === 'E2 드래프트');
   check('zero writes across the entire two-episode round trip', writes.length === 0, writes);
@@ -349,6 +371,5 @@ test('closing or navigating away with an unsaved draft triggers the native unsav
   let dialogType = null;
   page.once('dialog', async (dialog) => { dialogType = dialog.type(); await dialog.dismiss(); });
   await page.reload({ waitUntil: 'commit' }).catch(() => {});
-  await page.waitForTimeout(250);
   check('an unsaved dirty draft triggers the native beforeunload confirmation when navigating away', dialogType === 'beforeunload', { dialogType });
 });

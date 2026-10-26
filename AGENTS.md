@@ -1,3 +1,4 @@
+<!-- Project instructions updated: 2026-10-26 -->
 <!-- mex-agent:skills:start -->
 ## MEX agent skills
 - At the start of every session, read `.mex/AGENTS.md` and `.mex/ROUTER.md` before project work; follow `ROUTER.md` to load only the relevant context.
@@ -11,14 +12,25 @@
 <!-- mex-agent:skills:end -->
 
 ## FrameForge production and knowledge
-For production work, verify `harness/manifest.json` using `node scripts/version-harness.mjs verify` and load the selected immutable bundle's docs and agent roles. `.claude/` holds editable authoring sources for the next promotion. Read `llm-wiki/index.md` for source-backed project knowledge. Keep immutable raw sources and private runtime data separate. Generated code graphs are structural evidence; they do not verify provider connections or publication. Preserve all existing parent and project instructions.
+For production work, verify `harness/manifest.json` using `node scripts/version-harness.mjs verify` and load only task-relevant selected immutable docs/roles. `.claude/` holds editable sources for the next promotion. Preserve the original production/blog goal and acceptance criteria: blocked, dropped, awaiting-review or fixture-only work is not verified completion. Graphs and historical receipts cannot establish present provider/publication readiness.
+
+For project knowledge, use `node scripts/knowledge.mjs status`, `search "subject phrase"`, or `check`; load `llm-wiki/index.md` only when authored knowledge is relevant. The explicit policy bounds paths/bytes/results/excerpts and labels history; existence, captured prompts and submitted drafts grant no admission. Follow `.mex/patterns/knowledge-refresh.md` for reviewed updates and deterministic `index --write`. Bounded checks are separate from still-failed full-vault legacy lint.
+
+For interactive Jeopi, use `node scripts/project-agent.mjs [--dry-run] -- <original task argv>` to contain prompt ingest through the documented launch-scoped `LLM_WIKI_VAULT` override under checkout-private `data/agent-captures`. External/conflicting overrides fail closed; original task arguments remain intact. This is explicit process containment, not a repository opt-out, global hook change or proof every host runs these rules. The native bridge keeps `--no-rules`/`--no-tools` isolation and receives only its promoted Bridge Runtime Contract, not these whole instructions. Keep raw captures immutable and private runtime data out of shared knowledge.
 
 ## Per-query Jev
 - Before responding to every user query, including interview answers, follow the `jev-control-plane` skill and check `jev-harness.mjs --profile <profile> status` for the current host's explicitly selected profile. This jeopi host uses `jeopi`; Codex configuration is a separate decision.
-- When the profile is active and its operation backend is ready, invoke `route-skills` with a minimal task summary. Use advisory `review` for material implementation proposals; retain the returned verdict and its evidence boundary.
+- When the profile is active and its API operation backend is ready, invoke `route-skills --backend api` with a minimal task summary before selecting skills. Use API-backed advisory `review` for material implementation proposals; retain the selected skills, verdict, backend tier and receipt. This project's requested routing backend is Jev API; local/model fallbacks are separate explicit decisions.
 - If the profile is inactive, unconfigured or unavailable, report the unmet Jev prerequisite explicitly. Proceed only within normal host permissions and never claim Jev was used successfully. Do not silently switch profiles, backends or models.
 - Keep credentials outside tracked files. Obtain approval before new hosted-data transmission or spend; Jev advice never replaces user approval, tests or publication gates.
 - This is a prompt-driven rule, not proof that an automatic hook is installed, trusted or enforcing every query.
+
+## Blog production workspace
+- For Naver, Tistory or GitHub Pages work, use the current `/blog.html` workspace and reload its canonical source pointers before research, drafting or deployment. Resolve each account's latest workspace/persona/menu policy from the configured source roots; record the source hashes with the draft rather than copying an old run as the current instructions.
+- Keep responsibilities separate: Hermes retrieves existing strategy and checks sources; drafting agents construct persona-specific copy; Aside handles the account-bound browser workflow; deterministic scripts own login/deployment validation and receipts. Host installation or a role label is not proof that an agent executed.
+- Login, content preparation and publication are distinct stages. Each account retains its own identity, draft and approval; credentials stay outside tracked files. A topic choice, research approval or cron trigger does not authorize public publication. Advance category rotation only after verified public readback; preserve unrelated existing drafts.
+- Cron is draft-only by default. Activating recurring work requires an explicit schedule/timezone choice; publishing additionally requires approval bound to the exact account, content and current source version. Missing Jev API configuration or an account/publisher prerequisite is blocked, never substituted with another profile, account or fabricated success.
+- Before generated blog writing, analyze publicly inspectable same-category influencer references with at least 100,000 labelled followers/subscribers (including explicitly labelled Naver fans/neighbors). Retain the metric URL, observation time, short supporting excerpt, source hash and category/author evidence; visits, views, likes and unknown counts do not qualify. Measure article layout, image placement and formatting, then pass an original persona-specific adaptation plan into the draft. Source text/images remain reference material, not reusable assets. Missing or stale reference analysis blocks automatic drafting and final publication approval; local scratch saving is not publication readiness.
 
 ## Product direction and interview
 - For product work, read `.mex/context/decisions.md`, especially the production-workspace interview contract and its acceptance criteria. Build on `docs/premiere-workspace.md`; distinguish agreed requirements and research proposals from implemented, verified behavior.

@@ -325,6 +325,7 @@ export function scenes(value) {
 
 export function episodePatch(body) {
   object(body);
+  if ('archivedAt' in body) throw new HttpError(400, 'Use the versioned archive or unarchive action');
   const patch = {};
   for (const [key, max] of [['title', 200], ['topic', 500]]) if (key in body) patch[key] = text(body[key], key, max);
   if ('notes' in body) patch.notes = optionalText(body.notes, 'notes', 20000);

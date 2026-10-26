@@ -1,0 +1,49 @@
+{
+  "schema": "frameforge-native-mex-check/v1",
+  "command": "node <installed-mex-agent>/dist/cli.js check --json",
+  "startedAt": "2026-10-26T14:36:04.386Z",
+  "finishedAt": "2026-10-26T14:36:21.750Z",
+  "exitCode": 0,
+  "score": 100,
+  "issues": [],
+  "filesChecked": 16,
+  "timestamp": "2026-10-26T14:36:21.716Z",
+  "graphStatus": {
+    "status": "fresh",
+    "inspected": true,
+    "observedAt": "2026-10-26T14:36:08.956Z",
+    "currentRepo": {
+      "branch": "main",
+      "head": "204c3529fa2170712b282adf6274f86d1cca3dc9",
+      "dirty": true,
+      "observedAt": "2026-10-26T14:36:08.956Z"
+    },
+    "lastSuccessfulIndexAt": "2026-10-26T12:21:38.916Z",
+    "indexedAt": "2026-10-26T12:21:38.916Z",
+    "indexedBranch": "main",
+    "indexedHead": "204c3529fa2170712b282adf6274f86d1cca3dc9",
+    "schemaVersion": 4,
+    "extractorVersion": "typescript-5.9-v5+tree-sitter-v2",
+    "grammarVersion": "e3024e9e581533232ee11d4ed0bf6ace91588959e0e609ebcf5d6e80b51b5f9c",
+    "parseHealth": {
+      "total": 128,
+      "ok": 128,
+      "partial": 0,
+      "failed": 0,
+      "failedPaths": [],
+      "failedPathsTruncated": false
+    },
+    "changes": {
+      "total": 0,
+      "added": [],
+      "modified": [],
+      "deleted": [],
+      "truncated": false,
+      "branchChanged": false,
+      "manifestChanged": false,
+      "configChanged": false,
+      "grammarChanged": false
+    },
+    "diagnostics": []
+  }
+}

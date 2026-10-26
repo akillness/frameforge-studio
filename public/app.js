@@ -2,6 +2,7 @@ import { createWorkflowEditor } from './workflow.js';
 import {episodeChanges,changesHtml,historyReason} from './history.js';
 import { createWorkspaceLayout, createOperationalWorkspace } from './workspace.js';
 import { createProductionTools } from './production-tools.js';
+import { createContextMenu, installInfoTooltips } from './context-menu.js';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -10,10 +11,10 @@ const id = () => crypto.randomUUID();
 const date = value => value ? new Date(value).toLocaleString('ko-KR', {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
 const categories = ['information','drama','reenactment'];
 const categoryNames = {information:'정보 전달',drama:'드라마',reenactment:'재연'};
-const statusNames = {draft:'제작 중',review:'검토 대기',ready:'제작 완료',queued:'대기 중',running:'렌더링 중',completed:'완료',failed:'실패'};
-const views = [['overview','☷','운영 개요'],['studio','▣','스튜디오'],['workflow','⤳','워크플로우 빌더'],['trends','↗','트렌드 & 리서치'],['templates','▦','템플릿'],['history','◷','제작 히스토리'],['knowledge','⌘','지식 그래프'],['settings','⚙','연결 & 설정']];
+const statusNames = {draft:'제작 중',review:'검토 대기',ready:'제작 완료',archived:'보관됨',queued:'대기 중',running:'렌더링 중',completed:'완료',failed:'실패'};
+const views = [['overview','☷','운영 개요'],['studio','▣','장면 편집'],['workflow','⤳','프로젝트 노드'],['source','↙','소스 · 이용 권리'],['delivery','↗','검토 · 공개'],['results','▤','결과 · 내보내기'],['trends','↗','트렌드 & 리서치'],['templates','▦','템플릿'],['history','◷','제작 히스토리'],['knowledge','⌘','지식 그래프'],['settings','⚙','연결 & 설정'],['archived','▢','보관된 프로젝트']];
 let state = {channels:[],episodes:[],templates:[],trends:[],trendKeywords:[],popularTrendKeywords:[],trendCollectionRuns:[],trendCollector:null,references:[],jobs:[],events:[],integrations:{},graph:{nodes:[],edges:[]},platformSessions:[],platformUploads:[],serverExports:[]};
-let view = 'studio';
+let view = 'workflow';
 let channelId = null;
 let episode = null;
 let sceneIndex = 0;
@@ -31,26 +32,33 @@ let playTimer;
 let toastTimer;
 let busy = false;
 let authenticated = false;
+let workbenchInitialization = 0;
 const studioDrafts = new Map();
 const channelEpisodes = new Map();
+let sceneEditorOpen = false;
+let activeTool = null;
+let projectToolRequest = 0;
+let overlayOpener = null;
+const overlaySnapshots = new Map();
+const toolDescriptions = {overview:'채널과 전체 제작 현황을 확인합니다.',studio:'현재 프로젝트의 실제 장면·슬롯 초안을 편집합니다. 열기만으로 저장하지 않습니다.',workflow:'현재 프로젝트의 노드 캔버스로 돌아갑니다.',source:'소스 검색, 이용 권리와 출처를 확인합니다.',delivery:'완성 후보의 검토와 별도 공개 승인을 관리합니다. 열기만으로 공개하지 않습니다.',results:'렌더 결과와 서버 MP4, 플랫폼 브라우저를 확인합니다.',trends:'트렌드 수집 기록과 조사 도구를 엽니다.',templates:'기존 장면 템플릿을 확인합니다. 적용은 별도 명시적 동작입니다.',history:'원본 버전과 현재 초안을 비교합니다. 복원은 별도로 확인합니다.',knowledge:'채널·에피소드의 원본 관계와 지식을 확인합니다.',settings:'외부 연결과 작업 명령 기록을 확인합니다.',archived:'보관한 프로젝트를 확인하거나 원래 목록으로 복구합니다.'};
 const canMutate = () => state.session?.role === 'admin' && state.session?.canMutate === true;
-const readActions = new Set(['view','channel','episode','project-section','scene','select-slot','select-platform-session','prev','next','play','reload','refresh-speech','refresh-commands','reload-history','history-version','refresh-knowledge','refresh-integrations','refresh-server-exports','trend-popular','ops-open','ops-history']);
-const readWorkflowActions = new Set(['select-node','minimap-select','inspector-tab','select-run','inspect-run-node','zoom-in','zoom-out','fit','reload','refresh-history','history-version','refresh-runs','refresh-generation','refresh-generation-job','open-tools','open-results','open-stage-overlay','close-overlay','select-stage','close-confirm','close-dialog']);
+const readActions = new Set(['view','channel','episode','project-section','scene','select-slot','select-platform-session','prev','next','play','reload','refresh-speech','refresh-commands','reload-history','history-version','refresh-knowledge','refresh-integrations','refresh-server-exports','trend-popular','ops-open','ops-history','project-tools','project-menu','episode-menu','channel-menu','tool-menu','sidebar-menu','open-scene-editor','close-scene-editor','close-project-tool','inspect-archived']);
+const readWorkflowActions = new Set(['select-node','minimap-select','inspector-tab','select-run','inspect-run-node','zoom-in','zoom-out','fit','reload','refresh-history','history-version','refresh-runs','refresh-generation','refresh-generation-job','open-tools','open-results','open-stage-overlay','close-overlay','select-stage','close-confirm','close-dialog','node-menu','node-tools','scene-editor','node-results','node-history','connections','open-add-node','open-workflow-settings','confirm-delete-node','input','output','canvas-history']);
 const mutationForms = new Set(['modal-form','chat-form','trend-form','trend-settings-form','command-form','wf-connect-form']);
 function applyAdminControls() {
   for (const control of document.querySelectorAll('[data-action],[data-wf-action],input,select,textarea,form button[type="submit"]')) {
     const mutation = control.dataset.action ? !readActions.has(control.dataset.action) : control.dataset.wfAction ? !readWorkflowActions.has(control.dataset.wfAction) :
       Boolean(control.matches('[data-scene],[data-slot-field],[data-slot-style],[data-episode],[data-wf-config],[data-wf-field],[data-wf-coordinate],[data-review-notes],#wf-name,#wf-add-type,#media-file,#audio-file') || mutationForms.has(control.closest('form')?.id));
     if (!mutation) continue;
-    control.dataset.adminOnly = 'true';
-    control.setAttribute('aria-description','관리자 전용 · Admin only');
+    if (control.dataset.adminOnly !== 'true') control.dataset.adminOnly = 'true';
+    if (control.getAttribute('aria-description') !== '관리자 전용 · Admin only') control.setAttribute('aria-description','관리자 전용 · Admin only');
     if (!control.title.includes('관리자 전용')) control.title = `${control.title ? control.title + ' · ' : ''}관리자 전용`;
     if (!canMutate() && !control.disabled) { control.disabled = true; control.dataset.adminDisabled = 'true'; }
     else if (canMutate() && control.dataset.adminDisabled === 'true') { control.disabled = false; delete control.dataset.adminDisabled; }
   }
 }
 // Workflow panels also replace their own controls between full page renders.
-new MutationObserver(applyAdminControls).observe(document.body,{childList:true,subtree:true});
+new MutationObserver(()=>{applyAdminControls();applyProjectControls();}).observe(document.body,{childList:true,subtree:true});
 for (const type of ['click','input','change','submit']) document.addEventListener(type,event=>{
   if (canMutate() || !event.target.closest('[data-admin-only="true"]') && !(type === 'submit' && mutationForms.has(event.target.id))) return;
   event.preventDefault(); event.stopImmediatePropagation(); toast('모든 변경은 관리자 전용입니다.',true);
@@ -69,7 +77,9 @@ const chatLogs = new Map();
 const workflowEditor = createWorkflowEditor({
   api,
   toast,
-  getEpisodes: () => state.episodes,
+  canMutate: () => canMutate() && state.episodes.find(item=>item.id === episode?.id)?.status !== 'archived',
+  onOpenSceneEditor: openSceneEditor,
+  getEpisodes: activeEpisodes,
   getEpisode: liveEpisode,
   hasEpisodeChanges: targetId => episode?.id === targetId ? dirty : Boolean(studioDrafts.get(targetId)?.dirty),
   beforeRun: async targetId => {
@@ -91,7 +101,235 @@ let mountedTools = null;
 let canvasContextObserver = null;
 let mountedContextKey = '';
 const workspaceLayout = createWorkspaceLayout({toast});
-const operations = createOperationalWorkspace({getData:()=>state, api, refresh, toast});
+const operations = createOperationalWorkspace({getData:()=>({...state,episodes:activeEpisodes()}), api, refresh, toast});
+const appContextMenu = createContextMenu({onAction:(action, context) => { Promise.resolve(runProjectMenuAction(action, context)).catch(error=>toast(error.message,true)); }});
+const infoTooltips = installInfoTooltips(document);
+
+function activeEpisodes() { return state.episodes.filter(item => item.status !== 'archived'); }
+function activeProjectWork(targetId) {
+  const context = workflowEditor.getActivity();
+  if (context?.episodeId === targetId && context.hasActiveRun) return true;
+  const runs = [...(state.workflowRuns || []),...(state.jobs || []),...(state.narrationJobs || []),...(state.generationJobs || [])];
+  if (context?.episodeId === targetId && context.run) runs.push(context.run);
+  return runs.some(item => item.episodeId === targetId && ['queued','running','pending','submitting','polling','in_progress','downloading'].includes(item.status));
+}
+function projectEditReason(targetId = episode?.id) {
+  if (!canMutate()) return '읽기 전용 · 관리자 권한이 필요합니다.';
+  if (state.episodes.find(item => item.id === targetId)?.status === 'archived') return '보관된 프로젝트 · 복구 후 편집하세요.';
+  return activeProjectWork(targetId) ? '실행 중 · 완료 또는 취소 후 편집하세요.' : '';
+}
+function requireProjectEdit(targetId = episode?.id) {
+  const reason = projectEditReason(targetId);
+  if (reason) throw new Error(reason);
+}
+function applyProjectControls() {
+  const reason = episode ? projectEditReason() : '';
+  for (const control of document.querySelectorAll('#project-scene-dialog [data-action],#project-scene-dialog input,#project-scene-dialog select,#project-scene-dialog textarea,#project-scene-dialog button[type="submit"]')) {
+    const action = control.dataset.action;
+    const mutation = action ? !readActions.has(action) : control.matches('[data-scene],[data-slot-field],[data-slot-style],[data-episode]') || control.closest('#chat-form');
+    if (!mutation) continue;
+    if (reason && !control.disabled) { control.disabled = true; control.dataset.projectDisabled = 'true'; control.setAttribute('aria-description',reason); }
+    else if (!reason && control.dataset.projectDisabled === 'true') { control.disabled = false; delete control.dataset.projectDisabled; }
+  }
+}
+function decorateTooltips() {
+  for (const control of document.querySelectorAll('#app button:not([data-tooltip]),#app [data-workspace-action]:not([data-tooltip])')) {
+    const action = control.dataset.action;
+    control.dataset.tooltip = action === 'view' ? toolDescriptions[control.dataset.view] || '프로젝트 도구를 엽니다.' : control.title || control.getAttribute('aria-label') || `${control.textContent.trim()} · 현재 프로젝트에서 선택한 작업을 수행합니다.`;
+  }
+  infoTooltips.refresh();
+}
+function overlayKey(kind) { return `${episode?.id || 'workspace'}:${kind}:${kind === 'scene' ? currentScene()?.id || '' : ''}`; }
+function captureProjectOverlay() {
+  for (const dialog of document.querySelectorAll('#project-scene-dialog[open],#project-tool-dialog[open]')) {
+    const fields = [...dialog.querySelectorAll('input:not([type="file"]),textarea,select')];
+    const focused = fields.indexOf(document.activeElement);
+    overlaySnapshots.set(dialog.dataset.context, {fields:fields.map(field=>({value:field.value,checked:field.checked,preserve:!field.matches('[data-scene],[data-episode],[data-slot-field],[data-slot-style]')})),details:[...dialog.querySelectorAll('details')].map(item=>item.open),focused,start:focused < 0 ? null : fields[focused].selectionStart,end:focused < 0 ? null : fields[focused].selectionEnd,scrollTop:dialog.scrollTop});
+  }
+}
+function restoreProjectOverlay(dialog) {
+  const snapshot = overlaySnapshots.get(dialog.dataset.context);
+  if (!snapshot) return;
+  const fields = [...dialog.querySelectorAll('input:not([type="file"]),textarea,select')];
+  fields.forEach((field,index)=>{ const saved=snapshot.fields[index]; if (saved?.preserve && !field.disabled) { field.value=saved.value; field.checked=saved.checked; } });
+  [...dialog.querySelectorAll('details')].forEach((item,index)=>{ if (index < snapshot.details.length) item.open=snapshot.details[index]; });
+  const focused = fields[snapshot.focused];
+  if (focused && !focused.disabled) { focused.focus({preventScroll:true}); if (snapshot.start !== null && typeof focused.setSelectionRange === 'function' && ['textarea','text','search','url','tel','password'].includes(focused.type)) focused.setSelectionRange(snapshot.start,snapshot.end); }
+  dialog.scrollTop = snapshot.scrollTop;
+}
+function closeSceneEditor(restoreFocus = true) {
+  projectToolRequest += 1;
+  captureProjectOverlay(); stopPlayback(); sceneEditorOpen = false;
+  const dialog = $('#project-scene-dialog');
+  if (dialog?.open) dialog.close();
+  if (dialog) dialog.innerHTML = '';
+  stashActiveDraft();
+  if (restoreFocus) (overlayOpener?.isConnected && overlayOpener.matches('button,a[href],input,select,textarea,[tabindex]') && !overlayOpener.matches(':disabled') ? overlayOpener : $('[data-action="open-scene-editor"]'))?.focus({preventScroll:true});
+}
+function closeProjectTool(restoreFocus = true) {
+  projectToolRequest += 1;
+  captureProjectOverlay(); activeTool = null;
+  const grid = $('#project-tool-body .production-tools-grid');
+  if (grid) { $('#project-tool-reservoir')?.append(grid); grid.querySelectorAll('[data-production-tools]').forEach(panel=>{panel.hidden=false;}); }
+  const dialog = $('#project-tool-dialog');
+  if (dialog?.open) dialog.close();
+  if ($('#project-tool-body')) $('#project-tool-body').innerHTML = '';
+  if (restoreFocus) (overlayOpener?.isConnected && overlayOpener.matches('button,a[href],input,select,textarea,[tabindex]') && !overlayOpener.matches(':disabled') ? overlayOpener : $('#project-tools-menu'))?.focus({preventScroll:true});
+}
+function closeProjectOverlays() { closeSceneEditor(false); closeProjectTool(false); }
+function bindProjectDialogs() {
+  for (const [selector, close] of [['#project-scene-dialog',closeSceneEditor],['#project-tool-dialog',closeProjectTool]]) {
+    const dialog = $(selector);
+    dialog.addEventListener('cancel',event=>{ event.preventDefault(); close(); });
+    dialog.addEventListener('close',()=>{ if (!dialog.open && $(selector) === dialog && (selector === '#project-scene-dialog' ? sceneEditorOpen : activeTool)) close(); });
+  }
+}
+function mountSceneEditor() {
+  const dialog = $('#project-scene-dialog');
+  if (!dialog || !episode) return;
+  const reason = projectEditReason();
+  dialog.dataset.context = overlayKey('scene');
+  dialog.innerHTML = `<div class="project-dialog-header"><div><h2 id="project-scene-title">장면 편집 · ${esc(episode.title)}</h2><p role="status">${esc(reason || '장면 초안은 이 창에서 저장합니다. 닫아도 저장 전 편집은 보존됩니다.')}</p></div><div class="row"><button type="button" id="save-button" data-action="save" data-tooltip="장면과 슬롯 초안을 원래 버전으로 저장합니다. Ctrl 또는 Command+S">변경 저장</button><button type="button" data-action="open-generation" data-tooltip="생성 설정을 엽니다. 비용 확인과 실행 동의는 별도입니다.">Higgsfield 장면 생성</button><button type="button" data-action="render" data-tooltip="장면 초안을 저장한 후 MP4 렌더를 명시적으로 시작합니다.">영상 내보내기</button><button type="button" class="icon-btn quiet" data-action="close-scene-editor" aria-label="장면 편집 닫기" data-tooltip="편집 초안을 보존하고 노드 캔버스로 돌아갑니다.">×</button></div></div><div class="studio-layout project-scene-body">${studioView()}</div>`;
+  updatePreview(); updateSaveStatus(); applyAdminControls(); applyProjectControls(); decorateTooltips();
+  dialog.showModal(); restoreProjectOverlay(dialog);
+}
+function openSceneEditor(target = {}) {
+  if (!episode || target.episodeId && target.episodeId !== episode.id) throw new Error('현재 프로젝트에 속한 장면만 열 수 있습니다.');
+  const context = projectContext();
+  if (target.workflowId && target.workflowId !== context.workflowId || target.nodeId && !context.workflow?.nodes.some(node=>node.id === target.nodeId)) throw new Error('선택한 노드가 현재 프로젝트에 없습니다.');
+  let nextIndex = sceneIndex;
+  if (target.sceneId) { nextIndex = episode.scenes.findIndex(scene=>scene.id === target.sceneId); if (nextIndex < 0) throw new Error('지정된 장면이 현재 초안에 없습니다.'); }
+  if (target.slotId && !target.sceneId) { nextIndex = episode.scenes.findIndex(scene=>scene.slots?.some(slot=>slot.id === target.slotId)); if (nextIndex < 0) throw new Error('지정된 슬롯이 현재 초안에 없습니다.'); }
+  const scene = episode.scenes[nextIndex];
+  if (!scene || target.slotId && !scene.slots?.some(slot=>slot.id === target.slotId)) throw new Error('지정된 장면과 슬롯의 소유 관계가 맞지 않습니다.');
+  const opener = document.activeElement;
+  closeProjectOverlays(); overlayOpener = opener;
+  sceneIndex = nextIndex; selectedSlotId = target.slotId || (scene.slots?.some(slot=>slot.id === selectedSlotId) ? selectedSlotId : scene.slots?.[0]?.id || null);
+  sceneEditorOpen = true; mountSceneEditor(); stashActiveDraft();
+}
+function mountProjectTool() {
+  const dialog = $('#project-tool-dialog');
+  if (!dialog || !activeTool) return;
+  dialog.dataset.context = overlayKey(activeTool);
+  $('#project-tool-title').textContent = views.find(([key])=>key === activeTool)?.[2] || '제작 도구';
+  const body = $('#project-tool-body');
+  if (['source','delivery'].includes(activeTool)) {
+    let grid = $('.production-tools-grid');
+    if (!grid && episode) {
+      mountedTools = toolsForProject();
+      $('#project-tool-reservoir').innerHTML = productionToolsHtml();
+      grid = $('.production-tools-grid');
+      mountedTools.source.mount(); mountedTools.delivery.mount();
+    }
+    if (grid) { body.append(grid); grid.querySelectorAll('[data-production-tools]').forEach(panel=>{panel.hidden=panel.dataset.mode !== activeTool;}); }
+    else body.innerHTML = '<p class="hint">프로젝트를 먼저 선택하세요.</p>';
+  } else body.innerHTML = renderView(activeTool);
+  if (activeTool === 'overview') operations.mount();
+  applyAdminControls(); decorateTooltips(); dialog.showModal(); restoreProjectOverlay(dialog);
+}
+async function openProjectTool(tool) {
+  if (!views.some(([key])=>key === tool)) return;
+  const request = ++projectToolRequest;
+  if (tool === 'studio') { openSceneEditor(); return; }
+  if (tool === 'workflow') { closeProjectOverlays(); $('#main')?.focus(); return; }
+  const targetId = episode?.id;
+  const opener = document.activeElement;
+  if (tool === 'history') await loadHistory();
+  if (tool === 'settings') await loadCommands();
+  if (tool === 'trends') await loadTrendBrowser();
+  if (request !== projectToolRequest || episode?.id !== targetId) return;
+  closeProjectOverlays(); overlayOpener = opener; activeTool = tool; mountProjectTool();
+}
+function archivedProjectsHtml() {
+  const archived = state.episodes.filter(item=>item.status === 'archived');
+  return heading('보관된 프로젝트','목록에서만 숨긴 기록입니다. 원본, 미디어와 버전 이력은 유지됩니다.') + `<div class="cards">${archived.map(item=>`<article class="panel"><div class="panel-body"><h3>${esc(item.title)}</h3><p>${esc(state.channels.find(channel=>channel.id === item.channelId)?.name)} · v${item.version} · ${date(item.archivedAt)}</p><div class="row"><button type="button" data-action="inspect-archived" data-id="${esc(item.id)}" data-tooltip="보관된 프로젝트의 노드와 장면을 읽기 전용으로 엽니다.">프로젝트 확인</button><button type="button" data-action="ops-history" data-id="${esc(item.id)}" data-tooltip="보관한 프로젝트의 버전 이력을 확인합니다.">버전 기록</button><button type="button" data-action="unarchive-project" data-id="${esc(item.id)}" ${canMutate()?'':'disabled'} data-tooltip="확인 후 프로젝트를 활성 목록으로 복구합니다. 기록은 유지됩니다.">복구</button><button type="button" class="project-more icon-btn quiet" data-action="episode-menu" data-id="${esc(item.id)}" aria-label="${esc(item.title)} 보관 프로젝트 메뉴" aria-haspopup="menu">⋯</button></div></div></article>`).join('') || '<p class="hint">보관한 프로젝트가 없습니다.</p>'}</div>`;
+}
+function openProjectMenu(anchor, event) {
+  projectToolRequest += 1;
+  const action = anchor.dataset.action;
+  const targetId = anchor.dataset.id || episode?.id;
+  const target = state.episodes.find(item=>item.id === targetId);
+  let title = '제작 도구';
+  let items;
+  const context = {targetId,channelId:anchor.dataset.id || channelId};
+  if (action === 'channel-menu') {
+    title = state.channels.find(item=>item.id === context.channelId)?.name || '채널';
+    items = [{id:'rename-channel',label:'채널 이름 변경',description:canMutate()?'원본 채널의 현재 fingerprint로 충돌을 확인합니다.':'관리자 권한이 필요합니다.',disabled:!canMutate()},{id:'tool:settings',label:'연결 & 설정',description:toolDescriptions.settings},{id:'new-project',label:'새 프로젝트',description:'이 채널에 에피소드를 만듭니다.',disabled:!canMutate()}];
+  } else if (['project-menu','episode-menu'].includes(action)) {
+    title = target?.title || '프로젝트';
+    const reason = target ? projectEditReason(target.id) : '프로젝트를 선택하세요.';
+    items = [{id:'open-project',label:'노드 캔버스 열기',description:'기록이나 초안을 저장하지 않고 프로젝트를 선택합니다.',disabled:!target},{id:'project-scenes',label:'장면 편집 열기',description:toolDescriptions.studio,disabled:!target},{id:'rename-project',label:'제목 변경',description:reason || '기존 원본 버전으로 제목만 저장합니다. 장면 초안은 유지됩니다.',disabled:!target || Boolean(reason)},{id:'project-history',label:'버전 기록',description:toolDescriptions.history,disabled:!target},{id:target?.status === 'archived'?'unarchive-project':'archive-project',label:target?.status === 'archived'?'프로젝트 복구':'프로젝트 보관',description:!canMutate()?'관리자 권한이 필요합니다.':activeProjectWork(targetId)?'실행이 끝난 뒤 보관하세요.':'확인 후 목록에서만 숨깁니다. 미디어와 기록은 삭제하지 않습니다.',destructive:target?.status !== 'archived',disabled:!target || !canMutate() || activeProjectWork(targetId)}];
+  } else {
+    items = views.map(([key,icon,label])=>({id:`tool:${key}`,label,description:toolDescriptions[key],disabled:['studio','source','delivery','results','history'].includes(key) && !episode}));
+    items.push({id:'workspace-settings',label:'작업 창 설정',description:'브라우저별 창 크기와 레이아웃 프로필을 관리합니다.'},{id:'new-channel',label:'새 채널',description:'새 채널 제작 공간을 등록합니다.',disabled:!canMutate()},{id:'new-project',label:'새 프로젝트',description:'현재 채널에 새 에피소드를 만듭니다.',disabled:!canMutate()});
+  }
+  appContextMenu.open({anchor,x:event?.clientX,y:event?.clientY,title,items,context});
+}
+async function runProjectMenuAction(action, context = {}) {
+  if (action.startsWith('tool:')) { await openProjectTool(action.slice(5)); return; }
+  if (action === 'workspace-settings') { closeProjectOverlays(); $('[data-workspace-action="settings"]')?.click(); return; }
+  if (action === 'new-channel') { newChannel(); return; }
+  if (action === 'new-project') { if (context.channelId && state.channels.some(item=>item.id === context.channelId) && context.channelId !== channelId) { closeProjectOverlays(); switchEpisode(null,context.channelId); render(); } newEpisode(); return; }
+  if (action === 'rename-channel') { await renameChannel(context.channelId); return; }
+  if (action === 'rename-project') { renameProject(context.targetId); return; }
+  if (['archive-project','unarchive-project'].includes(action)) { archiveProject(context.targetId, action === 'unarchive-project'); return; }
+  const target = state.episodes.find(item=>item.id === context.targetId);
+  if (!target) throw new Error('현재 자료에서 프로젝트를 찾을 수 없습니다.');
+  closeProjectOverlays(); stopPlayback(); switchEpisode(target); render();
+  if (action === 'project-history') await openProjectTool('history');
+  else if (action === 'project-scenes') openSceneEditor();
+}
+function renameProject(targetId) {
+  requireProjectEdit(targetId);
+  if (targetId === episode?.id ? dirty || savePending : studioDrafts.get(targetId)?.dirty) throw new Error('장면 초안의 원래 버전은 보존했습니다. 먼저 장면 초안을 저장한 뒤 제목을 변경하세요.');
+  const target = liveEpisode(targetId);
+  if (!target) throw new Error('프로젝트를 다시 선택하세요.');
+  const draft = targetId === episode?.id ? {baseVersion:baseVersion ?? target.version,editRevision} : studioDrafts.get(targetId);
+  const expectedVersion = draft?.baseVersion ?? target.version;
+  openModal('프로젝트 제목 변경',`<label>제목<input name="title" required maxlength="200" value="${esc(target.title)}"></label><p class="hint">제목만 새 버전으로 저장합니다. 장면과 그래프 초안, 원본 미디어는 유지됩니다.</p>`,async data=>{
+    requireProjectEdit(targetId);
+    if (targetId === episode?.id ? dirty || savePending : studioDrafts.get(targetId)?.dirty) throw new Error('제목을 여는 동안 장면 초안이 바뀌었습니다. 초안을 먼저 저장하세요.');
+    const updated = await api(`/api/episodes/${encodeURIComponent(targetId)}`,{method:'PUT',body:JSON.stringify({title:data.title,expectedVersion})});
+    cacheEpisode(updated);
+    const stashed = studioDrafts.get(targetId);
+    const currentRevision = episode?.id === targetId ? editRevision : stashed?.editRevision;
+    if (currentRevision === draft?.editRevision || !draft) {
+      if (episode?.id === targetId) { episode.title=updated.title; episode.version=updated.version; baseVersion=updated.version; stashActiveDraft(); }
+      else if (stashed) { stashed.episode.title=updated.title; stashed.episode.version=updated.version; stashed.baseVersion=updated.version; }
+    }
+    render(); toast('프로젝트 제목을 새 버전으로 저장했습니다.');
+  },'제목 저장');
+}
+async function renameChannel(targetId) {
+  if (!canMutate()) throw new Error('관리자 권한이 필요합니다.');
+  const result = await api('/api/knowledge');
+  const graph = result.graph || result;
+  const node = graph.nodes?.find(item=>item.id === targetId && item.type === 'channel');
+  if (!node?.editable || !node.edit?.expectedRecord) throw new Error('채널 원본 정보를 새로고침하세요.');
+  openModal('채널 이름 변경',`<label>채널 이름<input name="label" required maxlength="160" value="${esc(node.label)}"></label>`,async data=>{
+    await api(`/api/knowledge/nodes/${encodeURIComponent(targetId)}`,{method:'PUT',body:JSON.stringify({label:data.label,expectedRecord:node.edit.expectedRecord})});
+    await refresh(); render(); toast('채널 이름을 저장했습니다.');
+  },'이름 저장');
+}
+function archiveProject(targetId, restore = false) {
+  const target = state.episodes.find(item=>item.id === targetId);
+  if (!target || !canMutate()) throw new Error('프로젝트와 관리자 권한을 확인하세요.');
+  if (activeProjectWork(targetId)) throw new Error('실행이 완료되거나 취소된 뒤 보관하세요.');
+  if (targetId === episode?.id ? dirty || savePending || workflowEditor.hasChanges() : studioDrafts.get(targetId)?.dirty) throw new Error('저장 전 초안은 보존했습니다. 프로젝트를 열어 초안을 먼저 저장한 뒤 보관 또는 복구하세요.');
+  if ((target.status === 'archived') !== restore) throw new Error('프로젝트의 보관 상태를 새로 확인하세요.');
+  const expectedVersion = targetId === episode?.id ? baseVersion ?? target.version : studioDrafts.get(targetId)?.baseVersion ?? target.version;
+  openModal(restore?'프로젝트 복구':'프로젝트 보관',`<p><strong>${esc(target.title)}</strong></p><p>${restore?'활성 프로젝트 목록으로 복구합니다.':'활성 목록에서만 숨깁니다. 보관 프로젝트 메뉴에서 언제든 확인하고 복구할 수 있습니다.'}</p><p class="hint">장면, 그래프, 버전 기록, 실행 이력과 원본 미디어는 삭제하지 않습니다.</p>`,async()=>{
+    if (activeProjectWork(targetId)) throw new Error('프로젝트가 실행 중입니다. 완료 후 다시 시도하세요.');
+    if (targetId === episode?.id ? dirty || savePending || workflowEditor.hasChanges() : studioDrafts.get(targetId)?.dirty) throw new Error('확인 중 초안이 바뀌었습니다. 초안을 먼저 저장하세요.');
+    const updated = await post(`/api/episodes/${encodeURIComponent(targetId)}/${restore?'unarchive':'archive'}`,{expectedVersion});
+    cacheEpisode(updated);
+    if (episode?.id === targetId) { episode=clone(updated); baseVersion=updated.version; dirty=false; stashActiveDraft(); }
+    else if (studioDrafts.has(targetId)) { const stashed=studioDrafts.get(targetId); stashed.episode=clone(updated); stashed.baseVersion=updated.version; }
+    closeProjectOverlays();
+    if (!restore && episode?.id === targetId) switchEpisode(activeEpisodes().find(item=>item.channelId === channelId) || null,channelId);
+    render(); toast(restore?'프로젝트를 복구했습니다.':'프로젝트를 보관했습니다. 미디어와 기록은 유지됩니다.');
+  },restore?'복구 확인':'보관 확인');
+}
 
 function bindWorkflowProject() {
   return workflowEditor.bindProject?.({episodeId: episode?.id ?? null, channelId});
@@ -112,30 +350,32 @@ function toolsForProject() {
       refresh,
       onEpisodeUpdated: onEpisodeUpdatedForTools,
       toast,
-      canMutate: () => canMutate() && episode?.id === targetId && channelId === targetChannelId && !dirty && !savePending,
+      canMutate: () => canMutate() && episode?.id === targetId && channelId === targetChannelId && !projectEditReason(targetId) && !dirty && !savePending,
     };
     projectTools.set(targetId,{source:createProductionTools(deps),delivery:createProductionTools(deps)});
   }
   return projectTools.get(targetId);
 }
 function productionToolsHtml() {
-  const tools = toolsForProject();
+  const tools = mountedTools;
   return tools ? `<div class="production-tools-grid">${dirty ? '<p class="hint production-tools-draft" role="status">소스 변경과 공개 승인은 현재 초안을 저장한 뒤 진행하세요.</p>' : ''}${tools.source.html({mode:'source'})}${tools.delivery.html({mode:'delivery'})}</div>` : '';
 }
 function syncProjectToolsContext() {
-  if (view !== 'workflow' || !mountedTools) return;
+  if (view !== 'workflow') return;
   const context = projectContext();
-  const key = JSON.stringify([context.episodeId,context.channelId,context.workflowId,context.workflowVersion,context.selectedNodeId,context.runId,context.reviewNodeId,context.renderNodeId,context.run?.status,context.run?.reviews]);
+  const key = JSON.stringify([context.episodeId,context.channelId,context.workflowId,context.workflowVersion,context.selectedNodeId,context.runId,context.reviewNodeId,context.renderNodeId,context.run?.status,context.run?.reviews,context.hasActiveRun,activeProjectWork(episode?.id)]);
   if (key === mountedContextKey) return;
   const container = document.querySelector('.production-tools-grid');
   if (container?.contains(document.activeElement) || container?.querySelector('dialog[open]')) return;
   mountedContextKey = key;
   const navigation = $('#project-navigation');
   if (navigation) navigation.outerHTML = projectNavigationHtml();
-  if (!container) return;
+  if (!container || !mountedTools) return;
   mountedTools.source.destroy(); mountedTools.delivery.destroy();
   container.outerHTML = productionToolsHtml();
   mountedTools.source.mount(); mountedTools.delivery.mount();
+  if (['source','delivery'].includes(activeTool)) document.querySelectorAll('#project-tool-body [data-production-tools]').forEach(panel=>{panel.hidden=panel.dataset.mode !== activeTool;});
+  applyProjectControls();
 }
 
 function toast(message, error = false) {
@@ -211,10 +451,10 @@ async function refresh() {
   operations.noteSuccess();
   authenticated = true;
   if (!channelId || !state.channels.some(channel => channel.id === channelId)) channelId = state.channels[0]?.id || null;
-  if (!episode) switchEpisode(state.episodes.find(item => item.id === channelEpisodes.get(channelId) && item.channelId === channelId) || state.episodes.find(item => item.channelId === channelId) || null, channelId);
+  if (!episode) switchEpisode(activeEpisodes().find(item => item.id === channelEpisodes.get(channelId) && item.channelId === channelId) || activeEpisodes().find(item => item.channelId === channelId) || null, channelId);
   bindWorkflowProject();
   if (!speechLoaded) await loadSpeechVoices();
-  if (view === 'trends') await loadTrendBrowser();
+  if (activeTool === 'trends') await loadTrendBrowser();
 }
 
 async function loadSpeechVoices() {
@@ -253,7 +493,7 @@ async function startNarration(allScenes) {
   state.narrationJobs ||= [];
   state.narrationJobs.unshift(job);
   render();
-  toast('음성 파일 생성을 시작했습니다. 진행 중에도 편집할 수 있습니다.');
+  toast('음성 파일 생성을 시작했습니다. 완료될 때까지 프로젝트 변경은 잠깐 잠깁니다.');
 }
 
 function applyNarrationResult(job, latest) {
@@ -267,7 +507,7 @@ function applyNarrationResult(job, latest) {
   }
   sceneIndex = Math.min(sceneIndex,episode.scenes.length - 1);
   // Do not replace focused fields or the whole editor during background polling.
-  if (view === 'studio') {
+  if (sceneEditorOpen) {
     const inspector = $('.inspector .panel-body');
     if (inspector && !inspector.contains(document.activeElement)) inspector.innerHTML = inspectorHtml(currentScene());
     const status = $('#save-status');
@@ -291,18 +531,59 @@ function commandsHtml() {
   return `<section class="panel section-spacer" id="commands-panel"><div class="panel-header"><h2>작업 명령함</h2><button class="small" data-action="refresh-commands">↻ 명령 새로고침</button></div><form class="panel-body" id="command-form" data-testid="command-form"><label>워크스페이스 명령<textarea name="message" id="command-message" required maxlength="4000" placeholder="채널, 에피소드, 작업 목적을 적어 주세요"></textarea></label><button class="primary" type="submit">명령 기록</button><p class="hint" style="margin-top:12px">웹에서 접수한 명령을 지속 기록합니다. 접수 자체는 에이전트 실행을 뜻하지 않으며, 실제 실행 작업은 스튜디오의 제작 어시스턴트를 이용하세요.</p></form><div id="command-list">${commands.length ? commands.map(command => `<div class="data-row"><div><h3>${esc(command.message)}</h3><p>${esc(command.source || 'web')} · ${date(command.createdAt)}</p></div><span class="badge">${esc(command.status || '접수됨')}</span></div>`).join('') : '<div class="panel-body hint">접수된 명령이 없습니다.</div>'}</div></section>`;
 }
 
-function showLogin() {
+function stopWorkbench() {
+  closeProjectOverlays();
   workspaceLayout.beforeRender(false);
+  canvasContextObserver?.disconnect(); canvasContextObserver = null;
+  mountedTools?.source.destroy(); mountedTools?.delivery.destroy(); mountedTools = null;
+  workflowEditor.destroy();
+  stashActiveDraft();
+}
+function showWorkbenchLoadFailure(error) {
+  stopWorkbench();
+  $('#app').innerHTML = `<main class="panel login"><h1>스튜디오에 연결할 수 없습니다</h1><p role="alert">${esc(error.message)}</p><button data-action="reload">다시 연결</button></main>`;
+}
+async function initializeWorkbench(request = ++workbenchInitialization) {
+  await refresh();
+  if (request !== workbenchInitialization) return;
+  await workflowEditor.load();
+  if (request !== workbenchInitialization) return;
+  bindWorkflowProject();
+  render();
+}
+function showLogin() {
+  workbenchInitialization += 1;
+  stopWorkbench();
   $('#app').innerHTML = `<main class="panel login"><div class="brand"><span class="brandmark">F</span> FRAMEFORGE</div><h1>나의 제작실에 입장</h1><p>개인 스튜디오의 접근 토큰을 입력해 주세요. 인증 후 채널과 제작 기록에 접근할 수 있습니다.</p><form id="login-form"><label>접근 토큰<input name="token" type="password" autocomplete="current-password" required></label><button class="primary">스튜디오 열기 →</button><p class="hint" id="login-error" role="alert"></p></form></main>`;
-  $('#login-form').addEventListener('submit', async event => {
+  const form = $('#login-form');
+  const button = $('button',form);
+  const errorNode = $('#login-error',form);
+  form.addEventListener('submit', async event => {
     event.preventDefault();
-    const button = $('button', event.currentTarget);
+    if (button.disabled) return;
+    const request = ++workbenchInitialization;
+    const token = new FormData(form).get('token');
     button.disabled = true;
-    try { await post('/api/login', {token:new FormData(event.currentTarget).get('token')}); await refresh(); render(); }
-    catch (error) { $('#login-error').textContent = error.message; }
-    finally { button.disabled = false; }
+    button.textContent = '프로젝트를 준비하는 중…';
+    form.setAttribute('aria-busy','true');
+    errorNode.textContent = '';
+    try {
+      await post('/api/login',{token});
+      if (request !== workbenchInitialization || !form.isConnected) return;
+      await initializeWorkbench(request);
+    } catch (error) {
+      if (request !== workbenchInitialization) return;
+      if (form.isConnected) errorNode.textContent = error.message;
+      else showWorkbenchLoadFailure(error);
+    } finally {
+      if (request === workbenchInitialization && form.isConnected) {
+        button.disabled = false;
+        button.textContent = '스튜디오 열기 →';
+        form.removeAttribute('aria-busy');
+      }
+    }
   });
-  $('#login-form input').focus();
+  $('input',form).focus();
 }
 
 const platformNames = {youtube:'YouTube',instagram:'Instagram',tiktok:'TikTok',other:'기타 플랫폼'};
@@ -315,7 +596,7 @@ function channelHierarchyHtml() {
   }
   return [...groups].map(([key,channels]) => {
     const label = platformNames[key] || channels[0].platform;
-    return `<details class="platform-group" ${channels.some(item=>item.id===channelId)?'open':''}><summary title="${esc(label)}" aria-label="${esc(label)} 채널"><span class="platform-symbol" aria-hidden="true">${esc(label.slice(0,1))}</span><span class="platform-name">${esc(label)}</span><span class="platform-count">${channels.length}</span></summary><div class="platform-channels">${channels.map(item => `<button class="channel ${item.id===channelId?'active':''}" data-action="channel" data-id="${esc(item.id)}" ${item.id===channelId?'aria-current="true"':''} title="${esc(item.name)}"><span class="channel-avatar">${String(state.channels.indexOf(item)+1).padStart(2,'0')}</span><span class="channel-copy"><span class="channel-name">${esc(item.name)}</span><small>${state.episodes.filter(episode=>episode.channelId===item.id).length} 에피소드 · ${esc(categoryNames[item.category] || item.category || '제작 공간')}</small></span></button>`).join('')}</div></details>`;
+    return `<details class="platform-group" ${channels.some(item=>item.id===channelId)?'open':''}><summary data-tooltip="${esc(label)} 채널을 펼쳐 프로젝트를 선택합니다."><span class="platform-symbol" aria-hidden="true">${esc(label.slice(0,1))}</span><span class="platform-name">${esc(label)}</span><span class="platform-count">${channels.length}</span></summary><div class="platform-channels">${channels.map(item => `<div class="project-row"><button class="channel ${item.id===channelId?'active':''}" data-action="channel" data-id="${esc(item.id)}" ${item.id===channelId?'aria-current="true"':''} data-tooltip="${esc(item.name)}의 마지막 프로젝트 노드 캔버스를 엽니다."><span class="channel-avatar">${String(state.channels.indexOf(item)+1).padStart(2,'0')}</span><span class="channel-copy"><span class="channel-name">${esc(item.name)}</span><small>${esc(categoryNames[item.category] || item.category)}</small></span></button><button type="button" class="icon-btn quiet project-more" data-action="channel-menu" data-id="${esc(item.id)}" aria-label="${esc(item.name)} 채널 메뉴" aria-haspopup="menu" data-tooltip="채널 이름 변경과 연결 설정을 엽니다.">⋯</button></div>`).join('')}</div></details>`;
   }).join('');
 }
 function sceneBinItems() {
@@ -323,6 +604,8 @@ function sceneBinItems() {
 }
 
 function render() {
+  captureProjectOverlay();
+  appContextMenu.close();
   workspaceLayout.beforeRender();
   canvasContextObserver?.disconnect(); canvasContextObserver = null;
   mountedContextKey = '';
@@ -332,56 +615,58 @@ function render() {
   workflowEditor.destroy();
   stashActiveDraft();
   bindWorkflowProject();
+  view = 'workflow';
+  document.body.dataset.workbench = 'project';
   const channel = activeChannel();
   $('#app').innerHTML = `<div class="shell"><aside class="sidebar" aria-label="워크스페이스 탐색">
     <div class="brand"><span class="brandmark" aria-hidden="true">F</span><div class="brand-copy">FRAME<small>PRODUCTION STUDIO</small></div></div>
-    <p class="sidebar-workspace">제작 워크스페이스</p>
-    <section class="platform-browser" aria-label="플랫폼과 채널"><div class="sidebar-label">PLATFORMS <button class="icon-btn quiet" data-action="new-channel" aria-label="채널 추가">+</button></div>${channelHierarchyHtml() || '<p class="hint platform-name">등록된 채널이 없습니다.</p>'}<button class="channel quiet" data-action="new-channel" title="새 채널 추가"><span class="channel-avatar">+</span><span class="channel-copy muted">채널 추가</span></button></section>
-    <div class="sidebar-bottom"><button class="channel quiet" data-action="view" data-view="settings" title="플랫폼 연결 관리"><span class="nav-icon" aria-hidden="true">⚙</span><span class="channel-copy">플랫폼 연결 관리</span></button><p class="eyebrow">LOCAL WORKSPACE</p><div class="account-copy">나의 제작 기록<br><small>로컬 결과물 · 버전 이력</small></div></div>
-  </aside><div class="workspace"><header class="topbar"><div class="breadcrumb">${esc(platformNames[channel?.platform?.toLowerCase()] || channel?.platform || '워크스페이스')} <span aria-hidden="true"> / </span><strong>${esc(channel?.name || '채널 없음')}</strong><span aria-hidden="true"> / </span>${esc(views.find(([key])=>key===view)?.[2] || '')}</div><div class="row"><span class="badge" data-testid="session-capability"><span class="connection-label">${canMutate()?'관리자 · 변경 권한':authenticated?'읽기 전용 · 변경은 관리자 전용':'API 확인 필요'}</span></span><button class="small quiet" data-action="view" data-view="settings">연결 관리 ↗</button></div></header>
-    <nav class="nav task-nav" aria-label="제작 작업 공간">${views.map(([key,icon,label]) => `<button data-action="view" data-view="${key}" class="${view===key?'active':''}" ${view===key?'aria-current="page"':''} title="${label}"><span class="nav-icon" aria-hidden="true">${icon}</span><span class="nav-label">${label}</span></button>`).join('')}</nav>
-    <main class="main" id="main" tabindex="-1">${['studio','workflow'].includes(view) ? projectNavigationHtml() : ''}${view==='overview'?operations.html():workspaceLayout.html(renderView(), view)}</main></div></div>`;
-  if (view === 'studio') updatePreview();
-  if (view === 'workflow') workflowEditor.mount();
-  if (['studio','workflow'].includes(view)) {
-    mountedTools = toolsForProject();
-    mountedTools?.source.mount();
-    mountedTools?.delivery.mount();
-  }
-  if (view === 'workflow') {
-    syncProjectToolsContext();
-    canvasContextObserver = new MutationObserver(syncProjectToolsContext);
-    const host = $('#workflow-host');
-    if (host) canvasContextObserver.observe(host,{childList:true,subtree:true});
-  }
+    <div class="sidebar-label">제작 워크스페이스 <button type="button" class="icon-btn quiet project-more" data-action="sidebar-menu" aria-label="워크스페이스 메뉴" aria-haspopup="menu" data-tooltip="새 채널, 제작 현황, 보관 프로젝트와 설정 도구를 엽니다.">⋯</button></div>
+    <section class="platform-browser" aria-label="플랫폼과 채널"><div class="sidebar-label">PLATFORMS <button class="icon-btn quiet" data-action="new-channel" aria-label="채널 추가" data-tooltip="새 채널 제작 공간을 등록합니다. 외부 계정 인증은 별도입니다.">+</button></div>${channelHierarchyHtml() || '<p class="hint platform-name">등록된 채널이 없습니다.</p>'}</section>
+    <section class="project-list" aria-label="채널 프로젝트"><div class="sidebar-label">PROJECTS <button type="button" class="icon-btn quiet" data-action="new-episode" aria-label="새 프로젝트" data-tooltip="현재 채널에 새 에피소드를 만듭니다.">+</button></div>${activeEpisodes().filter(item=>item.channelId===channelId).map(item=>`<div class="project-row"><button type="button" class="channel ${item.id===episode?.id?'active':''}" data-action="episode" data-id="${esc(item.id)}" data-tooltip="${esc(item.title)}의 노드 캔버스를 엽니다."><span class="channel-copy">${esc(studioDrafts.get(item.id)?.episode.title || item.title)}</span></button><button type="button" class="icon-btn quiet project-more" data-action="episode-menu" data-id="${esc(item.id)}" aria-label="${esc(item.title)} 프로젝트 메뉴" aria-haspopup="menu" data-tooltip="제목 변경, 버전 기록, 안전한 보관 메뉴입니다.">⋯</button></div>`).join('') || '<p class="hint">새 프로젝트를 만들어 시작하세요.</p>'}</section>
+    <a class="channel" href="/blog.html" target="_blank" rel="noopener" aria-label="블로그 운영실 새 탭에서 열기" data-testid="blog-workspace-link"><span class="nav-icon" aria-hidden="true">B</span><span class="channel-copy">블로그 운영실 ↗</span></a>
+    <div class="sidebar-bottom"><button class="channel quiet" data-action="view" data-view="archived" data-tooltip="보관한 프로젝트와 기록을 확인하고 복구합니다."><span class="nav-icon" aria-hidden="true">▢</span><span class="channel-copy">보관된 프로젝트</span></button><button class="channel quiet" data-action="view" data-view="settings" data-tooltip="외부 플랫폼 연결과 설정을 확인합니다."><span class="nav-icon" aria-hidden="true">⚙</span><span class="channel-copy">연결 & 설정</span></button></div>
+    </aside><div class="workspace"><header class="topbar"><div class="breadcrumb">${esc(platformNames[channel?.platform?.toLowerCase()] || channel?.platform || '워크스페이스')} <span aria-hidden="true"> / </span><strong>${esc(channel?.name || '채널 없음')}</strong><span aria-hidden="true"> / </span>프로젝트 노드</div><div class="row"><span class="badge" data-testid="session-capability">${canMutate()?'관리자 · 변경 권한':authenticated?'읽기 전용 · 변경은 관리자 전용':'API 확인 필요'}</span><button type="button" id="project-tools-menu" class="small" data-action="project-tools" aria-haspopup="menu" data-tooltip="장면 편집, 소스, 결과, 히스토리와 모든 제작 도구를 캔버스 위에서 엽니다.">제작 도구 ▾</button></div></header>
+    <main class="main" id="main" tabindex="-1">${projectNavigationHtml()}${workspaceLayout.html(workflowEditor.html(), 'workflow')}<div id="project-tool-reservoir" hidden>${productionToolsHtml()}</div></main></div></div>
+    <dialog id="project-scene-dialog" class="project-scene-dialog" aria-labelledby="project-scene-title"></dialog>
+    <dialog id="project-tool-dialog" class="project-tool-dialog" aria-labelledby="project-tool-title"><div class="project-dialog-header"><h2 id="project-tool-title">제작 도구</h2><div class="row"><button type="button" class="icon-btn quiet project-more" data-action="tool-menu" aria-haspopup="menu" aria-label="다른 제작 도구" data-tooltip="현재 프로젝트의 다른 도구를 선택합니다.">⋯</button><button type="button" class="icon-btn quiet" data-action="close-project-tool" aria-label="제작 도구 닫기" data-tooltip="도구를 닫고 노드 캔버스로 돌아갑니다. 초안은 보존됩니다.">×</button></div></div><div id="project-tool-body" class="project-tool-body"></div></dialog>`;
   workspaceLayout.mount();
-  if (view === 'overview') operations.mount();
+  syncProjectToolsContext();
+  workflowEditor.mount();
+  canvasContextObserver = new MutationObserver(syncProjectToolsContext);
+  const host = $('#workflow-host');
+  if (host) canvasContextObserver.observe(host,{childList:true,subtree:true});
+  bindProjectDialogs();
+  if (sceneEditorOpen && episode) mountSceneEditor();
+  else if (activeTool) mountProjectTool();
   updateSaveStatus();
   applyAdminControls();
+  applyProjectControls();
+  decorateTooltips();
 }
 
 function projectNavigationHtml() {
   const context = projectContext();
   const nodes = context.workflow?.nodes || [];
-  return `<section class="project-navigation" id="project-navigation" aria-label="프로젝트 제작 모드">
-    <div class="project-context"><span class="eyebrow">${esc(activeChannel()?.name || '채널을 선택하세요')}</span><strong>${esc(episode?.title || '선택된 에피소드 없음')}</strong><span class="hint">${episode ? `원본 v${baseVersion ?? episode.version}${dirty ? ' · 편집 중' : ''}` : '새 에피소드를 만들어 시작하세요.'}</span></div>
-    <div class="project-modes" role="group" aria-label="프로젝트 모드"><button type="button" data-action="view" data-view="studio" aria-pressed="${view === 'studio'}" class="${view === 'studio' ? 'primary' : ''}">A · 장면 편집</button><button type="button" data-action="view" data-view="workflow" aria-pressed="${view === 'workflow'}" class="${view === 'workflow' ? 'primary' : ''}">B · 프로젝트 노드</button></div>
-    <label>현재 프로젝트<select id="project-episode" aria-label="현재 프로젝트"><option value="">에피소드 선택</option>${state.episodes.filter(item => item.channelId === channelId).map(item => `<option value="${esc(item.id)}" ${item.id === episode?.id ? 'selected' : ''}>${esc(studioDrafts.get(item.id)?.episode.title || item.title)}</option>`).join('')}</select></label>
-    ${nodes.length ? `<label>노드 단계<select id="project-stage" aria-label="프로젝트 노드 단계"><option value="">단계 선택</option>${nodes.map(node => `<option value="${esc(node.id)}" ${context.selectedNodeId === node.id ? 'selected' : ''}>${esc(node.label || node.type)} · ${esc(node.id)}</option>`).join('')}</select></label>` : '<p class="hint">프로젝트 노드에서 이 제작물의 워크플로우를 연결하세요.</p>'}
-    <nav class="project-sections" aria-label="프로젝트 자료와 결과"><button type="button" data-action="project-section" data-section="source">소스 · 이용 권리</button><button type="button" data-action="view" data-view="history">소스 · 버전 기록</button><button type="button" data-action="project-section" data-section="delivery">검토 · 공개</button></nav>
+  const reason = episode ? projectEditReason(episode.id) : '';
+  return `<section class="project-navigation" id="project-navigation" aria-label="프로젝트 작업대">
+    <div class="project-context"><span class="eyebrow">${esc(activeChannel()?.name || '채널을 선택하세요')}</span><strong>${esc(episode?.title || '선택된 프로젝트 없음')}</strong><span class="hint">${episode ? `원본 v${baseVersion ?? episode.version}${dirty ? ' · 장면 초안 편집 중' : ''}${reason ? ` · ${esc(reason)}` : ''}` : '새 프로젝트를 만들어 시작하세요.'}</span></div>
+    <label>현재 프로젝트<select id="project-episode" aria-label="현재 프로젝트" data-tooltip="프로젝트를 바꿔도 장면과 그래프의 저장 전 초안은 각각 보존됩니다."><option value="">프로젝트 선택</option>${activeEpisodes().filter(item => item.channelId === channelId).map(item => `<option value="${esc(item.id)}" ${item.id === episode?.id ? 'selected' : ''}>${esc(studioDrafts.get(item.id)?.episode.title || item.title)}</option>`).join('')}</select></label>
+    ${nodes.length ? `<label>노드 단계<select id="project-stage" aria-label="프로젝트 노드 단계" data-tooltip="노드 ID로 정확한 단계를 선택합니다. 선택만으로 실행하지 않습니다."><option value="">단계 선택</option>${nodes.map(node => `<option value="${esc(node.id)}" ${context.selectedNodeId === node.id ? 'selected' : ''}>${esc(node.label || node.type)} · ${esc(node.id)}</option>`).join('')}</select></label>` : '<p class="hint">템플릿에서 프로젝트 워크플로우를 연결하세요.</p>'}
+    <div class="project-tool-strip" role="group" aria-label="프로젝트 도구"><button type="button" data-action="open-scene-editor" aria-haspopup="dialog" data-tooltip="${esc(toolDescriptions.studio)}" ${episode?'':'disabled'}>장면 편집</button><button type="button" data-action="project-section" data-section="source" aria-haspopup="dialog" data-tooltip="${esc(toolDescriptions.source)}" ${episode?'':'disabled'}>소스</button><button type="button" data-action="project-section" data-section="delivery" aria-haspopup="dialog" data-tooltip="${esc(toolDescriptions.delivery)}" ${episode?'':'disabled'}>검토 · 공개</button><button type="button" class="icon-btn quiet project-more" data-action="project-menu" data-id="${esc(episode?.id)}" aria-label="프로젝트 메뉴" aria-haspopup="menu" data-tooltip="프로젝트 제목 변경, 버전 기록과 보관 메뉴입니다.">⋯</button></div>
   </section>`;
 }
 
 function heading(title, description, actions = '') {
   return `<div class="page-heading"><div><h1>${title}</h1><p>${description}</p></div><div class="row">${actions}</div></div>`;
 }
-function renderView() {
-  if (view === 'studio') return studioView();
-  if (view === 'workflow') return workflowEditor.html() + productionToolsHtml();
-  if (view === 'trends') return trendsView();
-  if (view === 'templates') return templatesView();
-  if (view === 'history') return historyView();
-  if (view === 'knowledge') return knowledgeView();
+function renderView(tool = activeTool) {
+  if (tool === 'overview') return operations.html();
+  if (tool === 'trends') return trendsView();
+  if (tool === 'templates') return templatesView();
+  if (tool === 'history') return historyView();
+  if (tool === 'knowledge') return knowledgeView();
+  if (tool === 'archived') return archivedProjectsHtml();
+  if (tool === 'results') return `<section class="panel"><div class="panel-header"><h2>내보내기 결과</h2></div><div id="jobs">${jobsHtml()}</div></section>${platformBrowserHtml()}`;
   return settingsView() + commandsHtml();
 }
 
@@ -554,16 +839,13 @@ function platformBrowserHtml() {
 }
 
 function studioView() {
-  const episodes = state.episodes.filter(item => item.channelId === channelId);
-  const actions = `${episode ? '<button data-action="save" id="save-button">변경 저장</button><button class="primary" data-action="open-generation">Higgsfield 장면 생성</button><button data-action="render">영상 내보내기</button>' : ''}<button class="icon-btn" data-action="new-episode" aria-label="새 에피소드">+</button>`;
-  let html = heading('이야기를 편집하는 제작실.', '프로젝트에서 장면을 고르고, 모니터와 속성 패널에서 편집하세요.', actions);
-  html += `<div class="episode-strip" aria-label="에피소드">${episodes.map((item,index) => `<button class="episode-tab ${episode?.id === item.id ? 'selected' : ''}" data-action="episode" data-id="${esc(item.id)}"><span>EP ${String(index + 1).padStart(2,'0')} · ${esc(statusNames[item.status] || item.status)}</span><strong>${esc(item.title)}</strong></button>`).join('')}<button class="episode-tab" data-action="new-episode"><span>새 에피소드</span><strong>＋ 에피소드 만들기</strong></button></div>`;
-  if (!episode) return html + `<div class="panel empty"><div class="empty-mark">✳</div><h2>에피소드를 만드세요</h2><p>채널을 선택한 뒤 장면 편집과 MP4 내보내기를 시작하세요.</p><button class="primary" data-action="${channelId ? 'new-episode' : 'new-channel'}">${channelId ? '에피소드 만들기' : '채널 만들기'}</button></div>`;
+  if (!episode) return '';
+  let html = '';
   const scene = currentScene();
   html += `<div class="editor-grid"><div><div class="monitor-deck"><aside class="panel project-bin" aria-label="프로젝트 장면 목록"><div class="panel-header"><h3>프로젝트</h3><span class="badge">${episode.scenes.length}</span></div><div class="source-heading"><span class="eyebrow">PROJECT BIN</span><strong>${esc(episode.title)}</strong></div><div class="project-bin-list" id="project-bin-list">${sceneBinItems()}</div><p class="source-note">장면 선택은 미리보기와 편집 패널에 함께 반영됩니다.</p></aside><section class="panel program-monitor"><div class="panel-header"><div class="row"><span class="eyebrow">PROGRAM MONITOR</span><span class="badge">${esc(episode.format)}</span></div><span id="save-status" class="${dirty ? 'unsaved' : 'hint'}">${dirty ? '저장되지 않은 변경' : `버전 ${episode.version} · 저장됨`}</span></div><div class="preview-stage"><span class="stage-tag">LIVE CANVAS / ${esc(episode.category?.toUpperCase() || 'STUDIO')}</span><div id="preview" class="preview" data-format="${esc(episode.format)}" aria-label="현재 장면 미리보기"></div></div><div class="transport"><span class="time" id="play-time">${time(episode.scenes.slice(0,sceneIndex).reduce((sum,s) => sum + s.duration,0))} / ${time(duration())}</span><div class="row"><button class="icon-btn quiet" data-action="prev" aria-label="이전 장면">‹</button><button class="icon-btn primary" data-action="play" aria-label="${playing ? '미리보기 정지' : '미리보기 재생'}">${playing ? 'Ⅱ' : '▶'}</button><button class="icon-btn quiet" data-action="next" aria-label="다음 장면">›</button></div><span class="hint">${sceneIndex + 1} / ${episode.scenes.length} 장면</span></div></section></div>
     <section class="panel timeline"><div class="panel-header"><div><span class="eyebrow">SEQUENCE</span><h3>장면 타임라인</h3></div><span class="hint" id="total-duration">총 ${duration()}초</span></div><div class="timeline-body"><div class="ruler"><span>00:00</span><span>V1 · 장면 순서 / A · 첨부 오디오</span><span>${time(duration())}</span></div><div class="scenes" id="scenes">${sceneCards()}</div><div class="row between timeline-actions"><button class="small quiet" data-action="add-scene">＋ 장면 추가</button><div class="row"><button class="small quiet" data-action="save-template">템플릿으로 저장</button><button class="small quiet" data-action="view" data-view="templates">템플릿 불러오기 ↗</button></div></div></div></section>
     <section class="panel section-spacer"><div class="panel-header"><h3>내보내기 작업</h3><span class="hint">FFmpeg · MP4</span></div><div id="jobs">${jobsHtml()}</div></section>
-    ${platformBrowserHtml()}${productionToolsHtml()}</div>
+    </div>
     <div class="right-column"><section class="panel inspector"><div class="panel-header"><h3>장면 편집</h3><span class="badge">SCENE ${String(sceneIndex + 1).padStart(2,'0')}</span></div><div class="panel-body">${scene ? inspectorHtml(scene) : '<p>장면을 추가해 주세요.</p>'}</div></section>${narrationHtml()}${chatHtml()}</div></div><p class="footnote">변경 사항은 버전별로 기록됩니다. 영상 업로드 전 채널 연결과 콘텐츠 권리를 확인하세요.</p>`;
   return html;
 }
@@ -579,6 +861,7 @@ function updatePreview() {
   preview.style.backgroundColor = safeColor(scene.background);
   preview.dataset.format = episode.format;
   preview.dataset.layout = scene.layout;
+  const exportWidth = episode.format === '16:9' ? 1920 : 1080;
   let media = '';
   if (scene.assetUrl) media = scene.kind === 'video' ? `<video src="${safeUrl(scene.assetUrl)}" muted playsinline ${playing ? 'autoplay' : ''} loop></video>` : `<img src="${safeUrl(scene.assetUrl)}" alt="장면에 업로드한 이미지">`;
   const slots = Array.isArray(scene.slots) ? [...scene.slots].sort((a, b) => (Number(a.zIndex) || 0) - (Number(b.zIndex) || 0)) : [];
@@ -588,7 +871,7 @@ function updatePreview() {
       const bg = safeColor(slot.style?.backgroundColor || '#1e293b');
       const opacity = Math.max(0, Math.min(1, Number(slot.style?.opacity ?? 0.85)));
       const radius = Math.max(0, Math.min(80, Number(slot.style?.borderRadius ?? 8)));
-      const fontSize = Math.max(10, Math.min(140, Number(slot.style?.fontSize || 36)));
+      const fontSize = Math.max(16, Math.min(120, Math.round(Number(slot.style?.fontSize) || (slot.role === 'subtitle-layer' ? 44 : 36))));
       const textColor = safeTextColor(slot.style?.textColor || '#ffffff');
       const align = safeAlign(slot.style?.align);
       const slotMedia = slot.assetUrl
@@ -602,7 +885,7 @@ function updatePreview() {
         ${slotMedia}
         <div class="slot-overlay-content">
           <div class="slot-header-meta">${badge}<small>${esc(slot.dataBinding)}</small></div>
-          <div class="slot-copy" style="font-size:${fontSize}px;color:${textColor};text-align:${align}">${esc(copyText)}</div>
+          <div class="slot-copy" style="font-size:${fontSize * 100 / exportWidth}cqw;color:${textColor};text-align:${align}">${esc(copyText)}</div>
         </div>
         <span class="slot-resize-handle" title="크기 조절">◢</span>
       </div>`;
@@ -666,6 +949,7 @@ function restoreEpisode(version) {
   const targetId=episode.id,expectedVersion=episode.version,revision=editRevision;
   openModal(`v${version}을 새 버전으로 복원`, `<p class="hint">현재 v${expectedVersion}의 내용이 아래 선택 버전으로 바뀝니다. 기존 모든 버전은 보존되며, 복원 결과는 새 버전으로 저장됩니다.</p>${changesHtml(episodeChanges(episode,entry.snapshot),esc,`현재 v${expectedVersion}`,`복원할 v${version}`)}`,async()=>{
     if (episode?.id!==targetId || editRevision!==revision || dirty || episode.version!==expectedVersion) throw new Error('비교 이후 편집본이 변경되었습니다. 복원 내용을 다시 확인해 주세요.');
+    requireProjectEdit(targetId);
     const restored=await post(`/api/episodes/${targetId}/restore`,{version,expectedVersion});
     cacheEpisode(restored);
     if (episode?.id!==targetId || editRevision!==revision || dirty) {await refresh();throw new Error('복원 기록은 저장됐으며, 진행 중인 로컬 편집은 보존했습니다. 최신 기록과 비교해 주세요.');}
@@ -735,6 +1019,7 @@ function stashActiveDraft() {
   channelEpisodes.set(episode.channelId,episode.id);
 }
 function switchEpisode(target, targetChannelId = target?.channelId ?? channelId) {
+  projectToolRequest += 1;
   if (episode?.id === target?.id && channelId === targetChannelId) { bindWorkflowProject(); return; }
   stashActiveDraft();
   channelId = targetChannelId;
@@ -784,6 +1069,7 @@ function markDirty() {
 }
 async function save(quiet = false) {
   if (!episode || !dirty) return;
+  requireProjectEdit();
   if (savePending) throw new Error('저장 중입니다. 잠시 후 다시 시도해 주세요.');
   const revision = editRevision;
   const targetId = episode.id;
@@ -807,7 +1093,7 @@ async function save(quiet = false) {
 function updateSaveStatus() {
   const status=$('#save-status');
   if (status) {status.textContent=savePending?'저장 중…':dirty?'저장되지 않은 변경':`버전 ${episode?.version} · 저장됨`;status.className=dirty?'unsaved':'hint';status.setAttribute('role','status');}
-  if ($('#save-button')) $('#save-button').disabled=savePending || !dirty;
+  if ($('#save-button')) $('#save-button').disabled=savePending || !dirty || Boolean(projectEditReason());
 }
 function stopPlayback() { playing = false; clearTimeout(playTimer); if (previewAudio) { previewAudio.pause(); previewAudio=null; } }
 function playNext() {
@@ -829,6 +1115,7 @@ function playNext() {
 
 function openModal(title, body, handler, submit = '만들기') {
   $('#modal-content').innerHTML = `<h2>${title}</h2>${body}`;
+  projectToolRequest += 1;
   $('#modal-form button[type="submit"]').textContent = submit;
   modalHandler = handler;
   $('#modal').showModal();
@@ -849,7 +1136,8 @@ function newEpisode(topic = '') {
     const created = await post('/api/episodes',{...data,channelId:targetChannelId});
     cacheEpisode(created);
     switchEpisode(created);
-    view = 'studio';
+    closeProjectOverlays();
+    view = 'workflow';
     await refresh();
     render();
     toast('새 에피소드를 만들었습니다.');
@@ -865,16 +1153,26 @@ async function loadHistory() {
 
 async function handleAction(button) {
   const action = button.dataset.action;
+  if (['project-tools','project-menu','episode-menu','channel-menu','tool-menu','sidebar-menu'].includes(action)) { openProjectMenu(button); return; }
+  if (action === 'open-scene-editor') { openSceneEditor(); return; }
+  if (action === 'close-scene-editor') { closeSceneEditor(); return; }
+  if (action === 'close-project-tool') { closeProjectTool(); return; }
+  if (action === 'unarchive-project') { archiveProject(button.dataset.id,true); return; }
+  if (action === 'inspect-archived') { await runProjectMenuAction('open-project',{targetId:button.dataset.id}); return; }
+  if (episode && ['save','render','restore-episode','save-history-draft','narrate-scene','narrate-all','load-narration-result','apply-layout-preset','add-slot','delete-slot','upload-slot-media','remove-slot-media','add-scene','duplicate-scene','delete-scene','move-left','move-right','upload-audio','remove-audio','upload','remove-media','apply-template'].includes(action)) requireProjectEdit();
   if (action === 'edit-graph-node') { editGraphNode(button.dataset.id); return; }
   if (action === 'edit-graph-edge') { editGraphEdge(Number(button.dataset.index)); return; }
   if (action === 'ops-open' || action === 'ops-history') {
     const target=state.episodes.find(item=>item.id===button.dataset.id);
     if (!target) throw new Error('에피소드가 현재 자료에 없습니다. 자료를 새로고침하세요.');
     stopPlayback();
+    closeProjectOverlays();
     switchEpisode(target);
-    view=action==='ops-history'?'history':'studio';
-    if (view==='history') await loadHistory();
-    render(); $('#main')?.focus(); return;
+    view='workflow';
+    render();
+    if (action === 'ops-history') await openProjectTool('history');
+    else $('#main')?.focus();
+    return;
   }
   if (action === 'narrate-scene' || action === 'narrate-all') { await startNarration(action === 'narrate-all'); return; }
   if (action === 'refresh-speech') { await loadSpeechVoices(); render(); return; }
@@ -889,16 +1187,13 @@ async function handleAction(button) {
   else if (action === 'history-version') {historyVersion=Number(button.dataset.version);render();}
   else if (action === 'restore-episode') restoreEpisode(Number(button.dataset.version));
   else if (action === 'save-history-draft') {await save(true);await loadHistory();render();}
-  else if (action === 'view') { stopPlayback(); stashActiveDraft(); view = button.dataset.view; bindWorkflowProject(); if (view === 'history') await loadHistory(); if (view === 'settings') await loadCommands(); if (view === 'workflow') { await workflowEditor.load(); bindWorkflowProject(); } if (view === 'trends') await loadTrendBrowser(); render(); $('#main')?.focus(); }
-  else if (action === 'project-section') {
-    const panel = document.querySelector(`[data-production-tools][data-mode="${button.dataset.section === 'delivery' ? 'delivery' : 'source'}"]`);
-    if (panel) { panel.setAttribute('tabindex','-1'); panel.scrollIntoView({block:'start'}); panel.focus({preventScroll:true}); }
-  }
+  else if (action === 'view') { await openProjectTool(button.dataset.view); }
+  else if (action === 'project-section') { await openProjectTool(button.dataset.section === 'delivery' ? 'delivery' : 'source'); }
   else if (action === 'new-channel') newChannel();
   else if (action === 'new-episode') newEpisode();
-  else if (action === 'channel') { stopPlayback(); const targetChannelId = button.dataset.id; switchEpisode(state.episodes.find(item => item.id === channelEpisodes.get(targetChannelId) && item.channelId === targetChannelId) || state.episodes.find(item => item.channelId === targetChannelId) || null, targetChannelId); view = 'studio'; render(); $('#main')?.focus(); }
-  else if (action === 'episode') { stopPlayback(); switchEpisode(state.episodes.find(item => item.id === button.dataset.id) || null); render(); }
-  else if (action === 'open-generation') { stopPlayback(); if (!episode) return; bindWorkflowProject(); const targetId = episode.id; await workflowEditor.openGeneration({episode:clone(episode),episodeId:targetId,sceneIndex,sceneId:currentScene()?.id}); if (episode?.id !== targetId) return; view = 'workflow'; render(); toast('Higgsfield 생성 설정을 열었습니다. 실행 전 비용을 확인합니다.'); }
+  else if (action === 'channel') { stopPlayback(); closeProjectOverlays(); const targetChannelId = button.dataset.id; switchEpisode(activeEpisodes().find(item => item.id === channelEpisodes.get(targetChannelId) && item.channelId === targetChannelId) || activeEpisodes().find(item => item.channelId === targetChannelId) || null, targetChannelId); view = 'workflow'; render(); $('#main')?.focus(); }
+  else if (action === 'episode') { stopPlayback(); closeProjectOverlays(); switchEpisode(activeEpisodes().find(item => item.id === button.dataset.id) || null); render(); }
+  else if (action === 'open-generation') { stopPlayback(); if (!episode) return; bindWorkflowProject(); const targetId = episode.id; await workflowEditor.openGeneration({episode:clone(episode),episodeId:targetId,sceneIndex,sceneId:currentScene()?.id}); if (episode?.id !== targetId) return; closeProjectOverlays(); view = 'workflow'; render(); toast('Higgsfield 생성 설정을 열었습니다. 실행 전 비용을 확인합니다.'); }
   else if (action === 'open-slot-generation') {
     stopPlayback();
     if (!episode || !currentScene()) return;
@@ -907,6 +1202,7 @@ async function handleAction(button) {
     const slot = currentScene().slots?.find(item => item.id === button.dataset.slotId) || currentSlot();
     await workflowEditor.openGeneration({episode:clone(episode),episodeId:targetId,sceneIndex,sceneId:currentScene().id,slotId:slot?.id,prompt:slot?.prompt || slot?.text || currentScene().text});
     if (episode?.id !== targetId) return;
+    closeProjectOverlays();
     view = 'workflow';
     render();
     toast(`'${slot?.name || '레이아웃 슬롯'}'의 Higgsfield 생성 설정을 열었습니다.`);
@@ -1066,7 +1362,7 @@ async function handleAction(button) {
   else if (action === 'remove-media') { delete currentScene().assetUrl; currentScene().kind = 'title'; markDirty(); render(); }
   else if (action === 'render') { const targetId=episode?.id; await save(true); if (!targetId || episode?.id !== targetId) throw new Error('프로젝트가 바뀌었습니다. 내보내기 대상을 다시 확인하세요.'); const job = await post(`/api/episodes/${targetId}/render`); state.jobs.push(job); render(); toast('MP4 렌더링을 시작했습니다. 아래에서 진행 상황을 확인하세요.'); }
   else if (action === 'save-template') { if (!episode) return; openModal('내 템플릿 저장', `<label>템플릿 이름<input name="name" required value="${esc(episode.title)} 템플릿"></label><label>콘텐츠 유형<select name="category">${categoryOptions(episode.category)}</select></label>`, async data => { await post('/api/templates',{...data,format:episode.format,scenes:episode.scenes}); await refresh(); render(); toast('템플릿을 저장했습니다.'); },'저장'); }
-  else if (action === 'apply-template') { if (!episode) { toast('스튜디오에서 에피소드를 먼저 만들어 주세요.',true); return; } const targetId=episode.id,templateId=button.dataset.id; await save(true); if (episode?.id !== targetId) throw new Error('프로젝트가 바뀌었습니다. 적용 대상을 다시 확인하세요.'); const result=await post(`/api/episodes/${targetId}/template`,{templateId}); cacheEpisode(result); if (reconcileEpisode(result)) { sceneIndex = 0; view = 'studio'; } await refresh(); render(); toast('템플릿 적용 기록을 저장했습니다.'); }
+  else if (action === 'apply-template') { if (!episode) { toast('프로젝트를 먼저 만들어 주세요.',true); return; } const targetId=episode.id,templateId=button.dataset.id; await save(true); if (episode?.id !== targetId) throw new Error('프로젝트가 바뀌었습니다. 적용 대상을 다시 확인하세요.'); const result=await post(`/api/episodes/${targetId}/template`,{templateId}); cacheEpisode(result); if (reconcileEpisode(result)) { sceneIndex = 0; view = 'workflow'; } closeProjectOverlays(); await refresh(); render(); toast('템플릿 적용 기록을 저장했습니다.'); }
   else if (action === 'refresh-trends') { const result = await post('/api/trends/refresh'); await refresh(); render(); const sources = Array.isArray(result.sources) ? result.sources : Object.values(result.sources || {}); const errors = sources.filter(source => source.error || source.ok === false || source.status === 'error'); toast(errors.length ? `수집 결과를 확인하세요: ${errors.map(source => source.error || source.message || '일부 출처 연결 실패').join(' · ')}` : `${result.trends?.length || 0}개의 트렌드를 수집했습니다.`,errors.length > 0); }
   else if (action === 'trend-episode') { newEpisode(button.dataset.keyword || ''); }
   else if (action === 'trend-select') { await post('/api/trends/select',{keyword:button.dataset.keyword,selected:button.dataset.selected === 'true'}); await refresh(); render(); }
@@ -1077,14 +1373,30 @@ async function handleAction(button) {
   else if (action === 'refresh-integrations') { state.integrations = await api('/api/integrations'); render(); toast('연결 상태를 확인했습니다.'); }
 }
 
+function contextMenuAnchor(target) {
+  if (target.closest('#workflow-host')) return null;
+  return target.closest('[data-action="project-menu"],[data-action="episode-menu"],[data-action="channel-menu"],[data-action="tool-menu"],[data-action="project-tools"],[data-action="sidebar-menu"]') || target.closest('.project-row')?.querySelector('.project-more') || target.closest('#project-navigation')?.querySelector('[data-action="project-menu"]') || target.closest('#project-tool-dialog')?.querySelector('[data-action="tool-menu"]') || target.closest('.sidebar')?.querySelector('[data-action="sidebar-menu"]');
+}
+document.addEventListener('contextmenu',event=>{
+  const anchor = contextMenuAnchor(event.target);
+  if (!anchor) return;
+  event.preventDefault(); openProjectMenu(anchor,event);
+});
+document.addEventListener('keydown',event=>{
+  if (!(event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10')) return;
+  const anchor = contextMenuAnchor(event.target);
+  if (!anchor) return;
+  event.preventDefault(); openProjectMenu(anchor);
+});
+
 document.addEventListener('click', async event => {
   const button = event.target.closest('[data-action]');
   if (!button || busy) return;
   busy = true;
-  button.disabled = true;
+  if (!readActions.has(button.dataset.action)) button.disabled = true;
   try { await handleAction(button); }
   catch (error) { toast(error.status === 409 ? '다른 작업에서 이 에피소드가 수정되었습니다. 현재 편집은 보존했습니다. 페이지를 다시 열기 전에 편집 내용을 복사해 주세요.' : error.message,true); }
-  finally { busy = false; button.disabled = false; }
+  finally { busy = false; if (button.isConnected && !readActions.has(button.dataset.action)) { button.disabled = false; applyAdminControls(); applyProjectControls(); updateSaveStatus(); } }
 });
 
 document.addEventListener('change',async event=>{
@@ -1105,6 +1417,7 @@ document.addEventListener('change',async event=>{
     if (targetId === episode?.id) return;
     const target = state.episodes.find(item => item.id === targetId);
     stopPlayback();
+    closeProjectOverlays();
     switchEpisode(target || null);
     if (view === 'workflow') { await workflowEditor.load(); bindWorkflowProject(); }
     render(); $('#main')?.focus(); return;
@@ -1119,6 +1432,7 @@ document.addEventListener('focusout', () => queueMicrotask(syncProjectToolsConte
 
 document.addEventListener('input', event => {
   const target = event.target;
+  if (target.matches('[data-scene],[data-episode],[data-slot-field],[data-slot-style]') && projectEditReason()) return;
   if (target.id === 'speech-voice') { speechVoice=target.value; return; }
   if (target.id === 'speech-rate') { if (target.checkValidity() && target.value !== '') speechRate=Number(target.value); return; }
   if (target.dataset.slotField && currentSlot()) {
@@ -1161,6 +1475,7 @@ document.addEventListener('submit', async event => {
   const button = $('button[type="submit"]',form);
   button.disabled = true;
   try {
+    if (form.id === 'chat-form') requireProjectEdit();
     if (form.id === 'command-form') { await post('/api/commands',{message:data.message,source:'web'}); await loadCommands(); render(); }
     else if (form.id === 'trend-form') { await post('/api/trends',data); await refresh(); render(); toast('키워드를 기록했습니다.'); }
     else if (form.id === 'trend-settings-form') {
@@ -1216,23 +1531,25 @@ $('#media-file').addEventListener('change', async event => {
   pendingSlotUploadId = null;
   if (!file || !selectedScene) return;
   try {
+    requireProjectEdit(selectedEpisode);
+    if (targetSlotId && !currentScene()?.slots?.some(slot=>slot.id === targetSlotId)) throw new Error('업로드 대상 슬롯이 없어졌습니다. 현재 장면에서 슬롯을 다시 선택하세요.');
     toast('미디어를 업로드하는 중입니다…');
     const asset = await api(`/api/uploads?name=${encodeURIComponent(file.name)}`,{method:'POST',headers:{'Content-Type':file.type || 'application/octet-stream'},body:file});
     if (episode?.id !== selectedEpisode) { toast('업로드했습니다. 선택한 에피소드가 바뀌어 장면에는 적용하지 않았습니다.',true); return; }
+    requireProjectEdit(selectedEpisode);
     const scene = episode.scenes.find(item => item.id === selectedScene);
-    if (!scene) return;
+    if (!scene) throw new Error('업로드는 완료했지만 대상 장면이 없어 연결하지 않았습니다. 소스 도구에서 업로드 파일을 확인하세요.');
     const mediaKind = file.type.startsWith('video/') ? 'video' : 'image';
-    if (targetSlotId && Array.isArray(scene.slots)) {
-      const slot = scene.slots.find(item => item.id === targetSlotId);
-      if (slot) {
-        slot.assetUrl = asset.url;
-        slot.mediaKind = mediaKind;
-        selectedSlotId = slot.id;
-        markDirty();
-        render();
-        toast(`미디어를 '${slot.name}' 레이아웃 슬롯에 연결했습니다. 변경 저장을 눌러 보관하세요.`);
-        return;
-      }
+    if (targetSlotId) {
+      const slot = scene.slots?.find(item => item.id === targetSlotId);
+      if (!slot) throw new Error('업로드는 완료했지만 대상 슬롯이 없어 연결하지 않았습니다. 소스 도구에서 업로드 파일을 확인하세요.');
+      slot.assetUrl = asset.url;
+      slot.mediaKind = mediaKind;
+      selectedSlotId = slot.id;
+      markDirty();
+      render();
+      toast(`미디어를 '${slot.name}' 레이아웃 슬롯에 연결했습니다. 변경 저장을 눌러 보관하세요.`);
+      return;
     }
     scene.assetUrl = asset.url;
     scene.kind = mediaKind;
@@ -1247,7 +1564,7 @@ let slotDrag = null;
 document.addEventListener('pointerdown', event => {
   const slotEl = event.target.closest('.preview-slot[data-slot-id]');
   const preview = $('#preview');
-  if (!slotEl || !preview || event.button !== 0 || !canMutate()) return;
+  if (!slotEl || !preview || event.button !== 0 || projectEditReason()) return;
   const scene = currentScene();
   const slot = scene?.slots?.find(item => item.id === slotEl.dataset.slotId);
   if (!slot) return;
@@ -1293,7 +1610,7 @@ document.addEventListener('pointerup', event => {
   if (!slotDrag || event.pointerId !== slotDrag.pointerId) return;
   const wasMoved = slotDrag.moved;
   slotDrag = null;
-  if (wasMoved || view === 'studio') render();
+  if (wasMoved || sceneEditorOpen) render();
 });
 
 $('#audio-file').addEventListener('change', async event => {
@@ -1302,9 +1619,11 @@ $('#audio-file').addEventListener('change', async event => {
   const selectedScene = currentScene()?.id;
   if (!file || !selectedScene) return;
   try {
+    requireProjectEdit(selectedEpisode);
     toast('오디오를 업로드하는 중입니다…');
     const asset = await api(`/api/uploads?name=${encodeURIComponent(file.name)}`,{method:'POST',headers:{'Content-Type':file.type || 'application/octet-stream'},body:file});
     if (episode?.id !== selectedEpisode) { toast('오디오 업로드는 완료했지만 선택한 에피소드가 바뀌어 적용하지 않았습니다.',true); return; }
+    requireProjectEdit(selectedEpisode);
     const scene = episode.scenes.find(item => item.id === selectedScene);
     if (!scene) return;
     scene.audioUrl = asset.url;
@@ -1317,27 +1636,30 @@ $('#audio-file').addEventListener('change', async event => {
 });
 
 window.addEventListener('beforeunload', event => { if (anyStudioDraftDirty() || workflowEditor.hasAnyChanges?.() || workflowEditor.hasChanges()) { event.preventDefault(); event.returnValue = ''; } });
-document.addEventListener('keydown', async event => { if ((event.ctrlKey || event.metaKey) && event.key === 's') { event.preventDefault(); try { if (view === 'workflow') await workflowEditor.save(); else await save(); render(); } catch (error) { toast(error.message,true); } } });
+document.addEventListener('keydown', async event => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); try { if (sceneEditorOpen && $('#project-scene-dialog')?.open) await save(); else await workflowEditor.save(); render(); } catch (error) { toast(error.message,true); } } });
 
 setInterval(async () => {
-  if (!authenticated || polling || !(state.jobs.some(job => ['running','queued'].includes(job.status)) || (state.narrationJobs || []).some(job => ['running','queued'].includes(job.status)))) return;
+  if (!authenticated || polling || ![...(state.jobs || []),...(state.narrationJobs || []),...(state.workflowRuns || []),...(state.generationJobs || [])].some(job => ['running','queued','pending','submitting','polling','in_progress','downloading'].includes(job.status))) return;
   polling=true;
   try {
     const activeNarrations = new Set((state.narrationJobs || []).filter(job => ['queued','running'].includes(job.status)).map(job => job.id));
     const latest = await api('/api/state');
     state.jobs = latest.jobs || [];
     state.narrationJobs = latest.narrationJobs || [];
+    state.workflowRuns = latest.workflowRuns || [];
+    state.generationJobs = latest.generationJobs || [];
     for (const job of state.narrationJobs) {
       if (activeNarrations.has(job.id) && job.status === 'completed' && !completedNarrations.has(job.id)) { completedNarrations.add(job.id); applyNarrationResult(job,latest); }
     }
     if ($('#jobs')) $('#jobs').innerHTML = jobsHtml();
     if ($('#narration-status')) $('#narration-status').innerHTML = narrationStatusHtml();
     for (const button of document.querySelectorAll('[data-action="narrate-scene"],[data-action="narrate-all"]')) button.disabled = !speech.available || !speechVoice || ['queued','running'].includes(narrationJob()?.status);
+    applyProjectControls(); syncProjectToolsContext();
   } catch { /* Foreground actions report errors; job polling preserves the current draft. */ }
   finally { polling=false; }
 },2500);
 
-try { await refresh(); await workflowEditor.load(); bindWorkflowProject(); render(); }
-catch (error) { if (error.status !== 401) { $('#app').innerHTML = `<main class="panel login"><h1>스튜디오에 연결할 수 없습니다</h1><p>${esc(error.message)}</p><button data-action="reload">다시 연결</button></main>`; } }
+try { await initializeWorkbench(); }
+catch (error) { if (error.status !== 401) showWorkbenchLoadFailure(error); }
 
-setInterval(() => { if (authenticated && view==='overview' && !busy) operations.reload(true); },30000);
+setInterval(() => { if (authenticated && activeTool==='overview' && !busy) operations.reload(true); },30000);

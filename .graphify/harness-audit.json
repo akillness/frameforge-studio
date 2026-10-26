@@ -1,0 +1,363 @@
+{
+  "schema": "frameforge-harness-audit/v1",
+  "observedAt": "2026-10-26T14:49:28.943Z",
+  "scope": "Bounded harness, authored knowledge, measured context and actual local Docker/host-bridge delivery; not completion of the original production/blog goal",
+  "gates": [
+    {
+      "command": "node --test --test-reporter=spec tests/project-knowledge.test.mjs tests/project-agent.test.mjs tests/harness-context.test.mjs",
+      "exitCode": 0,
+      "passed": 77,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "command": "python -m unittest discover -s .graphify -p test_refresh*.py -v",
+      "exitCode": 0,
+      "passed": 26
+    },
+    {
+      "command": "npm run check",
+      "exitCode": 0,
+      "modules": 118
+    }
+  ],
+  "knowledge": {
+    "admittedPages": 10,
+    "sourceToSearch": {
+      "query": "newline",
+      "entitySha256": "0bcb3fc20be3a0c3f6df8ed2b9da1b3f7b622dc42291b906c126a4647faa2366",
+      "explicitReviewedRepin": true,
+      "indexWritePassed": true,
+      "checkPassed": true,
+      "actualSearchPassed": true,
+      "policySha256": "42c94c3df8fee07b96ed88f2873848d62b85a46d453bab6c170617eb69c40f62",
+      "initialAuditEntitySha256": "997c38f5880f9b24f682f2447dc05b428e98681d988400437dd2833c2d58de11",
+      "concurrentAuthoredUpdateReviewedWithoutBlindRepin": true
+    },
+    "captureBoundary": "Supported per-launch environment containment only; no global or universal hook enforcement",
+    "rawPreservation": {
+      "observedAt": "2026-10-26T14:00:23.752Z",
+      "baselineObservedAt": "2026-10-26T12:01:43.939394+00:00",
+      "baselineFiles": 187,
+      "matched": 187,
+      "changed": 0,
+      "missing": 0,
+      "baselineIdentity": "current187-final-operation-only",
+      "historicalInitial161Gate": "unresolved: original per-file baseline was not retained; do not infer unchanged from current hashes",
+      "passedForRetainedBaseline": true
+    }
+  },
+  "measurements": {
+    "startup": {
+      "mandatoryStartup": {
+        "bytes": {
+          "before": 40917,
+          "after": 15049,
+          "delta": -25868
+        },
+        "characters": {
+          "before": 40861,
+          "after": 15046,
+          "delta": -25815
+        },
+        "utf16CodeUnits": {
+          "before": 40861,
+          "after": 15046,
+          "delta": -25815
+        }
+      },
+      "startupWithArchitecture": {
+        "bytes": {
+          "before": 58156,
+          "after": 22252,
+          "delta": -35904
+        },
+        "characters": {
+          "before": 58081,
+          "after": 22249,
+          "delta": -35832
+        },
+        "utf16CodeUnits": {
+          "before": 58081,
+          "after": 22249,
+          "delta": -35832
+        }
+      },
+      "allMeasuredFiles": {
+        "bytes": {
+          "before": 60758,
+          "after": 30893,
+          "delta": -29865
+        },
+        "characters": {
+          "before": 60683,
+          "after": 30890,
+          "delta": -29793
+        },
+        "utf16CodeUnits": {
+          "before": 60683,
+          "after": 30890,
+          "delta": -29793
+        }
+      }
+    },
+    "commandBaselines": [
+      {
+        "argv": [
+          "scripts/knowledge.mjs",
+          "status"
+        ],
+        "medianWallMilliseconds": 453.7435999999998,
+        "allSucceeded": true,
+        "maxRSSKiB": [
+          56220,
+          56244,
+          56228,
+          56204,
+          56236
+        ]
+      },
+      {
+        "argv": [
+          "scripts/knowledge.mjs",
+          "search",
+          "production"
+        ],
+        "medianWallMilliseconds": 489.8137999999999,
+        "allSucceeded": true,
+        "maxRSSKiB": [
+          56224,
+          56152,
+          56196,
+          56292,
+          56208
+        ]
+      },
+      {
+        "argv": [
+          "scripts/knowledge.mjs",
+          "check"
+        ],
+        "medianWallMilliseconds": 696.4528999999993,
+        "allSucceeded": true,
+        "maxRSSKiB": [
+          56312,
+          56236,
+          56176,
+          56284,
+          56220
+        ]
+      }
+    ],
+    "inputsStable": true,
+    "graphLoad": {
+      "command": "node scripts/knowledge-benchmark.mjs --graph-only --graph-before data/harness-audit/graph-before.json --graph-after .graphify/graph.json --phase graph-sharing-final-pair --iterations 5 --output data/harness-audit/graph-sharing-final.json",
+      "inputsStable": true,
+      "beforeBytes": 4527088,
+      "afterBytes": 2647844,
+      "workloads": [
+        {
+          "semanticWorkload": "native JSON file read + UTF-8 decode + JSON.parse + node/edge counts",
+          "medianWallMilliseconds": 755.1497999999997,
+          "allSucceeded": true,
+          "maxRSSKiB": [
+            72824,
+            72716,
+            72812,
+            72684,
+            72824
+          ]
+        },
+        {
+          "semanticWorkload": "native JSON file read + UTF-8 decode + JSON.parse + node/edge counts",
+          "medianWallMilliseconds": 317.66969999999947,
+          "allSucceeded": true,
+          "maxRSSKiB": [
+            66808,
+            66876,
+            66852,
+            66892,
+            66952
+          ]
+        }
+      ],
+      "observedAt": "2026-10-26T14:47:56.139Z"
+    },
+    "limits": [
+      "Exact file bytes/Unicode code points are not billed tokens or measured model ingestion.",
+      "Fresh child wall times include startup and uncontrolled filesystem cache/scheduling. Five observations are not a controlled performance study.",
+      "Graph-load read/decode/parse/count workloads are identical but corpora differ. Native extraction CPU, provider latency and general memory savings are not established.",
+      "New knowledge commands have no prior semantic-equivalent baseline."
+    ],
+    "startupObservedAt": "2026-10-26T14:47:55.111Z",
+    "commandBaselinesObservedAt": "2026-10-26T13:39:00.550Z"
+  },
+  "structural": {
+    "mex": {
+      "refreshCommand": "mex graph refresh --json",
+      "refreshExitCode": 0,
+      "fresh": true,
+      "reindexedFiles": 0,
+      "parseHealth": {
+        "total": 128,
+        "ok": 128,
+        "partial": 0,
+        "failed": 0
+      },
+      "checkCommand": "mex check --json",
+      "checkExitCode": 0,
+      "checkScore": 100,
+      "issues": 0,
+      "filesChecked": 16,
+      "observedAt": "2026-10-26T14:06:55.735Z"
+    },
+    "graphify": {
+      "command": "python .graphify/refresh.py",
+      "exitCode": 0,
+      "version": "0.8.39",
+      "nodes": 3049,
+      "edges": 5391,
+      "sourceFiles": 340,
+      "receipt": ".graphify/verification.json",
+      "semanticVerification": false,
+      "observedAt": "2026-10-26T14:42:07.818487+00:00",
+      "policySha256": "42c94c3df8fee07b96ed88f2873848d62b85a46d453bab6c170617eb69c40f62"
+    }
+  },
+  "deployment": {
+    "command": "docker compose --project-name frameforge-studio --file compose.yaml --env-file .env up -d --no-deps --no-build --wait --wait-timeout 60 studio",
+    "healthy": true,
+    "image": "frameforge-studio:harness-audit-20261026-clean",
+    "runtimeSource": {
+      "observedAt": "2026-10-26T14:39:59.623Z",
+      "runtimeFiles": 172,
+      "runtimeBytes": 2169969,
+      "allSourceBytesExact": true,
+      "generatedCacheEntries": 0,
+      "integrity": "ok",
+      "allTableSchemasAndRowsExact": true,
+      "allMediaExact": true,
+      "tables": {
+        "entities": 450,
+        "history": 46,
+        "settings": 2,
+        "workflow_history": 21,
+        "workflow_node_reviews": 0,
+        "workflow_reviews": 6
+      },
+      "mediaFiles": 29,
+      "activeJobs": 0,
+      "healthStatus": 200,
+      "loginStatus": 200,
+      "blogStateStatus": 200,
+      "blogUiStatus": 200,
+      "accounts": 5,
+      "enabledSchedules": 0,
+      "contract": {
+        "version": "1.7.2",
+        "path": "harness/versions/1.7.2/docs/harness.md",
+        "sha256": "d8e1fdb6ce62a660cf2f96d8f27f3ab92b3ac4f28854e99832e89298c4742013",
+        "bundleSha256": "86ac9b9af933feec8069a38030d45aa2a5f9953fc7187bd66ad2583aaedf8fcb",
+        "contractSha256": "1daa0fc929528506499c16b3469ecd3c932b0d53f35d48f0ac143f9b79d630b9",
+        "bytes": 1241
+      },
+      "uid": 1000,
+      "privatePaths": {
+        "wiki": false,
+        "captures": false,
+        "rootAgentRules": false
+      },
+      "runtimeSourceScope": [
+        "server",
+        "public",
+        "scripts",
+        "harness/manifest.json",
+        "harness/versions"
+      ]
+    },
+    "preservation": {
+      "integrity": "ok",
+      "allTableSchemasAndRowsExact": true,
+      "allMediaExact": true,
+      "tables": {
+        "entities": 450,
+        "history": 46,
+        "settings": 2,
+        "workflow_history": 21,
+        "workflow_node_reviews": 0,
+        "workflow_reviews": 6
+      },
+      "mediaFiles": 29,
+      "activeJobs": 0
+    },
+    "authenticatedSmoke": {
+      "health": 200,
+      "login": 200,
+      "blogState": 200,
+      "blogUi": 200,
+      "accounts": 5,
+      "enabledSchedules": 0,
+      "uid": 1000,
+      "privatePaths": {
+        "wiki": false,
+        "captures": false,
+        "rootAgentRules": false
+      }
+    },
+    "selectedContract": {
+      "version": "1.7.2",
+      "path": "harness/versions/1.7.2/docs/harness.md",
+      "sha256": "d8e1fdb6ce62a660cf2f96d8f27f3ab92b3ac4f28854e99832e89298c4742013",
+      "bundleSha256": "86ac9b9af933feec8069a38030d45aa2a5f9953fc7187bd66ad2583aaedf8fcb",
+      "contractSha256": "1daa0fc929528506499c16b3469ecd3c932b0d53f35d48f0ac143f9b79d630b9",
+      "bytes": 1241
+    },
+    "liveHostBridge": {
+      "httpStatus": 200,
+      "busy": false,
+      "speechBusy": false,
+      "source": {
+        "version": "1.7.2",
+        "path": "harness/versions/1.7.2/docs/harness.md",
+        "sha256": "d8e1fdb6ce62a660cf2f96d8f27f3ab92b3ac4f28854e99832e89298c4742013",
+        "bundleSha256": "86ac9b9af933feec8069a38030d45aa2a5f9953fc7187bd66ad2583aaedf8fcb",
+        "contractSha256": "1daa0fc929528506499c16b3469ecd3c932b0d53f35d48f0ac143f9b79d630b9",
+        "bytes": 1241
+      },
+      "independentOwnershipVerified": true
+    },
+    "rollback": "Previous image retained by immutable Docker image ID; private consistent snapshot was matched against every immediate pre-cutover row/schema/media digest. Image rollback is not automatic data rollback.",
+    "packagingCorrection": {
+      "initialRuntimeFiles": 173,
+      "finalRuntimeSources": 172,
+      "generatedCacheEntries": 0,
+      "hostGeneratedCachePreserved": true,
+      "deniedPatterns": [
+        "**/__pycache__/",
+        "**/__pycache__/**",
+        "**/*.pyc",
+        "**/*.pyo"
+      ]
+    }
+  },
+  "retainedFailuresAndLimits": [
+    "Earlier normal native Graphify exit1 attempts retained privately; their exact cause was not established. Later actual canonical command passed. The unguarded runpy diagnostic was invalid for Windows multiprocessing and is not native failure evidence.",
+    "Managed bridge launch capture timed out, but subsequent exact Win32 ownership and authenticated status verified the new runtime; a timeout did not prove restart failure.",
+    "First operational blog smoke used a wrong accounts URL and got404; corrected against the existing state route without changing production routes or weakening tests.",
+    "Historical initial161-file raw baseline was not retained; whole-session preservation for that initial set is unresolved, not passed. Retained187-file operation baseline matches.",
+    "Legacy full-vault wiki/OKF failures are preserved and not replaced by ten-page admission/check or MEX100.",
+    "Jev jeopi is inactive with readiness unestablished; no successful API routing/review or fallback is claimed.",
+    "Original production/blog completion remains separate. Concurrent authored clone-v9 readability/preservation evidence is retained with its own scope; this harness audit grants no owner/creative/provider/publication approval."
+  ],
+  "sharingBoundary": "Only reviewed source, authored navigation/ledger prefix and safe evidence are eligible for the separately authorized commit/push. Full local capture log/suffix, raw prompt sources, private data/media, operational credentials/state and diagnostic logs are not shared.",
+  "gitByteBoundary": {
+    "default": "-text",
+    "explicitLfExceptions": [
+      "*.svg",
+      "*.sh"
+    ],
+    "additionalExistingRuntimeByteOnlyPaths": 15,
+    "allAdditionalPathsNormalizeExactlyToPriorHEAD": true,
+    "privateWikiSuffixesExcludedFromStaging": true
+  }
+}

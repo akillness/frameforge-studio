@@ -1,0 +1,78 @@
+{
+  "schema": "frameforge-native-mex-refresh/v1",
+  "command": "node <installed-mex-agent>/dist/cli.js graph refresh --json",
+  "startedAt": "2026-10-26T14:34:31.699Z",
+  "finishedAt": "2026-10-26T14:34:43.609Z",
+  "exitCode": 0,
+  "state": "succeeded",
+  "durationMs": 11910,
+  "diagnostics": [],
+  "status": {
+    "status": "fresh",
+    "inspected": true,
+    "observedAt": "2026-10-26T14:34:37.198Z",
+    "currentRepo": {
+      "branch": "main",
+      "head": "204c3529fa2170712b282adf6274f86d1cca3dc9",
+      "dirty": true,
+      "observedAt": "2026-10-26T14:34:37.198Z"
+    },
+    "lastSuccessfulIndexAt": "2026-10-26T12:21:38.916Z",
+    "indexedAt": "2026-10-26T12:21:38.916Z",
+    "indexedBranch": "main",
+    "indexedHead": "204c3529fa2170712b282adf6274f86d1cca3dc9",
+    "schemaVersion": 4,
+    "extractorVersion": "typescript-5.9-v5+tree-sitter-v2",
+    "grammarVersion": "e3024e9e581533232ee11d4ed0bf6ace91588959e0e609ebcf5d6e80b51b5f9c",
+    "parseHealth": {
+      "total": 128,
+      "ok": 128,
+      "partial": 0,
+      "failed": 0,
+      "failedPaths": [],
+      "failedPathsTruncated": false
+    },
+    "changes": {
+      "total": 0,
+      "added": [],
+      "modified": [],
+      "deleted": [],
+      "truncated": false,
+      "branchChanged": false,
+      "manifestChanged": false,
+      "configChanged": false,
+      "grammarChanged": false
+    },
+    "diagnostics": []
+  },
+  "filesIndexed": 0,
+  "nodesCreated": 0,
+  "edgesCreated": 0,
+  "indexedTotals": {
+    "files": 128,
+    "nodes": 6160,
+    "edges": 20269,
+    "sourceChunks": 607
+  },
+  "incrementalBoundary": "No code changed: this native invocation created zero new records; the existing complete index remains128files/6160nodes/20269edges.",
+  "privacyAudit": {
+    "filePaths": {
+      "operations": 0,
+      "privateWorkspace": 0,
+      "runtimeData": 0,
+      "privateArtifacts": 0,
+      "rawCaptures": 0,
+      "rootState": 0
+    },
+    "chunkPaths": {
+      "operations": 0,
+      "privateWorkspace": 0,
+      "runtimeData": 0,
+      "privateArtifacts": 0,
+      "rawCaptures": 0,
+      "rootState": 0
+    },
+    "metadataRows": 12,
+    "privateMetadataPathMentions": 0
+  }
+}

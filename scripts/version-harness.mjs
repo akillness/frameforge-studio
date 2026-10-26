@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { existsSync, lstatSync, mkdirSync, openSync, closeSync, readFileSync, writeFileSync, renameSync, readdirSync, unlinkSync, rmSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { constants, existsSync, fstatSync, lstatSync, mkdirSync, openSync, closeSync, readSync, writeFileSync, renameSync, opendirSync, unlinkSync, rmSync } from 'node:fs';
+import { dirname, join, parse, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 export const HARNESS_FILES = [
@@ -13,6 +13,38 @@ export const HARNESS_FILES = [
   'docs/harness.md',
   'docs/harness-versioning.md',
 ].sort();
+export const MAX_HARNESS_MANIFEST_BYTES = 8192;
+export const MAX_HARNESS_BUNDLE_BYTES = 16384;
+export const MAX_HARNESS_FILE_BYTES = 262144;
+export const MAX_HARNESS_TOTAL_BYTES = 1048576;
+const snapshots = new WeakMap();
+const bundleInventory = new Map([['', new Map()]]);
+for (const name of [...HARNESS_FILES, 'bundle.json']) {
+  const parts = name.split('/');
+  let parent = '';
+  for (let index = 0; index < parts.length; index += 1) {
+    const directory = index < parts.length - 1;
+    bundleInventory.get(parent).set(parts[index], directory);
+    parent = parent ? `${parent}/${parts[index]}` : parts[index];
+    if (directory && !bundleInventory.has(parent)) bundleInventory.set(parent, new Map());
+  }
+}
+
+function tooLarge() {
+  return Object.assign(new Error('Harness input exceeds the byte limit'), { code: 'HARNESS_INPUT_TOO_LARGE' });
+}
+
+function plainDirectory(directory) {
+  directory = resolve(directory);
+  let current = parse(directory).root;
+  for (const part of relative(current, directory).split(/[\\/]/).filter(Boolean)) {
+    current = join(current, part);
+    const info = lstatSync(current);
+    if (!info.isDirectory() || info.isSymbolicLink()) throw new Error('Harness directories must not be symbolic links');
+  }
+  const info = lstatSync(directory);
+  if (!info.isDirectory() || info.isSymbolicLink()) throw new Error('Invalid bundle directory');
+}
 const hash = value => createHash('sha256').update(value).digest('hex');
 const encode = value => `${JSON.stringify(value, null, 2)}\n`;
 const versionParts = version => {
@@ -26,42 +58,97 @@ const newer = (candidate, previous) => {
   for (let i = 0; i < 3; i += 1) if (left[i] !== right[i]) return left[i] > right[i];
   return false;
 };
-function regularFile(path) {
-  if (!lstatSync(path).isFile() || lstatSync(path).isSymbolicLink()) throw new Error(`Expected a regular file: ${path}`);
-  return readFileSync(path);
+function regularFileInfo(path) {
+  plainDirectory(dirname(path));
+  const info = lstatSync(path);
+  if (!info.isFile() || info.isSymbolicLink()) throw new Error(`Expected a regular file: ${path}`);
+  return info;
+}
+function regularFile(path, maximum = MAX_HARNESS_FILE_BYTES) {
+  const before = regularFileInfo(path);
+  if (before.size > maximum) throw tooLarge();
+  const fd = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW || 0) | (constants.O_NONBLOCK || 0));
+  try {
+    const info = fstatSync(fd);
+    if (!info.isFile() || info.dev !== before.dev || info.ino !== before.ino) throw new Error('Harness file changed while opening');
+    if (info.size > maximum) throw tooLarge();
+    const bytes = Buffer.alloc(info.size + 1);
+    let length = 0, count;
+    while (length < bytes.length && (count = readSync(fd, bytes, length, bytes.length - length, null)) > 0) length += count;
+    if (length !== info.size || fstatSync(fd).size !== info.size) throw new Error('Harness file changed while reading');
+    return bytes.subarray(0, length);
+  } finally { closeSync(fd); }
 }
 function ensureDirectory(path) {
   mkdirSync(path, { recursive: true });
   if (!lstatSync(path).isDirectory() || lstatSync(path).isSymbolicLink()) throw new Error('Harness directories must not be symbolic links');
 }
-function contents(directory, prefix = '') {
-  return readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
-    if (entry.isSymbolicLink()) throw new Error('Symbolic links are not allowed in a harness bundle');
-    const name = `${prefix}${entry.name}`;
-    return entry.isDirectory() ? contents(join(directory, entry.name), `${name}/`) : [name];
-  }).sort();
+function verifyInventory(directory) {
+  for (const [parent, expected] of bundleInventory) {
+    const current = join(directory, parent);
+    plainDirectory(current);
+    const handle = opendirSync(current, { bufferSize: 1 });
+    let count = 0;
+    try {
+      let entry;
+      while ((entry = handle.readSync()) !== null) {
+        if (count >= expected.size || !expected.has(entry.name) || entry.isSymbolicLink() || (expected.get(entry.name) ? !entry.isDirectory() : !entry.isFile())) throw new Error('Unexpected files in immutable bundle');
+        count += 1;
+      }
+    } finally { handle.closeSync(); }
+    if (count !== expected.size) throw new Error('Unexpected files in immutable bundle');
+  }
 }
-export function verifyBundle(directory, version) {
+function verifyBundleSnapshot(directory, version, reservedBytes = 0) {
   versionParts(version);
-  if (!lstatSync(directory).isDirectory() || lstatSync(directory).isSymbolicLink()) throw new Error('Invalid bundle directory');
-  const bytes = regularFile(join(directory, 'bundle.json'));
+  plainDirectory(directory);
+  const bytes = regularFile(join(directory, 'bundle.json'), MAX_HARNESS_BUNDLE_BYTES);
   const bundle = JSON.parse(bytes);
   if (bundle.schema !== 'frameforge-harness-bundle/v1' || bundle.version !== version || !Array.isArray(bundle.files)) throw new Error('Invalid harness bundle identity');
   if (JSON.stringify(bundle.files.map(file => file.path).sort()) !== JSON.stringify(HARNESS_FILES)) throw new Error('Unexpected harness file inventory');
-  if (JSON.stringify(contents(directory)) !== JSON.stringify([...HARNESS_FILES, 'bundle.json'].sort())) throw new Error('Unexpected files in immutable bundle');
-  for (const file of bundle.files) {
-    const data = regularFile(join(directory, file.path));
-    if (data.length !== file.bytes || hash(data) !== file.sha256) throw new Error(`Harness checksum mismatch: ${file.path}`);
+  verifyInventory(directory);
+  let inputBytes = bytes.length + reservedBytes;
+  for (const name of HARNESS_FILES) {
+    const info = regularFileInfo(join(directory, name));
+    if (info.size > MAX_HARNESS_FILE_BYTES || (inputBytes += info.size) > MAX_HARNESS_TOTAL_BYTES) throw tooLarge();
   }
-  return { bundle, sha256: hash(bytes) };
+  let totalBytes = bytes.length;
+  const files = new Map();
+  for (const file of bundle.files) {
+    if (!Number.isSafeInteger(file.bytes) || file.bytes < 0 || typeof file.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(file.sha256)) throw new Error('Invalid harness checksum record');
+    const maximum = Math.min(MAX_HARNESS_FILE_BYTES, MAX_HARNESS_TOTAL_BYTES - reservedBytes - totalBytes);
+    if (file.bytes > maximum) throw tooLarge();
+    const data = regularFile(join(directory, file.path), maximum);
+    if (data.length !== file.bytes || hash(data) !== file.sha256) throw new Error(`Harness checksum mismatch: ${file.path}`);
+    totalBytes += data.length;
+    files.set(file.path, data);
+  }
+  const verified = { bundle, sha256: hash(bytes) };
+  snapshots.set(verified, { files, totalBytes });
+  return verified;
+}
+export function verifyBundle(directory, version) {
+  return verifyBundleSnapshot(directory, version);
 }
 export function verifyCurrent(root) {
-  const pointer = JSON.parse(regularFile(join(root, 'harness/manifest.json')));
+  const manifest = join(root, 'harness/manifest.json');
+  const bytes = regularFile(manifest, MAX_HARNESS_MANIFEST_BYTES);
+  const pointer = JSON.parse(bytes);
   versionParts(pointer.currentVersion);
   if (pointer.schema !== 'frameforge-harness-current/v1' || pointer.bundlePath !== `versions/${pointer.currentVersion}`) throw new Error('Invalid current harness pointer');
-  const verified = verifyBundle(join(root, 'harness', pointer.bundlePath), pointer.currentVersion);
+  const verified = verifyBundleSnapshot(join(root, 'harness', pointer.bundlePath), pointer.currentVersion, bytes.length);
   if (verified.sha256 !== pointer.bundleSha256) throw new Error('Current bundle manifest checksum mismatch');
-  return { pointer, ...verified };
+  const snapshot = snapshots.get(verified);
+  if (snapshot.totalBytes + bytes.length > MAX_HARNESS_TOTAL_BYTES) throw tooLarge();
+  if (!regularFile(manifest, MAX_HARNESS_MANIFEST_BYTES).equals(bytes)) throw new Error('Current harness pointer changed during verification');
+  const selected = { pointer, ...verified };
+  snapshots.set(selected, snapshot);
+  return selected;
+}
+export function readVerifiedHarnessFile(verification, name) {
+  const bytes = snapshots.get(verification)?.files.get(name);
+  if (!bytes) throw new Error('File is not part of this verified harness snapshot');
+  return Buffer.from(bytes);
 }
 function copyBundle(source, destination, version) {
   const original = verifyBundle(source, version);

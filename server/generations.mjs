@@ -47,6 +47,8 @@ export class GenerationQueue {
     this.timers = new Map();
     this.waiters = new Map();
     for (const job of store.list('generationJobs').filter((item) => RECOVERABLE.has(item.status))) {
+      const episode = store.get('episodes', job.episodeId);
+      if (episode.status === 'archived' || episode.archivedAt) continue;
       if (job.transport !== provider.transport) this.update(job.id, { status: 'manual_recovery', error: 'Generation transport changed. Recover this job with its original provider connection.' });
       else if (!job.providerRequestId) this.update(job.id, { status: 'submission_unknown', error: 'Submission was interrupted. Inspect provider history before creating another request.' });
       else { this.update(job.id, { status: 'pending', pollFailures: 0 }); this.schedule(job.id, 0); }
@@ -58,6 +60,7 @@ export class GenerationQueue {
   recover(id) {
     if (this.closed) throw new HttpError(503, 'Generation service is stopping');
     const job = this.get(id);
+    this.store.assertEpisodeActive(job.episodeId);
     if (job.status === 'completed' || ACTIVE.has(job.status)) return job;
     if (!['polling_failed', 'import_failed', 'manual_recovery'].includes(job.status) || !job.providerRequestId) throw new HttpError(409, 'This generation cannot be recovered automatically. Inspect provider history without resubmitting.');
     if (job.transport !== this.provider.transport) throw new HttpError(409, 'Restore the original generation transport before recovering this request');
@@ -81,6 +84,7 @@ export class GenerationQueue {
     const input = { episodeId, expectedVersion: body.expectedVersion, sceneId, ...(slotId ? { slotId } : {}), model, prompt, params, transport: this.provider.transport };
     const inputHash = signature(input);
     const existing = this.store.list('generationJobs').find((job) => job.requestId === requestId);
+    const episode = this.store.assertEpisodeActive(episodeId);
     if (existing) {
       if (existing.inputHash !== inputHash) throw new HttpError(409, 'requestId already belongs to a different generation request');
       return existing;
@@ -91,7 +95,6 @@ export class GenerationQueue {
       return pending.promise;
     }
     if (this.pending.size + this.store.list('generationJobs').filter((job) => ACTIVE.has(job.status)).length >= this.maxActive) throw new HttpError(429, 'Generation queue is full');
-    const episode = this.store.get('episodes', episodeId);
     if (episode.version !== body.expectedVersion) throw new HttpError(409, 'Episode changed. Save and reload before generation.');
     if (!episode.scenes.some((scene) => scene.id === sceneId)) throw new HttpError(400, 'Generation requires an existing scene');
     const scene = episode.scenes.find((item) => item.id === sceneId);
@@ -111,13 +114,13 @@ export class GenerationQueue {
         throw new HttpError(invalidInput ? error.statusCode : 503, invalidInput ? 'Generation input does not match the supported model parameters' : 'Generation model schema is unavailable');
       }
       if (this.closed) throw new HttpError(503, 'Generation service is stopping');
-      if (this.store.get('episodes', episodeId).version !== episode.version) throw new HttpError(409, 'Episode changed while validating the generation request');
+      if (this.store.assertEpisodeActive(episodeId).version !== episode.version) throw new HttpError(409, 'Episode changed while validating the generation request');
       const { prompt: checkedPrompt, ...checkedParams } = normalized;
       const job = this.store.create('generationJobs', { requestId, inputHash, episodeId, episodeVersion: episode.version, sceneId, ...(slotId ? { slotId } : {}), model, prompt: checkedPrompt, params: checkedParams, transport: this.provider.transport, mediaKind: schema.type, status: 'queued', outputs: [], applied: false });
       this.schedule(job.id, 0);
       return job;
     })();
-    this.pending.set(requestId, { inputHash, promise });
+    this.pending.set(requestId, { episodeId, inputHash, promise });
     try { return await promise; }
     finally { this.pending.delete(requestId); }
   }
@@ -142,6 +145,7 @@ export class GenerationQueue {
     try {
       let job = this.get(id), result;
       if (!ACTIVE.has(job.status)) return;
+      this.store.assertEpisodeActive(job.episodeId);
       if (!job.providerRequestId) {
         if (job.status !== 'queued') { this.update(id, { status: 'submission_unknown', error: 'Provider submission identifier is unavailable; inspect provider history.' }); return; }
         this.update(id, { status: 'submitting', submittedAt: stamp() });
@@ -191,11 +195,13 @@ export class GenerationQueue {
   async importOutputs(id, outputs) {
     if (!Array.isArray(outputs) || !outputs.length || outputs.length > 4) throw new HttpError(422, 'Generation must return 1–4 media outputs');
     const job = this.get(id), root = await realpath(path.join(this.store.dataDir, 'uploads'));
+    this.store.assertEpisodeActive(job.episodeId);
     const files = [], uploads = [];
     let committed = false;
     try {
       for (const output of outputs) {
         if (this.closed) return;
+        this.store.assertEpisodeActive(job.episodeId);
         if (!['image', 'video'].includes(output.type) || output.type !== job.mediaKind) throw new HttpError(422, 'Generation output does not match its model media type');
         const uploadId = randomUUID(), temporary = path.join(root, `${uploadId}.download`);
         files.push(temporary);
@@ -241,6 +247,7 @@ export class GenerationQueue {
   async normalize(id) {
     if (this.closed) throw new HttpError(503, 'Generation service is stopping');
     const job = this.get(id);
+    this.store.assertEpisodeActive(job.episodeId);
     if (job.status !== 'completed') throw new HttpError(409, 'Only completed generation output can be normalized');
     if (this.busy.has(id)) throw new HttpError(409, 'Generation media is already being processed');
     if (this.normalizing.size >= Math.min(2, this.maxActive)) throw new HttpError(429, 'Video normalization capacity reached');
@@ -251,6 +258,7 @@ export class GenerationQueue {
     try {
       const root = await realpath(path.join(this.store.dataDir, 'uploads'));
       for (const output of job.outputs) {
+        this.store.assertEpisodeActive(job.episodeId);
         const original = this.store.get('uploads', output.uploadId);
         if (original.generationJobId !== id || original.url !== output.url || original.sha256 !== output.sha256 || !/^[a-f0-9-]{36}\.(png|jpg|webp|mp4|mov)$/.test(original.filename)) throw new HttpError(409, 'Generation asset identity does not match');
         const source = path.join(root, original.filename), info = await lstat(source);

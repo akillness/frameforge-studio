@@ -18,3 +18,17 @@ graphify-out/
 artifacts/private/
 
 _workspace/
+
+# Checkout-local agent state and unreviewed capture derivatives.
+.jeo/
+.omc/
+.ouroboros/
+.zvec-grep/
+/.state/
+llm-wiki/.state/
+llm-wiki/.graphify/
+llm-wiki/raw/sources/*
+!llm-wiki/raw/sources/2026-10-18-product-brief-excerpt.md
+!llm-wiki/raw/sources/premiere-workspace-2026-10-20.md
+llm-wiki/wiki/sources/20*.md
+llm-wiki/wiki/queries/20*.md

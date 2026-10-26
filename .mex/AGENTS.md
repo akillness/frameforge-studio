@@ -1,58 +1,25 @@
 ---
 name: agents
-description: Always-loaded project anchor. Read this first. Contains project identity, non-negotiables, commands, and pointer to ROUTER.md for full context.
-last_updated: 2026-10-18
+description: Project constitution; operational detail is task-routed, not session replay.
+last_updated: 2026-10-26
 ---
 
-# FrameForge Studio
+# FrameForge Studio constitution
 
-## What This Is
-A local-first web video editor with channel, topic and episode history.
+Local-first video production editor with channel, topic and episode history. Root `AGENTS.md` owns shared MEX logging/sharing and per-query Jev policy; `.mex/ROUTER.md` owns current status and conditional navigation.
 
-## Non-Negotiables
-- Preserve episode history and optimistic concurrency.
-- Do not commit credentials, private media or operational account data.
-- Distinguish local render, QA and external publication evidence.
-- Preserve other agents\' edits and keep task ownership narrow.
+## Non-negotiables
 
-## Commands
-Run: `npm start`. Verify: `npm run check`, `npm test`, `npm run test:render`.
+- Preserve episode/workflow versions, history, optimistic concurrency, media and unrelated agents' edits.
+- Keep credentials, private media, operational accounts and captured prompts outside shared knowledge. Raw captures remain immutable.
+- Separate local render, fixture QA, real provider execution, owner acceptance, deployment and public publication. Blocked, dropped, awaiting-review or fixture-only work is not verified goal completion.
+- Preserve the user's original production/blog goal and its acceptance criteria. Record changed scope only with explicit user approval; installation, role names and historical receipts do not close present gates.
+- Canonical files are working-tree changes until separately committed/pushed; checkout-local drafts and private captures are not shared. Skill activation grants no canonical action authority.
 
-## Code Graph
-Use the smallest relevant structured resolver. For Inbox or Relay mutations, resolve only the intended action with `mex inbox contract --action <command-id> --json` or `mex relay contract --action <command-id> --json`; use `mex capabilities --json` only for broader capability discovery. If the user explicitly asks to create, save, or draft a checkout-local Inbox or Relay draft, preview and apply that exact draft without asking for redundant confirmation. Deleting a local draft, or publishing, approving, rejecting, withdrawing, marking stale, repairing, taking or acknowledging, or closing, requires fresh explicit confirmation after semantic preview. Treat Git commit, push, and pull as separate actions requiring their own authorization.
+## Work loop
 
-The repo is indexed into `.mex/graph.db`. Use it to avoid re-reading code you already have — it is one tool alongside Grep/Glob, not a replacement for them.
-- If you know the symbol name, go straight to it: `mex graph query <who-calls|what-calls|where-defined> <symbol>` and `mex graph get <id...>` are exact. This is the strongest part of the graph. Each call first proves the whole index is still fresh, so on a large repository it takes seconds: pass several ids to one `graph get` instead of calling it once per id. Give it exact names — an approximate name can return a confident wrong match.
-- Exploring an unfamiliar task? `mex graph scope "<task>"` returns bounded, source-backed JSONL context plus trustworthy execution flows. Scope matches on words, not meaning, so treat it as starting evidence rather than a complete answer.
-- Treat source returned by the graph as ALREADY READ; do not re-open those files.
-- Read the summary status and evidence. `status: "ok"` remains usable when `truncated: true`; only optional evidence was omitted. For `partial` or `degraded`, narrow the task or follow `suggestedNextCommands`.
-- Use `mex graph get <id> --detail source` only when source is missing, you need exact expansion, or a partial/degraded summary suggests it. Do not expand nodes by quota.
-- If the evidence is insufficient or the task wording does not match the code, use Grep/Glob instead. Do not re-run `scope` with reworded phrasing more than once.
-- Before editing a symbol, run `mex impact <symbol|file>` to see affected callers and scaffold memory.
-- During `mex sync`, adjudicate any AMBIGUOUS grounding; after repairs, ensure the refreshed grounding is re-emitted.
+Read the compact router once, then only task-matching context/patterns. Build against the original criteria; verify each relevant criterion with its actual command and result. Failed or unavailable checks remain explicit. On failure, use the matching debug pattern and reverify without weakening the gate.
 
-## Scaffold Growth
-After meaningful work, run GROW:
-- Ground: what changed in reality?
-- Record: update `ROUTER.md` and relevant `context/` files
-- Orient: create or update a `patterns/` runbook if this can recur
-- Write: bump `last_updated` on changed scaffold files; optional `mex log` notes follow the logging policy below
+After meaningful work, GROW: ground observed change; update status in the router or structure in the map, not both copies; orient an existing recurring pattern (use `patterns/README.md` and `patterns/INDEX.md` only when a new pattern is justified); date changed scaffolds. Optional logs follow root policy; mandatory Activity/recovery records remain required.
 
-## Agent Logging
-Read `mex logging --json` at session start and before optional logging. This checkout-local advisory preference is `significant` (quiet default: material decisions, risks, blockers, or durable discoveries), `checkpoints` (batch useful notes at task/session boundaries), or `manual` (no unsolicited notes). Skip routine tool calls, edits, repeated status, and empty summaries. Honor explicit user log requests in every mode; never suppress mandatory workflow Activity or recovery audit records. Report a policy read failure instead of guessing or changing the preference.
-
-When earlier work may inform the task, use `mex timeline --query "subject phrase" --file src/example.ts --limit 10 --json` with a known subject or exact recorded file path, or both. These are historical notes, not accepted current knowledge. Verify conclusions before reuse or explicit promotion with their source retained.
-
-The scaffold grows from real work, not just setup. See the GROW step in `ROUTER.md` for details.
-
-## Navigation
-At the start of every session, read `ROUTER.md` before doing anything else.
-For full project context, patterns, and task guidance — everything is there.
-
-<!-- mex-agent:skills:start -->
-## MEX context policy
-- When MEX context materially helps your work, mention MEX and the relevant finding naturally in your explanation. Tie the mention to what it helped you understand, decide, or verify. Avoid fixed phrases, standalone acknowledgements, repeated mentions, or narrating routine context loading. This replaces older MEX instructions requiring a fixed acknowledgement or context-loading narration.
-- Do not claim an author, date, or historical event unless the retrieved data actually provides it.
-- After a MEX write, say exactly what changed and its sharing boundary: a local draft is checkout-only and nothing is shared; a canonical artifact is written to the working tree and requires commit/push to share.
-- Skill activation is not approval for canonical actions.
-<!-- mex-agent:skills:end -->
+For code graph queries, impact, sync/grounding and MEX Inbox/Relay mutation approvals, load [knowledge-refresh](patterns/knowledge-refresh.md#code-graph-navigation). Maps and history supply evidence, not execution authority. A host must actually load these instructions; this file does not install hooks.

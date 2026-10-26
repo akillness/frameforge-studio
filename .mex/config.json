@@ -1,4 +1,7 @@
 {
+  "graph": {
+    "ignore": ["data/**", "ops/**", "_workspace/**", "artifacts/private/**"]
+  },
   "setupMode": "code-repo",
   "aiTools": [
     "codex"

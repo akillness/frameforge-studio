@@ -128,7 +128,7 @@ export class NarrationQueue {
   }
 
   async start(id, raw) {
-    const body = object(raw), episode = this.store.get('episodes', id);
+    const body = object(raw), episode = this.store.assertEpisodeActive(id);
     if (!Number.isInteger(body.expectedVersion) || body.expectedVersion !== episode.version) throw new HttpError(409, 'Episode changed. Save and reload before generating narration.');
     const voice = text(body.voice, 'voice', 160);
     const rate = body.rate ?? 0;
@@ -145,7 +145,7 @@ export class NarrationQueue {
       if (this.closed) throw new HttpError(503, 'Service is stopping');
       if (!capability.available) throw new HttpError(503, capability.detail || 'Speech service unavailable');
       if (!capability.voices.some(item => item.id === voice)) throw new HttpError(400, 'Voice is not installed');
-      if (this.store.get('episodes', id).version !== episode.version) throw new HttpError(409, 'Episode changed while loading voices');
+      if (this.store.assertEpisodeActive(id).version !== episode.version) throw new HttpError(409, 'Episode changed while loading voices');
       const job = this.store.create('narrationJobs', { episodeId: id, episodeVersion: episode.version, sceneIds: ids, provider: capability.provider, voice, rate, status: 'queued', progress: 0 });
       this.queue.push({ job, episode, selected });
       setImmediate(() => this.process());
@@ -163,12 +163,14 @@ export class NarrationQueue {
     let applied = false;
     const update = patch => { if (!this.closed) this.store.save('narrationJobs', { ...this.store.get('narrationJobs', job.id), ...patch, updatedAt: stamp() }); };
     try {
+      this.store.assertEpisodeActive(episode.id);
       await mkdir(work, { recursive: true });
       const uploadRoot = await realpath(path.join(root, 'uploads'));
       update({ status: 'running', progress: 1 });
       const next = structuredClone(episode.scenes);
       for (const scene of selected) {
         if (this.closed) return;
+        this.store.assertEpisodeActive(episode.id);
         const id = randomUUID(), filename = `${id}.wav`, outputPath = path.join(uploadRoot, filename);
         files.push(outputPath);
         const { duration } = await this.synthesize({ text: scene.speech, voice: job.voice, rate: job.rate, outputPath, workDir: work });

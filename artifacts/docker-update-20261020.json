@@ -1,0 +1,36 @@
+{
+  "sqliteIntegrity": "ok",
+  "tableCountsPreserved": {
+    "entities": 303,
+    "history": 37,
+    "workflow_history": 16,
+    "workflow_reviews": 6,
+    "settings": 2
+  },
+  "entityIdentitiesPreserved": true,
+  "episodeAndWorkflowVersionsPreserved": true,
+  "mediaHashesMatched": 22,
+  "runtimeSourceHashesMatched": 56,
+  "unauthenticatedAccessRejected": true,
+  "authenticatedAdminLibraryRead": true,
+  "knowledgeAndWorkflowHistoryReadable": true,
+  "paidProviderCalls": 0,
+  "verifiedAt": "2026-10-20T16:13:33.620517+00:00",
+  "head": "adab575699e9436529a4113e53464941f741ecdd",
+  "previousImage": "sha256:d691a06864721d52453084e128afdc56bce5680256fa42b3f2e9fdbe10f20ba6",
+  "currentImage": "sha256:1aaecb9382abc4bb3a56b4e7378f5e4f3c9447c5b2fa60787482168de93ee7d9",
+  "containerRecreated": true,
+  "health": "healthy",
+  "volume": "frameforge-studio_studio-data",
+  "port": "127.0.0.1:4310",
+  "snapshotPath": "ops/snapshots/docker-preupdate-20261020-161200",
+  "rollbackTag": "frameforge-studio:preupdate-20261020",
+  "syntaxModules": 64,
+  "tests": {
+    "pass": 280,
+    "fail": 0,
+    "skipped": 0
+  },
+  "isolatedRender": "1080x1920 H.264 + AAC, 2 seconds",
+  "runtimeFilesDifferedBeforeRebuild": 0
+}

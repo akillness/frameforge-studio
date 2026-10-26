@@ -1,14 +1,9 @@
 """Offline regression for exact-record normalization without running Graphify."""
-import ast
-import json
+import runpy
 from pathlib import Path
 import unittest
 
-source = ast.parse(Path(__file__).with_name('refresh.py').read_text(encoding='utf-8'))
-function = next(node for node in source.body if isinstance(node, ast.FunctionDef)
-                and node.name == 'normalize_edges')
-namespace = {'json': json}
-exec(compile(ast.Module(body=[function], type_ignores=[]), 'refresh.py', 'exec'), namespace)
+namespace = runpy.run_path(str(Path(__file__).with_name('refresh.py')))
 normalize_edges = namespace['normalize_edges']
 
 
@@ -30,12 +25,7 @@ class NormalizationTest(unittest.TestCase):
         self.assertEqual(graph['edges'], [{'a': [1, 2]}, {'a': [2, 1]}])
 
 
-def exclude_local_state(graph):
-    function = next(node for node in source.body if isinstance(node, ast.FunctionDef)
-                    and node.name == 'exclude_checkout_local_state')
-    namespace = {}
-    exec(compile(ast.Module(body=[function], type_ignores=[]), 'refresh.py', 'exec'), namespace)
-    return namespace['exclude_checkout_local_state'](graph)
+exclude_local_state = namespace['exclude_checkout_local_state']
 
 
 class SourceBoundaryTest(unittest.TestCase):

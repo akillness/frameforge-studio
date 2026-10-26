@@ -1,0 +1,544 @@
+{
+  "schema": "frameforge-node-native-workbench-verification/v1",
+  "observedAt": "2026-10-26T14:52:38.902Z",
+  "overallStatus": "LOCAL_UI_AND_SCOPED_SOURCE_PRESERVING_VIDEO_VERIFIED_WITH_DOCUMENTED_KNOWLEDGE_LIMITS",
+  "localUiStatus": "PASSED",
+  "productionDeploymentStatus": "NOT_AUTHORIZED_OR_VERIFIED",
+  "candidate": {
+    "image": "sha256:6e4a8310c6363bfb12df952790504446a74df13cd84cea50b56b65f09e7eb2fb",
+    "baseImage": "sha256:4d9456675edf179bedd9f1c80e31525b007b5503d607f4e4b1bdf870925930df",
+    "runtimeFilesCompared": 77,
+    "changedRuntimePaths": [
+      "public/app.js",
+      "public/context-menu.js",
+      "public/workflow.js"
+    ],
+    "changedRuntimeAssets": [
+      {
+        "path": "public/app.js",
+        "sha256": "7a2d6bd2f448db21255ec6060d2606b106e5929f2e5731766276f164d31e462e"
+      },
+      {
+        "path": "public/workflow.js",
+        "sha256": "99a516fae3d8fd35949d4b933c2bf939d93668f6b4707f83a91fe87fc97dc444"
+      },
+      {
+        "path": "public/context-menu.js",
+        "sha256": "8139cb1068a2820cce6645f850f409aa46dbb0313b84697a579f08c563145ddb"
+      }
+    ],
+    "allBaseLayersRetained": true,
+    "addedLayers": 1,
+    "imageIdentity": "_workspace/node-native-20261025T130529Z/history-recovery/deferred-tool-recovery/image-identity.json",
+    "frozenScope": "_workspace/node-native-20261025T130529Z/history-recovery/deferred-tool-recovery/source-scope.json"
+  },
+  "repositoryHarness": {
+    "selectedVersion": "1.7.2",
+    "bundleSha256": "86ac9b9af933feec8069a38030d45aa2a5f9953fc7187bd66ad2583aaedf8fcb",
+    "integrityCommand": [
+      "node",
+      "scripts/version-harness.mjs",
+      "verify"
+    ],
+    "integrityResult": "passed",
+    "promotedByThisFinalVerification": false,
+    "liveReadiness": "not-established",
+    "testedImageBundledHarnessVersion": "ABSENT /app/harness/manifest.json; host selected1.7.2 contracts verified separately, no baked/deployed1.7.2 claim",
+    "hostBridgeInspection": {
+      "available": true,
+      "status": "verified",
+      "source": {
+        "version": "1.7.2",
+        "path": "harness/versions/1.7.2/docs/harness.md",
+        "sha256": "d8e1fdb6ce62a660cf2f96d8f27f3ab92b3ac4f28854e99832e89298c4742013",
+        "bundleSha256": "86ac9b9af933feec8069a38030d45aa2a5f9953fc7187bd66ad2583aaedf8fcb",
+        "contractSha256": "1daa0fc929528506499c16b3469ecd3c932b0d53f35d48f0ac143f9b79d630b9",
+        "bytes": 1241
+      }
+    }
+  },
+  "gates": {
+    "syntax": {
+      "command": [
+        "node",
+        "--check",
+        "public/app.js"
+      ],
+      "exitCode": 0
+    },
+    "newLifecycleRed": {
+      "image": "sha256:0ce067ed3f19f6cd9f56e401235404b3957e9945896d20aedbe2fd562845f4dc",
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0,
+      "reason": "Closed canvas eagerly read uploads, channel OAuth status and episode publications",
+      "log": "_workspace/node-native-20261025T130529Z/dt/red/run.tap"
+    },
+    "focused": {
+      "tests": 24,
+      "passed": 24,
+      "failed": 0,
+      "skipped": 0,
+      "commandRecord": "_workspace/node-native-20261025T130529Z/dt/functional/command.json",
+      "log": "_workspace/node-native-20261025T130529Z/dt/functional/run.tap"
+    },
+    "originalNativeStability": {
+      "requiredSequentialPasses": 3,
+      "observedSequentialPasses": 3,
+      "actionAndCaptureTimeoutMs": 5000,
+      "diagnosticInstrumentation": false,
+      "stopOnFirstFailure": true,
+      "retryUntilPass": false,
+      "widths": [
+        1600,
+        1024,
+        375,
+        320
+      ],
+      "actualPngHashesAndHeadersVerified": 12,
+      "record": "_workspace/node-native-20261025T130529Z/history-recovery/deferred-tool-recovery/strict-captures.json",
+      "samples": [
+        {
+          "exitCode": 0,
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "log": "_workspace/node-native-20261025T130529Z/dt/strict-1/run.tap"
+        },
+        {
+          "exitCode": 0,
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "log": "_workspace/node-native-20261025T130529Z/dt/strict-2/run.tap"
+        },
+        {
+          "exitCode": 0,
+          "passed": 1,
+          "failed": 0,
+          "skipped": 0,
+          "log": "_workspace/node-native-20261025T130529Z/dt/strict-3/run.tap"
+        }
+      ]
+    },
+    "completeAffectedSuite": {
+      "command": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "tests/news-query.test.mjs",
+        "tests/node-workbench.test.mjs",
+        "tests/production-workspace-journey.test.mjs",
+        "tests/production-workspace-ui.test.mjs",
+        "tests/project-archive.test.mjs",
+        "tests/workflow-empty-state.test.mjs",
+        "tests/workflow-ui-regressions.test.mjs",
+        "tests/workflow-activity.test.mjs"
+      ],
+      "commandRecord": "_workspace/node-native-20261025T130529Z/dt/full-98/command.json",
+      "exitCode": 0,
+      "tests": 98,
+      "passed": 98,
+      "failed": 0,
+      "skipped": 0,
+      "filtered": false,
+      "old97OraclesRetained": true,
+      "newLifecycleCases": 1,
+      "log": "_workspace/node-native-20261025T130529Z/dt/full-98/run.tap"
+    },
+    "completeRealAppJourney": {
+      "expected": 12,
+      "executed": 12,
+      "passed": 12,
+      "failed": 0,
+      "fullJourney": true,
+      "screenshots": 40,
+      "pageErrors": 0,
+      "externalRequests": 0,
+      "receipt": "_workspace/node-native-20261025T130529Z/dt/full-98/artifacts/production-workspace-implementation/journey-receipt.json"
+    },
+    "independentDeltaReviews": {
+      "javascript": {
+        "reviewer": "DeferredNativeJsReview",
+        "verdict": "SCOPED STATIC PASS"
+      },
+      "authorityAndStaleEffects": {
+        "reviewer": "DeferredNativeSecurityReview",
+        "verdict": "SCOPED STATIC PASS"
+      },
+      "configuredSpecialistAttempts": "Both failed with HTTP429 before review; supplied no verdict",
+      "runtimeOrReleaseVerdict": false
+    },
+    "rootStatePrivacy": {
+      "sourceChange": "Existing .state/ namespace prefix and rooted /.state/ ignore; no admission breadth change",
+      "red": {
+        "command": [
+          "python",
+          ".graphify/test_refresh_privacy.py",
+          "WikiAdmissionTest.test_root_knowledge_index_snapshots_never_enter_exported_graph",
+          "-v"
+        ],
+        "exitCode": 1,
+        "tests": 1,
+        "subtestFailures": 6,
+        "rawArtifact": "artifact://1641"
+      },
+      "focusedGreen": {
+        "exitCode": 0,
+        "tests": 1
+      },
+      "modifiedFileGreen": {
+        "command": [
+          "python",
+          ".graphify/test_refresh_privacy.py",
+          "-v"
+        ],
+        "exitCode": 0,
+        "tests": 22,
+        "failures": 0,
+        "skipped": 0,
+        "receipt": "artifacts/node-native-workbench/graphify-privacy-verification.json"
+      },
+      "review": "agent://Rootprivate-statePythonsafetyreview — static Python PASS",
+      "sourceAtThisGate": "1137bb032b786b58c49f674871aa8339b34495a14f6c6c856107fd964d37efb9",
+      "exportStatus": "PASSED_TIMESTAMPED_FILTERED_NATIVE_EXPORT; later docs/verification.md drift recorded, no current-global freshness or semantic-completeness claim",
+      "supersededInitial21TestSnapshot": {
+        "sourceChange": "Existing .state/ namespace prefix and rooted /.state/ ignore; no admission breadth change",
+        "red": {
+          "command": [
+            "python",
+            ".graphify/test_refresh_privacy.py",
+            "WikiAdmissionTest.test_root_knowledge_index_snapshots_never_enter_exported_graph",
+            "-v"
+          ],
+          "exitCode": 1,
+          "tests": 1,
+          "subtestFailures": 6,
+          "rawArtifact": "artifact://1641"
+        },
+        "focusedGreen": {
+          "exitCode": 0,
+          "tests": 1
+        },
+        "modifiedFileGreen": {
+          "command": [
+            "python",
+            ".graphify/test_refresh_privacy.py",
+            "-v"
+          ],
+          "exitCode": 0,
+          "tests": 21
+        },
+        "review": "agent://Rootprivate-statePythonsafetyreview — static Python PASS",
+        "sourceAtThisGate": "7ecbdd28635e023a91a17a43516acced91641f3b09c5aa181c4448b68c120d0e",
+        "exportStatus": "Old public generation preserved; fresh-staging corpus-shrink guard repair in progress with a new separate regression"
+      },
+      "finalFrozenSources": [
+        {
+          "path": ".graphify/refresh.py",
+          "sha256": "1137bb032b786b58c49f674871aa8339b34495a14f6c6c856107fd964d37efb9"
+        },
+        {
+          "path": ".graphify/test_refresh_privacy.py",
+          "sha256": "929693c7aa48d2e094493c732e92839011db092329f688f1cf1fe7b71b70c714"
+        },
+        {
+          "path": ".gitignore",
+          "sha256": "70b1e45d5fa12ed7df7bffc1bdf0771a79be29d7b92592619dbc2d11510a89a7"
+        }
+      ],
+      "freshStagingRegression": {
+        "command": [
+          "python",
+          ".graphify/test_refresh_privacy.py",
+          "WikiAdmissionTest.test_fresh_native_staging_replaces_larger_generation_only_after_validation",
+          "-v"
+        ],
+        "red": {
+          "exitCode": 1,
+          "tests": 1,
+          "failures": 1,
+          "observedMessage": "Fresh staging inherited an obsolete public graph: a smaller valid corpus must not reuse the old generation"
+        },
+        "green": {
+          "exitCode": 0,
+          "tests": 1,
+          "failures": 0,
+          "reportedRunSeconds": 2.453
+        }
+      },
+      "freshStagingReview": "agent://Fresh-stagegraphPythondeltareview — scoped static Python PASS",
+      "finalNativeExportReceipt": "artifacts/node-native-workbench/knowledge-refresh.json"
+    }
+  },
+  "requirements": [
+    {
+      "id": "NN-01",
+      "status": "PASSED_ISOLATED_UI",
+      "evidence": "completeAffectedSuite + completeRealAppJourney"
+    },
+    {
+      "id": "NN-02",
+      "status": "PASSED_ISOLATED_UI",
+      "evidence": "exact-target menu/removal/undo/save cases in completeAffectedSuite"
+    },
+    {
+      "id": "NN-03",
+      "status": "PASSED_ISOLATED_UI",
+      "evidence": "project-archive.test.mjs and full journey ownership/history cases"
+    },
+    {
+      "id": "NN-04",
+      "status": "PASSED_ISOLATED_UI",
+      "evidence": "actual hover/focus tooltip to native Shift+F10 menu activation regression and completeAffectedSuite"
+    },
+    {
+      "id": "NN-05",
+      "status": "PASSED_ISOLATED_UI",
+      "evidence": "originalNativeStability + completeRealAppJourney; no production URL claim"
+    },
+    {
+      "id": "NN-06",
+      "status": "HISTORICAL_SOURCE_BACKED_EPISODE_EVIDENCE_RETAINED",
+      "observedDate": "2026-10-25",
+      "freshness": "not refreshed during this final UI verification",
+      "evidence": [
+        "_workspace/node-native-20261025T130529Z/research/evidence.json",
+        "_workspace/node-native-20261025T130529Z/final-production-run-detail.private.json"
+      ]
+    },
+    {
+      "id": "NN-07",
+      "status": "PASSED_SCOPED_LOCAL_SOURCE_PRESERVING_RENDER_AND_READABILITY",
+      "evidence": [
+        "_workspace/node-native-20261025T130529Z/readability-isolation/readonly-clone-20261026T124526532z-fa20aa98/preservation-import-restart.private.json",
+        "_workspace/node-native-20261025T130529Z/readability-isolation/editor/render-receipt.private.json",
+        "_workspace/node-native-20261025T130529Z/readability-isolation/independent-review/review-with-targeted-listening.private.json",
+        "_workspace/node-native-20261025T130529Z/readability-isolation/audio-review/audio-semantics-review.private.json",
+        "_workspace/node-native-20261025T130529Z/readability-isolation/targeted-listening-attestation.private.json"
+      ],
+      "finding": "Explicitly authorized read-only snapshot/import/restart and post-render preservation verified original rows, 29 media and six WAVs unchanged. Exact isolated v9 1080x1920/53.721333s MP4 has scoped independent identity/preservation and six-scene readability approval; user reports only the three requested ASR-ambiguous terms clear. Not a full human narration/comfort/synchronization or smoothness certification;104/1611 dropped browser frames remain explicit. No owner creative acceptance, review API decision, live deployment, paid generation or publication approval follows.",
+      "supersededHistoricalSummary": {
+        "id": "NN-07",
+        "status": "RENDERED_INDEPENDENT_INSPECTION_FINALIZING",
+        "evidence": [
+          "_workspace/node-native-20261025T130529Z/perceptual-review/independent-review.private.json",
+          "_workspace/node-native-20261025T130529Z/media-access-preflight.private.json",
+          "_workspace/node-native-20261025T130529Z/media-access-choice.private.json"
+        ],
+        "finding": "Historical owned source-to-local-render candidate exists; independent review requested legibility corrections. Current authenticated original access, six original WAV bytes and a separate preservation/import receipt are not established. Different preview identities cannot substitute."
+      }
+    },
+    {
+      "id": "NN-08",
+      "status": "PASSED_ISOLATED_UI",
+      "evidence": "completeAffectedSuite + completeRealAppJourney, including hidden drafts/stale409/foreign-workflow activity guards"
+    }
+  ],
+  "preservedFailures": [
+    {
+      "scope": "earlier single-mount image",
+      "tests": 97,
+      "passed": 94,
+      "failed": 3,
+      "skipped": 0,
+      "log": "_workspace/node-native-20261025T130529Z/tm/full-97/run.tap"
+    },
+    {
+      "scope": "restored cold connection-list image original strict gate",
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0,
+      "log": "_workspace/node-native-20261025T130529Z/cl/strict-1/run.tap"
+    },
+    {
+      "scope": "new hidden-tool lifecycle RED",
+      "log": "_workspace/node-native-20261025T130529Z/dt/red/run.tap"
+    },
+    {
+      "scope": "initial candidate build tag case mismatch",
+      "record": "_workspace/node-native-20261025T130529Z/history-recovery/deferred-tool-recovery/build-attempts.json"
+    }
+  ],
+  "boundaries": [
+    "Tests use temporary SQLite and loopback services; only external transport is fixture-controlled. Real local FFmpeg fixture output is not the original production MP4.",
+    "Passing fixtures and static reviews grant no live generation, authentication, review/owner acceptance, publication, deployment or Git authority.",
+    "Browser access could not be established after user-confirmed tab recovery. The user then explicitly authorized existing-tool read-only FrameForge DB/referenced-media snapshot and a new isolated clone; credential/settings access and original production mutation remain excluded. Authorization is not a successful import, render or acceptance receipt.",
+    "No production source/data cutover, paid generation, OAuth consent, external upload/publication or Git commit/push performed by this final verification.",
+    "Knowledge admission/index checks, structural graphs and legacy full-vault validation are separate receipts."
+  ],
+  "originalMediaPreservation": {
+    "status": "PASSED_READONLY_SNAPSHOT_IMPORT_AND_RESTART",
+    "receipt": "_workspace/node-native-20261025T130529Z/readability-isolation/readonly-clone-20261026T124526532z-fa20aa98/preservation-import-restart.private.json",
+    "referencedMedia": 29,
+    "originalWavs": 6,
+    "allSevenTableFingerprintsPreserved": true,
+    "sourceUnchangedAfterClone": true,
+    "publicBindings": 0,
+    "externalNetwork": "none",
+    "credentialsCopied": false
+  },
+  "originalVideoRevision": {
+    "status": "INDEPENDENT_READABILITY_AND_PRESERVATION_RECOMMENDATION_PASSED",
+    "receipt": "_workspace/node-native-20261025T130529Z/readability-isolation/editor/render-receipt.private.json",
+    "candidatePath": "_workspace/node-native-20261025T130529Z/readability-isolation/editor/readability-candidate-6b302e93-5db3-41fa-a65a-063b6d4c0a06.mp4",
+    "sha256": "2a740dfca7fe14689989806acad7695dad6e1f66b1e5a41b782e7197f6fd6377",
+    "bytes": 1136300,
+    "format": {
+      "video": "H264",
+      "width": 1080,
+      "height": 1920,
+      "fps": 30,
+      "audio": "AAC48000HzStereo",
+      "containerDurationSeconds": 53.721333
+    },
+    "originalVersion": 6,
+    "clonedSaveVersion": 7,
+    "clonedStoryboardVersion": 8,
+    "clonedRenderedVersion": 9,
+    "workflowVersion": 2,
+    "changedLeaves": 32,
+    "changedSceneSlotPairs": 14,
+    "scenes": 6,
+    "slots": 24,
+    "oldMediaPreserved": 29,
+    "originalWavsUnchanged": 6,
+    "originalAndNewDecodedPcmSha256": "c3d5e55a4ed1c18f22faa81516b3cb4d30d6ab622d2a79453b6fa4bfcafa1c56",
+    "originalProductionRowsAndMediaUnchanged": true,
+    "runStatus": "awaiting_review",
+    "reviewApiDecisionSubmitted": false,
+    "ownerAcceptance": false,
+    "publicationAttempted": false,
+    "independentVisualObserved": {
+      "completeNormalRatePlayback": true,
+      "allSixCardsIntrinsicAnd360pxReadable": true,
+      "sourceStatusNoCroppingOrOverlap": true,
+      "semanticWordsAndDatesIntact": true,
+      "duplicateVerificationLinesRemoved": true,
+      "droppedVideoFrames": 104,
+      "totalVideoFrames": 1611,
+      "smoothness": "not-certified"
+    },
+    "offlineAsr": "Exact new MP4 independently transcribed offline; critical claims supported; rare-term ASR orthography uncertain, not a demonstrated speech defect.",
+    "targetedHumanListening": {
+      "receipt": "_workspace/node-native-20261025T130529Z/readability-isolation/targeted-listening-attestation.private.json",
+      "userReportedAllThreeTermsClear": true,
+      "scope": "Only three ASR-ambiguous terms; not full human narration/creative/publication approval"
+    },
+    "independentReview": {
+      "receipt": "_workspace/node-native-20261025T130529Z/readability-isolation/independent-review/review-with-targeted-listening.private.json",
+      "decision": "approved",
+      "scope": "Scoped format/identity, exact preservation and six-scene readability/source-fidelity recommendation for isolated v9, with targeted3-term clarity now supported by the user report. Not unqualified full-video or owner creative acceptance.",
+      "notCertified": [
+        "Smoothness:104/1611browser playback frames dropped; this limitation is unchanged.",
+        "Full human narration/script/phonetic audit, voice naturalness, loudness comfort and calibrated word-level synchronization.",
+        "Owner creative acceptance, review API decision or final publication readiness/approval."
+      ],
+      "ownerCreativeAcceptance": false,
+      "reviewApiDecisionSubmitted": false,
+      "publicationApproval": false
+    }
+  },
+  "jevObservation": {
+    "profile": "jeopi",
+    "command": [
+      "node",
+      "C:/Users/bangg/.agents/jev/jev-harness.mjs",
+      "--profile",
+      "jeopi",
+      "status"
+    ],
+    "exitCode": 2,
+    "active": false,
+    "enabled": false,
+    "ready": null,
+    "decisionReturned": false,
+    "profileOrCredentialsChanged": false
+  },
+  "independentCompletionEvaluation": {
+    "receipt": "_workspace/node-native-20261025T130529Z/final-scoped-evaluation.private.json",
+    "verdict": "PASS — bounded executed LOCAL workbench and isolated v9 readability/preservation scope",
+    "independentExecution": false,
+    "scores": {
+      "accuracy": 4,
+      "completeness": 4,
+      "clarity": 4,
+      "actionability": 4,
+      "conciseness": 4
+    },
+    "twoSummaryFindingsCorrectedByMain": true,
+    "scope": "Timestamped frozen-image LOCAL execution and isolated-v9 readability/preservation; no current-whole-checkout, production, full-human or owner approval claim"
+  },
+  "temporaryServiceCleanup": {
+    "cloneContainer": "frameforge-readability-clone-fa20aa98",
+    "command": [
+      "docker",
+      "stop",
+      "frameforge-readability-clone-fa20aa98"
+    ],
+    "exitCode": 0,
+    "confirmationCommand": [
+      "docker",
+      "container",
+      "inspect",
+      "--format",
+      "{{.State.Status}} {{.State.ExitCode}}",
+      "frameforge-readability-clone-fa20aa98"
+    ],
+    "observedConfirmation": "exited0",
+    "originalProductionContainerUntouched": true,
+    "mediaSnapshotsVolumesAndCandidatesNotDeleted": true,
+    "reviewerEphemeralPlayerBrowserAudioResources": "Reviewer reports already closed"
+  },
+  "completionLearningReceipt": "_workspace/node-native-20261025T130529Z/completion-lessons.private.json",
+  "knowledgeRefresh": {
+    "receipt": "artifacts/node-native-workbench/knowledge-refresh.json",
+    "capturedAt": "2026-10-26T14:42:51.540Z",
+    "status": "BOUNDED_EXPORT_VERIFIED_LATER_DOC_DRIFT_LEGACY_FULL_VAULT_FAILED",
+    "admission": {
+      "entries": 10,
+      "checkStatus": "passed",
+      "indexStatus": "passed",
+      "entitySha256": "0bcb3fc20be3a0c3f6df8ed2b9da1b3f7b622dc42291b906c126a4647faa2366",
+      "newEntriesAdmitted": false,
+      "concurrentSectionPreserved": true
+    },
+    "mex": {
+      "files": 128,
+      "nodes": 6160,
+      "edges": 20269,
+      "sourceChunks": 607,
+      "checkScore": 100,
+      "checkExitCode": 0,
+      "codeGraphStatus": "fresh"
+    },
+    "graphify": {
+      "observedAt": "2026-10-26T14:34:29.979243+00:00",
+      "nodes": 3049,
+      "edges": 5391,
+      "sourceFiles": 340,
+      "graphSha256": "bf1afc698e921397347d0aff3e6576c14e5d6e5c0f85772a94932a01fe6b54a8",
+      "nativeUpdateExitCode": 0,
+      "nativeTreeExitCode": 0,
+      "privateSourceFamilyMatches": 0,
+      "privateRecordPathFamilyMatches": 0,
+      "sourceBindingStatus": "TIMESTAMPED_EXPORT_WITH_LATER_DOCUMENTATION_DRIFT",
+      "laterChangedSources": [
+        "docs/verification.md"
+      ],
+      "currentGlobalFreshnessClaimed": false,
+      "unresolvedEndpointEdges": 567,
+      "semanticVerification": false
+    },
+    "legacyFullVault": {
+      "exitCode": 1,
+      "passed": false,
+      "diagnostics": 6282,
+      "wikiPages": 1044,
+      "okfAtoms": 338,
+      "rawManifestIntegrityFailures": 0,
+      "priorFailureEvidenceRetained": true
+    },
+    "sharingBoundary": "Canonical notes/exports are working-tree-only until separately committed/pushed; private media/captures remain checkout-private"
+  }
+}

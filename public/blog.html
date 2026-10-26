@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f4ef">
+  <title>블로그 운영실 · FrameForge</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/blog.css">
+  <script type="module" src="/blog.js"></script>
+</head>
+<body class="blog-page">
+  <a class="skip-link" href="#blog-main">블로그 작업 영역으로 이동</a>
+  <header class="blog-topbar">
+    <a class="blog-brand" href="/" target="_blank" rel="noopener" aria-label="FrameForge 영상 작업실 새 탭에서 열기"><span aria-hidden="true">F</span> FRAMEFORGE</a>
+    <span class="blog-workspace-label">BLOG WORKSPACE</span>
+    <a class="blog-back" href="/" target="_blank" rel="noopener">영상 작업실 ↗</a>
+  </header>
+  <main id="blog-main" class="blog-main" tabindex="-1">
+    <div class="blog-heading">
+      <div><p class="eyebrow">내 채널의 언어로, 한 편씩</p><h1>블로그 운영실</h1><p class="blog-subtitle">계정별 규칙과 최신 출처를 확인하고, 검토한 본문만 따로 승인합니다.</p></div>
+      <div class="blog-actions"><button type="button" id="blog-retry">상태 다시 확인</button><button type="button" id="blog-refresh">최신 원본 다시 읽기</button></div>
+    </div>
+    <p id="blog-notice" class="blog-notice" role="status" aria-live="polite" aria-atomic="true">운영 상태를 불러오는 중입니다.</p>
+    <section id="blog-auth" class="blog-panel blog-auth" aria-labelledby="blog-auth-title" hidden>
+      <h2 id="blog-auth-title">FrameForge 접근 인증</h2>
+      <p>기존 스튜디오 접근 토큰으로 인증합니다. 플랫폼 비밀번호가 아닙니다. 입력한 토큰은 브라우저 저장소에 보관하지 않습니다.</p>
+      <form id="blog-login-form"><label for="blog-token">스튜디오 접근 토큰</label><div class="blog-login-row"><input id="blog-token" name="token" type="password" autocomplete="current-password" required aria-describedby="blog-login-error"><button class="primary" type="submit">인증하고 계속</button></div><p id="blog-login-error" role="alert"></p></form>
+    </section>
+    <ol class="blog-stages" aria-label="블로그 운영 순서">
+      <li><a href="#blog-connection"><span>01</span><strong>연결 · 로그인</strong><small>설정과 실제 인증 구분</small></a></li>
+      <li><a href="#blog-reference"><span>02</span><strong>같은 주제 레퍼런스</strong><small>공개 구독자 10만+ 검증</small></a></li>
+      <li><a href="#blog-research"><span>03</span><strong>리서치 · 본문</strong><small>출처와 구조 계획 적용</small></a></li>
+      <li><a href="#blog-approval"><span>04</span><strong>전체 본문 승인</strong><small>정확한 버전에만 유효</small></a></li>
+      <li><a href="#blog-deploy-button"><span>05</span><strong>별도 배포</strong><small>승인만으로 게시되지 않음</small></a></li>
+    </ol>
+    <div id="blog-account-tabs" class="blog-account-tabs" role="tablist" aria-label="블로그 계정"></div>
+    <div id="blog-account-panel" role="tabpanel" tabindex="0" hidden>
+      <div class="blog-account-heading"><div><h2 id="blog-account-name"></h2><p id="blog-account-version" class="hint"></p></div><span id="blog-dirty-state" class="blog-state"></span></div>
+      <div class="blog-columns">
+        <div class="blog-editor-column">
+          <section id="blog-connection" class="blog-panel" aria-labelledby="blog-connection-title">
+            <div class="blog-section-heading"><h2 id="blog-connection-title">연결과 계정 규칙</h2><span id="blog-connection-status" class="badge"></span></div>
+            <p id="blog-connection-detail"></p><div id="blog-account-links" class="blog-actions"></div>
+            <div class="blog-actions"><button type="button" id="blog-platform-login">계정 로그인 상태 검증</button></div>
+            <p class="hint">정확한 전용 브라우저 프로필에서 사람이 로그인·MFA·캡차를 완료한 뒤 MyInfo 검증 스크립트로 계정과 작업 탭을 확인합니다. 비밀번호 입력이나 자동 계정 전환은 실행하지 않습니다. 설정 또는 과거 기록은 로그인 증명이 아닙니다.</p>
+            <details class="blog-config"><summary>페르소나 · 키워드 · 메뉴 편집</summary>
+              <form id="blog-config-form">
+                <label for="blog-persona">페르소나 / 글쓰기 규칙</label><textarea id="blog-persona" name="persona" rows="5"></textarea>
+                <div class="blog-form-grid"><div><label for="blog-keywords">관심 키워드 (한 줄에 하나)</label><textarea id="blog-keywords" name="keywords" rows="4"></textarea></div><div><label for="blog-menus">순환 메뉴 (한 줄에 하나)</label><textarea id="blog-menus" name="menus" rows="4"></textarea></div></div>
+                <p id="blog-menu-rotation" class="hint"></p>
+                <div class="blog-form-grid"><div><label for="blog-public-url">공개 블로그 URL</label><input id="blog-public-url" name="publicUrl" type="url" placeholder="확인한 URL만 입력" aria-describedby="blog-url-help"></div><div><label for="blog-editor-url">글쓰기 화면 URL</label><input id="blog-editor-url" name="editorUrl" type="url" placeholder="확인한 URL만 입력" aria-describedby="blog-url-help"></div></div>
+                <p id="blog-url-help" class="hint">미확인 주소는 비워 둡니다. 주소 저장은 연결 검증이나 게시 권한을 뜻하지 않습니다.</p>
+                <div class="blog-actions"><button class="primary" type="submit">계정 규칙 저장</button><span id="blog-config-state" class="hint"></span></div>
+              </form>
+            </details>
+          </section>
+          <section id="blog-reference" class="blog-panel" aria-labelledby="blog-reference-title">
+            <div class="blog-section-heading"><h2 id="blog-reference-title">글쓰기 전 · 같은 주제 인플루언서 분석</h2><span id="blog-reference-status" class="badge">검증한 레퍼런스 없음</span></div>
+            <p class="hint">현재 메뉴와 같은 주제이며 공개 팔로워·구독자(명시된 팬·이웃 포함) 100,000명 이상인 계정만 사용합니다. 방문·조회·좋아요 수는 자격 근거가 아닙니다. 숫자를 직접 입력하거나 추정하지 않습니다.</p>
+            <form id="blog-reference-form"><label for="blog-reference-profile">인플루언서 공개 프로필 URL</label><input id="blog-reference-profile" name="profileUrl" type="url" required placeholder="실제 공개 프로필의 HTTPS 주소" aria-describedby="blog-reference-help"><label for="blog-reference-posts">같은 작성자의 대표 글 URL (한 줄에 하나)</label><textarea id="blog-reference-posts" name="postUrls" rows="3" required placeholder="실제로 구조를 확인할 글의 HTTPS 주소" aria-describedby="blog-reference-help"></textarea><p id="blog-reference-help" class="hint">서버가 지원하는 공식 공개 주소만 실제로 읽습니다. 구독 지표·주제 일치·글 작성자 관계가 관찰되지 않으면 차단 이유를 표시하며 다른 주제로 대체하지 않습니다.</p><button type="submit" id="blog-analyze-reference">공개 근거 확인 · 레이아웃 분석</button></form>
+            <div id="blog-reference-result" class="blog-reference-result"><p class="hint">검증된 지표·관찰 시각·원본 해시와 측정한 제목/문단/이미지 배치, 우리 페르소나에 맞춘 구조 계획이 표시됩니다.</p></div>
+            <p class="blog-rights-note"><strong>레퍼런스 ≠ 이미지 사용 허가.</strong> 글의 구조만 참고하고 문장·사진을 복사하지 않습니다. 이미지는 직접 제작하거나 별도로 권리가 확인된 원본만 사용하세요.</p>
+            <p class="hint">참고 글의 이미지 개수는 관찰값이지 생성 수량 지시가 아닙니다. 실제 제작은 선택 계정의 원본 미디어 규칙과 적용 구조 계획을 따릅니다.</p>
+          </section>
+          <section id="blog-research" class="blog-panel" aria-labelledby="blog-research-title">
+            <div class="blog-section-heading"><h2 id="blog-research-title">키워드 · 뉴스 리서치</h2><span class="eyebrow">RESEARCH</span></div>
+            <form id="blog-research-form"><label for="blog-query">이번 글의 조사 주제</label><div class="blog-research-row"><input id="blog-query" name="query" type="search" placeholder="비워 두면 저장한 관심 키워드로 조사"><button type="submit">자료 조사</button></div></form>
+            <div id="blog-research-result" class="blog-research-result"><p class="hint">실제 조사 결과가 여기에 표시됩니다. 조사 전에는 결과나 지표를 만들지 않습니다.</p></div>
+            <div class="blog-draft-agent"><div><label for="blog-agent">초안 작성 에이전트</label><select id="blog-agent" name="agent"></select></div><button type="button" id="blog-create-draft">에이전트 초안 만들기</button></div>
+            <p class="hint">Jev jeopi 프로필의 API 라우팅과 실제 작성 연결이 필요합니다. 연결이 없으면 이유를 표시하며 다른 프로필로 우회하지 않습니다.</p>
+          </section>
+          <section id="blog-editor" class="blog-panel" aria-labelledby="blog-editor-title">
+            <div class="blog-section-heading"><h2 id="blog-editor-title">초안 편집</h2><span id="blog-draft-version" class="badge">새 초안</span></div>
+            <label for="blog-draft-select">저장된 초안</label><select id="blog-draft-select"><option value="">새 수동 초안</option></select>
+            <p id="blog-format-review" class="hint">렌더링된 레이아웃·이미지 권리 검토는 아직 확인하지 않았습니다.</p><details id="blog-applied-formatting" hidden><summary>이 초안에 연결된 레퍼런스 · 적용 구조 계획</summary><pre id="blog-applied-formatting-data"></pre></details>
+            <form id="blog-draft-form">
+              <label for="blog-title">제목</label><input id="blog-title" name="title" required maxlength="500">
+              <label for="blog-body">전체 본문</label><textarea id="blog-body" name="body" rows="17" required spellcheck="false" aria-describedby="blog-draft-help"></textarea>
+              <p id="blog-draft-help" class="hint">탭 이동으로 저장하지 않습니다. 미저장 편집은 이 탭에서 계정별로 유지됩니다. 페이지를 닫기 전 명시적으로 저장하세요.</p>
+              <div class="blog-actions"><button class="primary" type="submit">초안 저장</button><button type="button" id="blog-preview-button">전체 본문 미리보기</button><span id="blog-draft-state" class="hint"></span></div>
+            </form>
+          </section>
+          <section id="blog-approval" class="blog-panel blog-approval" aria-labelledby="blog-approval-title">
+            <div class="blog-section-heading"><h2 id="blog-approval-title">전체 본문 검토 · 승인 · 배포</h2><span class="eyebrow">OWNER GATE</span></div>
+            <p id="blog-preview-meta" class="hint">초안을 저장한 뒤 전체 본문을 열어 확인하세요.</p>
+            <p class="hint">이 미리보기는 전체 본문을 안전한 텍스트로 표시합니다. 플랫폼의 실제 레이아웃·이미지 배치·미디어 권리 검증을 대신하지 않습니다.</p>
+            <article id="blog-preview" class="blog-preview" aria-label="전체 본문과 적용 구조 계획 미리보기" tabindex="0" hidden><h3 id="blog-preview-title"></h3><div id="blog-preview-body"></div><h4>이 정확한 초안에 연결된 레이아웃 · 이미지 배치 계획</h4><pre id="blog-preview-plan"></pre></article>
+            <label class="blog-checkbox" for="blog-approve-check"><input id="blog-approve-check" type="checkbox" disabled><span>위 제목과 전체 본문, 대상 계정 및 출처 버전을 직접 확인했습니다.</span></label>
+            <label class="blog-checkbox" for="blog-format-check"><input id="blog-format-check" type="checkbox" disabled><span>본문·레이아웃·이미지 배치 계획을 확인했습니다 (실제 미디어 권리 검증은 별도)</span></label>
+            <p id="blog-approval-state" class="hint">유효한 승인 없음</p>
+            <section id="blog-git-publish" class="blog-git-publish" aria-labelledby="blog-git-title" hidden><h3 id="blog-git-title">GitHub Pages · Git 게시 권한 별도 확인</h3><button type="button" id="blog-git-plan-button" disabled>승인 초안의 정확한 Git 게시 계획 확인</button><div id="blog-git-proposal"></div><label class="blog-checkbox" for="blog-git-consent"><input id="blog-git-consent" type="checkbox" disabled><span>아래 버튼 실행 시 표시된 정확한 저장소·브랜치·파일에 한해 로컬 commit과 origin push를 허용합니다. 본문 승인과 별개인 Git 공개 게시 동의입니다.</span></label><p class="hint">준비된 게시 패키지와 정확한 계획 해시가 없으면 동의하거나 배포할 수 없습니다.</p></section>
+            <div class="blog-actions"><button type="button" id="blog-approve-button" disabled>이 정확한 버전 승인</button><button type="button" id="blog-deploy-button" class="primary" disabled>승인된 버전 별도 배포</button></div>
+            <p class="hint">페르소나·메뉴·본문·원본 버전이 바뀌면 승인은 무효입니다. 배포는 별도 클릭과 검증된 게시 연결이 필요합니다. 결과가 불명확하면 재실행하지 말고 실제 게시 화면과 실행 기록을 확인하세요.</p>
+          </section>
+        </div>
+        <aside class="blog-rail" aria-label="출처와 자동화 운영">
+          <section class="blog-panel" aria-labelledby="blog-source-title"><div class="blog-section-heading"><h2 id="blog-source-title">최신 원본 · 출처</h2><span id="blog-source-state" class="badge"></span></div><p id="blog-source-version" class="blog-version"></p><p id="blog-source-time" class="hint"></p><div id="blog-blocked-reasons"></div><details><summary>원본 근거와 버전 해시</summary><div id="blog-source-evidence" class="blog-evidence"></div></details><p class="hint">최신 원본 다시 읽기는 출처만 갱신합니다. 로그인·게시·예약 활성화를 실행하지 않으며 미저장 편집을 덮어쓰지 않습니다.</p></section>
+          <section class="blog-panel" aria-labelledby="blog-routing-title"><h2 id="blog-routing-title">Jev API 라우팅</h2><div id="blog-routing"></div></section>
+          <section class="blog-panel" aria-labelledby="blog-roles-title"><h2 id="blog-roles-title">에이전트 역할 · 실제 상태</h2><div id="blog-roles"></div><p class="hint">설치됨 ≠ 설정됨 ≠ 실제 실행 검증됨. 소유자 최종 승인은 에이전트가 대신하지 않습니다.</p></section>
+          <section class="blog-panel" aria-labelledby="blog-schedule-title"><div class="blog-section-heading"><h2 id="blog-schedule-title">예약 초안</h2><span class="badge">DRAFT ONLY</span></div><form id="blog-schedule-form"><label for="blog-cron">Cron 표현식 (분 시 일 월 요일)</label><input id="blog-cron" name="cron" required placeholder="0 9 * * *" aria-describedby="blog-schedule-help"><label for="blog-timezone">시간대</label><input id="blog-timezone" name="timezone" value="Asia/Seoul" readonly><label for="blog-schedule-agent">예약 작성 에이전트</label><select id="blog-schedule-agent" name="agent"></select><label class="blog-checkbox" for="blog-schedule-enabled"><input id="blog-schedule-enabled" name="enabled" type="checkbox"><span>이 계정의 예약 초안 생성을 명시적으로 활성화</span></label><p id="blog-schedule-help" class="hint">기본 비활성. 초안 생성만 허용하며 공개 게시 권한은 없습니다. 저장만으로 OS 스케줄러를 설치하거나 활성화하지 않습니다.</p><button type="submit">예약 설정 저장</button><p id="blog-schedule-state" class="hint"></p></form></section>
+          <section class="blog-panel" aria-labelledby="blog-runs-title"><h2 id="blog-runs-title">이 계정의 실행 기록</h2><div id="blog-runs"></div></section>
+        </aside>
+      </div>
+    </div>
+    <div id="blog-empty" class="blog-empty" hidden>블로그 계정 상태를 읽지 못했습니다. 인증 또는 서버 연결을 확인한 뒤 상태를 다시 확인하세요.</div>
+  </main>
+</body>
+</html>

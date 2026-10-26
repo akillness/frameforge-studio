@@ -15,6 +15,7 @@ import { PlatformSessionManager } from './platform-session.mjs';
 import { SourceMediaService } from './media-sources.mjs';
 import { YouTubeOAuth, YOUTUBE_OAUTH_COOKIE_NAME, YOUTUBE_OAUTH_CALLBACK_PATH, YOUTUBE_OAUTH_STATE_TTL_SECONDS } from './youtube-oauth.mjs';
 import { PublicationService } from './publication.mjs';
+import { BlogService } from './blog.mjs';
 
 const PUBLIC_DIR = fileURLToPath(new URL('../public/', import.meta.url));
 const MAX_JSON = 1024 * 1024;
@@ -107,7 +108,7 @@ async function generationCall(operation) {
 }
 
 /** Dependency overrides are for local tests; production imports actual adapters. */
-export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), loginToken = process.env.LOGIN_TOKEN || '', publicOrigin = process.env.PUBLIC_ORIGIN, integrations, renderer, speech, generation, generationOptions, platformSessions: injectedPlatformSessions, platformSessionOptions, mediaOptions, youtubeOptions, publicationOptions } = {}) {
+export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), loginToken = process.env.LOGIN_TOKEN || '', publicOrigin = process.env.PUBLIC_ORIGIN, integrations, renderer, speech, generation, generationOptions, platformSessions: injectedPlatformSessions, platformSessionOptions, mediaOptions, youtubeOptions, publicationOptions, blogOptions } = {}) {
   if (loginToken && (typeof loginToken !== 'string' || loginToken.length < 16)) throw new Error('LOGIN_TOKEN must contain at least 16 characters');
   if (publicOrigin) {
     const parsed = new URL(publicOrigin);
@@ -118,6 +119,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
   const sessions = new Map();
   const loginAttempts = new Map();
   const queue = [];
+  const activeChats = new Map();
   let rendering = false;
   let closing = false;
   const adapter = async () => integrations || await import('./integrations.mjs');
@@ -134,6 +136,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     try {
       saveProgress('running', 1);
       const render = renderer || (await import('./render.mjs')).renderEpisode;
+      store.assertEpisodeActive(episode.id);
       const result = await render(episode, { dataDir: store.dataDir, onProgress: (progress) => { if (!closing) saveProgress('running', Math.max(1, Math.min(99, Number(progress) || 1))); } });
       if (!/^\/api\/exports\/[a-zA-Z0-9_-]+\.mp4$/.test(result.outputUrl)) throw new Error('Renderer returned invalid output path');
       if (!closing) { saveProgress('completed', 100, result); store.record('render.completed', { entityId: episode.id, jobId: job.id }); complete?.({ ...result, jobId: job.id, episodeVersion: episode.version }); }
@@ -145,6 +148,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
   }
 
   function enqueueRender(episode, waitForCompletion = false) {
+    store.assertEpisodeActive(episode.id);
     if (store.list('jobs').filter((job) => ['queued', 'running'].includes(job.status)).length >= 10) throw new HttpError(429, 'Render queue is full');
     // Freeze the actual branch input before the queued renderer can yield or mutate it.
     episode = structuredClone(episode);
@@ -280,7 +284,16 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
   const workflows = new WorkflowEngine({ store, fetchTrends: refreshTrends, runAgent: async (...args) => (await adapter()).runAgent(...args), render: (episode) => enqueueRender(episode, true), validateAssets, generations, platformSessions, publication });
   const speechProvider = speech || createSpeechProvider();
   const narration = new NarrationQueue({ store, ...speechProvider });
+  const blog = new BlogService({ ...blogOptions, store });
   trendCollector.start();
+
+  function assertNoActiveEpisodeWork(id) {
+    if (activeChats.has(id) || narration.pendingEpisodes.has(id) || workflows.activeQuoteEpisodes.has(id) || platformSessions.activeEpisodes?.has(id)) throw new HttpError(409, 'Episode has active production work. Wait for it to finish before archiving.');
+    for (const pending of generations.pending.values()) if (pending.episodeId === id) throw new HttpError(409, 'Episode generation is being prepared');
+    for (const [kind, ids] of [['workflowRuns', workflows.activeExecutions.keys()], ['generationJobs', generations.busy.values()], ['publicationIntents', publication.jobs.keys()]]) {
+      for (const workId of ids) if (store.get(kind, workId).episodeId === id) throw new HttpError(409, 'Episode has active production work. Wait for it to finish before archiving.');
+    }
+  }
 
   async function upload(request, requestUrl) {
     const name = text(requestUrl.searchParams.get('name'), 'upload name', 200);
@@ -351,6 +364,36 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     if (request.method === 'GET' && path === '/api/session') return json(response, 200, session);
     if (path.startsWith('/api/') && !session.authenticated) throw new HttpError(401, 'Login required');
     if (path.startsWith('/api/') && !['GET', 'HEAD', 'OPTIONS'].includes(request.method)) requireAdmin(session);
+    if (path === '/api/blog' || path.startsWith('/api/blog/')) {
+      requireAdmin(session);
+      if (request.method === 'GET' && path === '/api/blog/state') return json(response, 200, await blog.state());
+      if (!['POST', 'PUT'].includes(request.method)) throw new HttpError(404, 'Blog API route not found');
+      const body = await readJson(request);
+      if (request.method === 'POST' && path === '/api/blog/refresh') {
+        if (Object.keys(body).length) throw new HttpError(400, 'Refresh does not accept configuration changes');
+        return json(response, 200, await blog.refresh());
+      }
+      if (request.method === 'POST' && path === '/api/blog/scheduler/tick') return json(response, 200, await blog.tick(body));
+      const accountRoute = /^\/api\/blog\/accounts\/([^/]+)(?:\/(research|references|drafts|login|schedule))?$/.exec(path);
+      if (accountRoute) {
+        const [, id, action] = accountRoute;
+        if (request.method === 'PUT' && !action) return json(response, 200, blog.updateAccount(id, body));
+        if (request.method === 'PUT' && action === 'schedule') return json(response, 200, blog.setSchedule(id, body));
+        if (request.method === 'POST' && action === 'research') return json(response, 200, await blog.research(id, body));
+        if (request.method === 'POST' && action === 'references') return json(response, 200, await blog.analyzeReferences(id, body));
+        if (request.method === 'POST' && action === 'drafts') return json(response, 201, await blog.createDraft(id, body));
+        if (request.method === 'POST' && action === 'login') return json(response, 200, await blog.login(id, body));
+      }
+      const draftRoute = /^\/api\/blog\/drafts\/([^/]+)(?:\/(approval|deploy|deploy-plan))?$/.exec(path);
+      if (draftRoute) {
+        const [, id, action] = draftRoute;
+        if (request.method === 'PUT' && !action) return json(response, 200, await blog.updateDraft(id, body));
+        if (request.method === 'POST' && action === 'approval') return json(response, 200, await blog.approve(id, body));
+        if (request.method === 'POST' && action === 'deploy-plan') return json(response, 200, await blog.planDeploy(id, body));
+        if (request.method === 'POST' && action === 'deploy') return json(response, 200, await blog.deploy(id, body));
+      }
+      throw new HttpError(404, 'Blog API route not found');
+    }
     if (request.method === 'POST' && path === '/api/logout') {
       const token = (request.headers.cookie || '').split(';').map((part) => part.trim()).find((part) => part.startsWith('frameforge_session='))?.slice(19);
       if (token) sessions.delete(digest(token).toString('hex'));
@@ -440,6 +483,16 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     }
     if (['POST', 'PUT'].includes(request.method) && path.startsWith('/api/')) {
       const body = await readJson(request);
+      const episodeArchive = /^\/api\/episodes\/([^/]+)\/(archive|unarchive)$/.exec(path);
+      if (request.method === 'POST' && episodeArchive) {
+        object(body);
+        if (Object.keys(body).some((key) => key !== 'expectedVersion') || !Number.isSafeInteger(body.expectedVersion) || body.expectedVersion < 1) throw new HttpError(400, 'Archive actions require only a positive expectedVersion');
+        const id = decodeURIComponent(episodeArchive[1]);
+        const archived = episodeArchive[2] === 'archive';
+        store.get('episodes', id);
+        if (archived) assertNoActiveEpisodeWork(id);
+        return json(response, 200, store.setEpisodeArchived(id, archived, body.expectedVersion));
+      }
       if (request.method === 'POST' && path === '/api/publication/approvals') return json(response, 201, await publication.approve(body, { ownerId: 'admin' }));
       const publicationPublish = /^\/api\/publication\/approvals\/([^/]+)\/publish$/.exec(path);
       if (request.method === 'POST' && publicationPublish) return json(response, 202, await publication.publish(decodeURIComponent(publicationPublish[1]), { ownerId: 'admin' }));
@@ -505,7 +558,10 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
         if (!entry) throw new HttpError(404, 'Requested history version not found');
         const reason = `restore:v${body.version}`;
         if (kind === 'episodes') {
-          const patch = episodePatch({ ...entry.snapshot, status: 'draft' });
+          store.assertEpisodeActive(id);
+          const snapshot = { ...entry.snapshot, status: 'draft' };
+          delete snapshot.archivedAt;
+          const patch = episodePatch(snapshot);
           if (patch.scenes) validateAssets(patch.scenes);
           return json(response, 200, store.updateEpisode(id, patch, body.expectedVersion, reason));
         }
@@ -543,7 +599,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       const episodeRoute = /^\/api\/episodes\/([^/]+)(?:\/(template|chat|render|narration))?$/.exec(path);
       if (episodeRoute) {
         const [, id, action] = episodeRoute;
-        const episode = store.get('episodes', id);
+        const episode = store.assertEpisodeActive(id);
         if (request.method === 'POST' && action === 'narration') return json(response, 202, await narration.start(id, body));
         if (request.method === 'PUT' && !action) {
           const patch = episodePatch(body);
@@ -562,8 +618,20 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
           if (agent === 'studio') {
             result = { message: 'Studio는 규칙 기반 스토리보드 도우미입니다. 요청을 훅·전개·마무리 3개 장면으로 구성했습니다. 사실과 출처는 직접 검토하세요.', scenes: [starterScene('훅 · 시선을 잡는 질문', episode.title), starterScene('전개 · 핵심 내용', message.slice(0, 2000), '#173940'), starterScene('마무리 · 검토와 다음 행동', `${episode.topic}\n출처 확인 · 내용 검토 후 게시`, '#382d46')] };
           } else {
-            try { result = await (await adapter()).runAgent(agent, message, episode); }
-            catch (error) { store.record('chat.failed', { entityId: id, agent }); throw new HttpError(503, `${agent} unavailable: ${error.code === 'UNAVAILABLE' ? 'host bridge is not configured' : 'host bridge could not complete the request'}`); }
+            activeChats.set(id, (activeChats.get(id) || 0) + 1);
+            try {
+              const integration = await adapter();
+              store.assertEpisodeActive(id);
+              result = await integration.runAgent(agent, message, episode);
+            } catch (error) {
+              store.record('chat.failed', { entityId: id, agent });
+              if (error instanceof HttpError) throw error;
+              throw new HttpError(503, `${agent} unavailable: ${error.code === 'UNAVAILABLE' ? 'host bridge is not configured' : 'host bridge could not complete the request'}`);
+            } finally {
+              const remaining = activeChats.get(id) - 1;
+              if (remaining) activeChats.set(id, remaining);
+              else activeChats.delete(id);
+            }
           }
           const reply = text(result.message, 'agent response', 20000);
           const updated = result.scenes ? store.updateEpisode(id, { scenes: validateAssets(scenes(result.scenes)) }, episode.version, `agent:${agent}`) : undefined;
@@ -592,7 +660,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
   });
   server.requestTimeout = 120_000;
   server.headersTimeout = 15_000;
-  server.on('close', () => { closing = true; trendCollector.close(); narration.close(); generations.close(); workflows.close(); publication.close(); platformSessions.close(); store.close(); });
+  server.on('close', () => { closing = true; trendCollector.close(); narration.close(); generations.close(); workflows.close(); publication.close(); platformSessions.close(); blog.close(); store.close(); });
   return server;
 }
 

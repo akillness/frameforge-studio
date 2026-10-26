@@ -83,3 +83,13 @@ python -B scripts/production-browser-smoke.py
 ```
 
 These tests create a sample episode/workflow and persist automated review decisions. They verify production mechanics, not owner acceptance or publication. Browser narration, audio/video playback, final review persistence, and restart persistence require their own observed receipts; a healthy container alone does not establish them.
+
+## Verified refresh — 2026-10-20
+
+The existing production service was rebuilt from checkout `adab575699e9436529a4113e53464941f741ecdd` and recreated using `scripts/start-docker.ps1`, preserving `frameforge-studio_studio-data` and the loopback-only port 4310 binding. All 56 runtime source files already matched the previous running container; no previously missing source change was discovered. The sanitized receipt is [docker-update-20261020.json](../artifacts/docker-update-20261020.json).
+
+Verification passed: immutable harness 1.4.0, syntax for 64 modules, 280/280 isolated Linux tests (zero failures/skips), a real 1080×1920 H.264/AAC render, local host health, unauthenticated API rejection, authenticated admin library/knowledge/workflow-history reads, SQLite integrity, unchanged table counts/entity IDs/episode-workflow versions, and all 22 referenced media SHA-256 values. The render used a disposable test container, never production data. The host bridge and inbox were already running and were not restarted. Browser interaction, the external HTTPS route and live paid providers were not reverified.
+
+A consistent pre-update snapshot remains under ignored `ops/snapshots/`; the receipt records its path. The previous image remains tagged `frameforge-studio:preupdate-20261020`. Image rollback would require stopping/replacing only the owned Compose service and preserving its existing volume; it does not restore database state or undo later edits.
+
+For a credential-free snapshot helper with `--cap-drop ALL`, use the volume owner's UID/GID (`1000:1000`), a read-only/no-copy production-volume mount and a separate writable backup destination. UID 0 without DAC override capabilities cannot read the non-root owner's private SQLite files; an `unable to open database file` error in that configuration is not evidence of database corruption. Retain incomplete snapshot directories and retry with a new target, never overwrite them.

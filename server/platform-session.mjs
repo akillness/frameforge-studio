@@ -78,6 +78,7 @@ export class PlatformSessionManager {
     this.closed = false;
     this.livePages = new Map();
     this.locks = new Map();
+    this.activeEpisodes = new Map();
   }
 
   async loadBrowserModule() {
@@ -131,6 +132,7 @@ export class PlatformSessionManager {
     };
     const executablePath = launchOptions.executablePath || process.env.PLATFORM_CHROMIUM_PATH || process.env.CHROMIUM_PATH || process.env.PLAYWRIGHT_EXECUTABLE_PATH;
     if (executablePath) launchOptions.executablePath = executablePath;
+    if (session.episodeId) this.store.assertEpisodeActive(session.episodeId);
     let context;
     try {
       context = await module.chromium.launchPersistentContext(profileDir, launchOptions);
@@ -209,10 +211,8 @@ export class PlatformSessionManager {
     if (jobId && job.id !== jobId) throw httpError(409, 'Export does not match the render job');
     if (episodeId && job.episodeId !== episodeId) throw httpError(409, 'Export does not match the episode');
     if (episodeVersion !== undefined && job.episodeVersion !== episodeVersion) throw httpError(409, 'Export does not match the episode version');
-    if (episodeId) {
-      const episode = this.store.get('episodes', episodeId);
-      if (job.episodeVersion !== undefined && episode.version !== job.episodeVersion) throw httpError(409, 'Render candidate is stale; render the current episode version before attaching it');
-    }
+    const episode = this.store.assertEpisodeActive(job.episodeId);
+    if (job.episodeVersion !== undefined && episode.version !== job.episodeVersion) throw httpError(409, 'Render candidate is stale; render the current episode version before attaching it');
     const exportRoot = await realpath(path.join(this.store.dataDir, 'exports'));
     const requested = path.join(exportRoot, filename);
     let file;
@@ -228,6 +228,7 @@ export class PlatformSessionManager {
       for await (const chunk of file.createReadStream({ autoClose: false })) digest.update(chunk);
       const sha256 = digest.digest('hex');
       if (job.sha256 && job.sha256 !== sha256) throw httpError(409, 'Render artifact hash changed since the job completed');
+      this.store.assertEpisodeActive(job.episodeId);
       return { filename, exportUrl: cleanUrl, serverPath: resolved, size: stat.size, sha256, jobId: job.id, episodeId: job.episodeId || null, episodeVersion: job.episodeVersion ?? null };
     } catch (error) {
       if (error instanceof HttpError) throw error;
@@ -251,12 +252,47 @@ export class PlatformSessionManager {
     return { required: true, approved: Boolean(approved), decision: approved ? 'approved' : null, runId: approved?.id || null };
   }
 
+  async withEpisodeWork(episodeId, operation) {
+    if (!episodeId) return operation();
+    this.store.assertEpisodeActive(episodeId);
+    this.activeEpisodes.set(episodeId, (this.activeEpisodes.get(episodeId) || 0) + 1);
+    try { return await operation(); }
+    finally {
+      const remaining = this.activeEpisodes.get(episodeId) - 1;
+      if (remaining) this.activeEpisodes.set(episodeId, remaining);
+      else this.activeEpisodes.delete(episodeId);
+    }
+  }
+
   async openSession(raw = {}) {
+    const body = object(raw);
+    let episodeId = optionalText(body.episodeId, 'episodeId', 80);
+    if (!episodeId && body.exportUrl) episodeId = (await this.verifyServerExport(body.exportUrl)).episodeId;
+    return this.withEpisodeWork(episodeId, () => this._openSession({ ...body, ...(episodeId ? { episodeId } : {}) }));
+  }
+
+  async withSessionEpisodeWork(sessionId, raw, operation) {
+    const session = this.getSession(sessionId), body = object(raw);
+    const action = choice(body.action, ACTIONS, 'session action', 'refresh');
+    if (action === 'close') return operation();
+    let episodeId = session.episodeId || session.attachedExport?.episodeId;
+    let attachment;
+    if (action === 'attach-export') {
+      const requested = body.exportUrl || session.attachedExport?.exportUrl;
+      if (!requested) throw httpError(400, 'Choose a verified server export before attaching it');
+      attachment = await this.verifyServerExport(requested, { episodeId: episodeId || undefined, episodeVersion: session.attachedExport?.episodeVersion, jobId: session.attachedExport?.jobId });
+      episodeId = attachment.episodeId;
+    }
+    if (episodeId && session.channelId && this.store.assertEpisodeActive(episodeId).channelId !== session.channelId) throw httpError(409, 'Platform session channel does not own this episode');
+    return this.withEpisodeWork(episodeId, () => operation(episodeId, attachment));
+  }
+
+  async _openSession(raw = {}) {
     if (this.closed) throw httpError(503, 'Platform session manager is stopping');
     const body = object(raw);
     const channelId = optionalText(body.channelId, 'channelId', 80);
     const episodeId = optionalText(body.episodeId, 'episodeId', 80);
-    const episode = episodeId ? this.store.get('episodes', episodeId) : null;
+    const episode = episodeId ? this.store.assertEpisodeActive(episodeId) : null;
     const channel = channelId ? this.store.get('channels', channelId) : episode?.channelId ? this.store.get('channels', episode.channelId) : null;
     if (episode && channel && episode.channelId !== channel.id) throw httpError(409, 'Platform session channel does not own this episode');
     const platform = choice(String(body.platform || channel?.platform || 'youtube').toLowerCase(), ['youtube', 'tiktok', 'instagram', 'other'], 'platform', 'youtube');
@@ -319,10 +355,12 @@ export class PlatformSessionManager {
     let runtime;
     try { runtime = await this.launchRuntime(session); } catch (error) { throw browserUnavailable(error); }
     try {
+      if (session.episodeId) this.store.assertEpisodeActive(session.episodeId);
       await runtime.page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: NAVIGATION_TIMEOUT });
       session.url = runtime.page.url() || targetUrl;
       session.logs.push(`[${stamp()}] Browser page ready`);
     } catch (error) {
+      if (error instanceof HttpError) { await this.closeRuntime(session.id); throw error; }
       session.url = runtime.page.url() || targetUrl;
       session.logs.push(`[${stamp()}] Browser navigation unavailable; user can retry from the session controls`);
     }
@@ -348,13 +386,14 @@ export class PlatformSessionManager {
 
   async interact(sessionId, raw = {}) {
     const id = text(sessionId, 'sessionId', 80);
-    return this.withLock(id, async () => {
+    return this.withLock(id, () => this.withSessionEpisodeWork(id, raw, async (episodeId, attachment) => {
       if (this.closed) throw httpError(503, 'Platform session manager is stopping');
       const session = this.getSession(id);
       const body = object(raw);
       const action = choice(body.action, ACTIONS, 'session action', 'refresh');
       const now = stamp();
       const next = structuredClone(session);
+      if (episodeId) next.episodeId = episodeId;
       next.updatedAt = now;
       next.logs = Array.isArray(next.logs) ? [...next.logs] : [];
       if (action === 'close') {
@@ -368,6 +407,7 @@ export class PlatformSessionManager {
         return next;
       }
       if (session.status === 'closed') throw httpError(409, 'Platform browser session is closed');
+      if (session.episodeId) this.store.assertEpisodeActive(session.episodeId);
       if (isYouTubeSession(session) && action !== 'update-metadata') throw automatedYouTubeDisabled();
       if (action === 'navigate' && isYouTubeUrl(body.url)) throw automatedYouTubeDisabled();
       if (action === 'update-metadata') {
@@ -392,6 +432,7 @@ export class PlatformSessionManager {
         return next;
       }
       const runtime = await this.ensureRuntime(session);
+      if (session.episodeId) this.store.assertEpisodeActive(session.episodeId);
       const page = runtime.page;
       if (isYouTubeUrl(page.url())) throw automatedYouTubeDisabled();
       try {
@@ -419,12 +460,11 @@ export class PlatformSessionManager {
           await page.mouse.wheel(x, y);
           next.logs.push(`[${now}] Scrolled platform page`);
         } else if (action === 'attach-export') {
-          const requested = body.exportUrl || next.attachedExport?.exportUrl;
-          if (!requested) throw httpError(400, 'Choose a verified server export before attaching it');
-          const verified = await this.verifyServerExport(requested, { episodeId: next.episodeId || undefined, episodeVersion: next.attachedExport?.episodeVersion, jobId: next.attachedExport?.jobId });
+          const verified = attachment;
           const target = body.selector === undefined ? 'input[type="file"]' : selector(body.selector);
           const input = page.locator(target).first();
           if (await input.count() < 1) throw httpError(409, 'Platform file input is unavailable; open the platform upload form first');
+          if (next.episodeId) this.store.assertEpisodeActive(next.episodeId);
           await input.setInputFiles(verified.serverPath);
           const unchanged = await this.verifyServerExport(verified.exportUrl, { episodeId: next.episodeId || undefined, episodeVersion: verified.episodeVersion, jobId: verified.jobId });
           next.attachedExport = { filename: unchanged.filename, exportUrl: unchanged.exportUrl, size: unchanged.size, sha256: unchanged.sha256, jobId: unchanged.jobId, episodeId: unchanged.episodeId, episodeVersion: unchanged.episodeVersion, attachedAt: now };
@@ -452,16 +492,25 @@ export class PlatformSessionManager {
       next.logs = next.logs.slice(-20);
       this.store.save('platformSessions', next);
       return next;
-    });
+    }));
   }
 
   async screenshot(sessionId) {
     const id = text(sessionId, 'sessionId', 80);
     return this.withLock(id, async () => {
       const session = this.getSession(id);
-      const runtime = await this.ensureRuntime(session);
-      try { return await runtime.page.screenshot({ type: 'png' }); }
-      catch { throw httpError(409, 'Browser screenshot is unavailable'); }
+      if (isYouTubeSession(session)) throw automatedYouTubeDisabled();
+      if (this.closed) throw httpError(503, 'Platform session manager is stopping');
+      if (session.status === 'closed') throw httpError(409, 'Platform browser session is closed');
+      const existing = this.livePages.get(id);
+      const pages = existing?.context?.pages?.();
+      const needsRuntime = !existing || (pages && !pages.includes(existing.page) && !pages.length);
+      const capture = async (page) => {
+        try { return await page.screenshot({ type: 'png' }); }
+        catch { throw httpError(409, 'Browser screenshot is unavailable'); }
+      };
+      if (!needsRuntime) return capture(pages && !pages.includes(existing.page) ? pages[0] : existing.page);
+      return this.withEpisodeWork(session.episodeId || session.attachedExport?.episodeId, async () => capture((await this.ensureRuntime(session)).page));
     });
   }
 

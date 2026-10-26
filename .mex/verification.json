@@ -1,6 +1,42 @@
 {
-  "observedAt": "2026-10-25T09:33:24.433Z",
+  "harnessAudit20261026": {
+    "observedAt": "2026-10-26T14:06:55.735Z",
+    "scope": "Current bounded harness/knowledge audit; older fields below remain historical snapshots",
+    "receipt": ".graphify/harness-audit.json",
+    "graphRefresh": {
+      "command": "mex graph refresh --json",
+      "exitCode": 0,
+      "state": "succeeded",
+      "fresh": true,
+      "sourceChanges": 0,
+      "reindexedFiles": 0,
+      "parseHealth": {
+        "total": 128,
+        "ok": 128,
+        "partial": 0,
+        "failed": 0
+      }
+    },
+    "check": {
+      "command": "mex check --json",
+      "exitCode": 0,
+      "score": 100,
+      "issues": [],
+      "filesChecked": 16,
+      "graphFreshAtCheck": true
+    },
+    "knowledge": {
+      "admittedPages": 10,
+      "reviewedEntitySearchQuery": "newline",
+      "currentHarnessVersion": "1.7.2",
+      "bridgeRuntimeContractBytes": 1241
+    },
+    "boundary": "Freshness and check100 describe this executed snapshot, not future writes, semantic verification, a repaired full-vault legacy gate, provider execution or original-goal completion. Jev jeopi remains disabled/unconfigured."
+  },
+  "observedAt": "2026-10-26T14:42:51.540Z",
   "mexVersion": "0.8.3",
+  "knowledgeRefreshReceipt": "artifacts/node-native-workbench/knowledge-refresh.json",
+  "currentRefreshLimitation": "Successful14:34 Graphify generation remains frozen at3049nodes/5391edges/340sources. Initial post-export source audit matched340hashes; the later postwrite audit found only docs/verification.md differs. Native MEX check100/fresh128/changes0 and ten-entry admission/index passed within their recorded scope. Strict full-vault validation remains failed6282diagnostics. No current-global graph, whole-checkout/deployment/provider/owner readiness is inferred; no source overwrite/rebuild follows the parent freeze.",
   "setup": {
     "command": "mex setup --cli (Codex choice 6)",
     "scaffoldCreated": true,
@@ -8,7 +44,7 @@
     "population": "project-specific context authored by working agent",
     "automaticGround": "not executed by provider; real CLI symbol fingerprints used directly"
   },
-  "graphRebuild": {
+  "historicalGraphRebuild": {
     "state": "succeeded",
     "filesIndexed": 133,
     "nodesCreated": 4923,
@@ -25,7 +61,37 @@
     },
     "receipt": "artifacts/production-workspace-implementation/mex-refresh-final.json"
   },
-  "check": {
+  "graphRebuild": {
+    "state": "succeeded",
+    "filesIndexed": 0,
+    "nodesCreated": 0,
+    "edgesCreated": 0,
+    "command": "node <installed-mex-agent>/dist/cli.js graph refresh --json",
+    "observedAt": "2026-10-26T14:34:43.696Z",
+    "parseHealth": {
+      "total": 128,
+      "ok": 128,
+      "partial": 0,
+      "failed": 0,
+      "failedPaths": [],
+      "failedPathsTruncated": false
+    },
+    "sourceChanges": 0,
+    "incrementalInvocationCreated": {
+      "files": 0,
+      "nodes": 0,
+      "edges": 0
+    },
+    "privacyBoundary": "128indexedfiles/607chunks and12metadata rows contain zero audited private operational/workspace/runtime/raw/root-state paths.",
+    "receipt": "artifacts/node-native-workbench/mex-refresh.json",
+    "indexedTotals": {
+      "files": 128,
+      "nodes": 6160,
+      "edges": 20269,
+      "sourceChunks": 607
+    }
+  },
+  "historicalCheck": {
     "command": "mex check",
     "exitCode": 0,
     "driftScore": 100,
@@ -36,7 +102,20 @@
     "sourceChanges": 0,
     "receipt": "artifacts/production-workspace-implementation/mex-check-final.txt"
   },
-  "knowledgeCheck": {
+  "check": {
+    "command": "node <installed-mex-agent>/dist/cli.js check --json",
+    "exitCode": 0,
+    "driftScore": 100,
+    "errors": 0,
+    "warnings": 0,
+    "filesChecked": 16,
+    "graphFreshAtCheck": true,
+    "sourceChanges": 0,
+    "observedAt": "2026-10-26T14:36:21.716Z",
+    "boundary": "A bounded native/scaffold check, not semantic runtime or provider verification.",
+    "receipt": "artifacts/node-native-workbench/mex-check.json"
+  },
+  "historicalKnowledgeCheck": {
     "command": "python .mex/verify-knowledge.py",
     "exitCode": 1,
     "ok": false,
@@ -51,6 +130,30 @@
     "receipt": "artifacts/production-workspace-implementation/knowledge-final.json",
     "boundary": "No deleted/excluded history or weakened validator; runtime acceptance is separate."
   },
+  "knowledgeCheck": {
+    "schema": "frameforge-strict-legacy-knowledge-validation/v1",
+    "command": "python .mex/verify-knowledge.py",
+    "startedAt": "2026-10-26T14:34:29.471Z",
+    "finishedAt": "2026-10-26T14:34:41.041Z",
+    "exitCode": 1,
+    "ok": false,
+    "wikiPages": 1044,
+    "okfAtoms": 338,
+    "agentContracts": 5,
+    "immutableSources": 1,
+    "errorCount": 6282,
+    "errorCategories": {
+      "unresolved-link": 4594,
+      "missing-OKF-field": 984,
+      "orphan-page": 704
+    },
+    "rawManifestIntegrityFailures": 0,
+    "coreEntityConceptReportFindings": [],
+    "privateFullDiagnosticsRetained": true,
+    "boundary": "Unchanged strict full-vault validation failed. This snapshot validates its one recorded immutable source manifest, not every unrelated raw baseline; zero curated-core findings does not clear6282legacy diagnostics.",
+    "receipt": "artifacts/node-native-workbench/wiki-okf-validation.json",
+    "fullDiagnosticsRetainedCheckoutPrivate": true
+  },
   "harnessUpstreamValidator": {
     "exitCode": 1,
     "reason": "upstream bash set -e exits on first ((AGENT_COUNT++)) returning zero; no files modified",
@@ -61,8 +164,8 @@
     "Comparative production quality benchmark",
     "Persistent automatic team runtime activation"
   ],
-  "sharingBoundary": "Canonical source, documentation and verification records are working-tree changes; databases/caches remain checkout-local. No commit, push, deployment or external sharing performed.",
-  "harnessVersioning": {
+  "sharingBoundary": "This node-native knowledge sync performs no Git/deployment/provider/publication action. Concurrent separately owned release evidence is preserved, not attributed here. Canonical notes remain working-tree-only pending separately authorized selective commit/push; mixed capture/index/log/private material is not implicitly publication-safe.",
+  "historicalHarnessVersioning": {
     "observedAt": "2026-10-18T09:51:24.784Z",
     "currentVersion": "1.4.0",
     "previousVersion": "1.3.0",
@@ -73,6 +176,14 @@
     "testsCommand": "node --test tests/harness.test.mjs",
     "passed": 5,
     "failed": 0
+  },
+  "harnessVersioning": {
+    "currentVersion": "1.7.1",
+    "previousVersion": "1.7.0",
+    "bundleSha256": "960f256f33f75dd0de01904bbfefefef3a33932db66867c1a4804b9c461fb174",
+    "verifyCommand": "node scripts/version-harness.mjs verify",
+    "verifyExitCode": 0,
+    "boundary": "Immutable selection verified; prior1.6/1.7 evidence remains historical and final image cutover is still parent pending."
   },
   "runtimeEvidence": {
     "verifiedAt": "2026-10-18T08:03:06.093581+00:00",
@@ -171,7 +282,8 @@
     ],
     "sourceScope": "Historical c56cc4a narration/review/media-security source, preceding current Docker migration changes"
   },
-  "refreshState": "2026-10-19 source refresh completed: MEX 85 indexed files, 2624 nodes/7659 edges and check 100/100; Graphify 1463 nodes/3631 whole-record-unique edges from 200 source paths; deterministic structural extraction only, no semantic enrichment",
+  "historicalRefreshState": "2026-10-19 source refresh completed: MEX 85 indexed files, 2624 nodes/7659 edges and check 100/100; Graphify 1463 nodes/3631 whole-record-unique edges from 200 source paths; deterministic structural extraction only, no semantic enrichment",
+  "refreshState": "2026-10-25 bounded refresh: MEX119 indexed files/5781 nodes/19201 edges with sourceChanges0, but check67/exit1 for four pending final-receipt links. Graphify4309 nodes/9531 unique edges/615 source paths with audited private families absent. Full wiki/OKF gate failed3408 diagnostics; no global passing or rollout claim.",
   "sourceVerification": {
     "testsPassed": 77,
     "testsFailed": 0,
@@ -532,5 +644,52 @@
       "mode": "native deterministic code extraction; semantic enrichment not run"
     },
     "receipt": "artifacts/production-workspace-implementation/verification.json"
+  },
+  "currentSelectedHarnessIdentity": {
+    "command": "node scripts/version-harness.mjs verify",
+    "exitCode": 0,
+    "ok": true,
+    "currentVersion": "1.7.2",
+    "previousVersion": "1.7.1",
+    "bundleSha256": "86ac9b9af933feec8069a38030d45aa2a5f9953fc7187bd66ad2583aaedf8fcb",
+    "selectionPromotedByThisTask": false,
+    "providerReadinessEstablished": false,
+    "testedImageSelectionIdentityClaimed": false,
+    "boundary": "Read-only checksum verification of the separately selected immutable1.7.2, not promotion, tested-image identity or provider readiness."
+  },
+  "sourcePrivacyFlags": {
+    "rootStateSourcesExcluded": true,
+    "privateRuntimeFamiliesExcluded": true,
+    "unadmittedWikiExcluded": true,
+    "sourceFamilyMatchCount": 0,
+    "nodeEdgePathFamilyMatchCount": 0,
+    "admittedWikiSources": 10,
+    "unadmittedWikiSources": 0,
+    "realPrivateStateBodiesInspectedForPostExportAudit": false,
+    "nativeExtractionReadAvoidanceClaimed": false,
+    "privateSourcePathsExcluded": true,
+    "rawCaptureSourcesExcluded": true,
+    "currentGlobalSourceFreshnessClaimed": false
+  },
+  "sourceFreshnessBoundary": {
+    "reportedAt": "2026-10-26T14:51:03.962Z",
+    "exportObservedAt": "2026-10-26T14:34:29.979243+00:00",
+    "initialPostExportSourceHashMismatches": 0,
+    "postWriteSourceHashMismatches": 1,
+    "changedSources": [
+      "docs/verification.md"
+    ],
+    "postWriteAdmissionCheck": {
+      "command": "node scripts/knowledge.mjs check",
+      "finishedAt": "2026-10-26T14:48:40.473Z",
+      "exitCode": 0,
+      "ok": true,
+      "entries": 10,
+      "indexStatus": "passed"
+    },
+    "generationFrozenByParent": true,
+    "furtherRebuildOrSourceEditPerformed": false,
+    "currentGlobalSourceFreshnessClaimed": false,
+    "boundary": "The successful exported generation is retained as a timestamped snapshot. A later postwrite audit found only docs/verification.md differs from its recorded export hash; no actor or cause is inferred, and no source is overwritten or re-exported after the parent freeze."
   }
 }
