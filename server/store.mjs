@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, writeFileSync, renameSync, existsSync, unlinkSync, readdirSync, lstatSync, realpathSync, openSync, fstatSync, readSync, closeSync, constants } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
-import { HttpError, object, text, scenes as validateScenes } from './validation.mjs';
+import { HttpError, object, text, episodeMusic, scenes as validateScenes } from './validation.mjs';
 import { resolvePrerequisite } from './graph.mjs';
 
 const DEFAULT_TREND_INTERVAL_MS = 24 * 60 * 60 * 1000;
@@ -38,7 +38,8 @@ function validateGenerationUploads(id, uploads) {
   if (!Array.isArray(uploads) || !uploads.length || uploads.length > 8 || !uploads.some((upload) => upload.variant !== 'original') || uploads.filter((upload) => upload.variant !== 'original').length > 4) throw new HttpError(400, 'Generation requires 1–4 outputs and at most 4 preserved originals');
   const ids = new Set();
   for (const upload of uploads) {
-    if (!upload || !/^[a-f0-9-]{36}$/.test(upload.id || '') || ids.has(upload.id) || !new RegExp(`^${upload.id}\\.(png|jpg|webp|mp4|mov)$`).test(upload.filename || '') || upload.url !== `/api/uploads/${upload.filename}` || !/^(image|video)\//.test(upload.type || '') || !/^[a-f0-9]{64}$/.test(upload.sha256 || '') || upload.generationJobId !== id) throw new HttpError(400, 'Invalid generated upload');
+    const validAudio = upload?.kind === 'audio' && ((upload.type === 'audio/wav' && upload.filename?.endsWith('.wav')) || (upload.type === 'audio/mpeg' && upload.filename?.endsWith('.mp3')) || (upload.type === 'audio/mp4' && upload.filename?.endsWith('.m4a') && upload.variant === 'original'));
+    if (!upload || !/^[a-f0-9-]{36}$/.test(upload.id || '') || ids.has(upload.id) || !new RegExp(`^${upload.id}\\.(png|jpg|webp|mp4|mov|wav|mp3|m4a)$`).test(upload.filename || '') || upload.url !== `/api/uploads/${upload.filename}` || (!/^(image|video)\//.test(upload.type || '') && !validAudio) || !/^[a-f0-9]{64}$/.test(upload.sha256 || '') || upload.generationJobId !== id) throw new HttpError(400, 'Invalid generated upload');
     ids.add(upload.id);
   }
 }
@@ -46,7 +47,7 @@ function validateGenerationUploads(id, uploads) {
 function verifyGenerationFile(dataDir, upload) {
   let fd;
   try {
-    if (!/^[a-f0-9-]{36}$/.test(upload.id || '') || !new RegExp(`^${upload.id}\\.(png|jpg|webp|mp4|mov)$`).test(upload.filename || '') || upload.url !== `/api/uploads/${upload.filename}` || !/^[a-f0-9]{64}$/.test(upload.sha256 || '') || !Number.isSafeInteger(upload.size) || upload.size < 1 || upload.size > 100 * 1024 * 1024) throw new Error('Invalid generated file identity');
+    if (!/^[a-f0-9-]{36}$/.test(upload.id || '') || !new RegExp(`^${upload.id}\\.(png|jpg|webp|mp4|mov|wav|mp3|m4a)$`).test(upload.filename || '') || upload.url !== `/api/uploads/${upload.filename}` || !/^[a-f0-9]{64}$/.test(upload.sha256 || '') || !Number.isSafeInteger(upload.size) || upload.size < 1 || upload.size > 100 * 1024 * 1024) throw new Error('Invalid generated file identity');
     const root = resolve(dataDir, 'uploads');
     if (lstatSync(root).isSymbolicLink() || realpathSync(root) !== root) throw new Error('Redirected upload directory');
     const file = join(root, upload.filename), before = lstatSync(file);
@@ -404,17 +405,145 @@ export class Store {
     this.db.prepare('INSERT INTO history(episode_id,version,data) VALUES (?,?,?)').run(episode.id, episode.version, JSON.stringify(entry));
   }
 
-  completeGeneration(id, uploads) {
+  updateGeneration(id, patch, { importToken, time, activeOnly = false, expectedEpoch, expectedStatus } = {}) {
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const current = this.get('generationJobs', id);
+      const leased = current.status === 'downloading' && current.importLeaseToken && Date.parse(current.importLeaseExpiresAt) > time;
+      const authorized = importToken ? leased && current.importLeaseToken === importToken : !leased;
+      const next = ['completed', 'failed', 'nsfw', 'canceled'].includes(current.status) || !authorized || (activeOnly && (!['queued', 'submitting', 'pending', 'in_progress', 'downloading'].includes(current.status) || current.recoveryEpoch !== expectedEpoch)) || (expectedStatus !== undefined && (current.status !== expectedStatus || current.recoveryEpoch !== expectedEpoch)) ? current : { ...current, ...patch, updatedAt: now() };
+      if (next !== current) this.save('generationJobs', next);
+      this.db.exec('COMMIT');
+      return next;
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+  }
+
+  claimGenerationImport(id, token, time, leaseMs, expectedEpoch) {
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const job = this.get('generationJobs', id);
+      if (!Number.isFinite(time) || !['pending', 'in_progress', 'downloading'].includes(job.status) || job.recoveryEpoch !== expectedEpoch || !job.providerRequestId || (job.importLeaseToken && Date.parse(job.importLeaseExpiresAt) > time)) { this.db.exec('COMMIT'); return null; }
+      const claimed = { ...job, status: 'downloading', providerStatus: 'completed', importLeaseToken: token, importLeaseExpiresAt: new Date(time + leaseMs).toISOString(), updatedAt: now() };
+      this.save('generationJobs', claimed);
+      this.db.exec('COMMIT');
+      return claimed;
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+  }
+
+  hasUnresolvedMusicSubmission(episodeId, requestId, includeSubmitting = false) {
+    return [...this.iterate('generationJobs')].some((job) => job.target === 'music' && job.episodeId === episodeId && job.requestId !== requestId && (job.status === 'submission_unknown' || (includeSubmitting && job.status === 'submitting')));
+  }
+
+  createMusicQuote(fields) {
+    this.db.exec('BEGIN IMMEDIATE');
+    let quote;
+    try {
+      if (this.hasUnresolvedMusicSubmission(fields.input.episodeId, fields.input.requestId)) throw new HttpError(409, 'A music submission outcome is unknown. Inspect provider history before creating another request.');
+      if (this.assertEpisodeActive(fields.input.episodeId).version !== fields.input.expectedVersion) throw new HttpError(409, 'Episode changed while requesting the quote');
+      quote = entity(fields);
+      this.save('generationQuotes', quote);
+      this.record('generationQuotes.created', { entityId: quote.id });
+      this.db.exec('COMMIT');
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+    this.exportKnowledge();
+    return quote;
+  }
+
+  claimMusicSubmission(id) {
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const job = this.get('generationJobs', id);
+      if (job.target !== 'music' || job.status !== 'queued' || job.providerRequestId) { this.db.exec('COMMIT'); return null; }
+      this.assertEpisodeActive(job.episodeId);
+      if (this.hasUnresolvedMusicSubmission(job.episodeId, job.requestId, true)) {
+        this.save('generationJobs', { ...job, status: 'failed', error: 'Another music submission is pending or unknown; no provider request was made.', updatedAt: now() });
+        this.db.exec('COMMIT');
+        return null;
+      }
+      const claimed = { ...job, status: 'submitting', submittedAt: now(), updatedAt: now() };
+      this.save('generationJobs', claimed);
+      this.db.exec('COMMIT');
+      return claimed;
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+  }
+
+  claimMusicGeneration(fields, expectedQuote, time) {
+    this.db.exec('BEGIN IMMEDIATE');
+    let job;
+    try {
+      const existing = [...this.iterate('generationJobs')].find((item) => item.requestId === fields.requestId);
+      if (existing) {
+        if (existing.inputHash !== fields.inputHash) throw new HttpError(409, 'requestId already belongs to a different generation request');
+        job = existing;
+      } else {
+        if (this.hasUnresolvedMusicSubmission(fields.episodeId, fields.requestId, true)) throw new HttpError(409, 'Another music submission is pending or unknown. Inspect its outcome before creating another request.');
+        const quote = this.get('generationQuotes', fields.quoteId);
+        if (JSON.stringify(quote) !== JSON.stringify(expectedQuote) || quote.usedBy || !Number.isFinite(time) || Date.parse(quote.expiresAt) <= time || quote.fingerprint !== fields.quoteFingerprint) throw new HttpError(409, 'Music quote is invalid or expired');
+        if (this.assertEpisodeActive(fields.episodeId).version !== fields.episodeVersion) throw new HttpError(409, 'Episode changed while validating the music quote');
+        job = entity(fields);
+        this.save('generationJobs', job);
+        this.save('generationQuotes', { ...quote, usedBy: job.id, updatedAt: now() });
+        this.record('generationJobs.created', { entityId: job.id });
+      }
+      this.db.exec('COMMIT');
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+    return job;
+  }
+
+  applyMusicGeneration(id, expectedVersion, outputUploadId) {
+    this.db.exec('BEGIN IMMEDIATE');
+    let episode, applied;
+    try {
+      const job = this.get('generationJobs', id);
+      if (job.target !== 'music' || job.mediaKind !== 'audio' || job.status !== 'completed' || job.applied) throw new HttpError(409, 'Music generation is not available to apply');
+      const previous = this.assertEpisodeActive(job.episodeId);
+      if (previous.version !== expectedVersion || previous.version !== job.episodeVersion) throw new HttpError(409, 'Episode changed since music generation. Generate again for the current version.');
+      const matches = (job.outputs || []).filter((item) => item.uploadId === outputUploadId);
+      if (matches.length !== 1) throw new HttpError(409, 'Select one output from this music generation');
+      const output = matches[0], upload = this.get('uploads', outputUploadId);
+      if (upload.generationJobId !== id || upload.kind !== 'audio' || !['audio/wav', 'audio/mpeg'].includes(upload.type) || output.kind !== upload.kind || output.type !== upload.type || output.url !== upload.url || output.sha256 !== upload.sha256 || output.size !== upload.size) throw new HttpError(409, 'Music output identity does not match its upload');
+      verifyGenerationFile(this.dataDir, upload);
+      if (upload.normalized || output.normalized) {
+        const source = upload.provenance?.original;
+        if (!upload.normalized || !output.normalized || !source || JSON.stringify(source) !== JSON.stringify(output.original)) throw new HttpError(409, 'Converted music provenance changed');
+        const original = this.get('uploads', source.uploadId);
+        if (original.generationJobId !== id || original.variant !== 'original' || original.type !== 'audio/mp4' || original.url !== source.url || original.sha256 !== source.sha256) throw new HttpError(409, 'Original music provenance changed');
+        verifyGenerationFile(this.dataDir, original);
+      }
+      const rights = [...this.iterate('mediaRights')].find((entry) => entry.uploadId === upload.id && entry.sha256 === upload.sha256 && entry.origin === 'generated' && entry.generationJobId === id && Number.isFinite(Date.parse(entry.acknowledgedAt || '')));
+      if (!rights) throw new HttpError(409, 'Confirm rights for the selected music output before applying');
+      const source = { origin: 'generated', generationJobId: id, sha256: upload.sha256, ...(rights.licenseId ? { licenseId: rights.licenseId } : {}), ...(rights.attribution ? { attribution: rights.attribution } : {}), ...(rights.sourceUrl ? { sourceUrl: rights.sourceUrl } : {}) };
+      const music = episodeMusic({ assetUrl: upload.url, start: 0, trimStart: 0, volume: 1, source });
+      episode = { ...previous, music, status: 'draft', version: previous.version + 1, updatedAt: now() };
+      this.save('episodes', episode);
+      this.snapshot(episode, `generation:${id}`);
+      applied = { ...job, applied: true, appliedVersion: episode.version, appliedOutputUploadId: upload.id, appliedAt: now(), updatedAt: now() };
+      this.save('generationJobs', applied);
+      this.record('generation.applied', { entityId: previous.id, jobId: id, outputUploadId: upload.id, version: episode.version });
+      this.db.exec('COMMIT');
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+    try { this.exportKnowledge(); } catch (error) { console.error('Music generation committed; knowledge export refresh failed:', error.message); }
+    return { job: applied, episode };
+  }
+
+  completeGeneration(id, uploads, importToken, time) {
     validateGenerationUploads(id, uploads);
     this.db.exec('BEGIN IMMEDIATE');
     let next;
     try {
       const job = this.get('generationJobs', id);
       this.assertEpisodeActive(job.episodeId);
-      if (job.status !== 'downloading' || !job.providerRequestId) throw new HttpError(409, 'Generation is not awaiting imported output');
+      if (job.status !== 'downloading' || !job.providerRequestId || !importToken || job.importLeaseToken !== importToken || !Number.isFinite(time) || !(Date.parse(job.importLeaseExpiresAt) > time)) throw new HttpError(409, 'Generation import ownership expired or changed');
+      if (uploads.some((upload) => upload.kind !== job.mediaKind || (upload.kind === 'audio' && (job.target !== 'music' || !['audio/wav', 'audio/mpeg', 'audio/mp4'].includes(upload.type))))) throw new HttpError(409, 'Generated upload does not match the generation target');
+      for (const upload of uploads.filter((item) => item.kind === 'audio' && item.normalized)) {
+        const source = upload.provenance?.original, original = uploads.find((item) => item.id === source?.uploadId);
+        if (!original || original.variant !== 'original' || original.type !== 'audio/mp4' || original.url !== source.url || original.sha256 !== source.sha256) throw new HttpError(409, 'Converted music source is missing or changed');
+        verifyGenerationFile(this.dataDir, original);
+        verifyGenerationFile(this.dataDir, upload);
+      }
       if (uploads.some((upload) => this.db.prepare('SELECT 1 FROM entities WHERE kind=? AND id=?').get('uploads', upload.id))) throw new HttpError(409, 'Generated upload already exists');
       for (const upload of uploads) this.save('uploads', upload);
-      next = { ...job, status: 'completed', outputs: uploads.filter((upload) => upload.variant !== 'original').map(generationOutput), completedAt: now(), updatedAt: now() };
+      next = { ...job, status: 'completed', importLeaseToken: undefined, importLeaseExpiresAt: undefined, outputs: uploads.filter((upload) => upload.variant !== 'original').map(generationOutput), completedAt: now(), updatedAt: now() };
       this.save('generationJobs', next);
       this.record('generation.completed', { entityId: job.episodeId, jobId: id, uploadIds: uploads.map((upload) => upload.id) });
       this.db.exec('COMMIT');
@@ -520,6 +649,31 @@ export class Store {
       this.save('workflows', next);
       this.workflowSnapshot(next, reason);
       this.record('workflows.updated', { entityId: id, version: next.version, reason });
+      this.db.exec('COMMIT');
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+    return next;
+  }
+
+  rollupWorkflow(id, { expectedWorkflowVersion, expectedTemplateVersion }, portableWorkflow) {
+    for (const [key, value] of Object.entries({ expectedWorkflowVersion, expectedTemplateVersion })) {
+      if (!Number.isSafeInteger(value) || value < 1) throw new HttpError(400, `Rollup requires a positive ${key}`);
+    }
+    this.db.exec('BEGIN IMMEDIATE');
+    let next;
+    try {
+      const workflow = this.get('workflows', id);
+      if (workflow.version !== expectedWorkflowVersion) throw new HttpError(409, `Workflow changed: current version is ${workflow.version}. Reload before rollup.`);
+      if (!workflow.episodeId || !workflow.channelId || !workflow.templateId || workflow.templateId === workflow.id) throw new HttpError(400, 'Rollup requires a project workflow linked to a shared template');
+      const episode = this.assertEpisodeActive(workflow.episodeId);
+      const channel = this.get('channels', workflow.channelId);
+      if (episode.channelId !== channel.id) throw new HttpError(400, 'Workflow project does not belong to its channel');
+      const template = this.get('workflows', workflow.templateId);
+      if (template.episodeId || template.channelId || template.templateId || template.templateVersion) throw new HttpError(400, 'Rollup target must be a shared template');
+      if (template.version !== expectedTemplateVersion) throw new HttpError(409, `Template changed: current version is ${template.version}. Reload before rollup.`);
+      const patch = portableWorkflow(workflow, episode, channel);
+      next = { ...template, ...patch, version: template.version + 1, updatedAt: now() };
+      this.save('workflows', next);
+      this.workflowSnapshot(next, 'project-rollup');
       this.db.exec('COMMIT');
     } catch (error) { this.db.exec('ROLLBACK'); throw error; }
     return next;

@@ -276,9 +276,9 @@ function gitConsentValid() {
 function controls() {
   const view = activeId && buffers.has(activeId) ? buffer() : null;
   const value = view ? editor(view) : null;
-  const canWrite = Boolean(session.authenticated && session.canMutate && view && !view.pending && !loading && !refreshPending);
+  const canWrite = Boolean(session.authenticated && view && !view.pending && !loading && !refreshPending);
   for (const node of document.querySelectorAll('#blog-account-panel button, #blog-account-panel input, #blog-account-panel select, #blog-account-panel textarea')) node.disabled = !canWrite;
-  $('#blog-refresh').disabled = !session.canMutate || loading || refreshPending || [...buffers.values()].some((item) => item.pending);
+  $('#blog-refresh').disabled = !session.authenticated || loading || refreshPending || [...buffers.values()].some((item) => item.pending);
   $('#blog-retry').disabled = loading || refreshPending;
   if (!view) return;
   const canInspect = Boolean(session.authenticated && !view.pending && !loading && !refreshPending);
@@ -311,7 +311,7 @@ function controls() {
 async function perform(id, message, action) {
   const view = buffer(id);
   if (view.pending || loading || refreshPending) return;
-  if (!session.canMutate) { notify('관리자 인증 후 실행할 수 있습니다.', true, id); return; }
+  if (!session.authenticated) { notify('로그인 후 실행할 수 있습니다.', true, id); return; }
   view.pending = true; controls(); notify(message, false, id);
   try { await action(view); view.conflict = false; }
   catch (error) {

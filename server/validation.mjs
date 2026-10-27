@@ -70,6 +70,19 @@ function sourceEvidence(value) {
   return result;
 }
 
+export function episodeMusic(value) {
+  if (value === undefined || value === null) return value;
+  const music = object(value);
+  if (Object.keys(music).some((key) => !['assetUrl', 'start', 'trimStart', 'volume', 'source'].includes(key))) throw new HttpError(400, 'Invalid music field');
+  if (typeof music.assetUrl !== 'string' || !/^\/api\/uploads\/[a-zA-Z0-9_-]+\.(?:mp3|wav|ogg)$/i.test(music.assetUrl)) throw new HttpError(400, 'Invalid music upload');
+  for (const [key, max] of [['start', 1800], ['trimStart', 36000], ['volume', 2]]) {
+    if (typeof music[key] !== 'number' || !Number.isFinite(music[key]) || music[key] < 0 || music[key] > max) throw new HttpError(400, `Invalid music ${key}`);
+  }
+  const source = object(music.source);
+  if (!['own', 'third-party', 'generated'].includes(source.origin)) throw new HttpError(400, 'Invalid music source origin');
+  return { assetUrl: music.assetUrl, start: music.start, trimStart: music.trimStart, volume: music.volume, source: sourceEvidence(source) };
+}
+
 /** Optional provenance is editable evidence, not an implicit rights clearance. */
 export function sceneSource(value) {
   if (value === undefined) return undefined;
@@ -278,6 +291,22 @@ export function createPresetSlots(preset, scene = {}) {
   ];
 }
 
+export function sceneCaptions(value, duration) {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.length > 200) throw new HttpError(400, 'Captions must be an array of at most 200 cues');
+  return value.map((cue) => {
+    if (!cue || typeof cue !== 'object' || Array.isArray(cue) ||
+        typeof cue.start !== 'number' || !Number.isFinite(cue.start) ||
+        typeof cue.end !== 'number' || !Number.isFinite(cue.end) ||
+        !Number.isFinite(duration) || cue.start < 0 || cue.start >= cue.end || cue.end > duration ||
+        Math.round(cue.start * 100) >= Math.round(cue.end * 100)) {
+      throw new HttpError(400, 'Invalid caption timing');
+    }
+    text(cue.text, 'caption text', 2000);
+    return { start: cue.start, end: cue.end, text: cue.text };
+  });
+}
+
 export function scenes(value) {
   if (!Array.isArray(value) || !value.length || value.length > 60) throw new HttpError(400, 'Between 1 and 60 scenes are required');
   const ids = new Set();
@@ -295,16 +324,19 @@ export function scenes(value) {
     const trimStart = boundedNumber(scene.trimStart, 'trimStart', 0, 36000, 0);
     const trimEnd = mediaTrim(scene.trimEnd, trimStart);
     const source = sceneSource(scene.source);
+    const audioSource = sceneSource(scene.audioSource);
     const audioVolume = boundedNumber(scene.audioVolume, 'audioVolume', 0, 2, 1);
     const kind = choice(scene.kind, ['title', 'video', 'image'], 'scene kind', 'title');
     if (kind !== 'title' && !assetUrl) throw new HttpError(400, `${kind} scenes require an uploaded asset`);
     const layout = choice(scene.layout, layouts, 'layout', 'center');
     const validatedSlots = sceneSlots(scene.slots);
+    const captions = sceneCaptions(scene.captions, scene.duration);
     return {
       id,
       title: text(scene.title, 'scene title', 160, '장면'),
       text: optionalText(scene.text, 'scene text', 2000),
       duration: scene.duration,
+      ...(captions !== undefined ? { captions } : {}),
       background: scene.background,
       kind,
       layout,
@@ -313,6 +345,7 @@ export function scenes(value) {
       trimStart,
       ...(trimEnd !== undefined ? { trimEnd } : {}),
       ...(source ? { source } : {}),
+      ...(audioSource ? { audioSource } : {}),
       ...(scene.evidence !== undefined ? { evidence: sourceEvidence(scene.evidence) } : {}),
       audioVolume,
       narration: optionalText(scene.narration, 'narration', 4000),
@@ -332,6 +365,7 @@ export function episodePatch(body) {
   if ('status' in body) patch.status = choice(body.status, ['draft', 'review', 'ready'], 'status');
   if ('format' in body) patch.format = choice(body.format, formats, 'format');
   if ('scenes' in body) patch.scenes = scenes(body.scenes);
+  if ('music' in body) patch.music = episodeMusic(body.music);
   if ('expectedVersion' in body && (!Number.isInteger(body.expectedVersion) || body.expectedVersion < 1)) throw new HttpError(400, 'expectedVersion must be a positive integer');
   if (!Object.keys(patch).length) throw new HttpError(400, 'No editable fields supplied');
   return patch;

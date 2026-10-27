@@ -23,6 +23,7 @@ import { YouTubeOAuth } from '../server/youtube-oauth.mjs';
 import { PublicationService } from '../server/publication.mjs';
 import { candidateFingerprint } from '../server/graph.mjs';
 import { requiredMediaCredits } from '../server/media-credits.mjs';
+import { candidateManifest, verifyCandidateAssets } from '../server/candidates.mjs';
 import { createHook } from 'node:async_hooks';
 import { readFile, readdir } from 'node:fs/promises';
 
@@ -947,6 +948,71 @@ test('publish() rejects when the approved render artifact hash changed since app
   store.save('jobs', { ...job, sha256: 'f'.repeat(64) });
   await assert.rejects(service.publish(approval.id, { ownerId: 'owner-1' }), { status: 409 });
   assert.equal(calls.length, 0);
+});
+
+async function musicUpload(store) {
+  const id = randomUUID(), filename = `${id}.wav`, bytes = Buffer.from('isolated music fixture bytes');
+  const sha256 = createHash('sha256').update(bytes).digest('hex');
+  await writeFile(path.join(store.dataDir, 'uploads', filename), bytes);
+  const upload = store.save('uploads', { id, filename, name: 'Music fixture', url: `/api/uploads/${filename}`, kind: 'audio', type: 'audio/wav', size: bytes.length, sha256 });
+  const music = { assetUrl: upload.url, start: 0, trimStart: 0, volume: 0.5, source: { origin: 'third-party', sha256, sourceUrl: 'https://example.invalid/music', licenseId: 'CC-BY-4.0', attribution: 'Fixture composer' } };
+  return { upload, music };
+}
+
+test('music provenance rejects uncleared and byte-tampered candidates before preview or approval', async t => {
+  const store = await tempStore(t), channel = boundChannel(store), candidate = await renderCandidate(store, channel);
+  const { upload, music } = await musicUpload(store);
+  const episode = store.save('episodes', { ...candidate.episode, music });
+  const { oauth } = await connectChannel(store, channel), { fetchImpl, calls } = sequentialFetch([]);
+  const service = new PublicationService({ store, oauth, fetchImpl }); t.after(() => service.close());
+  const preview = candidateManifest(store, episode, candidate.workflow, { selectedStages: ['render', 'review'] });
+  await assert.rejects(verifyCandidateAssets(store, preview), { status: 409 }, 'missing music rights must block candidate verification');
+  store.create('mediaRights', { uploadId: upload.id, ...music.source, acknowledgedAt: '2026-01-01T00:00:00Z' });
+  const cleared = candidateManifest(store, episode, candidate.workflow, { selectedStages: ['render', 'review'] });
+  await writeFile(path.join(store.dataDir, 'uploads', upload.filename), Buffer.from('tampered music bytes'));
+  await assert.rejects(verifyCandidateAssets(store, cleared), { status: 409 }, 'music bytes must match the registered and reviewed hash');
+  await assert.rejects(service.approve(approveBody(candidate), { ownerId: 'owner-1' }), { status: 409 });
+  assert.deepEqual(await service.list(episode.id), []);
+  assert.deepEqual(calls, []);
+});
+
+test('music provenance rejects a cleared music candidate whose review only binds scenes', async t => {
+  const store = await tempStore(t), channel = boundChannel(store), candidate = await renderCandidate(store, channel);
+  const { upload, music } = await musicUpload(store);
+  store.create('mediaRights', { uploadId: upload.id, ...music.source, acknowledgedAt: '2026-01-01T00:00:00Z' });
+  const episode = store.save('episodes', { ...candidate.episode, music });
+  const preview = candidateManifest(store, episode, candidate.workflow, { selectedStages: ['render', 'review'] });
+  const verified = await verifyCandidateAssets(store, preview);
+  assert.equal(verified.assets.find(asset => asset.use === 'music').sha256, upload.sha256);
+  const { oauth } = await connectChannel(store, channel), { fetchImpl, calls } = sequentialFetch([]);
+  const service = new PublicationService({ store, oauth, fetchImpl }); t.after(() => service.close());
+  await assert.rejects(service.approve(approveBody(candidate), { ownerId: 'owner-1' }), { status: 409 });
+  assert.deepEqual(await service.list(episode.id), []);
+  assert.deepEqual(calls, []);
+});
+
+test('music added after approval cannot publish a scene-only reviewed render', async t => {
+  const store = await tempStore(t), channel = boundChannel(store), candidate = await renderCandidate(store, channel);
+  const { oauth } = await connectChannel(store, channel), { fetchImpl, calls } = sequentialFetch([]);
+  const service = new PublicationService({ store, oauth, fetchImpl }); t.after(() => service.close());
+  const approval = await service.approve(approveBody(candidate), { ownerId: 'owner-1' });
+  const { music } = await musicUpload(store);
+  // Preserve the version to exercise the provenance guard independently of version checks.
+  store.save('episodes', { ...candidate.episode, music });
+  await assert.rejects(service.publish(approval.id, { ownerId: 'owner-1' }), { status: 409 });
+  assert.deepEqual(calls, []);
+});
+
+for (const location of ['job', 'render']) test(`music snapshot survives removal from the episode and blocks ${location} publication`, async t => {
+  const store = await tempStore(t), channel = boundChannel(store), candidate = await renderCandidate(store, channel);
+  const { oauth } = await connectChannel(store, channel), { fetchImpl, calls } = sequentialFetch([]);
+  const service = new PublicationService({ store, oauth, fetchImpl }); t.after(() => service.close());
+  const { music } = await musicUpload(store);
+  if (location === 'job') store.save('jobs', { ...candidate.job, musicSnapshot: music });
+  else store.save('workflowRuns', { ...candidate.run, nodeRuns: candidate.run.nodeRuns.map(node => node.nodeId === 'render' ? { ...node, output: { ...node.output, musicSnapshot: music } } : node) });
+  await assert.rejects(service.approve(approveBody(candidate), { ownerId: 'owner-1' }), { status: 409 });
+  assert.deepEqual(await service.list(candidate.episode.id), []);
+  assert.deepEqual(calls, []);
 });
 
 // =========================================================================================

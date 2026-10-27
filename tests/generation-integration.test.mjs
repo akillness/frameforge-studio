@@ -3,10 +3,12 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { createApp } from '../server/app.mjs';
 import { defaultWorkflow, validateWorkflow } from '../server/workflows.mjs';
 import { createAgentBridge } from '../scripts/agent-bridge.mjs';
 import { createGenerationProvider } from '../server/generation-provider.mjs';
+import { createHiggsfieldCli } from '../server/higgsfield-cli.mjs';
 
 async function listen(server, t) {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -46,6 +48,35 @@ test('authenticated bridge preserves safe errors and never invokes unauthenticat
   assert.equal(creates, 1);
   const unsafe = createGenerationProvider({ env: { AGENT_BRIDGE_URL: 'http://example.com', AGENT_BRIDGE_TOKEN: token }, fetchImpl: () => { throw new Error('must not fetch'); } });
   assert.equal((await unsafe.capability()).available, false);
+});
+
+test('host bridge propagates expired quote and changed schema before any paid CLI command', async t => {
+  const token = 'fixture-private-bridge-token-123456';
+  const schema = { job_type: 'music_fixture', display_name: 'Music fixture', type: 'audio', params: [{ name: 'prompt', type: 'string', required: true }] };
+  let creates = 0;
+  const generation = createHiggsfieldCli({ now: () => Date.parse('2025-01-01T00:00:00.000Z'), execute: async args => {
+    if (args[0] === 'model' && args[1] === 'list') return { stdout: JSON.stringify([{ job_type: 'music_fixture', type: 'audio' }]) };
+    if (args[0] === 'model' && args[1] === 'get') return { stdout: JSON.stringify(schema) };
+    if (args[0] === 'generate' && args[1] === 'create') { creates++; throw new Error('unexpected paid submission'); }
+    throw new Error(`Unexpected CLI fixture command: ${args.join(' ')}`);
+  } });
+  const base = await listen(createAgentBridge({ token, generation }), t);
+  const provider = createGenerationProvider({ env: { AGENT_BRIDGE_URL: base, AGENT_BRIDGE_TOKEN: token } });
+  const modelSchema = await provider.modelSchema('music_fixture');
+  const canonical = value => Array.isArray(value) ? value.map(canonical) : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])])) : value;
+  const hash = createHash('sha256').update(JSON.stringify(canonical(modelSchema))).digest('hex');
+  const cases = [
+    { code: 'EXPIRED_QUOTE', quoteExpiresAt: '2025-01-01T00:00:00.000Z', quoteSchemaHash: hash },
+    { code: 'SCHEMA_CHANGED', quoteExpiresAt: '2025-01-01T00:01:00.000Z', quoteSchemaHash: '0'.repeat(64) },
+  ];
+  for (const { code, ...approval } of cases) {
+    const input = { model: 'music_fixture', prompt: 'Fixture music', params: {}, ...approval };
+    const response = await fetch(`${base}/generation/create`, { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify(input) });
+    assert.equal(response.status, 409, code);
+    assert.equal((await response.json()).code, code);
+    await assert.rejects(provider.create(input), error => error.status === 409 && error.code === code);
+    assert.equal(creates, 0, `${code} must be rejected before the paid command`);
+  }
 });
 
 test('workflow generation consent precedes edits; completed asset applies with versioned provenance', async t => {

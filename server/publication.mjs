@@ -3,7 +3,7 @@ import { lstat, readFile, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { HttpError, text } from './validation.mjs';
 import { ancestors, candidateFingerprint, canonicalJson, resolvePrerequisite } from './graph.mjs';
-import { candidateManifest, verifyCandidateAssets } from './candidates.mjs';
+import { candidateManifest, verifyCandidateAssets, verifySceneReceipts } from './candidates.mjs';
 import { requiredMediaCredits } from './media-credits.mjs';
 import { PrivateRuntime } from './private-runtime.mjs';
 
@@ -160,6 +160,20 @@ export class PublicationService {
     const renderRun = run.nodeRuns.find((node) => node.nodeId === renderNode.id);
     if (renderRun?.type !== 'render' || renderRun.status !== 'completed' || !renderRun.output?.jobId) conflict('Review has no completed connected render');
     const job = this.store.get('jobs', renderRun.output.jobId);
+    const music = episode.music;
+    if (music || job.musicSnapshot || renderRun.output.musicSnapshot || job.musicIntegrity || job.verifiedMusicIntegrity || renderRun.output.verifiedMusicIntegrity) {
+      if (!music || !job.musicSnapshot || !renderRun.output.musicSnapshot
+        || canonicalJson(music) !== canonicalJson(job.musicSnapshot)
+        || canonicalJson(music) !== canonicalJson(renderRun.output.musicSnapshot)
+        || !job.musicIntegrity || !job.verifiedMusicIntegrity || !renderRun.output.verifiedMusicIntegrity
+        || canonicalJson(job.musicIntegrity) !== canonicalJson(job.verifiedMusicIntegrity)
+        || canonicalJson(job.musicIntegrity) !== canonicalJson(renderRun.output.verifiedMusicIntegrity)
+        || !SHA256.test(job.musicIntegrity.sha256 || '') || !Number.isSafeInteger(job.musicIntegrity.size)
+        || job.musicIntegrity.size < 1 || job.musicIntegrity.size > 100 * 1024 * 1024
+        || renderRun.output.renderNodeId !== renderNode.id || renderRun.output.episodeVersion !== episode.version
+        || review.reviewNodeId !== body.reviewNodeId || !run.workflowSnapshot
+        || canonicalJson(nodeRun.output?.review ?? null) !== canonicalJson(review)) conflict('Music render lineage is incomplete or mismatched; a fresh render and review are required');
+    }
     if (job.status !== 'completed' || job.episodeId !== episode.id || job.episodeVersion !== episode.version || review.jobId !== job.id || review.outputUrl !== job.outputUrl || renderRun.output.outputUrl !== job.outputUrl || renderRun.output.sha256 !== review.sha256 || job.sha256 !== review.sha256 || (renderRun.output.episodeVersion !== undefined && renderRun.output.episodeVersion !== episode.version)) conflict('Review and render artifact differ');
     const sceneSnapshot = job.sceneSnapshot;
     if (!Array.isArray(sceneSnapshot) || !sceneSnapshot.length || !Array.isArray(renderRun.output.sceneSnapshot)
@@ -179,6 +193,31 @@ export class PublicationService {
       disclosure: { containsSyntheticMedia: fields.containsSyntheticMedia, rationale: fields.disclosureRationale },
       publication: fields,
     });
+    for (const asset of candidate.assets.filter((item) => item.use === 'audio' && item.source)) {
+      const reviewedAt = Date.parse(review.reviewedAt || '');
+      if (!Number.isFinite(reviewedAt) || !asset.rights.some((right) => right.uploadId === asset.uploadId && right.sha256 === asset.sha256
+        && right.origin === asset.source.origin && Number.isFinite(Date.parse(right.acknowledgedAt || '')) && Date.parse(right.acknowledgedAt) <= reviewedAt
+        && ['sourceUrl', 'licenseId', 'attribution', 'retrievedAt', 'generationJobId'].every((key) => asset.source[key] === undefined || asset.source[key] === right[key]))) conflict('Scene audio requires matching rights clearance before review');
+    }
+    if (!music && (candidate.assets.some((asset) => asset.use !== 'music') || job.sceneIntegrity !== undefined
+      || job.verifiedSceneAssets !== undefined || renderRun.output.verifiedSceneAssets !== undefined)) verifySceneReceipts(job, renderRun.output, candidate);
+    if (music) {
+      verifySceneReceipts(job, renderRun.output, candidate);
+      const assets = candidate.assets.filter((asset) => asset.use === 'music');
+      const asset = assets[0], source = music.source;
+      const reviewedAt = Date.parse(review.reviewedAt || '');
+      if (assets.length !== 1 || !source || !Number.isFinite(reviewedAt)
+        || asset.sha256 !== job.musicIntegrity.sha256 || asset.upload?.sha256 !== job.musicIntegrity.sha256
+        || asset.upload?.size !== job.musicIntegrity.size
+        || !['own', 'third-party', 'generated'].includes(source.origin)) conflict('Music upload identity or review evidence is incomplete');
+      if (source.origin === 'third-party' && ['sourceUrl', 'licenseId', 'attribution'].some((key) => typeof source[key] !== 'string' || !source[key].trim())) conflict('Music source, license and attribution are required');
+      const cleared = asset.rights.some((right) => right.uploadId === asset.uploadId && right.sha256 === asset.sha256
+        && right.origin === source.origin && Number.isFinite(Date.parse(right.acknowledgedAt || ''))
+        && Date.parse(right.acknowledgedAt) <= reviewedAt
+        && ['sourceUrl', 'licenseId', 'attribution'].every((key) => source[key] === undefined || right[key] === source[key])
+        && (source.origin !== 'generated' || (right.generationJobId && right.generationJobId === asset.upload.generationJobId)));
+      if (!cleared) conflict('Music requires explicit matching rights clearance before review');
+    }
     return {
       fields, workflow, run, episode, channel, job, review, renderNode, candidate, sceneSnapshot, ownerId,
       request: { ...fields, workflowId: workflow.id, runId: run.id, reviewNodeId: body.reviewNodeId, expectedEpisodeVersion: body.expectedEpisodeVersion },
@@ -203,7 +242,7 @@ export class PublicationService {
     const { fields, workflow, run, episode, channel, job, review, renderNode, candidate } = snapshot;
     await verifyCandidateAssets(this.store, candidate);
     const bytes = await this._export(job, review.sha256);
-    const credits = requiredMediaCredits(snapshot.sceneSnapshot);
+    const credits = requiredMediaCredits(snapshot.sceneSnapshot, snapshot.episode.music);
     const description = credits ? `${fields.description}\n\n${credits}` : fields.description;
     // Validate the actual final text, including all server-derived attribution.
     if (description.length > 5000 || Buffer.byteLength(description, 'utf8') > 5000 || /[<>]/.test(description)) throw new HttpError(400, 'Final YouTube description including credits exceeds the metadata limits');

@@ -16,6 +16,7 @@ export function createWorkspaceLayout({toast = () => {}} = {}) {
   let pending = null;
   let navigated = false;
   let drag = null;
+  let sidebarDrag = null;
   let lastStorageError = null;
 
   const $ = selector => root?.querySelector(selector);
@@ -96,6 +97,10 @@ export function createWorkspaceLayout({toast = () => {}} = {}) {
     const windowNode = $('#workspace-window');
     windowNode.style.setProperty('--workspace-width', `${layout.width || 1280}px`);
     windowNode.style.setProperty('--workspace-height', `${layout.height || 800}px`);
+    const shell = root.closest('.shell');
+    shell?.style.setProperty('--sidebar-width', `${layout.sidebarWidth}px`);
+    const separator = shell?.querySelector('.sidebar-resize');
+    if (separator) separator.setAttribute('aria-valuenow', String(layout.sidebarWidth));
     root.style.setProperty('--workspace-inspector-width', `${layout.inspectorWidth}px`);
     const values = {'workspace-template':layout.presetId,'workspace-width':layout.width || 1280,'workspace-height':layout.height || 800,'workspace-inspector-width':layout.inspectorWidth,'workspace-tools-mode':layout.toolsMode};
     for (const [id, value] of Object.entries(values)) {
@@ -153,6 +158,7 @@ export function createWorkspaceLayout({toast = () => {}} = {}) {
     if (preserve && settings?.open && !navigated) pending = {kind:'settings',view:currentView,context,snapshot:capturePanel(settings)};
     closeTool(false);
     closeSettings(false);
+    sidebarDrag = null;
     if (drag) { drag = null; }
     bindings?.abort();
     observer?.disconnect();
@@ -251,6 +257,44 @@ export function createWorkspaceLayout({toast = () => {}} = {}) {
     currentView = root.dataset.workspaceView;
     bindings = new AbortController();
     const {signal} = bindings;
+    const shell = root.closest('.shell');
+    shell?.addEventListener('click', event => {
+      const button = event.target.closest('[data-sidebar-size]');
+      if (!button) return;
+      const delta = button.dataset.sidebarSize === 'increase' ? 16 : -16;
+      store.setLayout({sidebarWidth:store.getState().layout.sidebarWidth + delta});
+    }, {signal});
+    shell?.addEventListener('keydown', event => {
+      if (!event.target.matches('.sidebar-resize') || !['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+      event.preventDefault();
+      const width = store.getState().layout.sidebarWidth;
+      const step = event.shiftKey ? 64 : 16;
+      store.setLayout({sidebarWidth:event.key === 'Home' ? 160 : event.key === 'End' ? 400 : width + (event.key === 'ArrowRight' ? step : -step)});
+    }, {signal});
+    shell?.addEventListener('pointerdown', event => {
+      const handle = event.target.closest('.sidebar-resize');
+      if (!handle || event.button !== 0) return;
+      event.preventDefault();
+      sidebarDrag = {pointerId:event.pointerId, handle, x:event.clientX, width:store.getState().layout.sidebarWidth, next:store.getState().layout.sidebarWidth};
+      handle.focus({preventScroll:true});
+      handle.setPointerCapture(event.pointerId);
+    }, {signal});
+    shell?.addEventListener('pointermove', event => {
+      if (!sidebarDrag || event.pointerId !== sidebarDrag.pointerId) return;
+      sidebarDrag.next = normalizeLayout({...store.getState().layout,sidebarWidth:sidebarDrag.width + event.clientX - sidebarDrag.x}).sidebarWidth;
+      applyLayout({...store.getState().layout,sidebarWidth:sidebarDrag.next});
+    }, {signal});
+    const finishSidebarDrag = event => {
+      if (!sidebarDrag || event.pointerId !== sidebarDrag.pointerId) return;
+      const current = sidebarDrag; sidebarDrag = null;
+      if (current.handle.hasPointerCapture(current.pointerId)) current.handle.releasePointerCapture(current.pointerId);
+      if (event.type === 'pointercancel' || event.type === 'lostpointercapture') applyLayout();
+      else if (current.next !== current.width) store.setLayout({sidebarWidth:current.next});
+      else applyLayout();
+    };
+    shell?.addEventListener('pointerup', finishSidebarDrag, {signal});
+    shell?.addEventListener('pointercancel', finishSidebarDrag, {signal});
+    shell?.addEventListener('lostpointercapture', finishSidebarDrag, {signal});
     root.addEventListener('click', onClick, {signal});
     root.addEventListener('change', onChange, {signal});
     root.addEventListener('submit', onSubmit, {signal});

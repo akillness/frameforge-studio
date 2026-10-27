@@ -1,5 +1,5 @@
 import { mkdir, writeFile, realpath, stat, unlink, rm, open } from 'node:fs/promises';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { execute } from './process.mjs';
@@ -178,9 +178,26 @@ export class NarrationQueue {
         if (!Number.isFinite(duration) || duration <= 0 || duration > 119.7) throw new HttpError(400, 'Generated narration is too long');
         const info = await stat(outputPath);
         if (!info.isFile() || info.size < 44 || info.size > 50 * 1024 * 1024 || await realpath(outputPath) !== outputPath) throw new Error('Invalid generated audio');
+        const handle = await open(outputPath, 'r');
+        let sha256;
+        try {
+          const sameFile = other => other.isFile() && other.dev === info.dev && other.ino === info.ino && other.size === info.size && other.mtimeMs === info.mtimeMs && other.ctimeMs === info.ctimeMs;
+          if (!sameFile(await handle.stat())) throw new Error('Generated audio changed while opening');
+          const hash = createHash('sha256'), buffer = Buffer.allocUnsafe(64 * 1024);
+          let offset = 0;
+          while (offset < info.size) {
+            const { bytesRead } = await handle.read(buffer, 0, Math.min(buffer.length, info.size - offset), offset);
+            if (!bytesRead) throw new Error('Generated audio changed while reading');
+            hash.update(buffer.subarray(0, bytesRead));
+            offset += bytesRead;
+          }
+          if (!sameFile(await handle.stat()) || !sameFile(await stat(outputPath)) || await realpath(outputPath) !== outputPath) throw new Error('Generated audio changed while reading');
+          sha256 = hash.digest('hex');
+        } finally { await handle.close(); }
         const url = `/api/uploads/${filename}`;
-        uploads.push({ id, filename, url, name: `${scene.title} · narration.wav`, type: 'audio/wav', size: info.size, generated: true, provider: job.provider, voice: job.voice, duration, createdAt: stamp(), updatedAt: stamp() });
+        uploads.push({ id, filename, url, name: `${scene.title} · narration.wav`, type: 'audio/wav', size: info.size, sha256, generated: true, provider: job.provider, voice: job.voice, duration, createdAt: stamp(), updatedAt: stamp() });
         const target = next.find(item => item.id === scene.id);
+        delete target.audioSource;
         Object.assign(target, { narration: scene.speech, audioUrl: url, audioVolume: 1, duration: Math.max(target.duration, Math.ceil((duration + .2) * 10) / 10) });
         update({ progress: Math.round(uploads.length / selected.length * 95) });
       }

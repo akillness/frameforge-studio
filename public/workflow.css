@@ -390,3 +390,13 @@
   #workflow-canvas[data-layout="stacked"] .wf-node { grid-template-rows: 44px auto 44px; }
   #workflow-canvas[data-layout="stacked"] .wf-port { min-height: 44px; }
 }
+
+.wf-focused-node { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: var(--space-3) var(--space-4); margin-bottom: var(--space-3); }
+.wf-focused-node > div { min-width: 0; }
+.wf-focused-node h2 { margin: 4px 0; font-size: 16px; overflow-wrap: anywhere; }
+.wf-focused-node p { margin: 3px 0; overflow-wrap: anywhere; }
+.wf-focused-node .row { flex-wrap: wrap; }
+@media (max-width: 560px) { .wf-focused-node { padding: var(--space-3); } .wf-focused-node .row { width: 100%; } .wf-focused-node button { flex: 1 1 auto; } }
+.wf-rollup-json { max-width: 100%; max-height: 45dvh; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; padding: var(--space-3); border: 1px solid var(--border); background: var(--surface-subtle); }
+#wf-rollup-body label { display: flex; align-items: flex-start; gap: 8px; }
+#wf-rollup-reviewed { width: auto; flex: 0 0 auto; }

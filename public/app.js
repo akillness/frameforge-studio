@@ -29,6 +29,11 @@ let history = [];
 let historyVersion = null;
 let playing = false;
 let playTimer;
+let previewCueTimer;
+let previewSceneStartedAt = 0;
+let previewMusicTimer;
+let previewMusic;
+let previewMusicContext;
 let toastTimer;
 let busy = false;
 let authenticated = false;
@@ -40,28 +45,28 @@ let activeTool = null;
 let projectToolRequest = 0;
 let overlayOpener = null;
 const overlaySnapshots = new Map();
+let musicUploads = [];
+const musicGenerationStates = new Map();
 const toolDescriptions = {overview:'채널과 전체 제작 현황을 확인합니다.',studio:'현재 프로젝트의 실제 장면·슬롯 초안을 편집합니다. 열기만으로 저장하지 않습니다.',workflow:'현재 프로젝트의 노드 캔버스로 돌아갑니다.',source:'소스 검색, 이용 권리와 출처를 확인합니다.',delivery:'완성 후보의 검토와 별도 공개 승인을 관리합니다. 열기만으로 공개하지 않습니다.',results:'렌더 결과와 서버 MP4, 플랫폼 브라우저를 확인합니다.',trends:'트렌드 수집 기록과 조사 도구를 엽니다.',templates:'기존 장면 템플릿을 확인합니다. 적용은 별도 명시적 동작입니다.',history:'원본 버전과 현재 초안을 비교합니다. 복원은 별도로 확인합니다.',knowledge:'채널·에피소드의 원본 관계와 지식을 확인합니다.',settings:'외부 연결과 작업 명령 기록을 확인합니다.',archived:'보관한 프로젝트를 확인하거나 원래 목록으로 복구합니다.'};
-const canMutate = () => state.session?.role === 'admin' && state.session?.canMutate === true;
+const canMutate = () => state.session?.authenticated === true;
 const readActions = new Set(['view','channel','episode','project-section','scene','select-slot','select-platform-session','prev','next','play','reload','refresh-speech','refresh-commands','reload-history','history-version','refresh-knowledge','refresh-integrations','refresh-server-exports','trend-popular','ops-open','ops-history','project-tools','project-menu','episode-menu','channel-menu','tool-menu','sidebar-menu','open-scene-editor','close-scene-editor','close-project-tool','inspect-archived']);
 const readWorkflowActions = new Set(['select-node','minimap-select','inspector-tab','select-run','inspect-run-node','zoom-in','zoom-out','fit','reload','refresh-history','history-version','refresh-runs','refresh-generation','refresh-generation-job','open-tools','open-results','open-stage-overlay','close-overlay','select-stage','close-confirm','close-dialog','node-menu','node-tools','scene-editor','node-results','node-history','connections','open-add-node','open-workflow-settings','confirm-delete-node','input','output','canvas-history']);
 const mutationForms = new Set(['modal-form','chat-form','trend-form','trend-settings-form','command-form','wf-connect-form']);
-function applyAdminControls() {
+function applySessionControls() {
   for (const control of document.querySelectorAll('[data-action],[data-wf-action],input,select,textarea,form button[type="submit"]')) {
     const mutation = control.dataset.action ? !readActions.has(control.dataset.action) : control.dataset.wfAction ? !readWorkflowActions.has(control.dataset.wfAction) :
-      Boolean(control.matches('[data-scene],[data-slot-field],[data-slot-style],[data-episode],[data-wf-config],[data-wf-field],[data-wf-coordinate],[data-review-notes],#wf-name,#wf-add-type,#media-file,#audio-file') || mutationForms.has(control.closest('form')?.id));
+      Boolean(control.matches('[data-scene],[data-caption],[data-music],[data-music-source],[data-slot-field],[data-slot-style],[data-episode],[data-wf-config],[data-wf-field],[data-wf-coordinate],[data-review-notes],#wf-name,#wf-add-type,#media-file,#audio-file') || mutationForms.has(control.closest('form')?.id));
     if (!mutation) continue;
-    if (control.dataset.adminOnly !== 'true') control.dataset.adminOnly = 'true';
-    if (control.getAttribute('aria-description') !== '관리자 전용 · Admin only') control.setAttribute('aria-description','관리자 전용 · Admin only');
-    if (!control.title.includes('관리자 전용')) control.title = `${control.title ? control.title + ' · ' : ''}관리자 전용`;
-    if (!canMutate() && !control.disabled) { control.disabled = true; control.dataset.adminDisabled = 'true'; }
-    else if (canMutate() && control.dataset.adminDisabled === 'true') { control.disabled = false; delete control.dataset.adminDisabled; }
+    if (control.dataset.sessionRequired !== 'true') control.dataset.sessionRequired = 'true';
+    if (!canMutate() && !control.disabled) { control.disabled = true; control.dataset.sessionDisabled = 'true'; }
+    else if (canMutate() && control.dataset.sessionDisabled === 'true') { control.disabled = false; delete control.dataset.sessionDisabled; }
   }
 }
 // Workflow panels also replace their own controls between full page renders.
-new MutationObserver(()=>{applyAdminControls();applyProjectControls();}).observe(document.body,{childList:true,subtree:true});
+new MutationObserver(()=>{applySessionControls();applyProjectControls();}).observe(document.body,{childList:true,subtree:true});
 for (const type of ['click','input','change','submit']) document.addEventListener(type,event=>{
-  if (canMutate() || !event.target.closest('[data-admin-only="true"]') && !(type === 'submit' && mutationForms.has(event.target.id))) return;
-  event.preventDefault(); event.stopImmediatePropagation(); toast('모든 변경은 관리자 전용입니다.',true);
+  if (canMutate() || !event.target.closest('[data-session-required="true"]') && !(type === 'submit' && mutationForms.has(event.target.id))) return;
+  event.preventDefault(); event.stopImmediatePropagation(); toast('변경하려면 로그인하세요.',true);
 },true);
 let modalHandler;
 let commands = [];
@@ -78,6 +83,7 @@ const workflowEditor = createWorkflowEditor({
   api,
   toast,
   canMutate: () => canMutate() && state.episodes.find(item=>item.id === episode?.id)?.status !== 'archived',
+  mutationBlockReason: () => !canMutate() ? '로그인이 필요합니다.' : state.episodes.find(item=>item.id === episode?.id)?.status === 'archived' ? '보관된 프로젝트 · 복구 후 편집하세요.' : '',
   onOpenSceneEditor: openSceneEditor,
   getEpisodes: activeEpisodes,
   getEpisode: liveEpisode,
@@ -114,7 +120,7 @@ function activeProjectWork(targetId) {
   return runs.some(item => item.episodeId === targetId && ['queued','running','pending','submitting','polling','in_progress','downloading'].includes(item.status));
 }
 function projectEditReason(targetId = episode?.id) {
-  if (!canMutate()) return '읽기 전용 · 관리자 권한이 필요합니다.';
+  if (!canMutate()) return '읽기 전용 · 로그인이 필요합니다.';
   if (state.episodes.find(item => item.id === targetId)?.status === 'archived') return '보관된 프로젝트 · 복구 후 편집하세요.';
   return activeProjectWork(targetId) ? '실행 중 · 완료 또는 취소 후 편집하세요.' : '';
 }
@@ -126,7 +132,7 @@ function applyProjectControls() {
   const reason = episode ? projectEditReason() : '';
   for (const control of document.querySelectorAll('#project-scene-dialog [data-action],#project-scene-dialog input,#project-scene-dialog select,#project-scene-dialog textarea,#project-scene-dialog button[type="submit"]')) {
     const action = control.dataset.action;
-    const mutation = action ? !readActions.has(action) : control.matches('[data-scene],[data-slot-field],[data-slot-style],[data-episode]') || control.closest('#chat-form');
+    const mutation = action ? !readActions.has(action) : control.matches('[data-scene],[data-caption],[data-music],[data-music-source],[data-slot-field],[data-slot-style],[data-episode]') || control.closest('#chat-form');
     if (!mutation) continue;
     if (reason && !control.disabled) { control.disabled = true; control.dataset.projectDisabled = 'true'; control.setAttribute('aria-description',reason); }
     else if (!reason && control.dataset.projectDisabled === 'true') { control.disabled = false; delete control.dataset.projectDisabled; }
@@ -144,7 +150,7 @@ function captureProjectOverlay() {
   for (const dialog of document.querySelectorAll('#project-scene-dialog[open],#project-tool-dialog[open]')) {
     const fields = [...dialog.querySelectorAll('input:not([type="file"]),textarea,select')];
     const focused = fields.indexOf(document.activeElement);
-    overlaySnapshots.set(dialog.dataset.context, {fields:fields.map(field=>({value:field.value,checked:field.checked,preserve:!field.matches('[data-scene],[data-episode],[data-slot-field],[data-slot-style]')})),details:[...dialog.querySelectorAll('details')].map(item=>item.open),focused,start:focused < 0 ? null : fields[focused].selectionStart,end:focused < 0 ? null : fields[focused].selectionEnd,scrollTop:dialog.scrollTop});
+    overlaySnapshots.set(dialog.dataset.context, {fields:fields.map(field=>({value:field.value,checked:field.checked,preserve:!field.matches('[data-scene],[data-caption],[data-music],[data-music-source],[data-episode],[data-slot-field],[data-slot-style]')})),details:[...dialog.querySelectorAll('details')].map(item=>item.open),focused,start:focused < 0 ? null : fields[focused].selectionStart,end:focused < 0 ? null : fields[focused].selectionEnd,scrollTop:dialog.scrollTop});
   }
 }
 function restoreProjectOverlay(dialog) {
@@ -190,8 +196,10 @@ function mountSceneEditor() {
   const reason = projectEditReason();
   dialog.dataset.context = overlayKey('scene');
   dialog.innerHTML = `<div class="project-dialog-header"><div><h2 id="project-scene-title">장면 편집 · ${esc(episode.title)}</h2><p role="status">${esc(reason || '장면 초안은 이 창에서 저장합니다. 닫아도 저장 전 편집은 보존됩니다.')}</p></div><div class="row"><button type="button" id="save-button" data-action="save" data-tooltip="장면과 슬롯 초안을 원래 버전으로 저장합니다. Ctrl 또는 Command+S">변경 저장</button><button type="button" data-action="open-generation" data-tooltip="생성 설정을 엽니다. 비용 확인과 실행 동의는 별도입니다.">Higgsfield 장면 생성</button><button type="button" data-action="render" data-tooltip="장면 초안을 저장한 후 MP4 렌더를 명시적으로 시작합니다.">영상 내보내기</button><button type="button" class="icon-btn quiet" data-action="close-scene-editor" aria-label="장면 편집 닫기" data-tooltip="편집 초안을 보존하고 노드 캔버스로 돌아갑니다.">×</button></div></div><div class="studio-layout project-scene-body">${studioView()}</div>`;
-  updatePreview(); updateSaveStatus(); applyAdminControls(); applyProjectControls(); decorateTooltips();
+  updatePreview(); updateSaveStatus(); applySessionControls(); applyProjectControls(); decorateTooltips();
   dialog.showModal(); restoreProjectOverlay(dialog);
+  mountMusicGeneration(dialog);
+  loadMusicUploads(dialog);
 }
 function openSceneEditor(target = {}) {
   if (!episode || target.episodeId && target.episodeId !== episode.id) throw new Error('현재 프로젝트에 속한 장면만 열 수 있습니다.');
@@ -225,7 +233,7 @@ function mountProjectTool() {
     else body.innerHTML = '<p class="hint">프로젝트를 먼저 선택하세요.</p>';
   } else body.innerHTML = renderView(activeTool);
   if (activeTool === 'overview') operations.mount();
-  applyAdminControls(); decorateTooltips(); dialog.showModal(); restoreProjectOverlay(dialog);
+  applySessionControls(); decorateTooltips(); dialog.showModal(); restoreProjectOverlay(dialog);
 }
 async function openProjectTool(tool) {
   if (!views.some(([key])=>key === tool)) return;
@@ -254,11 +262,11 @@ function openProjectMenu(anchor, event) {
   const context = {targetId,channelId:anchor.dataset.id || channelId};
   if (action === 'channel-menu') {
     title = state.channels.find(item=>item.id === context.channelId)?.name || '채널';
-    items = [{id:'rename-channel',label:'채널 이름 변경',description:canMutate()?'원본 채널의 현재 fingerprint로 충돌을 확인합니다.':'관리자 권한이 필요합니다.',disabled:!canMutate()},{id:'tool:settings',label:'연결 & 설정',description:toolDescriptions.settings},{id:'new-project',label:'새 프로젝트',description:'이 채널에 에피소드를 만듭니다.',disabled:!canMutate()}];
+    items = [{id:'rename-channel',label:'채널 이름 변경',description:canMutate()?'원본 채널의 현재 fingerprint로 충돌을 확인합니다.':'로그인이 필요합니다.',disabled:!canMutate()},{id:'tool:settings',label:'연결 & 설정',description:toolDescriptions.settings},{id:'new-project',label:'새 프로젝트',description:'이 채널에 에피소드를 만듭니다.',disabled:!canMutate()}];
   } else if (['project-menu','episode-menu'].includes(action)) {
     title = target?.title || '프로젝트';
     const reason = target ? projectEditReason(target.id) : '프로젝트를 선택하세요.';
-    items = [{id:'open-project',label:'노드 캔버스 열기',description:'기록이나 초안을 저장하지 않고 프로젝트를 선택합니다.',disabled:!target},{id:'project-scenes',label:'장면 편집 열기',description:toolDescriptions.studio,disabled:!target},{id:'rename-project',label:'제목 변경',description:reason || '기존 원본 버전으로 제목만 저장합니다. 장면 초안은 유지됩니다.',disabled:!target || Boolean(reason)},{id:'project-history',label:'버전 기록',description:toolDescriptions.history,disabled:!target},{id:target?.status === 'archived'?'unarchive-project':'archive-project',label:target?.status === 'archived'?'프로젝트 복구':'프로젝트 보관',description:!canMutate()?'관리자 권한이 필요합니다.':activeProjectWork(targetId)?'실행이 끝난 뒤 보관하세요.':'확인 후 목록에서만 숨깁니다. 미디어와 기록은 삭제하지 않습니다.',destructive:target?.status !== 'archived',disabled:!target || !canMutate() || activeProjectWork(targetId)}];
+    items = [{id:'open-project',label:'노드 캔버스 열기',description:'기록이나 초안을 저장하지 않고 프로젝트를 선택합니다.',disabled:!target},{id:'project-scenes',label:'장면 편집 열기',description:toolDescriptions.studio,disabled:!target},{id:'rename-project',label:'제목 변경',description:reason || '기존 원본 버전으로 제목만 저장합니다. 장면 초안은 유지됩니다.',disabled:!target || Boolean(reason)},{id:'project-history',label:'버전 기록',description:toolDescriptions.history,disabled:!target},{id:target?.status === 'archived'?'unarchive-project':'archive-project',label:target?.status === 'archived'?'프로젝트 복구':'프로젝트 보관',description:!canMutate()?'로그인이 필요합니다.':activeProjectWork(targetId)?'실행이 끝난 뒤 보관하세요.':'확인 후 목록에서만 숨깁니다. 미디어와 기록은 삭제하지 않습니다.',destructive:target?.status !== 'archived',disabled:!target || !canMutate() || activeProjectWork(targetId)}];
   } else {
     items = views.map(([key,icon,label])=>({id:`tool:${key}`,label,description:toolDescriptions[key],disabled:['studio','source','delivery','results','history'].includes(key) && !episode}));
     items.push({id:'workspace-settings',label:'작업 창 설정',description:'브라우저별 창 크기와 레이아웃 프로필을 관리합니다.'},{id:'new-channel',label:'새 채널',description:'새 채널 제작 공간을 등록합니다.',disabled:!canMutate()},{id:'new-project',label:'새 프로젝트',description:'현재 채널에 새 에피소드를 만듭니다.',disabled:!canMutate()});
@@ -301,7 +309,7 @@ function renameProject(targetId) {
   },'제목 저장');
 }
 async function renameChannel(targetId) {
-  if (!canMutate()) throw new Error('관리자 권한이 필요합니다.');
+  if (!canMutate()) throw new Error('로그인이 필요합니다.');
   const result = await api('/api/knowledge');
   const graph = result.graph || result;
   const node = graph.nodes?.find(item=>item.id === targetId && item.type === 'channel');
@@ -313,7 +321,8 @@ async function renameChannel(targetId) {
 }
 function archiveProject(targetId, restore = false) {
   const target = state.episodes.find(item=>item.id === targetId);
-  if (!target || !canMutate()) throw new Error('프로젝트와 관리자 권한을 확인하세요.');
+  if (!target) throw new Error('프로젝트를 다시 선택하세요.');
+  if (!canMutate()) throw new Error('로그인이 필요합니다.');
   if (activeProjectWork(targetId)) throw new Error('실행이 완료되거나 취소된 뒤 보관하세요.');
   if (targetId === episode?.id ? dirty || savePending || workflowEditor.hasChanges() : studioDrafts.get(targetId)?.dirty) throw new Error('저장 전 초안은 보존했습니다. 프로젝트를 열어 초안을 먼저 저장한 뒤 보관 또는 복구하세요.');
   if ((target.status === 'archived') !== restore) throw new Error('프로젝트의 보관 상태를 새로 확인하세요.');
@@ -366,6 +375,7 @@ function syncProjectToolsContext() {
   const key = JSON.stringify([context.episodeId,context.channelId,context.workflowId,context.workflowVersion,context.selectedNodeId,context.runId,context.reviewNodeId,context.renderNodeId,context.run?.status,context.run?.reviews,context.hasActiveRun,activeProjectWork(episode?.id)]);
   if (key === mountedContextKey) return;
   const container = document.querySelector('.production-tools-grid');
+  if ($('#project-navigation')?.contains(document.activeElement)) return;
   if (container?.contains(document.activeElement) || container?.querySelector('dialog[open]')) return;
   mountedContextKey = key;
   const navigation = $('#project-navigation');
@@ -387,7 +397,7 @@ function toast(message, error = false) {
 }
 
 async function api(path, options = {}) {
-  if (!['GET','HEAD'].includes((options.method || 'GET').toUpperCase()) && path !== '/api/login' && !canMutate()) throw new Error('모든 변경은 관리자 전용입니다.');
+  if (!['GET','HEAD'].includes((options.method || 'GET').toUpperCase()) && path !== '/api/login' && !canMutate()) throw new Error('변경하려면 로그인하세요.');
   const headers = options.body && typeof options.body === 'string' ? {'Content-Type':'application/json', ...options.headers} : options.headers;
   const response = await fetch(path, {...options, headers, credentials:'same-origin'});
   const data = await response.json().catch(() => ({}));
@@ -450,8 +460,18 @@ async function refresh() {
   state = {...state, ...await api('/api/state')};
   operations.noteSuccess();
   authenticated = true;
+  if (!channelId && !episode) {
+    try {
+      const selected = activeEpisodes().find(item => item.id === sessionStorage.getItem('frameforge.selectedEpisode'));
+      if (selected && state.channels.some(channel => channel.id === selected.channelId)) channelId = selected.channelId;
+    } catch { /* Storage can be unavailable; use the normal selection. */ }
+  }
   if (!channelId || !state.channels.some(channel => channel.id === channelId)) channelId = state.channels[0]?.id || null;
-  if (!episode) switchEpisode(activeEpisodes().find(item => item.id === channelEpisodes.get(channelId) && item.channelId === channelId) || activeEpisodes().find(item => item.channelId === channelId) || null, channelId);
+  if (!episode) {
+    let selectedId;
+    try { selectedId = sessionStorage.getItem('frameforge.selectedEpisode'); } catch { /* Use the normal selection. */ }
+    switchEpisode(activeEpisodes().find(item => item.id === (channelEpisodes.get(channelId) || selectedId) && item.channelId === channelId) || activeEpisodes().find(item => item.channelId === channelId) || null, channelId);
+  }
   bindWorkflowProject();
   if (!speechLoaded) await loadSpeechVoices();
   if (activeTool === 'trends') await loadTrendBrowser();
@@ -618,14 +638,15 @@ function render() {
   view = 'workflow';
   document.body.dataset.workbench = 'project';
   const channel = activeChannel();
-  $('#app').innerHTML = `<div class="shell"><aside class="sidebar" aria-label="워크스페이스 탐색">
+  $('#app').innerHTML = `<div class="shell"><aside id="project-sidebar" class="sidebar" aria-label="워크스페이스 탐색">
     <div class="brand"><span class="brandmark" aria-hidden="true">F</span><div class="brand-copy">FRAME<small>PRODUCTION STUDIO</small></div></div>
+    <div class="sidebar-sizing" role="group" aria-label="사이드바 크기"><button type="button" data-sidebar-size="decrease" aria-label="사이드바 좁게">−</button><button type="button" data-sidebar-size="increase" aria-label="사이드바 넓게">+</button></div><div class="sidebar-resize" role="separator" tabindex="0" aria-label="사이드바 너비 조절" aria-orientation="vertical" aria-valuemin="160" aria-valuemax="400" aria-valuenow="184" aria-controls="project-sidebar"></div>
     <div class="sidebar-label">제작 워크스페이스 <button type="button" class="icon-btn quiet project-more" data-action="sidebar-menu" aria-label="워크스페이스 메뉴" aria-haspopup="menu" data-tooltip="새 채널, 제작 현황, 보관 프로젝트와 설정 도구를 엽니다.">⋯</button></div>
     <section class="platform-browser" aria-label="플랫폼과 채널"><div class="sidebar-label">PLATFORMS <button class="icon-btn quiet" data-action="new-channel" aria-label="채널 추가" data-tooltip="새 채널 제작 공간을 등록합니다. 외부 계정 인증은 별도입니다.">+</button></div>${channelHierarchyHtml() || '<p class="hint platform-name">등록된 채널이 없습니다.</p>'}</section>
     <section class="project-list" aria-label="채널 프로젝트"><div class="sidebar-label">PROJECTS <button type="button" class="icon-btn quiet" data-action="new-episode" aria-label="새 프로젝트" data-tooltip="현재 채널에 새 에피소드를 만듭니다.">+</button></div>${activeEpisodes().filter(item=>item.channelId===channelId).map(item=>`<div class="project-row"><button type="button" class="channel ${item.id===episode?.id?'active':''}" data-action="episode" data-id="${esc(item.id)}" data-tooltip="${esc(item.title)}의 노드 캔버스를 엽니다."><span class="channel-copy">${esc(studioDrafts.get(item.id)?.episode.title || item.title)}</span></button><button type="button" class="icon-btn quiet project-more" data-action="episode-menu" data-id="${esc(item.id)}" aria-label="${esc(item.title)} 프로젝트 메뉴" aria-haspopup="menu" data-tooltip="제목 변경, 버전 기록, 안전한 보관 메뉴입니다.">⋯</button></div>`).join('') || '<p class="hint">새 프로젝트를 만들어 시작하세요.</p>'}</section>
     <a class="channel" href="/blog.html" target="_blank" rel="noopener" aria-label="블로그 운영실 새 탭에서 열기" data-testid="blog-workspace-link"><span class="nav-icon" aria-hidden="true">B</span><span class="channel-copy">블로그 운영실 ↗</span></a>
     <div class="sidebar-bottom"><button class="channel quiet" data-action="view" data-view="archived" data-tooltip="보관한 프로젝트와 기록을 확인하고 복구합니다."><span class="nav-icon" aria-hidden="true">▢</span><span class="channel-copy">보관된 프로젝트</span></button><button class="channel quiet" data-action="view" data-view="settings" data-tooltip="외부 플랫폼 연결과 설정을 확인합니다."><span class="nav-icon" aria-hidden="true">⚙</span><span class="channel-copy">연결 & 설정</span></button></div>
-    </aside><div class="workspace"><header class="topbar"><div class="breadcrumb">${esc(platformNames[channel?.platform?.toLowerCase()] || channel?.platform || '워크스페이스')} <span aria-hidden="true"> / </span><strong>${esc(channel?.name || '채널 없음')}</strong><span aria-hidden="true"> / </span>프로젝트 노드</div><div class="row"><span class="badge" data-testid="session-capability">${canMutate()?'관리자 · 변경 권한':authenticated?'읽기 전용 · 변경은 관리자 전용':'API 확인 필요'}</span><button type="button" id="project-tools-menu" class="small" data-action="project-tools" aria-haspopup="menu" data-tooltip="장면 편집, 소스, 결과, 히스토리와 모든 제작 도구를 캔버스 위에서 엽니다.">제작 도구 ▾</button></div></header>
+    </aside><div class="workspace"><header class="topbar"><div class="breadcrumb">${esc(platformNames[channel?.platform?.toLowerCase()] || channel?.platform || '워크스페이스')} <span aria-hidden="true"> / </span><strong>${esc(channel?.name || '채널 없음')}</strong><span aria-hidden="true"> / </span>프로젝트 노드</div><div class="row"><span class="badge" data-testid="session-capability">${canMutate()?'로그인됨':'로그인 확인 필요'}</span><button type="button" id="project-tools-menu" class="small" data-action="project-tools" aria-haspopup="menu" data-tooltip="장면 편집, 소스, 결과, 히스토리와 모든 제작 도구를 캔버스 위에서 엽니다.">제작 도구 ▾</button></div></header>
     <main class="main" id="main" tabindex="-1">${projectNavigationHtml()}${workspaceLayout.html(workflowEditor.html(), 'workflow')}<div id="project-tool-reservoir" hidden>${productionToolsHtml()}</div></main></div></div>
     <dialog id="project-scene-dialog" class="project-scene-dialog" aria-labelledby="project-scene-title"></dialog>
     <dialog id="project-tool-dialog" class="project-tool-dialog" aria-labelledby="project-tool-title"><div class="project-dialog-header"><h2 id="project-tool-title">제작 도구</h2><div class="row"><button type="button" class="icon-btn quiet project-more" data-action="tool-menu" aria-haspopup="menu" aria-label="다른 제작 도구" data-tooltip="현재 프로젝트의 다른 도구를 선택합니다.">⋯</button><button type="button" class="icon-btn quiet" data-action="close-project-tool" aria-label="제작 도구 닫기" data-tooltip="도구를 닫고 노드 캔버스로 돌아갑니다. 초안은 보존됩니다.">×</button></div></div><div id="project-tool-body" class="project-tool-body"></div></dialog>`;
@@ -639,7 +660,7 @@ function render() {
   if (sceneEditorOpen && episode) mountSceneEditor();
   else if (activeTool) mountProjectTool();
   updateSaveStatus();
-  applyAdminControls();
+  applySessionControls();
   applyProjectControls();
   decorateTooltips();
 }
@@ -850,8 +871,216 @@ function studioView() {
   return html;
 }
 
-function inspectorHtml(scene) {
+function inspectorBaseHtml(scene) {
   return `<details><summary class="hint" style="cursor:pointer;margin-bottom:13px">에피소드 설정 · ${esc(episode.title)}</summary><label>에피소드 제목<input data-episode="title" value="${esc(episode.title)}" maxlength="200"></label><label>소재 / 주제<textarea data-episode="topic">${esc(episode.topic)}</textarea></label><div class="two-cols"><label>화면 비율<select data-episode="format">${['9:16','16:9','1:1'].map(format => `<option ${episode.format === format ? 'selected' : ''}>${format}</option>`).join('')}</select></label><label>제작 상태<select data-episode="status">${['draft','review','ready'].map(status => `<option value="${status}" ${episode.status === status ? 'selected' : ''}>${statusNames[status]}</option>`).join('')}</select></label></div><label>제작 메모<textarea data-episode="notes">${esc(episode.notes)}</textarea></label></details><label>장면 이름<input data-scene="title" value="${esc(scene.title)}" maxlength="120"></label><label>화면 텍스트<textarea data-scene="text" rows="3" placeholder="이 장면에 보여줄 문장을 입력하세요">${esc(scene.text)}</textarea></label><div class="two-cols"><label>길이 (초)<input type="number" data-scene="duration" min="0.5" max="120" step="0.5" value="${scene.duration}"></label><label>배경 색상<input type="color" class="color-input" data-scene="background" value="${safeColor(scene.background)}"></label></div><label>텍스트·장면 레이아웃<select data-scene="layout"><option value="center" ${scene.layout === 'center' ? 'selected' : ''}>중앙 정렬</option><option value="lower-third" ${scene.layout === 'lower-third' ? 'selected' : ''}>하단 자막</option><option value="split" ${scene.layout === 'split' ? 'selected' : ''}>상하 분할</option><option value="top-image-mid-video" ${scene.layout === 'top-image-mid-video' ? 'selected' : ''}>상단 이미지·텍스트 + 중단 배경영상·자막</option><option value="premiere-3tier" ${scene.layout === 'premiere-3tier' ? 'selected' : ''}>프리미어 3단 (뉴스 배너 + 이미지 + 영상·자막)</option><option value="custom" ${scene.layout === 'custom' ? 'selected' : ''}>사용자 지정 다중 슬롯</option></select></label>${slotBuilderHtml(scene)}<label>내레이션 원고<textarea data-scene="narration" rows="2" placeholder="장면별 음성 제작용 원고">${esc(scene.narration)}</textarea></label><p class="hint">원고를 입력한 다음 아래 내레이션 패널에서 실제 음성을 생성하세요. 생성하거나 첨부한 오디오가 MP4에 반영됩니다.</p><div class="row"><button class="small" data-action="upload">↑ 이미지 / 영상</button>${scene.assetUrl ? '<button class="small quiet" data-action="remove-media">소스 제거</button>' : '<span class="hint">로컬 파일</span>'}</div>${audioInspectorHtml(scene)}<div class="row between" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)"><div class="row"><button class="icon-btn quiet" data-action="move-left" aria-label="장면 앞으로 이동">←</button><button class="icon-btn quiet" data-action="move-right" aria-label="장면 뒤로 이동">→</button><button class="small quiet" data-action="duplicate-scene">복제</button></div><button class="small quiet danger" data-action="delete-scene">삭제</button></div>`;
+}
+
+function sceneWithCaptionsHtml(scene) {
+  const cues = Array.isArray(scene.captions) ? scene.captions : [];
+  return `${inspectorBaseHtml(scene)}<section class="section-spacer" aria-label="장면별 시간 자막"><h4>장면별 시간 자막</h4><p class="hint">시간은 이 장면의 시작을 기준으로 합니다. ${scene.captions === undefined ? '자막을 추가하지 않으면 기존 장면 텍스트가 유지됩니다.' : '빈 자막 목록은 시간 자막을 표시하지 않습니다.'}</p>${cues.map((cue,index)=>`<fieldset class="caption-cue" aria-label="자막 ${index+1}"><legend>자막 ${index+1}</legend><div class="two-cols"><label for="caption-start-${index}">시작 (초)</label><input id="caption-start-${index}" aria-label="시작 (초)" type="number" step="any" min="0" data-caption="start" data-caption-index="${index}" value="${esc(cue.start)}"><label for="caption-end-${index}">종료 (초)</label><input id="caption-end-${index}" aria-label="종료 (초)" type="number" step="any" min="0" data-caption="end" data-caption-index="${index}" value="${esc(cue.end)}"></div><label for="caption-text-${index}">자막 내용</label><textarea id="caption-text-${index}" aria-label="자막 내용" data-caption="text" data-caption-index="${index}" maxlength="2000" rows="2">${esc(cue.text)}</textarea><button type="button" class="small quiet danger" data-action="delete-caption" data-index="${index}">자막 삭제</button></fieldset>`).join('')}<button type="button" class="small" data-action="add-caption" ${cues.length>=200?'disabled':''}>자막 추가</button></section>`;
+}
+
+function musicOptionsHtml(selected = '') {
+  const uploads=musicUploads.filter(item=>typeof item.url==='string' && /^\/api\/uploads\/[a-zA-Z0-9_-]+\.(mp3|wav|ogg)$/i.test(item.url) && typeof item.type==='string' && item.type.startsWith('audio/'));
+  return `<option value="">음악 없음</option>${selected && !uploads.some(item=>item.url===selected) ? `<option value="${esc(selected)}" selected>저장된 음악 · 목록에서 확인 불가</option>` : ''}${uploads.map(item=>`<option value="${esc(item.url)}" ${item.url===selected?'selected':''}>${esc(item.name || item.filename || item.id)}</option>`).join('')}`;
+}
+async function loadMusicUploads(dialog) {
+  const owner=episode?.id;
+  try {
+    const result=await api('/api/uploads');
+    if (!dialog.isConnected || !dialog.open || episode?.id!==owner || !Array.isArray(result)) return;
+    musicUploads=result;
+    const select=dialog.querySelector('[data-music="assetUrl"]');
+    if (select) select.innerHTML=musicOptionsHtml(episode.music?.assetUrl || '');
+  } catch (error) { if (dialog.isConnected && dialog.open && episode?.id===owner) toast(`음악 파일 목록을 불러오지 못했습니다: ${error.message}`,true); }
+}
+function mountMusicGeneration(dialog) {
+  const owner = episode?.id, section = dialog.querySelector('[aria-label="배경 음악"]');
+  if (!owner || !section) return;
+  let model = musicGenerationStates.get(owner);
+  if (!model) {
+    model = {open:false,transport:'api',models:[],model:'',prompt:'',params:{},schema:null,quote:null,job:null,selected:'',rights:false,error:'',loading:false,submitting:false};
+    musicGenerationStates.set(owner,model);
+  }
+  const host = document.createElement('div');
+  section.append(host);
+  const live = () => host.isConnected && dialog.open && episode?.id === owner;
+  const storageKey = `frameforge.musicSubmission.${owner}`;
+  const savedSubmission = () => { try { return JSON.parse(sessionStorage.getItem(storageKey) || 'null'); } catch { return null; } };
+  const saveSubmission = value => { if (value) { sessionStorage.setItem(storageKey,JSON.stringify(value)); if (!savedSubmission()) throw new Error('제출 복구 정보를 저장할 수 없어 생성을 시작하지 않았습니다.'); } else { try { sessionStorage.removeItem(storageKey); } catch { /* A stale marker remains fail-closed. */ } } };
+  const currentInput = () => ({requestId:model.requestId,expectedVersion:baseVersion,target:'music',transport:model.transport,model:model.model,prompt:model.prompt,params:clone(model.params)});
+  const quoteValid = () => Boolean(model.quote && model.quoteKey === JSON.stringify(currentInput()) && Date.parse(model.quote.expiresAt)>Date.now());
+  const blocked = () => Boolean(model.uncertain || model.verifying || savedSubmission() || model.job?.status === 'submission_unknown');
+  const validJobStatus = status => ['queued','submitting','pending','in_progress','downloading','completed','failed','submission_unknown','manual_recovery','polling_failed','import_failed','nsfw','canceled'].includes(status);
+  const fieldHtml = field => {
+    const name=esc(field.name), value=model.params[field.name] ?? field.default ?? '', type=(field.type || 'string').split('|').find(item=>item!=='null');
+    const required=field.required?'required':'';
+    if (Array.isArray(field.enum)) return `<label>${name}<select data-music-param="${name}" data-type="${esc(type)}" ${required}><option value="">선택</option>${field.enum.map(item=>`<option value="${esc(item)}" ${String(item)===String(value)?'selected':''}>${esc(item)}</option>`).join('')}</select></label>`;
+    if (type==='boolean') return `<label><input type="checkbox" data-music-param="${name}" data-type="boolean" ${value===true?'checked':''}>${name}</label>`;
+    return `<label>${name}<input data-music-param="${name}" data-type="${esc(type)}" type="${['number','integer'].includes(type)?'number':'text'}" value="${esc(value)}" ${Number.isFinite(field.minimum)?`min="${field.minimum}"`:''} ${Number.isFinite(field.maximum)?`max="${field.maximum}"`:''} step="${type==='integer'?'1':'any'}" ${required}></label>`;
+  };
+  const renderPanel = () => {
+    if (!live()) return;
+    const job=model.job, outputs=Array.isArray(job?.outputs)?job.outputs:[];
+    const unknown=blocked();
+    const jobHtml=job ? `<div role="status" aria-live="polite">음악 작업 ${esc(job.id)} · ${esc(job.status)}${job.error?` · ${esc(job.error)}`:''}${job.status==='submission_unknown'?' · 제출 여부를 확인할 수 없습니다. 제공자 기록을 확인하기 전 다시 생성하지 마세요.':''}</div>${outputs.length ? `<fieldset><legend>생성 결과 선택</legend>${outputs.map((output,index)=>`<label><input type="radio" name="music-generation-output" aria-label="생성 결과 ${index+1}" value="${esc(output.uploadId)}" ${model.selected===output.uploadId?'checked':''}>생성 결과 ${index+1}</label>${/^\/api\/uploads\/[a-zA-Z0-9_-]+\.(mp3|wav|ogg)$/i.test(output.url || '')?`<audio controls preload="none" src="${esc(output.url)}" aria-label="생성 결과 ${index+1} 듣기"></audio>`:''}`).join('')}</fieldset><label><input type="checkbox" data-music-rights ${model.rights?'checked':''}>생성 음악 이용 권리 확인</label><p class="hint">권리 확인은 사용자의 확인 기록이며 공개 허가가 아닙니다. 음악 포함 프로젝트의 게시는 차단됩니다.</p><button type="button" data-music-action="apply" ${!model.selected || !model.rights || model.loading?'disabled':''}>선택한 음악 적용</button>`:''}${job.providerRequestId && ['manual_recovery','polling_failed','import_failed'].includes(job.status)?'<button type="button" data-music-action="recover">기존 작업 복구</button>':''}` : '';
+    const form=model.open ? `<div><label>음악 생성 연결<select aria-label="음악 생성 연결" data-music-transport><option value="api" ${model.transport==='api'?'selected':''}>API</option><option value="cli" ${model.transport==='cli'?'selected':''}>CLI</option></select></label><label>음악 생성 모델<select aria-label="음악 생성 모델" data-music-model><option value="">모델 선택</option>${model.models.map(item=>`<option value="${esc(item.id)}" ${item.id===model.model?'selected':''}>${esc(item.name || item.id)}</option>`).join('')}</select></label><label>음악 생성 프롬프트<textarea aria-label="음악 생성 프롬프트" data-music-prompt maxlength="10000">${esc(model.prompt)}</textarea></label>${model.schema ? (model.schema.parameters || []).filter(field=>field.name!=='prompt' && !/array|object/.test(field.type || '')).map(fieldHtml).join('') : '<p class="hint">음악 모델의 실제 설정을 불러오세요.</p>'}<button type="button" data-music-action="quote" ${model.loading || unknown?'disabled':''}>음악 생성 견적</button>${quoteValid()?`<div role="status">견적: ${esc(model.quote.credits)} 크레딧 · 유효 기간 ${esc(model.quote.expiresAt)}<p>제공자 견적이며 실제 청구액은 다를 수 있습니다. 승인하면 비용이 발생할 수 있습니다.</p><pre>${esc(JSON.stringify(model.quote.input,null,2))}</pre></div><button type="button" data-music-action="submit" ${model.loading || unknown?'disabled':''}>견적 승인 및 생성</button>`:''}${model.submitting?'<button type="button" disabled>제출 중 · 취소할 수 없음</button>':'<button type="button" data-music-action="cancel">생성 취소</button>'}</div>` : '<button type="button" data-music-action="open">음악 생성 열기</button>';
+    host.innerHTML=`<section class="section-spacer" aria-label="음악 생성"><h4>Higgsfield 음악 생성</h4><p class="hint">견적과 승인 없이 생성하지 않습니다. 실제 제공자 가용성과 가격은 요청 시 확인합니다.</p>${unknown?'<p role="alert">이전 제출 결과를 확인할 수 없습니다. 중복 과금을 피하려면 제공자 기록을 먼저 확인하세요.</p>':''}${model.error?`<p role="alert">${esc(model.error)}</p>`:''}${form}${jobHtml}</section>`;
+    updateButtons();
+  };
+  model.renderCurrent=renderPanel;
+  const updateButtons = () => {
+    const submit=host.querySelector('[data-music-action="submit"]'); if (submit) submit.disabled=!quoteValid() || model.loading || blocked();
+    const apply=host.querySelector('[data-music-action="apply"]'); if (apply) { const reason=projectEditReason(owner); apply.disabled=!model.selected || !model.rights || model.loading || Boolean(reason); apply.title=reason; }
+  };
+  const acceptApplication = (result, revision, version, jobId, uploadId) => {
+    if (result.job?.id!==jobId || result.job?.episodeId!==owner || result.job?.target!=='music' || result.job?.applied!==true || result.job?.appliedOutputUploadId!==uploadId || result.job?.appliedVersion!==version+1 || result.episode?.id!==owner || !Number.isSafeInteger(result.episode.version) || result.episode.version<result.job.appliedVersion) throw new Error('음악 적용 결과를 확인하지 못했습니다. 작업 상태와 버전 기록을 확인하세요.');
+    model.job=result.job;
+    const cached=state.episodes.find(item=>item.id===owner);
+    const latest=cached && cached.version>result.episode.version ? cached : result.episode;
+    cacheEpisode(latest);
+    if (episode?.id===owner) {
+      if (editRevision!==revision || dirty || baseVersion!==version) { toast('서버에 적용됐지만 이후의 로컬 초안은 보존했습니다. 버전 기록을 확인하세요.',true); return; }
+      episode=clone(latest); baseVersion=episode.version; stashActiveDraft(); render(); toast('선택한 음악을 적용했습니다. 공개 권한은 별도로 확인해야 합니다.');
+    } else {
+      const draft=studioDrafts.get(owner);
+      if (draft && !draft.dirty && draft.editRevision===revision && draft.baseVersion===version) { draft.episode=clone(latest); draft.baseVersion=latest.version; }
+    }
+  };
+  const loadSchema = async () => {
+    const requested=model.model, transport=model.transport;
+    model.schema=null; model.params={}; model.quote=null;
+    if (!requested) { renderPanel(); return; }
+    try {
+      const schema=await api(`/api/generation/models?transport=${encodeURIComponent(transport)}&model=${encodeURIComponent(requested)}`);
+      if (!live() || model.model!==requested || model.transport!==transport) return;
+      if (schema.id!==requested || schema.type!=='audio' || schema.transport && schema.transport!==transport) throw new Error('선택한 모델은 확인된 음악 모델이 아닙니다.');
+      model.schema=schema;
+      for (const field of schema.parameters || []) if (field.name!=='prompt' && field.default!==undefined && field.default!==null) model.params[field.name]=field.default;
+      model.error='';
+    } catch (error) { if (live() && model.model===requested && model.transport===transport) model.error=`모델 설정을 확인하지 못했습니다: ${error.message}`; }
+    renderPanel();
+  };
+  const loadModels = async () => {
+    const transport=model.transport;
+    try {
+      const result=await api(`/api/generation/models?transport=${encodeURIComponent(transport)}`);
+      if (!live() || model.transport!==transport) return;
+      model.models=(Array.isArray(result)?result:result.models || []).filter(item=>item.type==='audio');
+      if (!model.models.length) model.error='사용 가능한 음악 모델을 확인하지 못했습니다.';
+    } catch (error) { if (live() && model.transport===transport) model.error=`음악 모델을 불러오지 못했습니다: ${error.message}`; }
+    renderPanel();
+  };
+  const pollJob = async () => {
+    if (!live()) return;
+    const epoch=model.generationEpoch || 0;
+    const saved=savedSubmission(), jobs=(state.generationJobs || []).filter(job=>job.episodeId===owner && job.target==='music');
+    const previousJobId=model.job?.id;
+    if (saved) model.job=jobs.find(job=>job.requestId===saved.requestId) || null;
+    else if (!model.job) model.job=jobs.at(-1) || null;
+    if (model.job?.id && model.authoritativeJobId!==model.job.id) model.verifying=true;
+    if (previousJobId!==model.job?.id || model.verifying) renderPanel();
+    if (model.job?.id) {
+      const jobId=model.job.id;
+      try {
+        const job=await api(`/api/generations/${encodeURIComponent(jobId)}`);
+        if (!live() || (model.generationEpoch || 0)!==epoch || model.job?.id!==jobId) return;
+        if (job.id!==jobId || job.episodeId!==owner || job.target!=='music' || !validJobStatus(job.status)) throw new Error('작업 식별자 또는 상태를 확인하지 못했습니다.');
+        if (saved && (job.requestId!==saved.requestId || job.quoteId!==saved.quoteId || job.quoteFingerprint!==saved.quoteFingerprint || job.acceptedCredits!==saved.acceptedCredits || job.episodeVersion!==saved.expectedVersion || job.model!==saved.model || job.transport!==saved.transport)) throw new Error('승인한 견적과 작업이 일치하지 않습니다. 제공자 기록을 확인하세요.');
+        const wasVerifying=model.verifying; model.authoritativeJobId=job.id; model.verifying=false;
+        const changed=JSON.stringify(job)!==JSON.stringify(model.job); model.job=job;
+        state.generationJobs=[...(state.generationJobs || []).filter(item=>item.id!==job.id),job];
+        if (saved && savedSubmission()?.requestId===saved.requestId) { saveSubmission(null); model.uncertain=false; model.error=''; }
+        if (changed || saved || wasVerifying) renderPanel();
+      } catch (error) { if (live() && (model.generationEpoch || 0)===epoch && model.job?.id===jobId) { model.error=`작업 상태를 확인하지 못했습니다: ${error.message}`; renderPanel(); } }
+    } else if (saved) {
+      try { const latest=await api('/api/state'); if (!live() || (model.generationEpoch || 0)!==epoch || savedSubmission()?.requestId!==saved.requestId) return; state.generationJobs=latest.generationJobs || []; const found=state.generationJobs.find(job=>job.episodeId===owner && job.target==='music' && job.requestId===saved.requestId); if (found) {model.job=found;renderPanel();setTimeout(pollJob,0);return;} }
+      catch (error) { if (live() && (model.generationEpoch || 0)===epoch && savedSubmission()?.requestId===saved.requestId) {model.error=`제출 상태를 확인하지 못했습니다: ${error.message}`;renderPanel();} }
+    }
+    if (live() && (savedSubmission() || model.verifying || model.job && ['queued','running','pending','submitting','polling','in_progress','downloading'].includes(model.job.status))) setTimeout(pollJob,1000);
+  };
+  host.addEventListener('input', event => {
+    const target=event.target;
+    if (target.matches('[data-music-prompt]')) { model.prompt=target.value; model.quote=null; updateButtons(); }
+    else if (target.dataset.musicParam) {
+      const key=target.dataset.musicParam, type=target.dataset.type;
+      if (type==='boolean') model.params[key]=target.checked;
+      else if (target.value==='') delete model.params[key];
+      else model.params[key]=['number','integer'].includes(type)?Number(target.value):target.value;
+      model.quote=null; updateButtons();
+    } else if (target.name==='music-generation-output') { model.selected=target.value; model.rights=false; const check=host.querySelector('[data-music-rights]'); if (check) check.checked=false; updateButtons(); }
+    else if (target.matches('[data-music-rights]')) { model.rights=target.checked; updateButtons(); }
+  });
+  host.addEventListener('change', event => {
+    if (event.target.matches('[data-music-transport]')) { model.transport=event.target.value; model.models=[]; model.model=''; model.schema=null; model.params={}; model.quote=null; model.requestId=null; model.error=''; renderPanel(); loadModels(); }
+    else if (event.target.matches('[data-music-model]')) { model.model=event.target.value; model.requestId=null; loadSchema(); }
+  });
+  host.addEventListener('click', async event => {
+    const action=event.target.closest('[data-music-action]')?.dataset.musicAction;
+    if (!action || model.loading && (action!=='cancel' || model.submitting)) return;
+    const operation=model.operationEpoch=(model.operationEpoch || 0)+1;
+    try {
+      if (action==='open') { model.open=true; model.error=''; renderPanel(); await loadModels(); return; }
+      if (action==='cancel') { model.open=false; model.loading=false; model.quote=null; model.requestId=null; renderPanel(); return; }
+      if (!canMutate()) throw new Error('변경하려면 로그인하세요.');
+      if (action==='quote') {
+        if (blocked()) throw new Error('이전 제출 결과를 먼저 확인하세요.');
+        if (!model.schema || model.schema.id!==model.model || !model.prompt.trim() || [...host.querySelectorAll('[data-music-param]')].some(input=>!input.checkValidity())) throw new Error('모델, 프롬프트와 필수 설정을 확인하세요.');
+        model.requestId=id(); model.quote=null; const input=currentInput(), key=JSON.stringify(input); model.loading=true; model.error=''; renderPanel();
+        const quote=await post(`/api/episodes/${encodeURIComponent(owner)}/generations/quote`,input);
+        if (!live() || model.operationEpoch!==operation) return;
+        if (JSON.stringify(currentInput())!==key) throw new Error('설정이 변경되어 견적을 사용할 수 없습니다.');
+        if (!quote.id || !quote.fingerprint || typeof quote.credits!=='number' || !Number.isFinite(quote.credits) || quote.credits<0 || !Number.isFinite(Date.parse(quote.expiresAt)) || Date.parse(quote.expiresAt)<=Date.now()) throw new Error('유효한 제공자 견적을 확인하지 못했습니다.');
+        model.quote=quote; model.quoteKey=key;
+      } else if (action==='submit') {
+        if (!quoteValid() || blocked()) throw new Error('유효한 견적과 제출 상태를 다시 확인하세요.');
+        const input=currentInput(), quote=model.quote;
+        saveSubmission({requestId:input.requestId,expectedVersion:input.expectedVersion,model:input.model,transport:input.transport,quoteId:quote.id,quoteFingerprint:quote.fingerprint,acceptedCredits:quote.credits}); model.generationEpoch=(model.generationEpoch || 0)+1; model.loading=true; model.submitting=true; model.uncertain=true; renderPanel();
+        const job=await post(`/api/episodes/${encodeURIComponent(owner)}/generations`,{...input,quoteId:quote.id,quoteFingerprint:quote.fingerprint,acceptedCredits:quote.credits});
+        if (!job || typeof job.id!=='string' || !job.id || job.requestId!==input.requestId || job.episodeId!==owner || job.target!=='music' || job.episodeVersion!==input.expectedVersion || job.model!==input.model || job.transport!==input.transport || job.quoteId!==quote.id || job.quoteFingerprint!==quote.fingerprint || job.acceptedCredits!==quote.credits || !validJobStatus(job.status)) throw new Error('제출 결과를 확인하지 못했습니다. 중복 제출 전에 작업 상태를 확인하세요.');
+        model.authoritativeJobId=job.id; model.verifying=false;
+        model.job=job; model.selected=''; model.rights=false; model.quote=null; model.open=false; model.uncertain=false; saveSubmission(null);
+        state.generationJobs=[...(state.generationJobs || []).filter(item=>item.id!==job.id),job];
+        setTimeout(pollJob,0);
+      } else if (action==='recover') {
+        if (!model.job?.providerRequestId) throw new Error('제공자 작업 식별자가 없어 복구할 수 없습니다.');
+        model.loading=true; model.job=await post(`/api/generations/${encodeURIComponent(model.job.id)}/recover`); if (live()) setTimeout(pollJob,0);
+      } else if (action==='apply') {
+        if (!live()) throw new Error('프로젝트가 바뀌었습니다. 적용 대상을 다시 확인하세요.');
+        requireProjectEdit(owner);
+        if (!model.selected || !model.rights || !model.job?.outputs?.some(output=>output.uploadId===model.selected)) throw new Error('결과와 이용 권리를 직접 확인하세요.');
+        if (dirty || savePending) throw new Error('현재 초안을 먼저 저장하세요. 저장 전 편집은 보존됩니다.');
+        const revision=editRevision, version=baseVersion, jobId=model.job.id, uploadId=model.selected;
+        model.loading=true; renderPanel();
+        await post(`/api/uploads/${encodeURIComponent(uploadId)}/rights`,{origin:'generated',generationJobId:jobId});
+        if (!live() || editRevision!==revision || dirty || baseVersion!==version) throw new Error('초안이 변경되어 적용하지 않았습니다. 현재 편집은 보존됩니다.');
+        requireProjectEdit(owner);
+        let result;
+        try {
+          result=await post(`/api/generations/${encodeURIComponent(jobId)}/apply`,{expectedVersion:version,outputUploadId:uploadId});
+          acceptApplication(result,revision,version,jobId,uploadId);
+        } catch (error) {
+          if (error.status===409) throw error;
+          try {
+            const [job,latest]=await Promise.all([api(`/api/generations/${encodeURIComponent(jobId)}`),api('/api/state')]);
+            const updated=latest.episodes?.find(item=>item.id===owner);
+            acceptApplication({job,episode:updated},revision,version,jobId,uploadId);
+          } catch { throw error; }
+        }
+        return;
+      }
+    } catch (error) {
+      if (action==='submit' && model.uncertain && error.status===409 && !/requestId/i.test(error.message)) { saveSubmission(null); model.uncertain=false; model.quote=null; }
+      if (live()) { model.error=error.status===409?'다른 작업에서 에피소드가 수정되었습니다. 현재 초안은 보존했습니다.':error.message; if (action==='submit' && model.uncertain) setTimeout(pollJob,0); }
+    }
+    finally { if (model.operationEpoch===operation) { model.loading=false; model.submitting=false; model.renderCurrent?.(); } }
+  });
+  renderPanel();
+  pollJob();
+}
+function inspectorHtml(scene) {
+  const music=episode.music || {},source=music.source || {};
+  return `${sceneWithCaptionsHtml(scene)}<section class="section-spacer" aria-label="배경 음악"><h4>배경 음악</h4><p role="status">배경 음악이 포함된 프로젝트의 게시는 현재 차단됩니다. 출처 입력은 권리 확인이나 생성 사실의 증명이 아닙니다.</p><label for="music-file">음악 파일</label><select id="music-file" aria-label="음악 파일" data-music="assetUrl">${musicOptionsHtml(music.assetUrl || '')}</select><label for="music-start">음악 시작 (초)</label><input id="music-start" aria-label="음악 시작 (초)" type="number" min="0" max="1800" step="any" data-music="start" value="${esc(music.start ?? 0)}"><label for="music-trim">음악 트림 시작 (초)</label><input id="music-trim" aria-label="음악 트림 시작 (초)" type="number" min="0" max="36000" step="any" data-music="trimStart" value="${esc(music.trimStart ?? 0)}"><label for="music-volume">음악 볼륨</label><input id="music-volume" aria-label="음악 볼륨" type="number" min="0" max="2" step="any" data-music="volume" value="${esc(music.volume ?? 1)}"><label for="music-origin">음악 출처</label><select id="music-origin" aria-label="음악 출처" data-music-source="origin"><option value="">직접 선택하세요</option>${[['own','직접 소유'],['third-party','제3자'],['generated','생성 주장 · 미검증']].map(([value,label])=>`<option value="${value}" ${source.origin===value?'selected':''}>${label}</option>`).join('')}</select><label for="music-url">음악 출처 URL</label><input id="music-url" aria-label="음악 출처 URL" type="url" maxlength="2000" data-music-source="sourceUrl" value="${esc(source.sourceUrl || '')}"><label for="music-license">음악 라이선스</label><input id="music-license" aria-label="음악 라이선스" maxlength="160" data-music-source="licenseId" value="${esc(source.licenseId || '')}"><label for="music-credit">음악 출처 표기</label><textarea id="music-credit" aria-label="음악 출처 표기" maxlength="4000" rows="2" data-music-source="attribution">${esc(source.attribution || '')}</textarea><button type="button" class="small quiet" data-action="remove-music">배경 음악 제거</button></section>`;
 }
 
 function updatePreview() {
@@ -880,22 +1109,24 @@ function updatePreview() {
           : `<img src="${safeUrl(slot.assetUrl)}" alt="${esc(slot.name)}" class="slot-media">`)
         : '';
       const badge = slot.style?.badge ? `<span class="slot-badge">${esc(slot.style.badge)}</span>` : `<span class="slot-role-tag">${esc(slot.role)}</span>`;
-      const copyText = slot.text || (slot.dataBinding === 'scene.title' ? scene.title : slot.dataBinding === 'scene.narration' ? (scene.narration || scene.text) : slot.dataBinding === 'scene.text' ? scene.text : slot.prompt || '');
+      const timedSlot = Array.isArray(scene.captions) && slots.findIndex(item => item.role === 'subtitle-layer') === slots.indexOf(slot);
+      const copyText = timedSlot ? '' : slot.text || (slot.dataBinding === 'scene.title' ? scene.title : slot.dataBinding === 'scene.narration' ? (scene.narration || scene.text) : slot.dataBinding === 'scene.text' ? scene.text : slot.prompt || '');
       return `<div class="preview-slot ${activeId === slot.id ? 'selected' : ''} role-${esc(slot.role)}" data-slot-id="${esc(slot.id)}" style="left:${Number(slot.x)||0}%;top:${Number(slot.y)||0}%;width:${Number(slot.w)||50}%;height:${Number(slot.h)||25}%;z-index:${Number(slot.zIndex)||1};background:${bg};opacity:${opacity};border-radius:${radius}px;color:${textColor};text-align:${align}">
         ${slotMedia}
         <div class="slot-overlay-content">
           <div class="slot-header-meta">${badge}<small>${esc(slot.dataBinding)}</small></div>
-          <div class="slot-copy" style="font-size:${fontSize * 100 / exportWidth}cqw;color:${textColor};text-align:${align}">${esc(copyText)}</div>
+          <div class="slot-copy" ${timedSlot ? 'data-preview-caption' : ''} style="font-size:${fontSize * 100 / exportWidth}cqw;color:${textColor};text-align:${align}">${esc(copyText)}</div>
         </div>
         <span class="slot-resize-handle" title="크기 조절">◢</span>
       </div>`;
     }).join('');
-    preview.innerHTML = `${media}<div class="preview-slots-layer">${slotsHtml}</div><div class="preview-footer"><span>FRAMEFORGE · MULTI-SLOT</span><span>${String(sceneIndex + 1).padStart(2,'0')}</span></div>`;
+    preview.innerHTML = `${media}<div class="preview-slots-layer">${slotsHtml}</div>${Array.isArray(scene.captions) && !slots.some(slot => slot.role === 'subtitle-layer') ? '<div class="preview-copy center"><div class="scene-text" data-preview-caption></div></div>' : ''}<div class="preview-footer"><span>FRAMEFORGE · MULTI-SLOT</span><span>${String(sceneIndex + 1).padStart(2,'0')}</span></div>`;
   } else {
-    preview.innerHTML = `${media}<div class="preview-copy ${['center','lower-third','split'].includes(scene.layout) ? scene.layout : 'center'}"><span class="scene-overline">${esc(scene.title || 'YOUR NEXT STORY')}</span><div class="scene-text">${esc(scene.text || '여기에 이야기를 담아보세요')}</div></div><div class="preview-footer"><span>FRAMEFORGE</span><span>${String(sceneIndex + 1).padStart(2,'0')}</span></div>`;
+    preview.innerHTML = `${media}<div class="preview-copy ${['center','lower-third','split'].includes(scene.layout) ? scene.layout : 'center'}"><span class="scene-overline">${esc(scene.title || 'YOUR NEXT STORY')}</span><div class="scene-text" ${Array.isArray(scene.captions) ? 'data-preview-caption' : ''}>${Array.isArray(scene.captions) ? '' : esc(scene.text || '여기에 이야기를 담아보세요')}</div></div><div class="preview-footer"><span>FRAMEFORGE</span><span>${String(sceneIndex + 1).padStart(2,'0')}</span></div>`;
   }
   const video = $('video',preview);
   if (video && Number(scene.trimStart) > 0) video.addEventListener('loadedmetadata', () => { video.currentTime = Math.min(Number(scene.trimStart), Math.max(0,video.duration - 0.01)); }, {once:true});
+  updatePreviewCaptions();
 }
 function sceneCards() {
   let elapsed = 0;
@@ -964,11 +1195,11 @@ function knowledgeView() {
   const lines = (graph.edges || []).map(edge => { const from = positions.get(edge.source || edge.from); const to = positions.get(edge.target || edge.to); return from && to ? `<line x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}"/>` : ''; }).join('');
   const circles = visible.map(node => { const pos = positions.get(node.id); return `<g><circle class="${(node.type || node.kind) === 'episode' ? 'episode-node' : ''}" cx="${pos.x}" cy="${pos.y}" r="${(node.type || node.kind) === 'channel' ? 20 : 12}"/><text x="${pos.x}" y="${pos.y + 31}" text-anchor="middle">${esc((node.label || node.title || node.name || node.id).slice(0,16))}</text><title>${esc(node.label || node.title || node.id)}</title></g>`; }).join('');
   const byId = new Map(nodes.map(node=>[node.id,node]));
-  const access = item => item.editable ? '<span class="badge">관리자 전용 편집</span>' : `<p class="hint graph-readonly" data-testid="graph-readonly">읽기 전용 · ${esc(item.readOnlyReason || '편집 가능한 원본이 없습니다.')}</p>`;
-  return heading('지식 그래프', '관리자 편집은 원본 기록에 저장되며 그래프와 내보내기를 갱신합니다.', '<button data-action="refresh-knowledge">그래프 새로고침</button>') + `<p class="source-note">채널 이름과 에피소드 제목·주제·소속 채널을 편집할 수 있습니다. 주제 노드는 에피소드에서 파생됩니다. 나머지 노드와 연결은 읽기 전용입니다. 모든 변경은 관리자 전용입니다.</p><div class="row" style="margin-bottom:17px"><span class="badge lime">${nodes.length}개 노드</span><span class="badge">${graph.edges?.length || 0}개 연결</span></div><section class="panel">${nodes.length ? `<svg class="graph" viewBox="0 0 700 390" role="img" aria-label="채널, 에피소드 및 소재의 관계 그래프">${lines}${circles}</svg>` : '<div class="empty">채널과 에피소드를 만들면 연결된 지식이 여기에 나타납니다.</div>'}</section><div class="cards section-spacer graph-records">${nodes.map(node => `<article class="panel panel-body" data-graph-node="${esc(node.id)}"><span class="eyebrow">${esc(node.type || node.kind || '지식')}</span><h3>${esc(node.label || node.title || node.name || node.id)}</h3><p class="hint graph-record-id">${esc(node.id)}</p>${access(node)}${node.editable ? `<button class="small" data-action="edit-graph-node" data-id="${esc(node.id)}" ${!canMutate()?'disabled':''}>원본 편집</button>`:''}</article>`).join('')}</div><section class="panel section-spacer graph-relations"><div class="panel-header"><h2>연결</h2></div>${(graph.edges || []).map((edge,index)=>`<article class="data-row" data-graph-edge="${index}"><div><h3>${esc(byId.get(edge.source)?.label || edge.source)} → ${esc(byId.get(edge.target)?.label || edge.target)}</h3><p class="hint">${esc(edge.relation)}</p>${access(edge)}</div>${edge.editable?`<button class="small" data-action="edit-graph-edge" data-index="${index}" ${!canMutate()?'disabled':''}>연결 원본 편집</button>`:''}</article>`).join('') || '<p class="panel-body hint">연결이 없습니다.</p>'}</section>`;
+  const access = item => item.editable ? '<span class="badge">원본 편집 가능</span>' : `<p class="hint graph-readonly" data-testid="graph-readonly">읽기 전용 · ${esc(item.readOnlyReason || '편집 가능한 원본이 없습니다.')}</p>`;
+  return heading('지식 그래프', '원본 기록을 편집하면 그래프와 내보내기가 갱신됩니다.', '<button data-action="refresh-knowledge">그래프 새로고침</button>') + `<p class="source-note">채널 이름과 에피소드 제목·주제·소속 채널을 편집할 수 있습니다. 주제 노드는 에피소드에서 파생됩니다. 나머지 노드와 연결은 읽기 전용입니다.</p><div class="row" style="margin-bottom:17px"><span class="badge lime">${nodes.length}개 노드</span><span class="badge">${graph.edges?.length || 0}개 연결</span></div><section class="panel">${nodes.length ? `<svg class="graph" viewBox="0 0 700 390" role="img" aria-label="채널, 에피소드 및 소재의 관계 그래프">${lines}${circles}</svg>` : '<div class="empty">채널과 에피소드를 만들면 연결된 지식이 여기에 나타납니다.</div>'}</section><div class="cards section-spacer graph-records">${nodes.map(node => `<article class="panel panel-body" data-graph-node="${esc(node.id)}"><span class="eyebrow">${esc(node.type || node.kind || '지식')}</span><h3>${esc(node.label || node.title || node.name || node.id)}</h3><p class="hint graph-record-id">${esc(node.id)}</p>${access(node)}${node.editable ? `<button class="small" data-action="edit-graph-node" data-id="${esc(node.id)}" ${!canMutate()?'disabled':''}>원본 편집</button>`:''}</article>`).join('')}</div><section class="panel section-spacer graph-relations"><div class="panel-header"><h2>연결</h2></div>${(graph.edges || []).map((edge,index)=>`<article class="data-row" data-graph-edge="${index}"><div><h3>${esc(byId.get(edge.source)?.label || edge.source)} → ${esc(byId.get(edge.target)?.label || edge.target)}</h3><p class="hint">${esc(edge.relation)}</p>${access(edge)}</div>${edge.editable?`<button class="small" data-action="edit-graph-edge" data-index="${index}" ${!canMutate()?'disabled':''}>연결 원본 편집</button>`:''}</article>`).join('') || '<p class="panel-body hint">연결이 없습니다.</p>'}</section>`;
 }
 function guardGraphEdit() {
-  if (!canMutate()) throw new Error('모든 변경은 관리자 전용입니다.');
+  if (!canMutate()) throw new Error('변경하려면 로그인하세요.');
   if (dirty || savePending || workflowEditor.hasChanges()) throw new Error('현재 초안을 먼저 저장해 주세요. 그래프 편집 중에도 기존 초안은 보존됩니다.');
 }
 async function refreshAfterGraphEdit() {
@@ -985,7 +1216,7 @@ function editGraphNode(targetId) {
   const node=state.graph.nodes.find(item=>item.id===targetId);
   if (!node?.editable || !node.edit) throw new Error(node?.readOnlyReason || '읽기 전용 노드입니다.');
   const fields=node.edit.fields || [];
-  const body=`<p class="hint">관리자 전용 · 원본 ${esc(node.type)} 기록을 수정합니다. 충돌이 발생하면 입력은 유지됩니다.</p>${fields.includes('label')?`<label>이름 / 제목<input name="label" required maxlength="${node.type==='channel'?160:200}" value="${esc(node.label)}"></label>`:''}${fields.includes('topic')?`<label>소재 / 주제<textarea name="topic" required>${esc(node.edit.topic)}</textarea></label>`:''}${fields.includes('channelId')?`<label>소속 채널<select name="channelId" required>${state.channels.map(channel=>`<option value="${esc(channel.id)}" ${channel.id===node.edit.channelId?'selected':''}>${esc(channel.name)}</option>`).join('')}</select></label>`:''}`;
+  const body=`<p class="hint">원본 ${esc(node.type)} 기록을 수정합니다. 충돌이 발생하면 입력은 유지됩니다.</p>${fields.includes('label')?`<label>이름 / 제목<input name="label" required maxlength="${node.type==='channel'?160:200}" value="${esc(node.label)}"></label>`:''}${fields.includes('topic')?`<label>소재 / 주제<textarea name="topic" required>${esc(node.edit.topic)}</textarea></label>`:''}${fields.includes('channelId')?`<label>소속 채널<select name="channelId" required>${state.channels.map(channel=>`<option value="${esc(channel.id)}" ${channel.id===node.edit.channelId?'selected':''}>${esc(channel.name)}</option>`).join('')}</select></label>`:''}`;
   openModal('지식 원본 편집',body,async data=>{
     guardGraphEdit();
     const payload=Object.fromEntries(fields.filter(field=>field in data).map(field=>[field,data[field]]));
@@ -1001,7 +1232,7 @@ function editGraphEdge(index) {
   if (!edge?.editable || !edge.edit) throw new Error(edge?.readOnlyReason || '읽기 전용 연결입니다.');
   const targetType=edge.edit.field==='channelId'?'channel':'topic';
   const targets=state.graph.nodes.filter(node=>node.type===targetType);
-  openModal('연결 원본 편집',`<p class="hint">관리자 전용 · 에피소드의 ${targetType==='channel'?'소속 채널':'주제'}를 수정합니다. 새 주제는 에피소드 원본 편집에서 입력하세요.</p><label>연결 대상<select name="newTarget" required>${targets.map(node=>`<option value="${esc(node.id)}" ${node.id===edge.target?'selected':''}>${esc(node.label)}</option>`).join('')}</select></label>`,async data=>{
+  openModal('연결 원본 편집',`<p class="hint">에피소드의 ${targetType==='channel'?'소속 채널':'주제'}를 수정합니다. 새 주제는 에피소드 원본 편집에서 입력하세요.</p><label>연결 대상<select name="newTarget" required>${targets.map(node=>`<option value="${esc(node.id)}" ${node.id===edge.target?'selected':''}>${esc(node.label)}</option>`).join('')}</select></label>`,async data=>{
     guardGraphEdit();
     await api('/api/knowledge/edges',{method:'PUT',body:JSON.stringify({source:edge.source,target:edge.target,relation:edge.relation,newTarget:data.newTarget,expectedVersion:edge.edit.expectedVersion})});
     await refreshAfterGraphEdit();
@@ -1030,6 +1261,7 @@ function switchEpisode(target, targetChannelId = target?.channelId ?? channelId)
     else { episode = clone(target); baseVersion = target.version; dirty = false; editRevision = 0; sceneIndex = 0; selectedSlotId = null; history = []; historyVersion = null; }
     channelEpisodes.set(channelId,target.id);
   }
+  try { if (target) sessionStorage.setItem('frameforge.selectedEpisode',target.id); else sessionStorage.removeItem('frameforge.selectedEpisode'); } catch { /* Selection remains available for this session in memory. */ }
   bindWorkflowProject();
 }
 function anyStudioDraftDirty() {
@@ -1071,14 +1303,18 @@ async function save(quiet = false) {
   if (!episode || !dirty) return;
   requireProjectEdit();
   if (savePending) throw new Error('저장 중입니다. 잠시 후 다시 시도해 주세요.');
+  for (const scene of episode.scenes) if (scene.captions !== undefined && (!Array.isArray(scene.captions) || scene.captions.length > 200 || scene.captions.some(cue => !Number.isFinite(cue.start) || !Number.isFinite(cue.end) || cue.start < 0 || cue.end <= cue.start || cue.end > Number(scene.duration) || typeof cue.text !== 'string' || !cue.text.trim() || cue.text.length > 2000))) throw new Error(`장면 '${scene.title || scene.id}'의 자막 시간과 내용을 확인하세요. 시작은 0 이상, 종료는 시작보다 크고 장면 길이 이하여야 합니다.`);
+  if (episode.music) { const music=episode.music,source=music.source || {}; if (!/^\/api\/uploads\/[a-zA-Z0-9_-]+\.(mp3|wav|ogg)$/i.test(music.assetUrl || '') || !['own','third-party','generated'].includes(source.origin) || [['start',1800],['trimStart',36000],['volume',2]].some(([key,max])=>!Number.isFinite(music[key]) || music[key]<0 || music[key]>max) || music.start>=duration() || source.origin==='third-party' && (!source.sourceUrl?.trim() || !source.licenseId?.trim() || !source.attribution?.trim())) throw new Error('음악 파일, 출처와 시작·트림·볼륨을 확인하세요. 제3자 음악은 출처 URL, 라이선스와 출처 표기가 필요합니다.'); }
   const revision = editRevision;
   const targetId = episode.id;
   const snapshot = clone(episode);
   const expectedVersion = baseVersion ?? snapshot.version;
+  const saved = state.episodes.find(item => item.id === targetId && item.version === expectedVersion);
+  const scenesChanged = !saved || JSON.stringify(saved.scenes) !== JSON.stringify(snapshot.scenes);
   savePending = true;
   updateSaveStatus();
   try {
-    const updated = await api(`/api/episodes/${targetId}`, {method:'PUT',body:JSON.stringify({title:snapshot.title,topic:snapshot.topic,status:snapshot.status,format:snapshot.format,scenes:snapshot.scenes,notes:snapshot.notes,expectedVersion})});
+    const updated = await api(`/api/episodes/${targetId}`, {method:'PUT',body:JSON.stringify({title:snapshot.title,topic:snapshot.topic,status:snapshot.status,format:snapshot.format,...(scenesChanged ? {scenes:snapshot.scenes} : {}),notes:snapshot.notes,...(Object.hasOwn(snapshot,'music')?{music:snapshot.music}:{}),expectedVersion})});
     cacheEpisode(updated);
     if (episode?.id !== targetId || editRevision !== revision) {
       throw new Error('요청한 버전은 저장됐습니다. 그 뒤의 로컬 초안과 원본 버전은 보존했습니다. 버전 기록에서 비교해 주세요.');
@@ -1095,21 +1331,67 @@ function updateSaveStatus() {
   if (status) {status.textContent=savePending?'저장 중…':dirty?'저장되지 않은 변경':`버전 ${episode?.version} · 저장됨`;status.className=dirty?'unsaved':'hint';status.setAttribute('role','status');}
   if ($('#save-button')) $('#save-button').disabled=savePending || !dirty || Boolean(projectEditReason());
 }
-function stopPlayback() { playing = false; clearTimeout(playTimer); if (previewAudio) { previewAudio.pause(); previewAudio=null; } }
+function updatePreviewCaptions() {
+  clearTimeout(previewCueTimer);
+  const scene = currentScene(), target = $('[data-preview-caption]', $('#preview') || document);
+  if (!target || !Array.isArray(scene?.captions)) return;
+  const elapsed = playing ? Math.max(0, (performance.now() - previewSceneStartedAt) / 1000) : 0;
+  const cues = scene.captions.filter(cue => typeof cue.text === 'string' && Number.isFinite(cue.start) && Number.isFinite(cue.end)).map(cue => ({text:cue.text,start:Math.round(cue.start * 100) / 100,end:Math.round(cue.end * 100) / 100}));
+  target.innerHTML = cues.filter(cue => elapsed >= cue.start && elapsed < cue.end).map(cue => `<div>${esc(cue.text)}</div>`).join('');
+  if (playing) {
+    const next = cues.flatMap(cue => [cue.start,cue.end]).filter(time => time > elapsed).reduce((nearest,time) => Math.min(nearest,time),Infinity);
+    if (Number.isFinite(next)) previewCueTimer = setTimeout(updatePreviewCaptions,Math.max(1,Math.ceil((next - elapsed) * 1000)));
+  }
+}
+function clearPreviewMusic() {
+  clearTimeout(previewMusicTimer);
+  if (previewMusic) { previewMusic.pause(); previewMusic = null; }
+  if (previewMusicContext) { previewMusicContext.close().catch(() => {}); previewMusicContext = null; }
+}
+function startPreviewMusic() {
+  clearPreviewMusic();
+  const music = episode?.music;
+  if (!music || !/^\/api\/uploads\/[a-zA-Z0-9_-]+\.(mp3|wav|ogg)$/i.test(music.assetUrl || '') || ![music.start,music.trimStart,music.volume].every(value => typeof value === 'number' && Number.isFinite(value) && value >= 0) || music.volume > 2) return;
+  const position = episode.scenes.slice(0,sceneIndex).reduce((sum,scene) => sum + Number(scene.duration || 0),0) + Math.max(0,(performance.now() - previewSceneStartedAt) / 1000);
+  const audio = new Audio(music.assetUrl);
+  previewMusic = audio;
+  if (music.volume <= 1) audio.volume = music.volume;
+  else {
+    try {
+      const context = new AudioContext(), source = context.createMediaElementSource(audio), gain = context.createGain();
+      gain.gain.value = music.volume; source.connect(gain).connect(context.destination); previewMusicContext = context;
+      context.resume().catch(() => {});
+    } catch (error) { clearPreviewMusic(); toast(`음악 볼륨을 재생할 수 없습니다: ${error.message}`,true); return; }
+  }
+  const begin = () => {
+    if (!playing || previewMusic !== audio) return;
+    const offset = music.trimStart + Math.max(0,position - music.start);
+    try { audio.currentTime = offset; } catch { audio.addEventListener('loadedmetadata',() => { if (previewMusic === audio) audio.currentTime = offset; },{once:true}); }
+    audio.play().catch(() => { if (previewMusic === audio && playing) toast('배경 음악 재생을 시작할 수 없습니다.',true); });
+  };
+  if (position >= music.start) begin(); else previewMusicTimer = setTimeout(begin,(music.start - position) * 1000);
+}
+function stopPlayback() {
+  playing = false; clearTimeout(playTimer); clearTimeout(previewCueTimer); clearPreviewMusic();
+  if (previewAudio) { previewAudio.pause(); previewAudio = null; }
+  updatePreviewCaptions();
+}
 function playNext() {
   if (!playing) return;
   if (previewAudio) previewAudio.pause();
+  previewSceneStartedAt = performance.now();
   const scene=currentScene();
   if (scene?.audioUrl) {
     previewAudio=new Audio(scene.audioUrl);
     previewAudio.volume=Math.min(1,Math.max(0,Number(scene.audioVolume ?? 1)));
     previewAudio.play().catch(()=>toast('오디오 재생을 시작할 수 없습니다. 장면 오디오 컨트롤을 사용하세요.',true));
   }
+  updatePreviewCaptions();
   playTimer = setTimeout(() => {
     if (sceneIndex >= episode.scenes.length - 1) { stopPlayback(); render(); return; }
     sceneIndex += 1;
-    render();
     playNext();
+    render();
   }, Number(currentScene()?.duration || 3) * 1000);
 }
 
@@ -1159,7 +1441,7 @@ async function handleAction(button) {
   if (action === 'close-project-tool') { closeProjectTool(); return; }
   if (action === 'unarchive-project') { archiveProject(button.dataset.id,true); return; }
   if (action === 'inspect-archived') { await runProjectMenuAction('open-project',{targetId:button.dataset.id}); return; }
-  if (episode && ['save','render','restore-episode','save-history-draft','narrate-scene','narrate-all','load-narration-result','apply-layout-preset','add-slot','delete-slot','upload-slot-media','remove-slot-media','add-scene','duplicate-scene','delete-scene','move-left','move-right','upload-audio','remove-audio','upload','remove-media','apply-template'].includes(action)) requireProjectEdit();
+  if (episode && ['save','render','restore-episode','save-history-draft','narrate-scene','narrate-all','load-narration-result','apply-layout-preset','add-slot','delete-slot','upload-slot-media','remove-slot-media','add-scene','duplicate-scene','delete-scene','move-left','move-right','add-caption','delete-caption','upload-audio','remove-audio','upload','remove-media','apply-template'].includes(action)) requireProjectEdit();
   if (action === 'edit-graph-node') { editGraphNode(button.dataset.id); return; }
   if (action === 'edit-graph-edge') { editGraphEdge(Number(button.dataset.index)); return; }
   if (action === 'ops-open' || action === 'ops-history') {
@@ -1193,6 +1475,9 @@ async function handleAction(button) {
   else if (action === 'new-episode') newEpisode();
   else if (action === 'channel') { stopPlayback(); closeProjectOverlays(); const targetChannelId = button.dataset.id; switchEpisode(activeEpisodes().find(item => item.id === channelEpisodes.get(targetChannelId) && item.channelId === targetChannelId) || activeEpisodes().find(item => item.channelId === targetChannelId) || null, targetChannelId); view = 'workflow'; render(); $('#main')?.focus(); }
   else if (action === 'episode') { stopPlayback(); closeProjectOverlays(); switchEpisode(activeEpisodes().find(item => item.id === button.dataset.id) || null); render(); }
+  else if (action === 'add-caption') { const scene=currentScene(); if (!scene) return; if (!Array.isArray(scene.captions)) scene.captions=[]; if (scene.captions.length>=200) throw new Error('장면 자막은 최대 200개입니다.'); scene.captions.push({start:0,end:Math.min(1,Number(scene.duration)),text:''}); markDirty(); render(); }
+  else if (action === 'delete-caption') { const scene=currentScene(),index=Number(button.dataset.index); if (!Array.isArray(scene?.captions) || !Number.isInteger(index) || index<0 || index>=scene.captions.length) return; scene.captions.splice(index,1); markDirty(); render(); }
+  else if (action === 'remove-music') { if (!episode) return; requireProjectEdit(); episode.music=null; clearPreviewMusic(); markDirty(); render(); }
   else if (action === 'open-generation') { stopPlayback(); if (!episode) return; bindWorkflowProject(); const targetId = episode.id; await workflowEditor.openGeneration({episode:clone(episode),episodeId:targetId,sceneIndex,sceneId:currentScene()?.id}); if (episode?.id !== targetId) return; closeProjectOverlays(); view = 'workflow'; render(); toast('Higgsfield 생성 설정을 열었습니다. 실행 전 비용을 확인합니다.'); }
   else if (action === 'open-slot-generation') {
     stopPlayback();
@@ -1350,7 +1635,7 @@ async function handleAction(button) {
   else if (action === 'scene') { const fromBin=Boolean(button.closest('.project-bin')); stopPlayback(); sceneIndex = Number(button.dataset.index); selectedSlotId = currentScene()?.slots?.[0]?.id || null; render(); $(fromBin?'.project-bin [aria-current="true"]':'.scene-card.selected')?.focus({preventScroll:true}); }
   else if (action === 'save') { await save(); render(); }
   else if (action === 'prev' || action === 'next') { stopPlayback(); sceneIndex = Math.max(0,Math.min(episode.scenes.length - 1, sceneIndex + (action === 'prev' ? -1 : 1))); render(); }
-  else if (action === 'play') { if (playing) stopPlayback(); else { playing = true; playNext(); } render(); }
+  else if (action === 'play') { if (playing) stopPlayback(); else { playing = true; playNext(); startPreviewMusic(); } render(); }
   else if (action === 'add-scene') { stopPlayback(); episode.scenes.push({id:id(),title:`장면 ${episode.scenes.length + 1}`,text:'새로운 이야기를 담아보세요',duration:5,background:'#294434',kind:'title',layout:'center'}); sceneIndex = episode.scenes.length - 1; markDirty(); render(); }
   else if (action === 'duplicate-scene') { stopPlayback(); episode.scenes.splice(sceneIndex + 1,0,{...clone(currentScene()),id:id()}); sceneIndex++; markDirty(); render(); }
   else if (action === 'delete-scene') { if (episode.scenes.length === 1) { toast('최소 한 개의 장면이 필요합니다.',true); return; } stopPlayback(); episode.scenes.splice(sceneIndex,1); sceneIndex = Math.min(sceneIndex,episode.scenes.length - 1); markDirty(); render(); }
@@ -1396,7 +1681,7 @@ document.addEventListener('click', async event => {
   if (!readActions.has(button.dataset.action)) button.disabled = true;
   try { await handleAction(button); }
   catch (error) { toast(error.status === 409 ? '다른 작업에서 이 에피소드가 수정되었습니다. 현재 편집은 보존했습니다. 페이지를 다시 열기 전에 편집 내용을 복사해 주세요.' : error.message,true); }
-  finally { busy = false; if (button.isConnected && !readActions.has(button.dataset.action)) { button.disabled = false; applyAdminControls(); applyProjectControls(); updateSaveStatus(); } }
+  finally { busy = false; if (button.isConnected && !readActions.has(button.dataset.action)) { button.disabled = false; applySessionControls(); applyProjectControls(); updateSaveStatus(); } }
 });
 
 document.addEventListener('change',async event=>{
@@ -1404,12 +1689,7 @@ document.addEventListener('change',async event=>{
   if (event.target.id === 'project-stage') {
     const nodeId = event.target.value;
     if (!projectContext().workflow?.nodes.some(node => node.id === nodeId)) return;
-    stopPlayback();
-    view = 'workflow';
-    render();
-    const control = document.querySelector(`#workflow-host [data-wf-action="select-node"][data-id="${CSS.escape(nodeId)}"]`);
-    control?.click();
-    control?.focus({preventScroll:true});
+    workflowEditor.selectNode(nodeId);
     return;
   }
   if (event.target.id === 'project-episode' || event.target.id === 'wf-episode') {
@@ -1432,9 +1712,30 @@ document.addEventListener('focusout', () => queueMicrotask(syncProjectToolsConte
 
 document.addEventListener('input', event => {
   const target = event.target;
-  if (target.matches('[data-scene],[data-episode],[data-slot-field],[data-slot-style]') && projectEditReason()) return;
+  if (target.matches('[data-scene],[data-caption],[data-music],[data-music-source],[data-episode],[data-slot-field],[data-slot-style]') && projectEditReason()) return;
   if (target.id === 'speech-voice') { speechVoice=target.value; return; }
   if (target.id === 'speech-rate') { if (target.checkValidity() && target.value !== '') speechRate=Number(target.value); return; }
+  if (target.dataset.music && episode) {
+    const key=target.dataset.music;
+    if (key==='assetUrl') {
+      const value=target.value;
+      if (!value) episode.music=null;
+      else if (episode.music?.assetUrl!==value) episode.music={assetUrl:value,start:0,trimStart:0,volume:1,source:{origin:''}};
+      for (const input of document.querySelectorAll('[data-music]:not([data-music="assetUrl"]),[data-music-source]')) {
+        const field=input.dataset.music,sourceKey=input.dataset.musicSource;
+        input.value=field ? String(episode.music?.[field] ?? (field==='volume'?1:0)) : String(episode.music?.source?.[sourceKey] || '');
+      }
+    } else if (episode.music && ['start','trimStart','volume'].includes(key)) episode.music[key]=target.value==='' ? '' : Number(target.value);
+    else return;
+    markDirty(); if (playing) startPreviewMusic(); return;
+  }
+  if (target.dataset.musicSource && episode?.music) { episode.music.source ||= {}; episode.music.source[target.dataset.musicSource]=target.value; markDirty(); return; }
+  if (target.dataset.caption && currentScene()) {
+    const index=Number(target.dataset.captionIndex),cue=currentScene().captions?.[index],key=target.dataset.caption;
+    if (!cue || !['start','end','text'].includes(key)) return;
+    cue[key]=key==='text' ? target.value : target.value==='' ? '' : Number(target.value);
+    markDirty(); return;
+  }
   if (target.dataset.slotField && currentSlot()) {
     const slot = currentSlot();
     const key = target.dataset.slotField;

@@ -256,7 +256,7 @@ export function createAgentBridge({ token = process.env.AGENT_BRIDGE_TOKEN, list
         generationBusy = true;
         try {
           const body = await readRequest(req, 24576);
-          if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => !['model','prompt','params'].includes(key))) throw new HttpError(400, 'Invalid generation request');
+          if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => !['model','prompt','params','quoteExpiresAt','quoteSchemaHash'].includes(key)) || (['quoteExpiresAt','quoteSchemaHash'].some(key => body[key] !== undefined && (!requestUrl.pathname.endsWith('/create') || typeof body[key] !== 'string')))) throw new HttpError(400, 'Invalid generation request');
           return res.end(JSON.stringify(await generation[requestUrl.pathname.endsWith('/create') ? 'create' : 'estimate'](body)));
         } finally { generationBusy = false; }
       }
@@ -305,8 +305,9 @@ export function createAgentBridge({ token = process.env.AGENT_BRIDGE_TOKEN, list
     } catch (error) {
       console.error('Bridge operation failed:', error instanceof HttpError ? `HTTP ${error.status}` : 'provider error');
       if (res.headersSent || res.destroyed) return res.destroy();
-      res.writeHead(error instanceof HttpError ? error.status : [400,422,429,503].includes(error.statusCode) ? error.statusCode : 502);
-      const code = ['INVALID_INPUT','UNSUPPORTED','NOT_CONFIGURED','AUTH_REQUIRED','RATE_LIMITED','AMBIGUOUS_SUBMISSION','PROVIDER_UNAVAILABLE'].includes(error.code) ? error.code : undefined;
+      const safeQuoteRejection = req.method === 'POST' && new URL(req.url, 'http://localhost').pathname === '/generation/create' && error.statusCode === 409 && ['EXPIRED_QUOTE', 'SCHEMA_CHANGED'].includes(error.code);
+      res.writeHead(error instanceof HttpError ? error.status : safeQuoteRejection ? 409 : [400,422,429,503].includes(error.statusCode) ? error.statusCode : 502);
+      const code = safeQuoteRejection || ['INVALID_INPUT','UNSUPPORTED','NOT_CONFIGURED','AUTH_REQUIRED','RATE_LIMITED','AMBIGUOUS_SUBMISSION','PROVIDER_UNAVAILABLE'].includes(error.code) ? error.code : undefined;
       res.end(JSON.stringify({ error: error instanceof HttpError ? error.message : 'Bridge execution failed. Check host provider availability and local logs.', ...(code ? { code } : {}) }));
     }
   });

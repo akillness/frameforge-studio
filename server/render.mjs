@@ -1,9 +1,11 @@
-import { mkdir, writeFile, realpath, rm, copyFile } from 'node:fs/promises';
+import { mkdir, writeFile, realpath, rm, copyFile, open, lstat } from 'node:fs/promises';
 import path from 'node:path';
-import { createReadStream } from 'node:fs';
+import { createReadStream, constants } from 'node:fs';
 import { randomUUID, createHash } from 'node:crypto';
-import { execute } from './process.mjs';
+import { execute, executeWithStreams } from './process.mjs';
 import { requiredMediaCredits } from './media-credits.mjs';
+import { sceneCaptions, episodeMusic } from './validation.mjs';
+import { canonicalJson } from './graph.mjs';
 
 export const dimensions = { '9:16': [1080, 1920], '16:9': [1920, 1080], '1:1': [1080, 1080] };
 const MEDIA_FORMATS = {
@@ -28,6 +30,22 @@ function subtitleText(text, width) {
     while (chars.length) rows.push(chars.splice(0, width).join(''));
     return rows.length ? rows : [''];
   }).join('\\N');
+}
+
+function captionText(text, width) {
+  return text.replace(/\r/g, '').split('\n').flatMap((line) => {
+    const chars = Array.from(line), rows = [];
+    while (chars.length) rows.push(chars.splice(0, width).join('').replace(/\\/g, '\\\u200b').replace(/[{}]/g, '\\$&'));
+    return rows.length ? rows : [''];
+  }).join('\\N');
+}
+
+function assTime(seconds) {
+  const centiseconds = Math.round(seconds * 100);
+  const hours = Math.floor(centiseconds / 360000);
+  const minutes = Math.floor(centiseconds / 6000) % 60;
+  const wholeSeconds = Math.floor(centiseconds / 100) % 60;
+  return `${hours}:${String(minutes).padStart(2, '0')}:${String(wholeSeconds).padStart(2, '0')}.${String(centiseconds % 100).padStart(2, '0')}`;
 }
 
 function hexToAssColor(hex = '#ffffff', alpha = 0) {
@@ -74,6 +92,8 @@ function visualInputOptions(source, mediaOptions, isImage, trimStart = 0, trimEn
 
 export function buildSceneCompositionPlan(scene, w, h) {
   const slots = Array.isArray(scene.slots) ? [...scene.slots].sort((a, b) => (Number(a.zIndex) || 0) - (Number(b.zIndex) || 0)) : [];
+  const captions = sceneCaptions(scene.captions, scene.duration);
+  const captionSlot = slots.findIndex((slot) => slot.role === 'subtitle-layer');
   const font = process.platform === 'win32' ? 'Malgun Gothic' : 'Noto Sans CJK KR';
   const alignment = scene.layout === 'lower-third' ? 2 : 5;
   const margin = scene.layout === 'lower-third' ? Math.round(h * 0.16) : 80;
@@ -83,7 +103,11 @@ export function buildSceneCompositionPlan(scene, w, h) {
   const dialogues = [];
   const globalDialogues = [];
   const slotDialogues = new Map();
-  if (!slots.length || (scene.text && !slots.some((slot) => ['subtitle-layer', 'text-overlay'].includes(slot.role) && slot.text))) {
+  if (captions !== undefined) {
+    if (captionSlot < 0) {
+      for (const cue of captions) globalDialogues.push(`Dialogue: 0,${assTime(cue.start)},${assTime(cue.end)},Default,,0,0,0,,${captionText(cue.text, w > h ? 34 : 17)}`);
+    }
+  } else if (!slots.length || (scene.text && !slots.some((slot) => ['subtitle-layer', 'text-overlay'].includes(slot.role) && slot.text))) {
     globalDialogues.push(`Dialogue: 0,0:00:00.00,0:10:00.00,Default,,0,0,0,,${subtitleText(scene.text, w > h ? 34 : 17)}`);
   }
 
@@ -104,13 +128,22 @@ export function buildSceneCompositionPlan(scene, w, h) {
     const copySource = slot.text || (slot.html ? stripHtmlTags(slot.html) : '') || (slot.dataBinding === 'scene.title' ? scene.title : slot.dataBinding === 'scene.narration' ? (scene.narration || scene.text) : slot.dataBinding === 'scene.text' ? scene.text : '');
     const badgePrefix = slot.style?.badge ? `[${slot.style.badge}] ` : '';
     const combinedText = `${badgePrefix}${copySource || ''}`.trim();
-    if (combinedText) {
+    if (captions !== undefined && index === captionSlot) {
+      if (captions.length) {
+        const charCols = Math.max(8, Math.round((sw / w) * (w > h ? 36 : 18)));
+        const slotAlign = slot.style?.align === 'left' ? 4 : slot.style?.align === 'right' ? 6 : 5;
+        const textX = slotAlign === 4 ? sx + 12 : slotAlign === 6 ? sx + sw - 12 : cx;
+        const events = captions.map((cue) => `Dialogue: ${Math.max(1, Number(slot.zIndex) || index + 1)},${assTime(cue.start)},${assTime(cue.end)},${styleName},,0,0,0,,{\\an${slotAlign}\\pos(${textX},${cy})}${captionText(`${badgePrefix}${cue.text}`, charCols)}`);
+        dialogues.push(...events);
+        slotDialogues.set(index, events);
+      }
+    } else if (combinedText) {
       const charCols = Math.max(8, Math.round((sw / w) * (w > h ? 36 : 18)));
       const slotAlign = slot.style?.align === 'left' ? 4 : slot.style?.align === 'right' ? 6 : 5;
       const textX = slotAlign === 4 ? sx + 12 : slotAlign === 6 ? sx + sw - 12 : cx;
       const textDialogue = `Dialogue: ${Math.max(1, Number(slot.zIndex) || index + 1)},0:00:00.00,0:10:00.00,${styleName},,0,0,0,,{\\an${slotAlign}\\pos(${textX},${cy})}${subtitleText(combinedText, charCols)}`;
       dialogues.push(textDialogue);
-      slotDialogues.set(index, textDialogue);
+      slotDialogues.set(index, [textDialogue]);
     }
 
     slotBoxes.push({
@@ -130,7 +163,7 @@ export function buildSceneCompositionPlan(scene, w, h) {
 
   dialogues.unshift(...globalDialogues);
   const makeAss = (events) => `[Script Info]\nScriptType: v4.00\nPlayResX: ${w}\nPlayResY: ${h}\nWrapStyle: 0\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n${styles.join('\n')}\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n${events.join('\n')}\n`;
-  const slotAss = Object.fromEntries([...slotDialogues.entries()].map(([index, dialogue]) => [index, makeAss([dialogue])]));
+  const slotAss = Object.fromEntries([...slotDialogues.entries()].map(([index, events]) => [index, makeAss(events)]));
   return { ass: makeAss(dialogues), globalAss: globalDialogues.length ? makeAss(globalDialogues) : '', slotAss, slotBoxes: slotBoxes.map((box) => slotAss[box.index] ? { ...box, textAss: slotAss[box.index] } : box), hasSlots: slots.length > 0, credits: mediaCreditPlan(scene, w, h) };
 }
 
@@ -144,7 +177,95 @@ async function resolveVerifiedUpload(root, assetUrl) {
   return { source, mediaOptions };
 }
 
-export async function renderEpisode(episode, { dataDir, onProgress = () => {} }) {
+async function sceneInput(root, assetUrl, receipt, pipeNumber) {
+  const match = /^\/api\/uploads\/([a-zA-Z0-9_-]+\.(?:png|jpe?g|webp|gif|mp4|webm|mov|mp3|wav|ogg))$/i.exec(assetUrl || '');
+  if (!match) throw new Error('Invalid scene media upload');
+  const declared = path.resolve(root, 'uploads'), directory = await realpath(declared);
+  const normalized = (value) => process.platform === 'win32' ? path.resolve(value).toLowerCase() : path.resolve(value);
+  if (normalized(directory) !== normalized(declared) || (await lstat(declared)).isSymbolicLink()) throw new Error('Unsafe scene media directory');
+  const filename = path.join(directory, match[1]), before = await lstat(filename);
+  if (!before.isFile() || before.isSymbolicLink() || normalized(await realpath(filename)) !== normalized(filename) || before.size < 1 || before.size > 100 * 1024 * 1024) throw new Error('Unsafe scene media file');
+  const formats = MEDIA_FORMATS[path.extname(filename).toLowerCase()];
+  let completed;
+  return {
+    source: `cache:pipe:${pipeNumber}`,
+    mediaOptions: ['-protocol_whitelist', 'cache,pipe', '-format_whitelist', formats, '-read_ahead_limit', '-1'],
+    feed: async (pipe) => {
+      const handle = await open(filename, constants.O_RDONLY | (constants.O_NOFOLLOW || 0));
+      const opened = await handle.stat();
+      if (!opened.isFile() || !sameMusicFile(before, opened)) { await handle.close(); throw new Error('Scene media changed while opening'); }
+      const hash = createHash('sha256'), buffer = Buffer.allocUnsafe(64 * 1024);
+      let offset = 0;
+      try {
+        while (offset < before.size) {
+          const { bytesRead } = await handle.read(buffer, 0, Math.min(buffer.length, before.size - offset), offset);
+          if (!bytesRead) throw new Error('Scene media changed while reading');
+          const chunk = buffer.subarray(0, bytesRead);
+          hash.update(chunk);
+          if (pipe.destroyed || !await new Promise((resolve) => pipe.write(chunk, (error) => resolve(!error)))) throw new Error('Scene media pipe closed before all verified bytes were delivered');
+          offset += bytesRead;
+        }
+        if (!pipe.destroyed) pipe.end();
+        const final = await handle.stat(), after = await lstat(filename);
+        if (!after.isFile() || after.isSymbolicLink() || !sameMusicFile(before, after) || !sameMusicFile(opened, final) || normalized(await realpath(filename)) !== normalized(filename)) throw new Error('Scene media changed while rendering');
+        completed = { ...receipt, assetUrl, sha256: hash.digest('hex'), size: offset };
+      } finally { await handle.close(); if (!pipe.destroyed) pipe.end(); }
+    },
+    result: () => { if (!completed) throw new Error('Scene media input was not verified'); return completed; },
+  };
+}
+
+function musicIntegrityError() {
+  return Object.assign(new Error('Music upload integrity check failed'), { code: 'MUSIC_INTEGRITY' });
+}
+function classifyMusicInputError(error, expected) {
+  if (expected && (['ENOENT', 'ENOTDIR', 'ELOOP', 'EACCES', 'EPERM'].includes(error?.code) || error?.message === 'Media path escapes uploads')) return musicIntegrityError();
+  return error;
+}
+
+
+function sameMusicFile(a, b) {
+  return a.dev === b.dev && a.ino === b.ino && a.size === b.size && a.mtimeMs === b.mtimeMs && a.ctimeMs === b.ctimeMs;
+}
+
+async function snapshotMusic(root, music, expected) {
+  const declaredRoot = path.join(root, 'uploads');
+  const uploadRoot = await realpath(declaredRoot);
+  const normalized = (value) => process.platform === 'win32' ? path.resolve(value).toLowerCase() : path.resolve(value);
+  if (normalized(uploadRoot) !== normalized(declaredRoot) || (await lstat(declaredRoot)).isSymbolicLink()) throw musicIntegrityError();
+  const filename = path.basename(music.assetUrl), source = path.join(uploadRoot, filename);
+  const before = await lstat(source);
+  if (!before.isFile() || before.isSymbolicLink() || normalized(await realpath(source)) !== normalized(source) || before.size < 1 || before.size > 100 * 1024 * 1024) throw musicIntegrityError();
+  if (expected && (!/^[a-f0-9]{64}$/.test(expected.sha256 || '') || !Number.isSafeInteger(expected.size) || expected.size !== before.size)) throw musicIntegrityError();
+  if (music.source.sha256 !== undefined && (typeof music.source.sha256 !== 'string' || !/^[a-f0-9]{64}$/i.test(music.source.sha256))) throw musicIntegrityError();
+  // FFmpeg consumes these verified bytes from stdin. It never reopens a replaceable
+  // snapshot path; the allocation is bounded by the same 100 MiB upload limit.
+  const bytes = Buffer.allocUnsafe(before.size);
+  let digest;
+  let input;
+  try {
+    input = await open(source, constants.O_RDONLY | (constants.O_NOFOLLOW || 0));
+    const opened = await input.stat();
+    if (!opened.isFile() || !sameMusicFile(before, opened)) throw musicIntegrityError();
+    const hash = createHash('sha256');
+    let offset = 0;
+    while (offset < bytes.length) {
+      const { bytesRead } = await input.read(bytes, offset, Math.min(64 * 1024, bytes.length - offset), offset);
+      if (!bytesRead) throw musicIntegrityError();
+      hash.update(bytes.subarray(offset, offset + bytesRead));
+      offset += bytesRead;
+    }
+    const final = await input.stat(), after = await lstat(source);
+    digest = hash.digest('hex');
+    if (!after.isFile() || after.isSymbolicLink() || !sameMusicFile(before, after) || !sameMusicFile(opened, final) || normalized(await realpath(source)) !== normalized(source) || (expected && digest !== expected.sha256) || (music.source.sha256 && digest !== music.source.sha256.toLowerCase())) throw musicIntegrityError();
+  } finally {
+    await input?.close();
+  }
+  const format = path.extname(filename).slice(1).toLowerCase();
+  return { source: 'pipe:0', input: bytes, mediaOptions: ['-protocol_whitelist', 'pipe', '-format_whitelist', MEDIA_FORMATS[`.${format}`], '-f', format], verifiedMusicIntegrity: { sha256: digest, size: bytes.length } };
+}
+
+export async function renderEpisode(episode, { dataDir, musicIntegrity, sceneIntegrity, onProgress = () => {} }) {
   if (!dimensions[episode.format] || !episode.scenes?.length || episode.scenes.length > 60) throw new Error('Invalid render timeline');
   const [w, h] = dimensions[episode.format];
   const root = path.resolve(dataDir), name = `${randomUUID()}.mp4`;
@@ -153,8 +274,29 @@ export async function renderEpisode(episode, { dataDir, onProgress = () => {} })
   await mkdir(path.join(root, 'exports'), { recursive: true });
   const ffmpeg = process.env.FFMPEG_PATH || 'ffmpeg';
   try {
+    const music = episodeMusic(episode.music);
+    const verifiedScenes = Boolean(music) || sceneIntegrity !== undefined;
+    let musicInput = null;
+    if (music) {
+      try { musicInput = await resolveVerifiedUpload(root, music.assetUrl); }
+      catch (error) { throw classifyMusicInputError(error, musicIntegrity); }
+    }
+    if (music) {
+      const duration = episode.scenes.reduce((total, scene) => total + Number(scene.duration), 0);
+      if (!Number.isFinite(duration) || duration <= 0 || duration > 1800 || music.start >= duration) throw new Error('Invalid music placement outside episode timeline');
+      try { musicInput = await snapshotMusic(root, music, musicIntegrity); }
+      catch (error) { throw classifyMusicInputError(error, musicIntegrity); }
+    }
+    const verifiedSceneAssets = [];
     for (let i = 0; i < episode.scenes.length; i++) {
       const scene = episode.scenes[i], duration = Number(scene.duration);
+      const streamInputs = [];
+      let probedAsset;
+      const streamFor = async (url, identity) => {
+        const entry = await sceneInput(root, url, identity, streamInputs.length + 3);
+        streamInputs.push(entry);
+        return entry;
+      };
       if (!(duration >= 0.25 && duration <= 120) || !/^#[\da-f]{6}$/i.test(scene.background)) throw new Error('Invalid scene duration/color');
       const plan = buildSceneCompositionPlan(scene, w, h);
       if (plan.credits) {
@@ -172,10 +314,18 @@ export async function renderEpisode(episode, { dataDir, onProgress = () => {} })
       if (!Number.isFinite(trimStart) || trimStart < 0 || trimStart > 36000 || !Number.isFinite(audioVolume) || audioVolume < 0 || audioVolume > 2) throw new Error('Invalid trim/audio volume');
       if (scene.trimEnd !== undefined && (!Number.isFinite(scene.trimEnd) || scene.trimEnd <= trimStart || scene.trimEnd > 36000)) throw new Error('Invalid media trim');
       if (scene.assetUrl) {
-        const { source, mediaOptions } = await resolveVerifiedUpload(root, scene.assetUrl);
+        const identity = { sceneId: scene.id, use: 'asset' };
+        const { source, mediaOptions } = verifiedScenes ? await streamFor(scene.assetUrl, identity) : await resolveVerifiedUpload(root, scene.assetUrl);
         input = visualInputOptions(source, mediaOptions, scene.kind === 'image', trimStart, scene.trimEnd);
         if (scene.kind === 'video') {
-          const probe = await execute(process.env.FFPROBE_PATH || 'ffprobe', ['-v', 'error', ...mediaOptions, '-select_streams', 'a:0', '-show_entries', 'stream=codec_type', '-of', 'csv=p=0', source], { timeout: 15000 });
+          let probe;
+          if (verifiedScenes) {
+            const verifiedProbe = await sceneInput(root, scene.assetUrl, identity, 3);
+            probe = await executeWithStreams(process.env.FFPROBE_PATH || 'ffprobe', ['-v', 'error', ...verifiedProbe.mediaOptions, '-select_streams', 'a:0', '-show_entries', 'stream=codec_type', '-of', 'csv=p=0', verifiedProbe.source], { timeout: 15000, streams: [verifiedProbe.feed] });
+            probedAsset = verifiedProbe.result();
+          } else {
+            probe = await execute(process.env.FFPROBE_PATH || 'ffprobe', ['-v', 'error', ...mediaOptions, '-select_streams', 'a:0', '-show_entries', 'stream=codec_type', '-of', 'csv=p=0', source], { timeout: 15000 });
+          }
           mediaAudio = probe.stdout.trim() === 'audio';
         }
       }
@@ -183,8 +333,8 @@ export async function renderEpisode(episode, { dataDir, onProgress = () => {} })
       const slotInputs = [];
       for (const box of plan.slotBoxes) {
         if (!box.hasAsset) continue;
-        const { source, mediaOptions } = await resolveVerifiedUpload(root, box.slot.assetUrl);
-        const isImage = box.slot.mediaKind === 'image' || /\.(?:png|jpe?g|webp|gif)$/i.test(source);
+        const { source, mediaOptions } = verifiedScenes ? await streamFor(box.slot.assetUrl, { sceneId: scene.id, slotId: box.slot.id, use: 'asset' }) : await resolveVerifiedUpload(root, box.slot.assetUrl);
+        const isImage = box.slot.mediaKind === 'image' || /\.(?:png|jpe?g|webp|gif)$/i.test(box.slot.assetUrl);
         slotInputs.push({
           ...box,
           isImage,
@@ -200,12 +350,17 @@ export async function renderEpisode(episode, { dataDir, onProgress = () => {} })
       const audioInputIndex = 1 + slotInputs.length;
       let audioMap = mediaAudio ? '0:a:0' : `${audioInputIndex}:a:0`;
       if (scene.audioUrl) {
-        const match = /^\/api\/uploads\/([a-zA-Z0-9_-]+\.(?:mp3|wav|ogg))$/.exec(scene.audioUrl);
-        if (!match) throw new Error('Invalid audio upload');
-        const uploadRoot = await realpath(path.join(root, 'uploads'));
-        const source = await realpath(path.join(uploadRoot, match[1]));
-        if (path.dirname(source) !== uploadRoot) throw new Error('Audio path escapes uploads');
-        audioInput = [...localMediaInputOptions(source), '-i', source];
+        if (verifiedScenes) {
+          const verified = await streamFor(scene.audioUrl, { sceneId: scene.id, use: 'audio' });
+          audioInput = [...verified.mediaOptions, '-i', verified.source];
+        } else {
+          const match = /^\/api\/uploads\/([a-zA-Z0-9_-]+\.(?:mp3|wav|ogg))$/.exec(scene.audioUrl);
+          if (!match) throw new Error('Invalid audio upload');
+          const uploadRoot = await realpath(path.join(root, 'uploads'));
+          const source = await realpath(path.join(uploadRoot, match[1]));
+          if (path.dirname(source) !== uploadRoot) throw new Error('Audio path escapes uploads');
+          audioInput = [...localMediaInputOptions(source), '-i', source];
+        }
         audioMap = `${audioInputIndex}:a:0`;
       }
 
@@ -257,16 +412,32 @@ export async function renderEpisode(episode, { dataDir, onProgress = () => {} })
 
       const allInputs = [...input, ...slotInputs.flatMap((item) => item.args), ...audioInput];
       const args = ['-hide_banner', '-loglevel', 'error', '-y', ...allInputs, '-map', videoMap, '-map', audioMap, ...filterArgs, '-af', `volume=${audioVolume},apad`, '-t', String(duration), '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '22', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-ar', '48000', '-ac', '2', '-threads', '2', `segment-${i}.mp4`];
-      await execute(ffmpeg, args, { cwd: temp, timeout: 300000 });
+      if (streamInputs.length) {
+        await executeWithStreams(ffmpeg, args, { cwd: temp, timeout: 300000, streams: streamInputs.map((entry) => entry.feed) });
+        const sceneReceipts = streamInputs.map((entry) => entry.result());
+        if (probedAsset && (sceneReceipts[0].sha256 !== probedAsset.sha256 || sceneReceipts[0].size !== probedAsset.size)) throw new Error('Scene media changed between probe and render');
+        verifiedSceneAssets.push(...sceneReceipts);
+      } else {
+        await execute(ffmpeg, args, { cwd: temp, timeout: 300000 });
+      }
       onProgress(Math.round((i + 1) / episode.scenes.length * 90));
     }
     await writeFile(path.join(temp, 'concat.txt'), episode.scenes.map((_, i) => `file 'segment-${i}.mp4'`).join('\n'));
-    await execute(ffmpeg, ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'concat', '-safe', '1', '-i', 'concat.txt', '-c', 'copy', '-movflags', '+faststart', 'final.mp4'], { cwd: temp });
+    await execute(ffmpeg, ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'concat', '-safe', '1', '-i', 'concat.txt', '-c', 'copy', '-movflags', '+faststart', music ? 'joined.mp4' : 'final.mp4'], { cwd: temp });
+    if (music) {
+      const delaySamples = Math.round(music.start * 48000);
+      const filters = `[1:a:0]atrim=start=${music.trimStart},asetpts=PTS-STARTPTS,aresample=48000,volume=${music.volume},adelay=${delaySamples}S:all=1[music];[0:a:0][music]amix=inputs=2:duration=first:dropout_transition=0:normalize=0,alimiter=limit=0.9:level=disabled:latency=1[aout]`;
+      await execute(ffmpeg, ['-hide_banner', '-loglevel', 'error', '-y', '-i', 'joined.mp4', ...musicInput.mediaOptions, '-i', musicInput.source, '-filter_complex', filters, '-map', '0:v:0', '-map', '[aout]', '-c:v', 'copy', '-c:a', 'aac', '-ar', '48000', '-ac', '2', '-movflags', '+faststart', 'final.mp4'], { cwd: temp, input: musicInput.input, timeout: 300000 });
+    }
+    if (sceneIntegrity !== undefined) {
+      const ordered = (values) => values.map((value) => canonicalJson(value)).sort();
+      if (!Array.isArray(sceneIntegrity) || canonicalJson(ordered(sceneIntegrity)) !== canonicalJson(ordered(verifiedSceneAssets))) throw new Error('Scene upload integrity check failed');
+    }
     await copyFile(path.join(temp, 'final.mp4'), path.join(root, 'exports', name));
     onProgress(100);
     const digest = createHash('sha256');
     for await (const chunk of createReadStream(path.join(root, 'exports', name))) digest.update(chunk);
-    return { filename: name, outputUrl: `/api/exports/${name}`, sha256: digest.digest('hex') };
+    return { filename: name, outputUrl: `/api/exports/${name}`, sha256: digest.digest('hex'), ...(musicInput ? { verifiedMusicIntegrity: musicInput.verifiedMusicIntegrity } : {}), ...(verifiedScenes ? { verifiedSceneAssets } : {}) };
   } finally {
     const actualParent = await realpath(path.join(root, 'render-work'));
     const actualTemp = await realpath(temp);

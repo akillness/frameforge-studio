@@ -25,7 +25,7 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&a
 const safeHttpUrl = value => {
   try { const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password ? esc(url.href) : ''; } catch { return ''; }
 };
-const mediaKind = item => item?.kind || ((item?.type || item?.mime)?.startsWith('image/') ? 'image' : (item?.type || item?.mime)?.startsWith('video/') ? 'video' : null);
+const mediaKind = item => item?.kind || ((item?.type || item?.mime)?.startsWith('image/') ? 'image' : (item?.type || item?.mime)?.startsWith('video/') ? 'video' : (item?.type || item?.mime)?.startsWith('audio/') ? 'audio' : null);
 const metadataHtml = metadata => `<details><summary>원본 라이선스 메타데이터 검토</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%">${esc(JSON.stringify(metadata || {}, null, 2))}</pre></details>`;
 const stamp = value => value && Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString('ko-KR') : '확인 불가';
 const bytes = value => Number.isFinite(value) ? (value < 1024 ? `${value} B` : value < 1048576 ? `${(value / 1024).toFixed(1)} KB` : `${(value / 1048576).toFixed(1)} MB`) : '확인 불가';
@@ -78,6 +78,7 @@ export function createProductionTools({
   let disconnecting = false;
   let approval = null;
   let approving = false;
+  let approvalError = '';
   let intent = null;
   let publishing = false;
   let polling = null;
@@ -126,7 +127,7 @@ export function createProductionTools({
       search.loading = false;
       for (const [id, value] of uploadRights) if (value.state === 'checking') uploadRights.delete(id);
       publications = []; publicationsLoaded = false; publicationsLoading = false; publicationsError = '';
-      intent = null; publishAttempted = false; intentError = ''; approvalDraft = {};
+      intent = null; publishAttempted = false; intentError = ''; approvalError = ''; approvalDraft = {};
       importTarget = null; rightsTarget = null; attachTarget = null; cardTarget = false; disconnectOpen = false;
       invalidatePreview();
     } else if (previewBinding && previewBinding.snapshot !== target.snapshot) {
@@ -136,7 +137,7 @@ export function createProductionTools({
 
   function guardMutate() {
     if (canMutate()) return true;
-    toast('모든 변경은 관리자 전용입니다.', true);
+    toast('현재 프로젝트 상태 또는 로그인 상태를 확인하세요.', true);
     return false;
   }
 
@@ -215,17 +216,17 @@ export function createProductionTools({
   function uploadsHtml() {
     if (uploadsError) return `<p class="hint danger">${esc(uploadsError)}</p><button class="small" type="button" data-pt-action="reload-uploads">다시 시도</button>`;
     if (!uploadsLoaded) return '<p class="hint">불러오는 중…</p>';
-    const relevant = uploads.filter(item => ['image', 'video'].includes(mediaKind(item))).sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')) || String(a.id).localeCompare(String(b.id)));
-    if (!relevant.length) return '<p class="hint">업로드된 이미지·영상이 없습니다.</p>';
+    const relevant = uploads.filter(item => ['image', 'video', 'audio'].includes(mediaKind(item))).sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')) || String(a.id).localeCompare(String(b.id)));
+    if (!relevant.length) return '<p class="hint">업로드된 이미지·영상·음악이 없습니다.</p>';
     return `<ul class="result-list">${relevant.map(item => {
       const state = uploadRights.get(item.id);
       const cleared = state?.state === 'cleared' && state.record?.sha256 === item.sha256;
       const record = state?.record;
       return `<li>
         <div class="row between"><strong>${esc(item.name)}</strong><span class="badge ${cleared ? 'lime' : ''}">${cleared ? '권리 정리됨' : state?.state === 'checking' ? '확인 중…' : '권리 미확인'}</span></div>
-        <p>${esc(item.kind === 'video' ? '영상' : '이미지')}${item.width && item.height ? ` · ${Number(item.width)}×${Number(item.height)}` : ''}${Number.isFinite(item.size) ? ` · ${bytes(item.size)}` : ''} · ${esc(stamp(item.createdAt))}</p>
+        <p>${esc(mediaKind(item) === 'video' ? '영상' : mediaKind(item) === 'audio' ? '음악' : '이미지')}${item.width && item.height ? ` · ${Number(item.width)}×${Number(item.height)}` : ''}${Number.isFinite(item.size) ? ` · ${bytes(item.size)}` : ''} · ${esc(stamp(item.createdAt))}</p>
         ${record ? `<p class="hint">${esc(ORIGIN_NAMES[record.origin] || record.origin)}${record.attribution ? ` · ${esc(record.attribution)}` : ''}</p>` : ''}
-        <div class="row"><button class="small" type="button" data-pt-action="open-rights" data-id="${esc(item.id)}">${cleared ? '권리 정보 보기' : '권리 정리'}</button><button class="small" type="button" data-pt-action="open-attach" data-id="${esc(item.id)}" ${cleared ? '' : 'disabled'} title="${cleared ? '' : '먼저 권리를 정리하세요'}">장면에 연결</button></div>
+        <div class="row"><button class="small" type="button" data-pt-action="open-rights" data-id="${esc(item.id)}">${cleared ? '권리 정보 보기' : '권리 정리'}</button>${mediaKind(item) === 'audio' ? '' : `<button class="small" type="button" data-pt-action="open-attach" data-id="${esc(item.id)}" ${cleared ? '' : 'disabled'} title="${cleared ? '' : '먼저 권리를 정리하세요'}">장면에 연결</button>`}</div>
       </li>`;
     }).join('')}</ul>`;
   }
@@ -317,7 +318,7 @@ export function createProductionTools({
       <section class="panel section-spacer" aria-label="소스 도구">
         <div class="panel-header"><h2>소스 · 이용 권리</h2></div>
         <div class="panel-body">
-          <div class="source-note">재사용 가능한 실제 영상·이미지를 Wikimedia Commons에서 찾아 가져오거나, 직접 업로드한 파일의 이용 권리를 정리한 뒤 장면에 연결하세요. 적절한 원본이 없다면 이야기를 유지한 텍스트 카드로 대체할 수 있습니다.</div>
+          <div class="source-note">재사용 가능한 실제 영상·이미지를 Wikimedia Commons에서 찾아 가져오거나, 직접 업로드한 파일의 이용 권리를 정리한 뒤 장면에 연결하세요. 업로드한 음악은 이용 권리를 정리한 뒤 음악 편집기에서 선택할 수 있습니다. 적절한 원본이 없다면 이야기를 유지한 텍스트 카드로 대체할 수 있습니다.</div>
           <form id="pt-search-form" class="two-cols" role="search">
             <label>Wikimedia Commons 검색<input type="search" name="query" maxlength="200" value="${esc(search.query)}" placeholder="예: 서울 야경"></label>
             <label>종류<select name="kind"><option value="image" ${search.kind === 'image' ? 'selected' : ''}>이미지</option><option value="video" ${search.kind === 'video' ? 'selected' : ''}>영상</option></select></label>
@@ -335,7 +336,7 @@ export function createProductionTools({
           </div>
         </div>
       </section>
-      <input hidden type="file" id="pt-upload-file" accept="image/png,image/jpeg,image/webp,video/mp4,video/webm">
+      <input hidden type="file" id="pt-upload-file" accept="image/png,image/jpeg,image/webp,video/mp4,video/webm,audio/wav,audio/mpeg,audio/ogg,.wav,.mp3,.ogg">
       <dialog data-pt-dialog="import" id="pt-import-dialog" aria-labelledby="pt-import-title">${importDialogHtml()}</dialog>
       <dialog data-pt-dialog="rights" id="pt-rights-dialog" aria-labelledby="pt-rights-title">${rightsDialogHtml()}</dialog>
       <dialog data-pt-dialog="attach" id="pt-attach-dialog" aria-labelledby="pt-attach-title">${attachDialogHtml()}</dialog>
@@ -410,11 +411,12 @@ export function createProductionTools({
   function approvalHtml(ctx, episode) {
     const ready = Boolean(ctx.workflowId && ctx.runId && ctx.reviewNodeId && episode);
     return `<p class="hint">게시 준비는 서버 승인과 미리보기만 만듭니다. 전체 manifest와 크레딧을 확인한 뒤 '최종 승인하고 공개'를 눌러야 전송을 시작합니다. 입력을 바꾸면 미리보기가 무효화됩니다.</p>
+      ${approvalError ? `<p class="hint danger" role="alert">${esc(approvalError)}</p>` : ''}
       ${!ready ? '<p class="hint">실행·검토가 선택되지 않아 승인할 수 없습니다.</p>' : ''}
       <form id="pt-approval-form">
         <fieldset ${publishAttempted ? 'disabled' : ''} style="border:0;padding:0;min-width:0">
         <label>제목<input type="text" name="title" maxlength="100" required value="${esc(episode?.title || '')}" ${ready ? '' : 'disabled'}></label>
-        <label>설명<textarea name="description" maxlength="5000" rows="4" ${ready ? '' : 'disabled'}></textarea></label>
+        <label>설명 (필수)<textarea name="description" maxlength="5000" rows="4" required ${ready ? '' : 'disabled'}></textarea></label>
         <div class="two-cols">
           <label>카테고리<select name="categoryId" required ${ready ? '' : 'disabled'}><option value="">선택하세요</option>${YOUTUBE_CATEGORIES.map(([id, name]) => `<option value="${id}">${esc(name)}</option>`).join('')}</select></label>
           <label>태그 (쉼표로 구분)<input type="text" name="tags" maxlength="500" ${ready ? '' : 'disabled'}></label>
@@ -427,7 +429,7 @@ export function createProductionTools({
           <label class="generation-checkbox"><input type="radio" name="containsSyntheticMedia" value="true" required ${ready ? '' : 'disabled'}> 예, AI로 생성되었거나 사실적으로 변형된 콘텐츠를 포함합니다</label>
           <label class="generation-checkbox"><input type="radio" name="containsSyntheticMedia" value="false" ${ready ? '' : 'disabled'}> 아니요, 해당 없음</label>
         </fieldset>
-        <label>공개 범위 결정 근거 (선택)<textarea name="disclosureRationale" maxlength="2000" rows="2" ${ready ? '' : 'disabled'}></textarea></label>
+        <label>공개 범위 결정 근거 (필수)<textarea name="disclosureRationale" maxlength="2000" rows="2" required ${ready ? '' : 'disabled'}></textarea></label>
         <label class="generation-checkbox"><input type="checkbox" name="rightsAcknowledged" value="true" required ${ready ? '' : 'disabled'}> 이 제작물의 모든 소스·이용 권리·출처 표기를 확인했으며, 공개 게시에 대한 책임을 인정합니다.</label>
         <div class="dialog-actions" style="border:0;padding:12px 0 0"><button class="primary" type="submit" ${ready && canMutate() && !busy ? '' : 'disabled'}>${approving ? '미리보기 준비 중…' : '게시 준비 · 미리보기'}</button></div>
         </fieldset>
@@ -812,6 +814,7 @@ export function createProductionTools({
     const synthetic = data.get('containsSyntheticMedia');
     const rightsAcknowledged = data.get('rightsAcknowledged') === 'true';
     if (!title || !categoryId) { toast('제목과 카테고리를 입력하세요.', true); return; }
+    if (!String(data.get('description') || '').trim() || !String(data.get('disclosureRationale') || '').trim()) { toast('설명과 공개 범위 결정 근거를 입력하세요.', true); return; }
     if (!['true', 'false'].includes(selfDeclared) || !['true', 'false'].includes(synthetic)) { toast('아동용 여부와 AI 콘텐츠 공개 여부를 모두 선택하세요.', true); return; }
     if (!rightsAcknowledged) { toast('이용 권리 확인에 동의해야 승인할 수 있습니다.', true); return; }
     const body = {
@@ -824,6 +827,7 @@ export function createProductionTools({
       disclosureRationale: String(data.get('disclosureRationale') || ''),
       rightsAcknowledged: true,
     };
+    approval = null; previewBinding = null; approvalError = '';
     busy = true; approving = true; repaint();
     try {
       await requireSavedEpisode(target);
@@ -836,7 +840,7 @@ export function createProductionTools({
       previewBinding = target;
       intent = null;
       toast('서버 미리보기를 준비했습니다. 전체 manifest와 크레딧을 확인하세요.');
-    } catch (error) { toast(error.message, true); }
+    } catch (error) { if (matches(target, false) && previewRevision === revision) approvalError = error.message; }
     finally { busy = false; approving = false; repaint(); }
   }
 

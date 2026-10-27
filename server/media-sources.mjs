@@ -298,12 +298,19 @@ export class SourceMediaService {
       const jobId = text(body.generationJobId, 'generationJobId', 80);
       if (!/^[a-zA-Z0-9_-]+$/.test(jobId)) throw new HttpError(400, 'Invalid generationJobId');
       if (upload.generationJobId !== jobId) throw new HttpError(409, 'Generated rights must match the verified generation output');
-      this.generatedProvenance({ ...upload, sha256 });
       fields.generationJobId = jobId;
     }
     this.store.db.exec('BEGIN IMMEDIATE');
     let rights;
     try {
+      if (origin === 'generated') {
+        const currentUpload = this.store.get('uploads', uploadId);
+        if (currentUpload.generationJobId !== upload.generationJobId || currentUpload.url !== upload.url || currentUpload.sha256 !== upload.sha256) throw new HttpError(409, 'Generated upload changed before rights registration');
+        this.generatedProvenance({ ...currentUpload, sha256 });
+        const job = this.store.get('generationJobs', fields.generationJobId);
+        const episode = this.store.assertEpisodeActive(job.episodeId);
+        if (job.target === 'music' && episode.version !== job.episodeVersion) throw new HttpError(409, 'Episode changed since music generation. Generate again for the current version.');
+      }
       // Legacy uploads acquire a byte identity only through an explicit decision.
       if (upload.sha256 === undefined) this.store.save('uploads', { ...upload, sha256 });
       rights = { id: randomUUID(), createdAt: now(), updatedAt: now(), ...fields };

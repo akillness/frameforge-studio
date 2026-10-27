@@ -6,7 +6,7 @@ import { join, resolve, relative, extname, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Store, entity, starterScene } from './store.mjs';
 import { TrendCollector } from './trend-collector.mjs';
-import { HttpError, object, text, optionalText, choice, url, scenes, formats, episodePatch } from './validation.mjs';
+import { HttpError, object, text, optionalText, choice, url, scenes, formats, episodePatch, episodeMusic } from './validation.mjs';
 import { WorkflowEngine, validateWorkflow } from './workflows.mjs';
 import { NarrationQueue, createSpeechProvider } from './narration.mjs';
 import { GenerationQueue } from './generations.mjs';
@@ -137,11 +137,11 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       saveProgress('running', 1);
       const render = renderer || (await import('./render.mjs')).renderEpisode;
       store.assertEpisodeActive(episode.id);
-      const result = await render(episode, { dataDir: store.dataDir, onProgress: (progress) => { if (!closing) saveProgress('running', Math.max(1, Math.min(99, Number(progress) || 1))); } });
+      const result = await render(episode, { dataDir: store.dataDir, sceneIntegrity: job.sceneIntegrity, ...(job.musicIntegrity ? { musicIntegrity: job.musicIntegrity } : {}), onProgress: (progress) => { if (!closing) saveProgress('running', Math.max(1, Math.min(99, Number(progress) || 1))); } });
       if (!/^\/api\/exports\/[a-zA-Z0-9_-]+\.mp4$/.test(result.outputUrl)) throw new Error('Renderer returned invalid output path');
-      if (!closing) { saveProgress('completed', 100, result); store.record('render.completed', { entityId: episode.id, jobId: job.id }); complete?.({ ...result, jobId: job.id, episodeVersion: episode.version }); }
+      if (!closing) { saveProgress('completed', 100, result); store.record('render.completed', { entityId: episode.id, jobId: job.id }); complete?.({ ...result, jobId: job.id, episodeVersion: episode.version, ...(episode.music ? { musicSnapshot: structuredClone(episode.music) } : {}) }); }
     } catch (error) {
-      if (!closing) { saveProgress('failed', 0, { error: 'Rendering failed. Verify FFmpeg, media files and available disk space.' }); store.record('render.failed', { entityId: episode.id, jobId: job.id }); }
+      if (!closing) { saveProgress('failed', 0, { error: error.code === 'MUSIC_INTEGRITY' ? 'Music upload integrity check failed.' : 'Rendering failed. Verify FFmpeg, media files and available disk space.' }); store.record('render.failed', { entityId: episode.id, jobId: job.id }); }
       console.error('Render failed:', error.message);
       fail?.(error);
     } finally { rendering = false; if (!closing) setImmediate(processQueue); }
@@ -153,7 +153,12 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     // Freeze the actual branch input before the queued renderer can yield or mutate it.
     episode = structuredClone(episode);
     validateAssets(scenes(episode.scenes));
-    const job = store.create('jobs', { episodeId: episode.id, episodeVersion: episode.version, sceneSnapshot: structuredClone(episode.scenes), status: 'queued', progress: 0 });
+    if (episode.music) for (const scene of episode.scenes) {
+      if (scene.audioUrl && !scene.audioSource) throw new HttpError(409, 'Scene audio requires explicit source rights for a music render');
+    }
+    const musicIntegrity = episode.music ? validateMusic(episodeMusic(episode.music)) : undefined;
+    const sceneIntegrity = snapshotSceneIntegrity(episode.scenes);
+    const job = store.create('jobs', { episodeId: episode.id, episodeVersion: episode.version, sceneSnapshot: structuredClone(episode.scenes), sceneIntegrity, ...(episode.music ? { musicSnapshot: structuredClone(episode.music), musicIntegrity } : {}), status: 'queued', progress: 0 });
     const completion = waitForCompletion ? new Promise((resolve, reject) => queue.push({ job, episode, resolve, reject })) : undefined;
     if (!waitForCompletion) queue.push({ job, episode });
     setImmediate(processQueue);
@@ -205,6 +210,32 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     return json(response, 200, { authenticated: true, role: 'admin', canMutate: true }, { 'Set-Cookie': `frameforge_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${SESSION_AGE / 1000}${secure ? '; Secure' : ''}` });
   }
 
+  function validateMusic(music) {
+    if (!music) return;
+    const matches = store.list('uploads').filter((item) => item.url === music.assetUrl);
+    if (matches.length !== 1 || !matches[0].type?.startsWith('audio/') || music.assetUrl !== `/api/uploads/${matches[0].filename}`) throw new HttpError(400, 'Music requires a registered local audio upload');
+    const upload = matches[0];
+    if (typeof upload.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(upload.sha256) || !Number.isSafeInteger(upload.size) || upload.size < 1 || upload.size > MAX_UPLOAD) throw new HttpError(409, 'Music upload requires a verified hash and size');
+    if (music.source.sha256 !== undefined && (typeof music.source.sha256 !== 'string' || music.source.sha256.toLowerCase() !== upload.sha256)) throw new HttpError(409, 'Music source hash does not match its upload');
+    return { sha256: upload.sha256, size: upload.size };
+  }
+
+  function snapshotSceneIntegrity(sceneList) {
+    const uploads = store.list('uploads'), result = [];
+    const add = (reference) => {
+      const matches = uploads.filter((upload) => upload.url === reference.assetUrl), upload = matches[0];
+      if (matches.length !== 1 || upload.url !== `/api/uploads/${upload.filename}` || !/^[a-f0-9]{64}$/.test(upload.sha256 || '')
+        || !Number.isSafeInteger(upload.size) || upload.size < 1 || upload.size > MAX_UPLOAD) throw new HttpError(409, 'Scene media requires a uniquely registered hash and size');
+      result.push({ ...reference, sha256: upload.sha256, size: upload.size });
+    };
+    for (const scene of sceneList) {
+      if (scene.assetUrl) add({ sceneId: scene.id, use: 'asset', assetUrl: scene.assetUrl });
+      if (scene.audioUrl) add({ sceneId: scene.id, use: 'audio', assetUrl: scene.audioUrl });
+      for (const slot of scene.slots || []) if (slot.assetUrl) add({ sceneId: scene.id, slotId: slot.id, use: 'asset', assetUrl: slot.assetUrl });
+    }
+    return result;
+  }
+
   function validateAssets(sceneList) {
     const uploads = new Map(store.list('uploads').map((item) => [item.url, item]));
     for (const scene of sceneList) {
@@ -227,6 +258,11 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
         const audio = uploads.get(scene.audioUrl);
         if (!audio) throw new HttpError(400, 'Scene refers to an unknown uploaded audio file');
         if (!audio.type.startsWith('audio/')) throw new HttpError(400, 'Scene audio requires an audio media upload');
+        if (scene.audioSource) {
+          const source = scene.audioSource, rights = media.rightsFor(audio);
+          if (source.sha256 !== audio.sha256 || source.origin !== rights.origin
+            || ['sourceUrl', 'licenseId', 'attribution', 'retrievedAt', 'generationJobId'].some((key) => source[key] !== undefined && source[key] !== rights[key])) throw new HttpError(409, 'Scene audio source does not match its clearance');
+        }
       }
     }
     media.validateAssets(sceneList);
@@ -444,8 +480,11 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     if (request.method === 'GET' && path === '/api/server-exports') return json(response, 200, await platformSessions.listServerExports());
     if (request.method === 'GET' && path === '/api/integrations') return json(response, 200, await integrationStatus());
     if (request.method === 'GET' && path === '/api/speech/voices') return json(response, 200, await speechProvider.listVoices());
-    if (request.method === 'GET' && path === '/api/generation/status') return json(response, 200, await generationProvider.capability());
-    if (request.method === 'GET' && path === '/api/generation/models') return json(response, 200, await generationCall(() => requestUrl.searchParams.has('model') ? generationProvider.modelSchema(requestUrl.searchParams.get('model')) : generationProvider.models()));
+    if (request.method === 'GET' && path === '/api/generation/status') return json(response, 200, await (requestUrl.searchParams.has('transport') ? generations.providerFor(requestUrl.searchParams.get('transport')) : generationProvider).capability());
+    if (request.method === 'GET' && path === '/api/generation/models') return json(response, 200, await generationCall(() => {
+      const provider = requestUrl.searchParams.has('transport') ? generations.providerFor(requestUrl.searchParams.get('transport')) : generationProvider;
+      return requestUrl.searchParams.has('model') ? provider.modelSchema(requestUrl.searchParams.get('model')) : provider.models();
+    }));
     const generationGet = /^\/api\/generations\/([^/]+)$/.exec(path);
     if (request.method === 'GET' && generationGet) return json(response, 200, generations.get(generationGet[1]));
     if (request.method === 'GET' && path === '/api/knowledge') return json(response, 200, store.knowledge());
@@ -513,10 +552,14 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       }
       const workflowCopy = /^\/api\/workflows\/([^/]+)\/copies$/.exec(path);
       if (request.method === 'POST' && workflowCopy) return json(response, 201, workflows.copy(decodeURIComponent(workflowCopy[1]), body));
+      const workflowRollup = /^\/api\/workflows\/([^/]+)\/rollup$/.exec(path);
+      if (request.method === 'POST' && workflowRollup) return json(response, 200, workflows.rollup(decodeURIComponent(workflowRollup[1]), body));
       const knowledgeNode = /^\/api\/knowledge\/nodes\/([a-zA-Z0-9_-]+)$/.exec(path);
       if (request.method === 'PUT' && knowledgeNode) return json(response, 200, { record: store.editKnowledgeNode(knowledgeNode[1], body), graph: store.knowledge() });
       if (request.method === 'PUT' && path === '/api/knowledge/edges') return json(response, 200, { record: store.editKnowledgeEdge(body), graph: store.knowledge() });
       if (request.method === 'POST' && path === '/api/generation/estimate') return json(response, 200, await generationCall(() => generationProvider.estimate(body)));
+      const musicQuote = /^\/api\/episodes\/([^/]+)\/generations\/quote$/.exec(path);
+      if (request.method === 'POST' && musicQuote) return json(response, 200, await generations.quoteMusic(musicQuote[1], body));
       const generationStart = /^\/api\/episodes\/([^/]+)\/generations$/.exec(path);
       if (request.method === 'POST' && generationStart) return json(response, 202, await generations.start(generationStart[1], body));
       const generationApply = /^\/api\/generations\/([^/]+)\/apply$/.exec(path);
@@ -562,6 +605,8 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
           const snapshot = { ...entry.snapshot, status: 'draft' };
           delete snapshot.archivedAt;
           const patch = episodePatch(snapshot);
+          if (!('music' in snapshot) && store.get('episodes', id).music) patch.music = null;
+          if (patch.music) validateMusic(patch.music);
           if (patch.scenes) validateAssets(patch.scenes);
           return json(response, 200, store.updateEpisode(id, patch, body.expectedVersion, reason));
         }
@@ -603,6 +648,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
         if (request.method === 'POST' && action === 'narration') return json(response, 202, await narration.start(id, body));
         if (request.method === 'PUT' && !action) {
           const patch = episodePatch(body);
+          if (patch.music) validateMusic(patch.music);
           if (patch.scenes) validateAssets(patch.scenes);
           return json(response, 200, store.updateEpisode(id, patch, body.expectedVersion));
         }
@@ -660,7 +706,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
   });
   server.requestTimeout = 120_000;
   server.headersTimeout = 15_000;
-  server.on('close', () => { closing = true; trendCollector.close(); narration.close(); generations.close(); workflows.close(); publication.close(); platformSessions.close(); blog.close(); store.close(); });
+  server.on('close', () => { closing = true; trendCollector.close(); narration.close(); const generationDrain = generations.close(); workflows.close(); publication.close(); platformSessions.close(); blog.close(); void generationDrain.finally(() => store.close()); });
   return server;
 }
 

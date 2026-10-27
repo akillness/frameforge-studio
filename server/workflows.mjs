@@ -177,6 +177,39 @@ export function validateWorkflow(raw) {
   return { name, nodes, edges };
 }
 
+function portableRollup(workflow, episode, channel) {
+  const graph = validateWorkflow(workflow);
+  for (const node of graph.nodes) {
+    if (node.type === 'generate') {
+      const config = node.config;
+      if (config.sceneId || config.slotId || config.sceneIndex !== 0 || config.targetMode === 'slot') throw new HttpError(400, `Generation node ${node.id} has a project-specific scene or slot target`);
+      const safeParams = {
+        duration: (value) => Number.isInteger(value) && value >= 4 && value <= 30,
+        resolution: (value) => ['480p', '720p', '1080p'].includes(value),
+        aspect_ratio: (value) => ['16:9', '4:3', '1:1', '3:4', '9:16', '21:9'].includes(value),
+        output_format: (value) => ['mp4', 'mov'].includes(value),
+        generate_audio: (value) => typeof value === 'boolean',
+      };
+      for (const [key, value] of Object.entries(config.params)) {
+        if (!Object.hasOwn(safeParams, key) || !safeParams[key](value)) throw new HttpError(400, `Generation node ${node.id} has a non-portable parameter: ${key}`);
+      }
+    }
+    if (node.type === 'publish' && node.config.channelId) {
+      if (node.config.channelId !== channel.id) throw new HttpError(400, `Publish node ${node.id} belongs to a different channel`);
+      delete node.config.channelId;
+    }
+  }
+  const media = [episode.music, ...(episode.scenes || []).flatMap((scene) => [scene, ...(scene.slots || [])])].filter(Boolean);
+  const projectIds = [workflow.id, episode.id, channel.id, channel.externalId, channel.accountEmail, ...(episode.scenes || []).flatMap((scene) => [scene.id, ...(scene.slots || []).map((slot) => slot.id)]), ...media.flatMap((item) => [item.assetUrl, item.audioUrl, item.source?.sourceUrl, item.source?.generationJobId, ...[item.assetUrl, item.audioUrl].map((url) => typeof url === 'string' ? /^\/api\/uploads\/([^/.]+)\./.exec(url)?.[1] : undefined)])].filter((value) => typeof value === 'string' && value.length > 0);
+  const containsIdentity = (value) => {
+    if (typeof value === 'string') return value.includes('/api/uploads/') || projectIds.some((id) => value === id || (id.length >= 4 && value.includes(id)));
+    if (Array.isArray(value)) return value.some(containsIdentity);
+    return value && typeof value === 'object' && Object.values(value).some(containsIdentity);
+  };
+  if (containsIdentity(graph)) throw new HttpError(400, 'Workflow contains project-specific identity; remove it before rollup');
+  return validateWorkflow(graph);
+}
+
 export function defaultWorkflow() {
   const classicTypes = ['trend', 'research', 'script', 'storyboard', 'render', 'review'];
   const nodes = classicTypes.map((type, index) => ({ id: type, type, x: 80 + index * 260, y: 180, config: type === 'script' ? { agent: 'studio', prompt: '출처가 확인된 내용으로 한국어 영상 스토리보드를 구성하세요.' } : {} }));
@@ -230,10 +263,25 @@ function stageSelection(workflow, options, episode, store) {
     if (source.workflowVersion !== workflow.version) throw new HttpError(409, 'Resume evidence is stale after a workflow edit');
     if (source.episodeVersion !== episode.version) throw new HttpError(409, 'Resume evidence is stale for this episode version');
   }
+  else if (options.selectedStages?.length === 1 && start.id === options.selectedStages[0]) {
+    source = store.list('workflowRuns').find((run) => run.workflowId === workflow.id && run.episodeId === episode.id
+      && run.workflowVersion === workflow.version && run.episodeVersion === episode.version && TERMINAL.includes(run.status));
+  }
+  if (source && (!source.workflowSnapshot || source.workflowSnapshot.id !== workflow.id
+    || source.workflowSnapshot.version !== workflow.version || source.workflowSnapshot.episodeId !== episode.id
+    || source.workflowSnapshot.channelId !== episode.channelId || source.episodeSnapshot?.id !== episode.id
+    || source.episodeSnapshot?.channelId !== episode.channelId || !Array.isArray(source.nodeRuns)
+    || canonicalJson(source.workflowSnapshot.nodes) !== canonicalJson(workflow.nodes)
+    || canonicalJson(source.workflowSnapshot.edges) !== canonicalJson(workflow.edges)
+    || new Set(source.nodeRuns.map((item) => item.nodeId)).size !== source.nodeRuns.length
+    || source.nodeRuns.some((item) => !workflow.nodes.some((node) => node.id === item.nodeId && node.type === item.type)))) throw new HttpError(409, 'Resume evidence lacks project workflow provenance');
+  const invalidated = new Set();
+  for (const node of orderedSelected) for (const id of descendants(workflow.edges, node.id)) invalidated.add(id);
   const sourceById = new Map((source?.nodeRuns || []).map((nodeRun) => [nodeRun.nodeId, nodeRun]));
   const requiredReuse = new Set();
   const reuse = (dependency) => {
     if (!dependency || selected.has(dependency.id) || requiredReuse.has(dependency.id)) return;
+    if (invalidated.has(dependency.id)) throw new HttpError(409, `${dependency.id} requires fresh evidence after an upstream stage is rerun`);
     requiredReuse.add(dependency.id);
     inspect(dependency);
   };
@@ -244,17 +292,40 @@ function stageSelection(workflow, options, episode, store) {
   };
   for (const node of orderedSelected) {
     inspect(node);
-    // Resolve optional context with the same nearest-per-path rule as execution.
-    if (['news', 'script', 'layout'].includes(node.type)) optional(workflow, node, node.type === 'news' ? 'trend' : 'news');
+    // Optional context is reused only when an exact connected producer has completed.
+    if (['news', 'script', 'layout'].includes(node.type)) {
+      const context = optional(workflow, node, node.type === 'news' ? 'trend' : 'news');
+      if (context && reusableNodeRun(sourceById.get(context.id))) reuse(context);
+    }
+    for (const edge of workflow.edges) if (edge.target === node.id) {
+      const parent = workflow.nodes.find((item) => item.id === edge.source);
+      if (reusableNodeRun(sourceById.get(parent.id))) reuse(parent);
+    }
+    if (node.type === 'generate') {
+      const layout = optional(workflow, node, 'layout');
+      if (layout && reusableNodeRun(sourceById.get(layout.id))) reuse(layout);
+      const storyboard = prerequisite(workflow, node, 'storyboard');
+      const sceneProducer = layout && (selected.has(layout.id) || reusableNodeRun(sourceById.get(layout.id))) && !ancestors(workflow.edges, storyboard.id).has(layout.id) ? layout : storyboard;
+      const superseded = ancestors(workflow.edges, sceneProducer.id);
+      for (const id of ancestors(workflow.edges, node.id)) {
+        const producer = workflow.nodes.find((item) => item.id === id);
+        const prior = sourceById.get(id);
+        if (producer.type === 'generate' && !superseded.has(id) && (reusableNodeRun(prior) || prior?.generationIntent)) reuse(producer);
+      }
+    }
     if (node.type === 'render') {
-      reuse(optional(workflow, node, 'storyboard'));
-      reuse(optional(workflow, node, 'layout'));
-      // Every selected or reusable generated input reaching this render participates.
+      const storyboard = optional(workflow, node, 'storyboard');
+      const layout = optional(workflow, node, 'layout');
+      reuse(storyboard);
+      reuse(layout);
+      const sceneProducer = storyboard && layout && ancestors(workflow.edges, storyboard.id).has(layout.id) ? storyboard : (layout || storyboard);
+      const superseded = sceneProducer ? ancestors(workflow.edges, sceneProducer.id) : new Set();
+      // Only generated inputs after the scene producer participate in this render.
       for (const id of ancestors(workflow.edges, node.id)) {
         const producer = workflow.nodes.find((item) => item.id === id);
         // A resumed render must retain its connected paid outputs, including failures
         // that need explicit recovery, rather than render the mutable saved episode.
-        if (producer.type === 'generate' && (source || reusableNodeRun(sourceById.get(id)))) reuse(producer);
+        if (producer.type === 'generate' && !superseded.has(id) && (source || reusableNodeRun(sourceById.get(id)))) reuse(producer);
       }
     }
     if (node.type === 'publish') {
@@ -272,7 +343,7 @@ function stageSelection(workflow, options, episode, store) {
   const outputs = new Map(), reusedOutputs = [];
   const nodeRuns = ordered.map((node) => {
     const prior = sourceById.get(node.id);
-    const reusable = reusableNodeRun(prior);
+    const reusable = !invalidated.has(node.id) && reusableNodeRun(prior);
     const intent = prior?.generationIntent;
     const jobId = nodeOutput(prior)?.generationJobId || intent?.generationJobId;
     const inheritedJob = source && node.type === 'generate' ? store.list('generationJobs').find((job) => jobId ? job.id === jobId : job.requestId === (intent?.requestId || `${source.resumedFrom || source.id}:${node.id}`)) : null;
@@ -287,7 +358,7 @@ function stageSelection(workflow, options, episode, store) {
     }
     if (requiredReuse.has(node.id) && !selected.has(node.id)) throw new HttpError(409, `${node.id} requires completed prerequisite evidence from its own branch`);
     const lineage = {
-      ...(!selected.has(node.id) && nodeOutput(prior) ? { retainedOutput: nodeOutput(prior), retainedStatus: nodeStatus(prior), retainedFrom: source.id } : {}),
+      ...(!selected.has(node.id) && !invalidated.has(node.id) && nodeOutput(prior) ? { retainedOutput: nodeOutput(prior), retainedStatus: nodeStatus(prior), retainedFrom: source.id } : {}),
       ...(intent ? { generationIntent: intent } : {}),
       ...(inheritedJob ? { output: { ...nodeOutput(prior), generationJobId: inheritedJob.id } } : {}),
     };
@@ -443,6 +514,12 @@ export class WorkflowEngine {
 
   copy(templateId, body) { return this.store.createWorkflowCopy({ ...object(body), templateId }); }
 
+  rollup(id, body) {
+    const options = object(body);
+    if (Object.keys(options).some((key) => !['expectedWorkflowVersion', 'expectedTemplateVersion'].includes(key))) throw new HttpError(400, 'Rollup accepts only the expected workflow and template versions');
+    return this.store.rollupWorkflow(id, options, portableRollup);
+  }
+
   async quote(id, episodeId, options = {}) {
     const targetId = text(episodeId, 'episodeId', 80);
     this.activeQuoteEpisodes.set(targetId, (this.activeQuoteEpisodes.get(targetId) || 0) + 1);
@@ -531,7 +608,7 @@ export class WorkflowEngine {
       generationPlan = this.store.get('generationPlans', identifier(options.generationPlanId, 'generationPlanId'));
       const { candidate: currentCandidate } = this.prepareCandidate(workflow, episode, { ...options, selectedStages: plan.selectedStages }, plan);
       const candidate = normalizeCandidate(currentCandidate, generationPlan.nodes);
-      if (generationPlan.workflowId !== id || generationPlan.episodeId !== episode.id || generationPlan.channelId !== episode.channelId || generationPlan.workflowVersion !== workflow.version || generationPlan.episodeVersion !== episode.version || generationPlan.resumeRunId !== resumeRunId || canonicalJson(generationPlan.selectedStages) !== canonicalJson(plan.selectedStages) || generationPlan.startStage !== plan.startStage || !Number.isFinite(Date.parse(generationPlan.expiresAt)) || Date.parse(generationPlan.expiresAt) <= Date.now() || generationPlan.fingerprint !== options.generationFingerprint || generationPlan.fingerprint !== candidateFingerprint(generationPlan.candidate) || generationPlan.fingerprint !== candidateFingerprint(candidate) || canonicalJson(generationPlan.disclosure) !== canonicalJson(options.disclosure)) throw new HttpError(409, 'Generation approval is stale or differs from the selected candidate. Obtain a fresh quote.');
+      if (generationPlan.workflowId !== id || generationPlan.episodeId !== episode.id || generationPlan.channelId !== episode.channelId || generationPlan.workflowVersion !== workflow.version || generationPlan.episodeVersion !== episode.version || generationPlan.resumeRunId !== plan.source?.id || canonicalJson(generationPlan.selectedStages) !== canonicalJson(plan.selectedStages) || generationPlan.startStage !== plan.startStage || !Number.isFinite(Date.parse(generationPlan.expiresAt)) || Date.parse(generationPlan.expiresAt) <= Date.now() || generationPlan.fingerprint !== options.generationFingerprint || generationPlan.fingerprint !== candidateFingerprint(generationPlan.candidate) || generationPlan.fingerprint !== candidateFingerprint(candidate) || canonicalJson(generationPlan.disclosure) !== canonicalJson(options.disclosure)) throw new HttpError(409, 'Generation approval is stale or differs from the selected candidate. Obtain a fresh quote.');
       if (!generationPlan.aggregate?.quoted && options.acceptUnquotedEstimate !== true) throw new HttpError(400, 'Unknown generation cost requires explicit acceptUnquotedEstimate');
       for (const nodeRun of plan.nodeRuns) if (nodeRun.generationIntent && plan.selectedStages.includes(nodeRun.nodeId)) {
         const accepted = nodeRun.reused ? nodeRun.generationIntent.resultFingerprint : nodeRun.generationIntent.inputFingerprint;
@@ -600,6 +677,43 @@ export class WorkflowEngine {
       throw new HttpError(409, 'Rendered artifact is unavailable for review');
     } finally { await file?.close(); }
     if ((job.sha256 && job.sha256 !== sha256) || (render.output.sha256 && render.output.sha256 !== sha256)) throw new HttpError(409, 'Rendered artifact hash does not match the completed candidate');
+    const episode = this.store.assertEpisodeActive(run.episodeId);
+    if (episode.music || job.musicSnapshot || render.output.musicSnapshot || job.musicIntegrity || job.verifiedMusicIntegrity || render.output.verifiedMusicIntegrity) {
+      if (!episode.music || !job.musicSnapshot || !render.output.musicSnapshot
+        || canonicalJson(episode.music) !== canonicalJson(job.musicSnapshot) || canonicalJson(episode.music) !== canonicalJson(render.output.musicSnapshot)
+        || !job.musicIntegrity || !job.verifiedMusicIntegrity || !render.output.verifiedMusicIntegrity
+        || canonicalJson(job.musicIntegrity) !== canonicalJson(job.verifiedMusicIntegrity) || canonicalJson(job.musicIntegrity) !== canonicalJson(render.output.verifiedMusicIntegrity)
+        || !/^[a-f0-9]{64}$/.test(job.musicIntegrity.sha256 || '') || !Number.isSafeInteger(job.musicIntegrity.size) || job.musicIntegrity.size < 1 || job.musicIntegrity.size > 100 * 1024 * 1024
+        || render.output.renderNodeId !== render.nodeId || render.output.episodeVersion !== episode.version
+        || !Array.isArray(job.sceneSnapshot) || canonicalJson(job.sceneSnapshot) !== canonicalJson(render.output.sceneSnapshot ?? null)) throw new HttpError(409, 'Music render lineage is incomplete; a fresh render is required');
+      const makeCandidate = () => candidates.candidateManifest(this.store, { ...this.store.assertEpisodeActive(run.episodeId), scenes: job.sceneSnapshot }, run.workflowSnapshot, { selectedStages: [render.nodeId] });
+      const candidate = makeCandidate();
+      candidates.verifySceneReceipts(job, render.output, candidate);
+      const music = candidate.assets.filter((asset) => asset.use === 'music');
+      const asset = music[0], source = episode.music.source;
+      if (music.length !== 1 || asset.sha256 !== job.musicIntegrity.sha256 || asset.upload?.sha256 !== job.musicIntegrity.sha256
+        || asset.upload?.size !== job.musicIntegrity.size || !asset.rights.some((right) => right.uploadId === asset.uploadId
+          && right.sha256 === asset.sha256 && right.origin === source.origin && Number.isFinite(Date.parse(right.acknowledgedAt || ''))
+          && Date.parse(right.acknowledgedAt) <= Date.now()
+          && ['sourceUrl', 'licenseId', 'attribution'].every((key) => source[key] === undefined || source[key] === right[key])
+          && (source.origin !== 'generated' || right.generationJobId === asset.upload.generationJobId))) throw new HttpError(409, 'Music requires matching registered bytes and explicit rights before review');
+      await candidates.verifyCandidateAssets(this.store, candidate);
+      const current = this.store.reviewCandidate(workflowId, runId, reviewNodeId, expectedEpisodeVersion);
+      if (canonicalJson(current.job) !== canonicalJson(job) || canonicalJson(current.render) !== canonicalJson(render)
+        || canonicalJson(makeCandidate()) !== canonicalJson(candidate)) throw new HttpError(409, 'Render evidence changed while preparing review');
+    }
+    const hasMedia = (scenes) => Array.isArray(scenes) && scenes.some((scene) => scene.assetUrl || scene.audioUrl || (scene.slots || []).some((slot) => slot.assetUrl));
+    if (!episode.music && (hasMedia(episode.scenes) || hasMedia(job.sceneSnapshot) || hasMedia(render.output.sceneSnapshot)
+      || job.sceneIntegrity !== undefined || job.verifiedSceneAssets !== undefined || render.output.verifiedSceneAssets !== undefined)) {
+      if (!run.workflowSnapshot || !Array.isArray(job.sceneSnapshot) || canonicalJson(job.sceneSnapshot) !== canonicalJson(render.output.sceneSnapshot ?? null)) throw new HttpError(409, 'Scene render lineage is incomplete; a fresh render is required');
+      const makeCandidate = () => candidates.candidateManifest(this.store, { ...this.store.assertEpisodeActive(run.episodeId), scenes: job.sceneSnapshot }, run.workflowSnapshot, { selectedStages: [render.nodeId] });
+      const candidate = makeCandidate();
+      candidates.verifySceneReceipts(job, render.output, candidate);
+      await candidates.verifyCandidateAssets(this.store, candidate);
+      const current = this.store.reviewCandidate(workflowId, runId, reviewNodeId, expectedEpisodeVersion);
+      if (canonicalJson(current.job) !== canonicalJson(job) || canonicalJson(current.render) !== canonicalJson(render)
+        || canonicalJson(makeCandidate()) !== canonicalJson(candidate)) throw new HttpError(409, 'Render evidence changed while preparing review');
+    }
     return this.store.commitWorkflowReview(workflowId, runId, reviewNodeId, { decision, notes, expectedEpisodeVersion, jobId: job.id, outputUrl: job.outputUrl, sha256 });
   }
 
@@ -660,8 +774,7 @@ export class WorkflowEngine {
           const storyboard = outputs.get(prerequisite(workflow, node, 'storyboard').id);
           if (!storyboard?.scenes) throw new HttpError(409, 'Prepare the connected storyboard before quoting its layout');
           const news = optional(workflow, node, 'news');
-          let newsOutput = news ? outputs.get(news.id) : null;
-          if (news && !newsOutput && selection.source) newsOutput = nodeOutput(selection.source.nodeRuns.find((item) => item.nodeId === news.id && reusableNodeRun(item)));
+          const newsOutput = news ? outputs.get(news.id) : null;
           if (news && selected.has(news.id) && !newsOutput) throw new HttpError(409, 'Collect and save source news before quoting its derived layout');
           staged = layoutScenes({ ...episode, scenes: storyboard.scenes }, node.config, newsOutput);
         }
@@ -669,6 +782,42 @@ export class WorkflowEngine {
         episode = { ...episode, scenes: normalized };
         preparedStages[node.id] = normalized;
         outputs.set(node.id, { scenes: normalized });
+      } else if (node.type === 'generate') {
+        const storyboard = prerequisite(workflow, node, 'storyboard');
+        const layout = optional(workflow, node, 'layout');
+        const producer = layout && outputs.has(layout.id) && !ancestors(workflow.edges, storyboard.id).has(layout.id) ? layout : storyboard;
+        let connectedScenes = outputs.get(producer.id)?.scenes;
+        const upstream = ancestors(workflow.edges, node.id);
+        const superseded = ancestors(workflow.edges, producer.id);
+        const priorGenerations = selection.nodeRuns.filter((item) => item.type === 'generate' && item.reused && !superseded.has(item.nodeId) && (item.nodeId === node.id || upstream.has(item.nodeId)));
+        for (const prior of priorGenerations) {
+          if (!Array.isArray(connectedScenes)) throw new HttpError(409, 'Applied generation requires connected scene evidence');
+          const output = prior.output;
+          const job = this.generations.get(output?.generationJobId);
+          const applied = output?.scene;
+          const target = job.slotId ? applied?.slots?.find((slot) => slot.id === job.slotId) : applied;
+          const receipt = job.outputs?.[0];
+          if (!job.applied || job.status !== 'completed' || job.episodeId !== episode.id
+            || job.sceneId !== output?.sceneId || job.appliedSceneId !== job.sceneId
+            || (job.slotId || null) !== (output.slotId || null) || (job.appliedSlotId || null) !== (job.slotId || null)
+            || !prior.generationIntent?.requestId || job.requestId !== prior.generationIntent.requestId
+            || canonicalJson(output.outputs) !== canonicalJson(job.outputs) || applied?.id !== job.sceneId
+            || !receipt || target?.assetUrl !== receipt.url || target?.source?.generationJobId !== job.id
+            || target?.source?.sha256 !== receipt.sha256 || !connectedScenes.some((scene) => scene.id === job.sceneId)) {
+            throw new HttpError(409, 'Applied generation has no matching node receipt');
+          }
+          connectedScenes = connectedScenes.map((scene) => {
+            if (scene.id !== job.sceneId) return scene;
+            if (job.slotId) {
+              if (!scene.slots?.some((slot) => slot.id === job.slotId)) throw new HttpError(409, 'Applied generation slot no longer exists');
+              return { ...scene, slots: scene.slots.map((slot) => slot.id === job.slotId ? { ...slot, assetUrl: target.assetUrl, mediaKind: target.mediaKind, source: target.source, trimStart: target.trimStart, trimEnd: target.trimEnd } : slot) };
+            }
+            return { ...scene, kind: applied.kind, assetUrl: applied.assetUrl, source: applied.source, trimStart: applied.trimStart, trimEnd: applied.trimEnd, ...(applied.kind === 'video' ? { duration: applied.duration } : {}) };
+          });
+        }
+        if (!Array.isArray(connectedScenes) || canonicalJson(this.validateAssets(scenes(connectedScenes))) !== canonicalJson(this.validateAssets(scenes(episode.scenes)))) {
+          throw new HttpError(409, 'Save the connected scene branch before quoting generation');
+        }
       }
     }
     const candidate = this.candidate(workflow, episode, options);
@@ -690,9 +839,10 @@ export class WorkflowEngine {
     if (!Array.isArray(connectedScenes) || !connectedScenes.length) throw new HttpError(409, 'Render requires completed scene evidence from its connected producer');
     let sceneList = structuredClone(connectedScenes);
     const upstream = ancestors(workflow.edges, node.id);
+    const superseded = latestInput ? ancestors(workflow.edges, latestInput.id) : new Set();
     const generationNodeIds = [];
     for (const producer of orderedNodes(workflow)) {
-      if (producer.type !== 'generate' || !upstream.has(producer.id)) continue;
+      if (producer.type !== 'generate' || !upstream.has(producer.id) || superseded.has(producer.id)) continue;
       const output = outputs.get(producer.id);
       if (!output?.generationJobId) continue;
       const job = this.generations.get(output.generationJobId);

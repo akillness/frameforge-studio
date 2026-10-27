@@ -11,7 +11,7 @@ const modulePath = process.env.PLATFORM_PLAYWRIGHT_MODULE || process.env.OPS_PLA
 const { chromium } = modulePath ? await import(pathToFileURL(modulePath)) : await import('playwright');
 const executablePath = process.env.PLATFORM_CHROMIUM_PATH || process.env.CHROMIUM_PATH || process.env.PLAYWRIGHT_EXECUTABLE_PATH || chromium.executablePath();
 
-async function fixture(t, { touch = false, sceneTarget = false, nativeLogin = false, persistedHistory = false, maximumConnections = false } = {}) {
+async function fixture(t, { touch = false, sceneTarget = false, nativeLogin = false, persistedHistory = false, maximumConnections = false, generationSwitch = false } = {}) {
   const dataDir = await mkdtemp(join(tmpdir(), 'frameforge-node-workbench-'));
   const forbidden = async () => { assert.fail('Opening or editing the workbench cannot invoke external production'); };
   const loginToken = nativeLogin ? 'fixture-native-login-token' : '';
@@ -22,10 +22,15 @@ async function fixture(t, { touch = false, sceneTarget = false, nativeLogin = fa
     trendQueries.push(query);
     return { trends: [{ keyword: query, source: 'Fixture RSS', url: 'https://example.com/persisted-workbench-evidence' }], sources: [{ name: 'Fixture RSS', status: 'ok' }] };
   } : forbidden;
+  const modelA = 'fixture-image-a', modelB = 'fixture-video-b';
+  const schemas = {
+    [modelA]: { id: modelA, type: 'image', parameters: [{ name: 'image_strength', type: 'integer', required: true }] },
+    [modelB]: { id: modelB, type: 'video', parameters: [{ name: 'video_motion', type: 'string', required: true }] },
+  };
   const app = createApp({
     dataDir, loginToken, publicOrigin: '',
     integrations: { integrationStatus: async () => ({ studio: { available: false } }), runAgent: forbidden, fetchTrends },
-    generation: { capability: async () => ({ available: false }), models: forbidden, modelSchema: forbidden, submit: forbidden, status: forbidden },
+    generation: { capability: async () => ({ available: false }), models: generationSwitch ? async () => [{ id: modelA, name: 'Image A', type: 'image' }, { id: modelB, name: 'Video B', type: 'video' }] : forbidden, modelSchema: generationSwitch ? async id => { assert.ok(schemas[id], `unexpected model ${id}`); return schemas[id]; } : forbidden, estimate: forbidden, create: forbidden, submit: forbidden, status: forbidden },
     speech: { listVoices: async () => ({ available: false, voices: [] }), synthesize: forbidden },
     mediaOptions: { fetchImpl: forbidden }, youtubeOptions: { clientId: '', clientSecret: '', redirectUri: '', fetchImpl: forbidden },
     publicationOptions: { fetchImpl: forbidden }, renderer: forbidden,
@@ -64,11 +69,13 @@ async function fixture(t, { touch = false, sceneTarget = false, nativeLogin = fa
   };
   const channel = await api('/api/channels', 'POST', { name: 'Native workbench channel', platform: 'youtube', category: 'information' });
   let episode = await api('/api/episodes', 'POST', { channelId: channel.id, title: 'Exact target project', topic: 'Local factual cards' });
-  episode = await api(`/api/episodes/${episode.id}`, 'PUT', { ...episode, scenes: [episode.scenes[0], { ...episode.scenes[0], id: 'second-target-scene', title: 'Second explicit scene' }], expectedVersion: episode.version });
+  const slot = (id, role) => ({ id, name: id, role, x: 0, y: 0, w: 100, h: 100, zIndex: 1 });
+  episode = await api(`/api/episodes/${episode.id}`, 'PUT', { ...episode, scenes: [generationSwitch ? { ...episode.scenes[0], slots: [slot('first-image-slot', 'image-gen')] } : episode.scenes[0], { ...episode.scenes[0], id: 'second-target-scene', title: 'Second explicit scene', ...(generationSwitch ? { slots: [slot('second-video-slot', 'video-bg')] } : {}) }], expectedVersion: episode.version });
   const types = sceneTarget ? ['script', 'storyboard', 'generate', 'render'] : ['trend', 'trend', 'trend', 'trend'];
   const nodes = maximumConnections
     ? Array.from({ length: 128 }, (_, index) => ({ id: `limit-node-${String(index).padStart(3, '0')}`, type: 'trend', label: `Limit node ${index}`, x: 40 + index % 16 * 260, y: 50 + Math.floor(index / 16) * 190, config: {} }))
     : ['a', 'b', 'c', 'd'].map((id, i) => ({ id, type: types[i], label: `Node ${id.toUpperCase()}`, x: 40 + i % 2 * 300, y: 50 + Math.floor(i / 2) * 240, config: types[i] === 'script' ? { agent: 'existing' } : types[i] === 'generate' ? { model: 'bytedance/seedance-2.5/text-to-video', sceneId: episode.scenes.at(-1).id, sceneIndex: 1, prompt: 'Explicit fixture illustration', params: {} } : {} }));
+  if (generationSwitch) nodes.find(node => node.id === 'c').config = { model: modelA, sceneId: episode.scenes[0].id, sceneIndex: 0, slotId: 'first-image-slot', prompt: 'Explicit fixture illustration', params: { image_strength: 4 } };
   const edges = maximumConnections
     ? nodes.slice(1).map((node, index) => ({ id: `hub-${index + 1}`, source: nodes[0].id, target: node.id }))
     : [{ id: 'ab', source: 'a', target: 'b' }, { id: 'bc', source: 'b', target: 'c' }, ...(sceneTarget ? [] : [{ id: 'ac', source: 'a', target: 'c' }]), { id: 'cd', source: 'c', target: 'd' }];
@@ -150,6 +157,70 @@ async function saveGraph(f, status = 200) {
   assert.equal(actual.request().postDataJSON().expectedVersion, f.workflow.version, 'Save uses the draft original base');
   return actual;
 }
+
+test('generation model switch renders only the selected schema and saves only its edited parameters', async t => {
+  const f = await fixture(t, { sceneTarget: true, generationSwitch: true }), { page } = f;
+  const history = await f.api(`/api/workflows/${f.workflow.id}/history`);
+  await openNodeMenu(page, 'c', 'more'); await item(page, '노드 설정 편집').click();
+  const dialog = page.locator('#wf-tools-dialog[open]');
+  await dialog.locator('[data-wf-action=refresh-generation]').click();
+  const image = dialog.locator('[data-wf-param=image_strength]');
+  await image.waitFor();
+  assert.equal(await image.inputValue(), '4');
+  await image.fill('7');
+  await dialog.locator('[data-wf-config=model]').selectOption('fixture-video-b');
+  const video = dialog.locator('[data-wf-param=video_motion]');
+  await video.waitFor();
+  assert.equal(await image.count(), 0, 'the previous model control is removed, not left editable');
+  await video.fill('slow pan');
+  assert.deepEqual(f.writes, [], 'opening and switching a model only changes the local draft');
+  assert.deepEqual((await f.api('/api/workflows')).find(w => w.id === f.workflow.id), f.workflow);
+  assert.deepEqual(await f.api(`/api/workflows/${f.workflow.id}/history`), history);
+  await page.keyboard.press('Escape');
+  await saveGraph(f);
+  const saved = (await f.api('/api/workflows')).find(w => w.id === f.workflow.id);
+  const config = saved.nodes.find(n => n.id === 'c').config;
+  assert.equal(config.model, 'fixture-video-b');
+  assert.deepEqual(config.params, { video_motion: 'slow pan' }, 'old model values cannot overwrite the new model');
+  assert.equal(config.sceneId, f.episode.scenes[0].id);
+  assert.equal(config.slotId, 'first-image-slot');
+  assert.deepEqual(saved.nodes.filter(n => n.id !== 'c'), f.workflow.nodes.filter(n => n.id !== 'c'));
+  assert.equal(saved.version, f.workflow.version + 1);
+  assert.deepEqual((await f.api('/api/state')).episodes.find(e => e.id === f.episode.id), f.episode);
+});
+
+test('generation scene switch clears the old slot and allows a new scene slot without navigation writes', async t => {
+  const f = await fixture(t, { sceneTarget: true, generationSwitch: true }), { page } = f;
+  const history = await f.api(`/api/workflows/${f.workflow.id}/history`);
+  await openNodeMenu(page, 'c', 'more'); await item(page, '노드 설정 편집').click();
+  const dialog = page.locator('#wf-tools-dialog[open]');
+  const scene = dialog.locator('[data-wf-config=sceneIndex]');
+  const slot = dialog.locator('[data-wf-config=slotId]');
+  assert.equal(await slot.inputValue(), 'first-image-slot');
+  await scene.fill('2');
+  await page.locator('#wf-tools-dialog [data-wf-field=label]').focus();
+  await slot.locator('option[value="second-video-slot"]').waitFor({ state: 'attached' });
+  assert.equal(await slot.inputValue(), '', 'the first scene slot is invalid after switching');
+  assert.equal(await slot.locator('option[value="first-image-slot"]').count(), 0);
+  assert.deepEqual(f.writes, [], 'scene navigation must not save a graph or episode');
+  assert.deepEqual((await f.api('/api/workflows')).find(w => w.id === f.workflow.id), f.workflow);
+  assert.deepEqual(await f.api(`/api/workflows/${f.workflow.id}/history`), history);
+  await slot.selectOption('second-video-slot');
+  assert.deepEqual(f.writes, [], 'slot selection is also a local draft');
+  await page.keyboard.press('Escape');
+  await saveGraph(f);
+  const saved = (await f.api('/api/workflows')).find(w => w.id === f.workflow.id);
+  const config = saved.nodes.find(n => n.id === 'c').config;
+  assert.equal(config.sceneId, f.episode.scenes[1].id);
+  assert.equal(config.sceneIndex, 1);
+  assert.equal(config.slotId, 'second-video-slot');
+  assert.deepEqual(config.params, { image_strength: 4 });
+  assert.equal(config.prompt, 'Explicit fixture illustration');
+  assert.deepEqual(saved.nodes.filter(n => n.id !== 'c'), f.workflow.nodes.filter(n => n.id !== 'c'));
+  assert.equal(saved.version, f.workflow.version + 1);
+  assert.deepEqual((await f.api('/api/state')).episodes.find(e => e.id === f.episode.id), f.episode);
+});
+
 async function connections(page, id) {
   await openNodeMenu(page, id, 'more'); await item(page, '입력·출력 연결 보기').click();
   await page.locator('#wf-connect-dialog[open]').waitFor();
@@ -920,4 +991,77 @@ test('visible node tooltips cannot intercept native pointer activation of the ta
   assert.deepEqual(f.writes, [], 'hover, focus, opening and pointer activation cannot save, execute, generate or publish');
   assert.deepEqual((await f.api('/api/workflows')).find(graph => graph.id === f.workflow.id), f.workflow);
   assert.deepEqual((await f.api('/api/state')).episodes.find(episode => episode.id === f.episode.id), f.episode);
+});
+
+test('sidebar pointer, keyboard and click resizing changes visible width and survives reload without server writes', async t => {
+  const f = await fixture(t), { page } = f;
+  const sidebar = page.locator('.shell > .sidebar');
+  const handle = page.getByRole('separator', { name: '사이드바 너비 조절' });
+  const width = async () => (await sidebar.boundingBox()).width;
+  const initial = await width(), box = await handle.boundingBox();
+  assert.ok(box, 'the resize handle is visible');
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down(); await page.mouse.move(box.x + box.width / 2 + 70, box.y + box.height / 2); await page.mouse.up();
+  const dragged = await width();
+  assert.ok(dragged > initial + 20, `pointer drag expands sidebar: ${initial} → ${dragged}`);
+  await handle.focus(); await page.keyboard.press('ArrowLeft');
+  const keyboard = await width();
+  assert.ok(keyboard < dragged, `ArrowLeft narrows sidebar: ${dragged} → ${keyboard}`);
+  await page.getByRole('button', { name: '사이드바 넓게', exact: true }).click();
+  const clicked = await width();
+  assert.ok(clicked > keyboard, `single click expands sidebar: ${keyboard} → ${clicked}`);
+  await page.getByRole('button', { name: '사이드바 좁게', exact: true }).click();
+  const saved = await width();
+  assert.ok(saved < clicked, `single click narrows sidebar: ${clicked} → ${saved}`);
+  await page.reload(); await page.locator('#app .shell').waitFor();
+  assert.ok(Math.abs(await width() - saved) < 1, 'the browser restores the chosen width after reload');
+  assert.deepEqual(f.writes, [], 'resizing and reload never save, execute or publish');
+});
+
+test('portrait sidebar resizing keeps the document and focused controls inside the viewport', async t => {
+  const f = await fixture(t, { touch: true }), { page } = f;
+  const wider = page.getByRole('button', { name: '사이드바 넓게', exact: true });
+  await wider.tap();
+  const geometry = await page.evaluate(() => ({ viewport: innerWidth, document: document.documentElement.scrollWidth, body: document.body.scrollWidth }));
+  assert.ok(geometry.document <= geometry.viewport + 1 && geometry.body <= geometry.viewport + 1, `no horizontal document overflow after resizing: ${JSON.stringify(geometry)}`);
+  await wider.scrollIntoViewIfNeeded(); await withinViewport(wider);
+  const stage = page.locator('#project-stage');
+  await stage.scrollIntoViewIfNeeded(); await withinViewport(stage);
+  assert.deepEqual(f.writes, [], 'mobile resizing never writes');
+});
+
+test('focused node actions show the selected node results and preserve a draft across navigation without writes', async t => {
+  const f = await fixture(t, { persistedHistory: true }), { page } = f;
+  await page.goto(f.base); await page.locator('#app .shell').waitFor();
+  const channel = page.locator(`[data-action=channel][data-id="${f.channel.id}"]`), group = channel.locator('xpath=ancestor::details[1]');
+  if (!await group.evaluate(element => element.open)) await group.locator('summary').click();
+  await channel.click();
+  await page.locator(`[data-action=episode][data-id="${f.episode.id}"]`).click();
+  await page.locator('#workflow-canvas').waitFor();
+  assert.equal(await page.locator('#wf-select').inputValue(), f.workflow.id);
+  const focus = page.getByRole('region', { name: '선택한 노드' });
+  await page.locator('#project-stage').selectOption('b');
+  await focus.getByText('Node B', { exact: false }).waitFor();
+  await focus.locator('[data-wf-action=node-tools]').click();
+  const tools = page.locator('#wf-tools-dialog[open]'); await tools.waitFor();
+  assert.equal(await tools.locator('[data-wf-field=label]').inputValue(), 'Node B');
+  await tools.locator('[data-wf-field=label]').fill('Unsaved B focus draft');
+  await page.keyboard.press('Escape');
+  await page.locator('#project-stage').selectOption('a');
+  await focus.locator('[data-wf-action=node-results]').click();
+  const results = page.locator('#wf-results-dialog[open]'); await results.waitFor();
+  await results.locator(`#wf-results-run option[value="${f.run.id}"]`).waitFor({ state: 'attached' });
+  await results.locator('.result-list strong').filter({ hasText: /^Persisted project A evidence$/ }).waitFor();
+  assert.deepEqual(await results.locator('.result-list strong').allTextContents(), ['Persisted project A evidence']);
+  assert.equal((await results.innerText()).includes('Persisted project B evidence'), false);
+  await page.keyboard.press('Escape');
+  await page.locator('#project-stage').selectOption('b');
+  await focus.locator('[data-wf-action=node-tools]').click(); await tools.waitFor();
+  assert.equal(await tools.locator('[data-wf-field=label]').inputValue(), 'Unsaved B focus draft', 'changing focus does not discard another node draft');
+  await page.keyboard.press('Escape');
+  await focus.locator('[data-wf-action=node-results]').click(); await results.waitFor();
+  assert.equal((await results.innerText()).includes('Persisted project A evidence'), false, 'skipped B cannot show A output');
+  assert.deepEqual(f.writes, [], 'selection, editing drafts and inspecting results never write');
+  assert.deepEqual((await f.api('/api/workflows')).find(graph => graph.id === f.workflow.id), f.workflow);
+  assert.deepEqual(await f.api(`/api/workflow-runs/${f.run.id}`), f.run);
 });

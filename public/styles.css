@@ -435,7 +435,7 @@ dialog::backdrop { background: var(--overlay-backdrop); }
 .graph-readonly { margin-top: 10px; overflow-wrap: anywhere; }
 .graph-relations .data-row > div { min-width: 0; }
 .graph-relations h3 { overflow-wrap: anywhere; }
-[data-admin-only="true"]:disabled { cursor: not-allowed; }
+[data-session-required="true"]:disabled { cursor: not-allowed; }
 
 /* Premiere Multi-Slot Scene Layout & Pencil HTML Overlay Builder */
 .preview-slots-layer { position: absolute; inset: 0; overflow: hidden; pointer-events: auto; }

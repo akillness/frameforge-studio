@@ -4,7 +4,7 @@ import { HttpError } from './validation.mjs';
 /** Credentials stay on the server/host; browser and MCP use the authenticated studio API. */
 export function createGenerationProvider({ env = process.env, fetchImpl = fetch } = {}) {
   const api = createHiggsfieldApi({ env, fetchImpl });
-  if (api.configured) return { ...api, capability: async () => ({ provider: 'higgsfield', transport: 'api', configured: true, available: true, authentication: 'configured', detail: 'Developer API key configured; generation verifies provider authentication.' }) };
+  const apiProvider = { ...api, capability: async () => ({ provider: 'higgsfield', transport: 'api', configured: api.configured, available: api.configured, authentication: api.configured ? 'configured' : 'not_configured', detail: 'Developer API key configuration is checked before generation.' }) };
   const configured = typeof env.AGENT_BRIDGE_TOKEN === 'string' && env.AGENT_BRIDGE_TOKEN.length >= 24;
   async function request(endpoint, body) {
     if (!configured) throw new HttpError(503, 'Higgsfield requires a Developer API key or an authenticated host bridge');
@@ -20,12 +20,12 @@ export function createGenerationProvider({ env = process.env, fetchImpl = fetch 
     try { result = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { throw new HttpError(502, 'Invalid generation bridge response'); }
     if (!response.ok) {
       const error = new HttpError([400,401,403,404,409,422,429,503].includes(response.status) ? response.status : 502, 'Higgsfield bridge rejected the request; verify model parameters and host login');
-      if (['INVALID_INPUT','UNSUPPORTED','NOT_CONFIGURED','AUTH_REQUIRED','RATE_LIMITED','AMBIGUOUS_SUBMISSION','PROVIDER_UNAVAILABLE'].includes(result.code)) error.code = result.code;
+      if (['INVALID_INPUT','UNSUPPORTED','NOT_CONFIGURED','AUTH_REQUIRED','RATE_LIMITED','EXPIRED_QUOTE','SCHEMA_CHANGED','AMBIGUOUS_SUBMISSION','PROVIDER_UNAVAILABLE'].includes(result.code)) error.code = result.code;
       throw error;
     }
     return result;
   }
-  return {
+  const cli = {
     configured, transport: 'cli',
     capability: async () => { try { return await request('/generation/status'); } catch { return { provider: 'higgsfield', transport: 'cli', available: false, configured, detail: 'Check host bridge connectivity and Higgsfield login.' }; } },
     models: () => request('/generation/models'),
@@ -34,4 +34,10 @@ export function createGenerationProvider({ env = process.env, fetchImpl = fetch 
     create: input => request('/generation/create', input),
     status: id => request(`/generation/jobs/${validateHiggsfieldId(id)}`),
   };
+  const selected = api.configured ? apiProvider : cli;
+  return { ...selected, forTransport: (transport) => {
+    if (transport === 'api' && api.configured) return apiProvider;
+    if (transport === 'cli' && configured) return cli;
+    throw new HttpError(503, 'Requested generation transport is unavailable');
+  } };
 }

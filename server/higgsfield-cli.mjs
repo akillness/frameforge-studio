@@ -2,11 +2,13 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { higgsfieldError, normalizeHiggsfieldModels, normalizeHiggsfieldJob, validateGenerationInput, validateHiggsfieldId } from './higgsfield.mjs';
 
 const run = promisify(execFile);
 const MODEL = /^[a-z][a-z0-9_]{0,100}$/;
 const forbidden = new Set(['batch_size', 'batch_count', 'num_images', 'num_outputs', 'wait', 'json', 'help', 'workspace', 'api_key', 'token', 'url']);
+const canonical = value => Array.isArray(value) ? value.map(canonical) : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])])) : value;
 
 export function resolveHiggsfieldBinary(env = process.env) {
   const candidates = process.platform === 'win32' ? [
@@ -43,7 +45,7 @@ export function buildHiggsfieldCliArgs(action, { model, prompt, params = {}, req
   return args;
 }
 
-export function createHiggsfieldCli({ execute, binary = resolveHiggsfieldBinary() } = {}) {
+export function createHiggsfieldCli({ execute, binary = resolveHiggsfieldBinary(), now = Date.now } = {}) {
   const invoke = execute || (async args => {
     if (!binary || !path.isAbsolute(binary) || /\.(cmd|bat|ps1)$/i.test(binary)) throw higgsfieldError('Higgsfield CLI is not installed', 'NOT_CONFIGURED', 503);
     return run(binary, args, { windowsHide: true, shell: false, timeout: 45000, maxBuffer: 1024 * 1024, env: { ...process.env, HIGGSFIELD_INSTALL_METHOD: 'npm' } });
@@ -69,7 +71,14 @@ export function createHiggsfieldCli({ execute, binary = resolveHiggsfieldBinary(
     // Unfiltered catalog discovery precedes schema lookup; never invent IDs.
     if (!(await models()).some(item => item.id === payload.model)) throw higgsfieldError('Higgsfield model is not in the live catalog', 'INVALID_INPUT', 400);
     const schema = await modelSchema(payload.model);
-    return command(buildHiggsfieldCliArgs(action, payload, schema), action === 'create');
+    const args = buildHiggsfieldCliArgs(action, payload, schema);
+    if (action === 'create' && (payload.quoteExpiresAt !== undefined || payload.quoteSchemaHash !== undefined)) {
+      const schemaHash = createHash('sha256').update(JSON.stringify(canonical(schema))).digest('hex');
+      if (typeof payload.quoteSchemaHash !== 'string' || !/^[a-f0-9]{64}$/.test(payload.quoteSchemaHash) || payload.quoteSchemaHash !== schemaHash) throw higgsfieldError('Music model schema changed before provider submission', 'SCHEMA_CHANGED', 409);
+      const deadline = payload.quoteExpiresAt;
+      if (typeof deadline !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(deadline) || !Number.isFinite(Date.parse(deadline)) || new Date(deadline).toISOString() !== deadline || !Number.isFinite(now()) || now() >= Date.parse(deadline)) throw higgsfieldError('Music quote expired before provider submission', 'EXPIRED_QUOTE', 409);
+    }
+    return command(args, action === 'create');
   }
   const provider = {
     configured: Boolean(execute || binary), transport: 'cli', models, modelSchema,

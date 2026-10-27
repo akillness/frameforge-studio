@@ -126,6 +126,7 @@ export function normalizeLayout(value = {}) {
     width,
     height,
     inspectorWidth: bounded(input.inspectorWidth, 240, 480, 300),
+    sidebarWidth: bounded(input.sidebarWidth, 160, 400, 184),
     toolsMode,
   };
 }
@@ -183,7 +184,7 @@ export function createWorkspaceStore(options = {}) {
       if (!record(patch)) throw new Error('작업 창 설정을 확인하세요.');
       if (Object.hasOwn(patch, 'presetId') && patch.presetId !== 'custom' && !WORKSPACE_PRESETS.some(item => item.id === patch.presetId)) throw new Error('작업 창 프리셋을 확인하세요.');
       if (Object.hasOwn(patch, 'toolsMode') && !['docked','overlay'].includes(patch.toolsMode)) throw new Error('도구 표시 방식을 확인하세요.');
-      for (const key of ['width','height','inspectorWidth']) {
+      for (const key of ['width','height','inspectorWidth','sidebarWidth']) {
         if (Object.hasOwn(patch, key) && (typeof patch[key] !== 'number' || !Number.isFinite(patch[key]))) throw new Error('작업 창 크기는 유효한 숫자로 입력하세요.');
       }
       layout = normalizeLayout({...layout, ...patch});
@@ -193,7 +194,7 @@ export function createWorkspaceStore(options = {}) {
     selectPreset(presetId) {
       const preset = WORKSPACE_PRESETS.find(item => item.id === presetId);
       if (!preset) throw new Error('작업 창 프리셋을 확인하세요.');
-      layout = normalizeLayout({...preset, presetId, inspectorWidth:layout.inspectorWidth});
+      layout = normalizeLayout({...preset, presetId, inspectorWidth:layout.inspectorWidth, sidebarWidth:layout.sidebarWidth});
       activeProfileId = null;
       return commit();
     },
