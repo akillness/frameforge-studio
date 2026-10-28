@@ -130,6 +130,7 @@
   padding: 0;
   overflow: auto;
   overscroll-behavior: contain;
+  scroll-padding-top: 88px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-dialog);
   background: var(--surface);
@@ -267,6 +268,7 @@
 }
 @media (max-width: 560px) {
   .workspace-dialog-header { gap: 12px; padding: 14px; }
+  .workspace-settings-dialog, .workspace-tool-dialog { scroll-padding-top: 112px; }
   .workspace-dialog-body { padding: 16px; }
   .workspace-dialog-body .two-cols { grid-template-columns: minmax(0, 1fr); }
   .workspace-dialog-body fieldset { padding: 12px; }
@@ -297,7 +299,7 @@ button:active { background: var(--accent-soft); }
 .main { max-width: none; margin: 0; padding: var(--space-4); }
 .page-heading h1 { font-size: clamp(20px, 1.8vw, 24px); font-weight: 650; }
 .page-heading p { line-height: 1.6; }
-.page-heading .eyebrow { font-size: 10px; margin-bottom: 4px; color: var(--text-secondary); letter-spacing: 1.4px; }
+.page-heading .eyebrow { font-size: 12px; margin-bottom: 4px; color: var(--text-secondary); letter-spacing: 1px; }
 .panel-header { padding: 10px var(--panel-padding); }
 .panel-header h3, .data-row h3, .integration h3, .template-info h3 { font-size: 14px; }
 .badge, .hint, .footnote, .history-version small, .workspace-dimension-status { font-size: 12px; }
@@ -484,7 +486,7 @@ body[data-workbench="project"] .page-heading p { font-size: 13px; }
 body[data-workbench="project"] .wf-toolbar { gap: var(--space-2); padding: var(--space-2) var(--space-3); }
 body[data-workbench="project"] .wf-canvas:not([data-layout="stacked"]) { height: clamp(460px, 65dvh, 820px); }
 .brand-copy { font-size: 20px; letter-spacing: -.6px; }
-.project-tool-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--border); background: var(--surface-side); }
+.project-tool-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; margin-left: auto; }
 .project-tool-strip > * { min-width: 0; max-width: 100%; }
 .project-tool-strip button { font-size: 12px; }
 .project-more { flex: 0 0 auto; display: inline-grid; place-items: center; min-width: 32px; width: 32px; min-height: 32px; padding: 0; color: var(--text-secondary); background: transparent; }
@@ -500,6 +502,7 @@ body[data-workbench="project"] .wf-canvas:not([data-layout="stacked"]) { height:
   padding: 0;
   overflow: auto;
   overscroll-behavior: contain;
+  scroll-padding-top: 104px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-dialog);
   background: var(--canvas);
@@ -522,7 +525,9 @@ body[data-workbench="project"] .wf-canvas:not([data-layout="stacked"]) { height:
   background: var(--surface-side);
 }
 .project-dialog-header > * { min-width: 0; max-width: 100%; }
+.project-dialog-header > div:first-child { flex: 1 1 280px; }
 .project-dialog-header :is(h2, h3) { margin: 0; font-size: 16px; overflow-wrap: anywhere; }
+.project-dialog-header h2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 .project-dialog-header p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
 .project-dialog-header .row { flex-wrap: wrap; }
 .project-dialog-header button { flex: 0 0 auto; min-height: 40px; }
@@ -561,25 +566,36 @@ body[data-workbench="project"] .wf-canvas:not([data-layout="stacked"]) { height:
 }
 @media (max-width: 699px) {
   body[data-workbench="project"] .main { padding: var(--space-2); }
-  .project-tool-strip { padding: var(--space-2); }
+  .project-tool-strip { flex-basis: 100%; margin-left: 0; }
   .project-navigation { gap: var(--space-2); padding: var(--space-2); }
   .project-more { width: 40px; min-width: 40px; min-height: 44px; }
   .project-tool-strip button { min-height: 44px; }
   .project-scene-dialog, .project-tool-dialog { width: calc(100vw - 16px); max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
-  .project-dialog-header { padding: var(--space-3); }
+  .project-dialog-header { padding: var(--space-2) var(--space-3); }
   .project-dialog-header button { min-height: 44px; }
   .project-scene-dialog > .studio-layout { padding: var(--space-2); }
   .project-tool-body, #project-tool-body { padding: var(--space-3); }
 }
 @media (max-width: 380px) {
-  .project-dialog-header > .row { width: 100%; }
-  .project-dialog-header > .row > button { flex: 1 1 auto; }
+  .project-dialog-header > .row:has(> button:not(.icon-btn)) { width: 100%; }
+  .project-dialog-header > .row > button:not(.icon-btn) { flex: 1 1 auto; }
   .project-scene-dialog .four-cols, .project-tool-dialog .two-cols { grid-template-columns: minmax(0, 1fr); }
   .project-scene-dialog .platform-browser-controls { grid-template-columns: minmax(0, 1fr); }
   .project-navigation label { flex-basis: 100%; }
 }
 @media (pointer: coarse) {
   .project-more { min-width: 44px; width: 44px; min-height: 44px; }
+}
+@media (max-width: 899px) {
+  .project-scene-dialog, .project-tool-dialog { scroll-padding-top: 152px; }
+}
+@media (max-width: 440px) {
+  .project-scene-dialog, .project-tool-dialog { scroll-padding-top: 224px; }
+}
+/* A sticky header must never cover a focused control (WCAG 2.2 · 2.4.11). In short windows it scrolls with the content instead of consuming the viewport. */
+@media (max-height: 520px) {
+  .project-dialog-header, .workspace-dialog-header { position: static; }
+  :is(.project-scene-dialog, .project-tool-dialog, .workspace-settings-dialog, .workspace-tool-dialog) { scroll-padding-top: 0; }
 }
 
 .project-list { display: grid; gap: 2px; min-width: 0; max-width: 100%; padding-top: var(--space-2); border-top: 1px solid var(--border); }
@@ -613,7 +629,7 @@ body[data-workbench="project"] .wf-canvas:not([data-layout="stacked"]) { height:
   body[data-workbench="project"] .sidebar .project-row > button:not(.project-more) { width: auto; padding-inline: 8px; text-align: left; }
 }
 .sidebar-sizing { display: flex; gap: 4px; }
-.sidebar-sizing button { min-width: 44px; min-height: 44px; padding: 4px; }
+.sidebar-sizing button { min-width: var(--control-height); min-height: var(--control-height); padding: 4px; }
 .sidebar-resize { position: absolute; z-index: 4; top: 0; right: 0; width: 12px; height: 100%; cursor: col-resize; touch-action: none; }
 .sidebar-resize:focus-visible { outline: 2px solid var(--focus); outline-offset: -3px; }
 @media (max-width: 699px) { .sidebar-resize { display: none; } .sidebar-sizing { margin-bottom: 8px; } }
