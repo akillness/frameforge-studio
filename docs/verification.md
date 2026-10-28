@@ -1,5 +1,36 @@
 # 실동작 검증 기록
 
+## Scoped source and isolated-fixture checks — 2026-10-28
+
+This record covers documentation of the current source-level checks only. It is not a deployment, Docker, WSL, live-service, public, or provider verification, and it does not assert a full-suite pass. Docker Desktop was inaccessible and WSL reported an optional component required, so no container result is claimed for this date.
+
+- **Version and knowledge gates:** `node scripts/version-harness.mjs verify` passed for the immutable 1.7.2 selection. `node scripts/knowledge.mjs check` passed within its bounded admitted scope only; this is not a whole-vault or legacy-lint pass.
+- **Isolated focused suites:** the menu suite passed 26/26, the UI focus suite passed 5/5, and the paid lost-source regression suite `tests/workflow-paid-lost-source.test.mjs` passed 11/11. All three use isolated fixtures and mock providers, not live providers.
+- **Changed-file test run:** of 249 changed test files, 247 passed and 2 failed. The two failing files are not resolved in this record, and the run is not a full-suite pass.
+- **Node-native scale journey:** a standalone rerun of the 128-node/256-edge journey still failed with a 5000 ms screenshot timeout. The earlier 2026-10-26 receipt is not superseded by this observation and is not re-established here.
+- **Sequential journey review:** an initial approval-state error was fixed, but the review is still in progress. The publish step now fails with the UI idle/blocked state not reached as expected. The review is not closed.
+- **Paid recovery boundary:** the unsettled-job guard is source-level evidence only. A `submission_unknown` request has no `providerRequestId`, so `recover()` and generation-panel apply cannot act on it, and the app offers no confirm or abandon path. It remains blocked (`generation_unresolved`) until manual investigation and a separate product decision.
+- **Not verified here:** Docker and WSL, deployed image behaviour, live service operation, public publication, and provider generation or account access. Jev `jeopi` route status is recorded in `.mex/ROUTER.md` and is not reproduced here.
+
+- **Follow-up observations (same date, after the entries above):**
+  - Backend four-file command `node --test --test-concurrency=1 tests/workflows.test.mjs tests/workflow-plan.test.mjs tests/workflow-paid-lost-source.test.mjs tests/workflow-skip.test.mjs` passed 94/94 with isolated fixtures and mock providers.
+  - Menu and UI command `node --test --test-concurrency=1 tests/workflow-menu-run.test.mjs tests/workflow-dialog-focus.test.mjs` passed 35/35.
+  - The "sequential reviewed producers" targeted journey passed after its server-planner async synchronization was fixed.
+  - The standalone 128-node screenshot reproduction still fails with a 5000 ms timeout.
+  - The 247/249 changed-file result above is preserved as recorded at that point. It must not be read as a full-suite pass, and the current full suite is not claimed to pass.
+  - Graph native preflight was not refreshed: staleness and privacy exclusion were not confirmed, and the SQLite handle state is unknown. `knowledge check` passed, within the admitted scope only.
+  - Not performed: Docker rebuild, live account access, paid provider calls, or push. Docker, live-service, public and provider status remain unverified.
+
+- **Later focused verification (same date):** `node --test --test-concurrency=1 tests/workflows.test.mjs tests/workflow-plan.test.mjs tests/workflow-paid-lost-source.test.mjs tests/workflow-skip.test.mjs tests/workflow-final-edge.test.mjs tests/workflow-review-status.test.mjs` passed 103/103; `node --test --test-concurrency=1 tests/workflow-menu-run.test.mjs tests/workflow-dialog-focus.test.mjs` passed 36/36. `node --test --test-concurrency=1 --test-name-pattern="sequential reviewed producers" tests/production-workspace-journey.test.mjs` passed 1/1. These use isolated fixtures, not live providers. `node scripts/check.mjs` passed syntax checks for 163 modules; harness verification and bounded knowledge check passed. The 128-node full-page screenshot and Docker deployment remain blocked as recorded above.
+  - A responsive stacked-grid change was followed by `node --test --test-concurrency=1 --test-name-pattern="128-node/256-edge" tests/production-workspace-journey.test.mjs`: 1/1 passed under the existing 5000 ms screenshot limit. The 1024 px PNG is 14,107 px tall, below the observed 16,384 px wrap boundary. This does not establish valid mobile screenshots: direct pixel comparison of the 375 px and 320 px PNGs showed their content after y=16,384 repeats the image from y=0 exactly. Their full-page visual evidence remains invalid despite the passing test.
+  - `node --test --test-concurrency=1 tests/workflow-history-compact.test.mjs tests/run-diff.test.mjs tests/workflow-retained-results-ui.test.mjs tests/workflow-stage-unblock.test.mjs tests/workflow-sequential-node-ui.test.mjs tests/production-publication.test.mjs` passed 115/115 using isolated fixtures.
+
+- **Large-canvas screenshot diagnosis (investigation, not verified):**
+  - Observed: the 1024 px viewport 128-node stacked output is about 25,085 px tall, and the standalone screenshot hit its 5000 ms timeout.
+  - Observed: an earlier screenshot repeated the screen after y=16384, so it is not valid full-page evidence.
+  - Hypothesis, not established: the height and capture cost of the stacked layout are the likely cause of the timeout. Rendering or performance cause is unconfirmed.
+  - No layout change has been approved or verified. This record does not claim a fix.
+
 ## Harness knowledge delivery audit — 2026-10-26
 
 This later audit supersedes the earlier missing-receipt observation below only where new evidence exists. The now-present native-workbench receipt remains isolated candidate UI evidence, not proof of original-video readability, account access or owner acceptance. Harness/knowledge work is a separate deliverable; its safe machine-readable summary is [`.graphify/harness-audit.json`](../.graphify/harness-audit.json).

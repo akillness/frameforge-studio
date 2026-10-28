@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
 import { lstat, open, realpath } from 'node:fs/promises';
 import path from 'node:path';
-import { topologicalOrder, ancestors, descendants, resolvePrerequisite, resolveOptional, canonicalJson, candidateFingerprint } from './graph.mjs';
+import { topologicalOrder, ancestors, descendants, resolvePrerequisite, resolveOptional, canonicalJson, candidateFingerprint, hardRequiredIds, HARD_DEPENDENCY } from './graph.mjs';
 import { validateGenerationInput } from './higgsfield.mjs';
 
 import * as candidates from './candidates.mjs';
@@ -231,7 +231,6 @@ function reusableNodeRun(nodeRun) {
   return Boolean(nodeOutput(nodeRun)) && ['completed', 'reused', 'awaiting_review', 'approved', 'changes_requested'].includes(status);
 }
 
-const HARD_DEPENDENCY = { storyboard: 'script', layout: 'storyboard', generate: 'storyboard', review: 'render', publish: 'review' };
 const orderedNodes = (workflow) => {
   const byId = new Map(workflow.nodes.map((node) => [node.id, node]));
   return topologicalOrder(workflow.nodes, workflow.edges).map((id) => byId.get(id));
@@ -239,15 +238,90 @@ const orderedNodes = (workflow) => {
 const prerequisite = (workflow, node, type) => resolvePrerequisite(workflow.nodes, workflow.edges, node.id, type);
 const optional = (workflow, node, type) => resolveOptional(workflow.nodes, workflow.edges, node.id, type);
 
+const BLOCK_MESSAGES = {
+  active_run: '이 에피소드에 실행 중인 워크플로우가 있습니다. 끝난 뒤 다시 시도하세요.',
+  skipped_target: '건너뛰기가 설정된 노드입니다. 건너뛰기를 해제한 뒤 실행하세요.',
+  skipped_prerequisite: '건너뛴 선행 노드에 저장된 결과가 없어 실행할 수 없습니다.',
+  publish_requires_review: '게시는 같은 결과에 대한 승인된 검토가 있어야 실행할 수 있습니다.',
+};
+const NOTHING_TO_RUN_MESSAGE = '실행할 노드가 없습니다. 완료된 결과를 유지합니다.';
+const PREPARE_FIRST_NOTICE = '비용이 드는 생성은 준비 단계가 끝난 뒤 다시 실행해 비용을 확인합니다.';
+const PREPARE_FIRST_EMPTY_MESSAGE = '먼저 실행할 수 있는 준비 단계가 없습니다.';
+const GENERATION_UNRESOLVED_MESSAGE = '이전 생성 요청이 아직 끝나지 않았거나 결과가 적용되지 않았습니다. 기존 요청을 복구하거나 적용한 뒤 다시 실행하세요.';
+const SETTLED_JOB_STATUSES = ['failed', 'nsfw', 'canceled'];
+function priorGenerationJob(jobs, priorNodeRun, resumeId, nodeId) {
+  const intent = priorNodeRun?.generationIntent;
+  const jobId = nodeOutput(priorNodeRun)?.generationJobId || intent?.generationJobId;
+  if (!jobId && !intent?.requestId && !resumeId) return null;
+  return jobs.find((job) => jobId ? job.id === jobId : job.requestId === (intent?.requestId || `${resumeId}:${nodeId}`)) || null;
+}
+// Legacy-guard-only ancestor walk: resolves the job a RAW legacy body's strict-reject guard
+// (guardJob below) must still catch regardless of how many intermediate runs separate the
+// paying run from the node currently being reselected. A node invalidated-and-settled by an
+// intermediate run persists only {staleFrom: <that run's id>} -- no jobId, no intent -- so a
+// single-hop `source.resumedFrom || source.id` guess only happens to work when the paying run
+// is exactly one hop back or is itself the root (finding F6). This walks the real staleFrom
+// pointer chain instead of guessing a pattern, so the guard stays reachable at any lineage
+// depth, matching docs/harness.md's "legacy explicit bodies keep their strict behaviour" at
+// every hop, not just depth 1. Bounded purely as defense: staleFrom always points to a
+// strictly earlier, already-terminal run, so a real cycle cannot occur.
+function legacyAncestorJob(runs, jobs, runId, nodeId, depth = 0) {
+  if (!runId || depth > 64) return null;
+  const run = runs.find((item) => item.id === runId);
+  const nodeRun = run?.nodeRuns?.find((item) => item.nodeId === nodeId);
+  if (!nodeRun) return null;
+  const jobId = nodeOutput(nodeRun)?.generationJobId || nodeRun.generationIntent?.generationJobId;
+  if (jobId) return jobs.find((job) => job.id === jobId) || null;
+  if (nodeRun.generationIntent?.requestId) return jobs.find((job) => job.requestId === nodeRun.generationIntent.requestId) || null;
+  return legacyAncestorJob(runs, jobs, nodeRun.staleFrom, nodeId, depth + 1);
+}
+const isJobSettled = (job) => !job || (job.status === 'completed' && job.applied === true) || SETTLED_JOB_STATUSES.includes(job.status);
+// Lineage-independent paid-job guard (mirrors store.hasUnresolvedMusicSubmission's intent but
+// node-scoped, not episode-scoped): an episode/workflow version bump, an explicit refresh, or
+// an intermediate run that reruns a node's ancestors without reselecting the node itself can
+// each sever the single-lineage priorGenerationJob() lookup from an older, still-unresolved
+// job for the SAME node. This scans every run for this workflow+episode (not only the newest/
+// version-compatible one) and resolves each run's own prior job for nodeId the same way
+// priorGenerationJob always has, so a job that settles in a later run -- or a job merely
+// referenced by the current lineage's own prior entry -- can never mask a DIFFERENT job that
+// is still unresolved elsewhere in this node's history. `excludeJobId` is NOT "any job this
+// lineage happens to reference"; it is the ONE specific job a caller is itself about to
+// legitimately resume (HEAD semantics) -- every other job for this node, settled-looking
+// lineage or not, is still checked.
+function hasUnresolvedNodeJob(runs, jobs, workflowId, episodeId, nodeId, excludeRunId, excludeJobId) {
+  const seen = new Set();
+  for (const run of runs) {
+    if (run.id === excludeRunId || run.workflowId !== workflowId || run.episodeId !== episodeId) continue;
+    const nodeRun = (run.nodeRuns || []).find((item) => item.nodeId === nodeId);
+    if (!nodeRun) continue;
+    const job = priorGenerationJob(jobs, nodeRun, run.resumedFrom || run.id, nodeId);
+    if (!job || job.id === excludeJobId || seen.has(job.id)) continue;
+    if (!isJobSettled(job)) return true;
+    seen.add(job.id);
+  }
+  return false;
+}
+const skippedSet = (workflow) => new Set((workflow.skippedNodes || []).filter((id) => workflow.nodes.some((node) => node.id === id)));
+const NO_RESUME = Symbol('no-resume');
+function invalidatedBySelection(workflow, selectedIds) {
+  const invalidated = new Set();
+  for (const id of selectedIds) for (const descendantId of descendants(workflow.edges, id)) invalidated.add(descendantId);
+  return invalidated;
+}
+
 function stageSelection(workflow, options, episode, store) {
+  const skipped = skippedSet(workflow);
+  const legacy = options.legacy === true;
   const selectedValues = options.selectedStages;
   if (selectedValues !== undefined && (!Array.isArray(selectedValues) || !selectedValues.length || selectedValues.length > workflow.nodes.length)) throw new HttpError(400, 'selectedStages must contain exact node IDs');
   const selected = new Set();
-  for (const value of selectedValues ?? workflow.nodes.map((node) => node.id)) {
+  for (const value of selectedValues ?? workflow.nodes.filter((node) => !skipped.has(node.id)).map((node) => node.id)) {
     const node = resolveStage(workflow, value, 'selected stage');
     if (selected.has(node.id)) throw new HttpError(400, 'selectedStages must not contain duplicates');
+    if (selectedValues !== undefined && skipped.has(node.id)) throw new HttpError(409, BLOCK_MESSAGES.skipped_target);
     selected.add(node.id);
   }
+  if (!selected.size) throw new HttpError(400, 'selectedStages must contain exact node IDs');
   const ordered = orderedNodes(workflow);
   const orderedSelected = ordered.filter((node) => selected.has(node.id));
   const start = options.startStage === undefined ? orderedSelected[0] : resolveStage(workflow, options.startStage, 'startStage');
@@ -256,7 +330,8 @@ function stageSelection(workflow, options, episode, store) {
   if (options.startStage !== undefined && orderedSelected.some((node) => node.id !== start.id && !reachable.has(node.id))) throw new HttpError(400, 'Every selected node must be downstream of startStage');
 
   let source;
-  if (options.resumeRunId !== undefined) {
+  if (options.resumeRunId === NO_RESUME) { /* explicit "no resume" (internal planner signal only): never fall back to the implicit single-stage lookup. A client-supplied literal null still falls through below and throws 400. */ }
+  else if (options.resumeRunId !== undefined) {
     source = store.get('workflowRuns', identifier(options.resumeRunId, 'resumeRunId'));
     if (source.workflowId !== workflow.id || source.episodeId !== episode.id) throw new HttpError(409, 'Resume evidence belongs to a different project workflow');
     if (!TERMINAL.includes(source.status)) throw new HttpError(409, 'Resume requires a terminal workflow run');
@@ -275,20 +350,20 @@ function stageSelection(workflow, options, episode, store) {
     || canonicalJson(source.workflowSnapshot.edges) !== canonicalJson(workflow.edges)
     || new Set(source.nodeRuns.map((item) => item.nodeId)).size !== source.nodeRuns.length
     || source.nodeRuns.some((item) => !workflow.nodes.some((node) => node.id === item.nodeId && node.type === item.type)))) throw new HttpError(409, 'Resume evidence lacks project workflow provenance');
-  const invalidated = new Set();
-  for (const node of orderedSelected) for (const id of descendants(workflow.edges, node.id)) invalidated.add(id);
+  const invalidated = invalidatedBySelection(workflow, orderedSelected.map((node) => node.id));
   const sourceById = new Map((source?.nodeRuns || []).map((nodeRun) => [nodeRun.nodeId, nodeRun]));
   const requiredReuse = new Set();
-  const reuse = (dependency) => {
+  const reuse = (dependency, { hard = false } = {}) => {
     if (!dependency || selected.has(dependency.id) || requiredReuse.has(dependency.id)) return;
-    if (invalidated.has(dependency.id)) throw new HttpError(409, `${dependency.id} requires fresh evidence after an upstream stage is rerun`);
+    if (!hard && skipped.has(dependency.id) && (invalidated.has(dependency.id) || !reusableNodeRun(sourceById.get(dependency.id)))) return;
+    if (invalidated.has(dependency.id)) throw new HttpError(409, skipped.has(dependency.id) ? `${BLOCK_MESSAGES.skipped_prerequisite} (${dependency.id})` : `${dependency.id} requires fresh evidence after an upstream stage is rerun`);
     requiredReuse.add(dependency.id);
     inspect(dependency);
   };
   const inspect = (node) => {
     const type = HARD_DEPENDENCY[node.type];
     if (!type) return;
-    reuse(prerequisite(workflow, node, type));
+    reuse(prerequisite(workflow, node, type), { hard: true });
   };
   for (const node of orderedSelected) {
     inspect(node);
@@ -318,7 +393,16 @@ function stageSelection(workflow, options, episode, store) {
       const layout = optional(workflow, node, 'layout');
       reuse(storyboard);
       reuse(layout);
-      const sceneProducer = storyboard && layout && ancestors(workflow.edges, storyboard.id).has(layout.id) ? storyboard : (layout || storyboard);
+      // Availability-aware, mirroring the generate branch above and prepareCandidate's generate
+      // branch (execute()-side): a structurally later producer that is SKIPPED with no valid
+      // saved output (or simply never ran) is omitted per docs/harness.md's "skipped optional
+      // producers without output are omitted", never structurally preferred just because the
+      // node exists in the graph. Neither producer is a HARD_DEPENDENCY of render, so nothing
+      // earlier blocks this; the prior unconditional pick could select an unusable node and
+      // only fail later, at execute() time inside renderCandidate (finding F3).
+      const layoutUsable = layout && (selected.has(layout.id) || reusableNodeRun(sourceById.get(layout.id)));
+      const storyboardUsable = storyboard && (selected.has(storyboard.id) || reusableNodeRun(sourceById.get(storyboard.id)));
+      const sceneProducer = storyboardUsable && layoutUsable && ancestors(workflow.edges, storyboard.id).has(layout.id) ? storyboard : layoutUsable ? layout : storyboardUsable ? storyboard : null;
       const superseded = sceneProducer ? ancestors(workflow.edges, sceneProducer.id) : new Set();
       // Only generated inputs after the scene producer participate in this render.
       for (const id of ancestors(workflow.edges, node.id)) {
@@ -341,31 +425,223 @@ function stageSelection(workflow, options, episode, store) {
     }
   }
   const outputs = new Map(), reusedOutputs = [];
+  // Fetched once for the whole selection (not per node, not per lookup): resumingJob,
+  // hasUnresolvedNodeJob's internal scan and inheritedJob below all resolve against these SAME
+  // snapshots instead of each independently re-querying+re-parsing the full table. workflowRuns
+  // rows are the fattest entity in the store (embedded workflowSnapshot/episodeSnapshot/
+  // nodeRuns outputs/generationPlan candidate) so this hoist matters more than generationJobs'.
+  const hasGenerateNode = workflow.nodes.some((item) => item.type === 'generate');
+  const jobs = hasGenerateNode ? store.list('generationJobs') : null;
+  const runs = hasGenerateNode ? store.list('workflowRuns') : null;
   const nodeRuns = ordered.map((node) => {
     const prior = sourceById.get(node.id);
     const reusable = !invalidated.has(node.id) && reusableNodeRun(prior);
-    const intent = prior?.generationIntent;
+    // Safe HEAD-semantics resume (never block) applies to exactly ONE job: the specific job
+    // this call would itself inherit/resume when the node is NOT invalidated -- the identical
+    // resolution `inheritedJob` below performs. A boolean "prior references some job" is NOT
+    // sufficient grounds to skip the scan: prior can legitimately reference an already-SETTLED
+    // job K while a different, OLDER job J for this same node sits unresolved in disconnected
+    // run history (an earlier attempt whose own lineage was severed before K's run existed).
+    // The scan must run unconditionally and must exempt ONLY that one literal resumed job --
+    // never skip scanning merely because some reference exists.
+    // No resumeId pattern-guess is passed here: `prior` must carry DIRECT evidence (its own
+    // jobId or persisted intent.requestId) to be excluded from the unresolved-job scan below.
+    // A stale, pointer-less placeholder (staleFrom only, left by an intermediate run that
+    // invalidated-and-settled this node without itself submitting a job) must never borrow a
+    // pattern guessed from ITS OWN resumedFrom/id -- that guess can coincidentally match an
+    // unrelated job. Omitting it only ever WIDENS the scan below, never narrows it: it feeds
+    // the exact same exclusion parameter the old guess fed, so this can only catch a job the
+    // old guess would have missed, never hide one it would have caught (finding F1).
+    const resumingJob = !invalidated.has(node.id) && node.type === 'generate' ? priorGenerationJob(jobs, prior, undefined, node.id) : null;
+    const unsettled = node.type === 'generate' && hasUnresolvedNodeJob(runs, jobs, workflow.id, episode.id, node.id, undefined, resumingJob?.id);
+    if (selected.has(node.id) && node.type === 'generate' && unsettled) { const error = new HttpError(409, GENERATION_UNRESOLVED_MESSAGE); error.code = 'generation_unresolved'; error.nodeId = node.id; throw error; }
+    // Legacy raw selectedStages+resumeRunId bodies (no execution intent, contract 1.3) keep the
+    // explicit "cannot rerun script/storyboard/layout while reusing a paid generation job"
+    // guard reachable via a SEPARATE `guardJob` lookup below -- but generationIntent/output
+    // persisted onto THIS node's own lineage are gated by `invalidated` UNCONDITIONALLY, for
+    // every call shape, legacy or not. A node's own intent/output must never resurrect through
+    // an intermediate run it wasn't selected in (addendum A); only the guard's reachability
+    // for a node that IS selected this call is legacy-aware, never what gets persisted.
+    const intent = (!invalidated.has(node.id) || unsettled) ? prior?.generationIntent : undefined;
     const jobId = nodeOutput(prior)?.generationJobId || intent?.generationJobId;
-    const inheritedJob = source && node.type === 'generate' ? store.list('generationJobs').find((job) => jobId ? job.id === jobId : job.requestId === (intent?.requestId || `${source.resumedFrom || source.id}:${node.id}`)) : null;
-    if (requiredReuse.has(node.id) && !selected.has(node.id) && ['storyboard', 'layout'].includes(node.type) && (!Array.isArray(nodeOutput(prior)?.scenes) || !nodeOutput(prior).scenes.length)) throw new HttpError(409, `${node.id} requires completed scene evidence from its own branch`);
+    // `directJob`: the ONLY resolution `inheritedJob` may use. Matches strictly by `prior`'s
+    // OWN direct evidence -- its stamped jobId, or (the narrow crash-recovery window between
+    // persisting intent and linking its job) its own persisted intent.requestId. NEVER guesses
+    // a requestId pattern from a resume point: that guess is sound only for the separate legacy
+    // strict-REJECT guard below (a false-positive guess there only blocks, forcing a fresh
+    // quote), never for silently stamping a job reference onto output execute() will actually
+    // try to resume -- the exact stale-stamp/fallback-mismatch that produced finding F1.
+    const directJob = node.type !== 'generate' ? null : (jobId ? jobs.find((job) => job.id === jobId) || null : (intent?.requestId ? jobs.find((job) => job.requestId === intent.requestId) || null : null));
+    // `inheritedJob`: what actually gets REUSED (paidReuse) and PERSISTED onto this node's
+    // lineage.output -- gated by invalidated ONLY, unconditionally, matching addendum A: a
+    // selected generate node invalidated by a co-selected ancestor is a fresh paid generation,
+    // never a stale reuse, regardless of legacy. Sourced from `directJob` only -- see its
+    // comment above for why the wider pattern-guessing `resolvedJob` below must never feed this.
+    const inheritedJob = !invalidated.has(node.id) ? directJob : null;
+    // `resolvedJob`: the wide, pattern-guessing lookup -- used ONLY as a last-resort fallback
+    // inside `guardJob` below, for genuinely pre-intent legacy data (predates generationIntent
+    // entirely: no jobId, no staleFrom chain for legacyAncestorJob to walk). Never feeds
+    // paidReuse, lineage.output or lineage.generationIntent.
+    const resolvedJob = source && node.type === 'generate' ? jobs.find((job) => jobId ? job.id === jobId : job.requestId === (intent?.requestId || `${source.resumedFrom || source.id}:${node.id}`)) : null;
+    // `guardJob`: used ONLY to decide reachability of the explicit "cannot rerun
+    // script/storyboard/layout" guard below, for a node that IS selected this call, on a
+    // genuine raw legacy body. Deliberately separate from `inheritedJob` -- NEVER feeds
+    // paidReuse, lineage.output or lineage.generationIntent, so it cannot leak a prior job
+    // reference onto an unselected/invalidated/skipped/deferred node. Execution-intent-derived
+    // calls (including this function's own internal dry-run validation) never set `legacy`,
+    // so the guard can never fire for them -- those get a fresh paid generation instead.
+    // Resolved by walking the REAL staleFrom pointer chain from `source` (legacyAncestorJob),
+    // not a single-hop resumeId guess: an intermediate run that invalidates-and-settles this
+    // node without itself touching it carries only {staleFrom}, so a guess computed from that
+    // ONE run's own resumedFrom/id only coincidentally matches when the paying run sits exactly
+    // one hop back or is the root (finding F6). `resolvedJob` remains the final fallback for
+    // legacy data old enough to predate staleFrom itself.
+    const guardJob = legacy && selected.has(node.id) && node.type === 'generate' && source ? (legacyAncestorJob(runs, jobs, source.id, node.id) || resolvedJob) : null;
+    if (requiredReuse.has(node.id) && !selected.has(node.id) && ['storyboard', 'layout'].includes(node.type) && (!Array.isArray(nodeOutput(prior)?.scenes) || !nodeOutput(prior).scenes.length)) throw new HttpError(409, skipped.has(node.id) ? `${BLOCK_MESSAGES.skipped_prerequisite} (${node.id})` : `${node.id} requires completed scene evidence from its own branch`);
     if ((selected.has(node.id) || requiredReuse.has(node.id)) && node.type === 'generate' && reusable && (!nodeOutput(prior)?.generationJobId || !inheritedJob)) throw new HttpError(409, 'Completed generation is missing its original job identity; recover it before retrying');
     const paidReuse = selected.has(node.id) && node.type === 'generate' && reusable && inheritedJob?.applied && inheritedJob.status === 'completed';
-    if (selected.has(node.id) && node.type === 'generate' && inheritedJob && orderedSelected.some((item) => ['script', 'storyboard', 'layout'].includes(item.type))) throw new HttpError(409, 'Cannot rerun script, storyboard or layout while reusing a paid generation job');
+    if (selected.has(node.id) && node.type === 'generate' && guardJob && orderedSelected.some((item) => ['script', 'storyboard', 'layout'].includes(item.type))) throw new HttpError(409, 'Cannot rerun script, storyboard or layout while reusing a paid generation job');
     if (paidReuse || (!selected.has(node.id) && requiredReuse.has(node.id) && reusable)) {
       outputs.set(node.id, nodeOutput(prior));
       reusedOutputs.push(node.id);
-      return { ...prior, output: nodeOutput(prior), status: node.type === 'review' ? nodeStatus(prior) : 'completed', reused: true, reusedFrom: source.id };
+      return { ...prior, output: nodeOutput(prior), status: node.type === 'review' ? nodeStatus(prior) : 'completed', reused: true, reusedFrom: source.id, skipReason: undefined, error: undefined, retainedOutput: undefined, retainedStatus: undefined, retainedFrom: undefined, staleFrom: undefined };
     }
-    if (requiredReuse.has(node.id) && !selected.has(node.id)) throw new HttpError(409, `${node.id} requires completed prerequisite evidence from its own branch`);
+    if (requiredReuse.has(node.id) && !selected.has(node.id)) throw new HttpError(409, skipped.has(node.id) ? `${BLOCK_MESSAGES.skipped_prerequisite} (${node.id})` : `${node.id} requires completed prerequisite evidence from its own branch`);
     const lineage = {
       ...(!selected.has(node.id) && !invalidated.has(node.id) && nodeOutput(prior) ? { retainedOutput: nodeOutput(prior), retainedStatus: nodeStatus(prior), retainedFrom: source.id } : {}),
+      ...(!selected.has(node.id) && invalidated.has(node.id) && reusableNodeRun(prior) ? { staleFrom: source.id } : !selected.has(node.id) && !reusableNodeRun(prior) && prior?.staleFrom ? { staleFrom: prior.staleFrom } : {}),
       ...(intent ? { generationIntent: intent } : {}),
       ...(inheritedJob ? { output: { ...nodeOutput(prior), generationJobId: inheritedJob.id } } : {}),
     };
-    return { nodeId: node.id, type: node.type, status: selected.has(node.id) ? 'queued' : 'skipped', ...(!selected.has(node.id) ? { error: 'Node was not selected for this execution' } : {}), ...lineage };
+    return { nodeId: node.id, type: node.type, status: selected.has(node.id) ? 'queued' : 'skipped', ...(selected.has(node.id) ? {} : skipped.has(node.id) ? { skipReason: 'user' } : { error: 'Node was not selected for this execution', skipReason: 'unselected' }), ...lineage };
   });
   return { selectedStages: orderedSelected.map((node) => node.id), startStage: start.id, source, nodeRuns, outputs, reusedOutputs };
 }
+
+function compatibleProvenance(workflow, episode, source) {
+  return Boolean(source.workflowSnapshot) && source.workflowSnapshot.id === workflow.id
+    && source.workflowSnapshot.version === workflow.version && source.workflowSnapshot.episodeId === episode.id
+    && source.workflowSnapshot.channelId === episode.channelId && source.episodeSnapshot?.id === episode.id
+    && source.episodeSnapshot?.channelId === episode.channelId && Array.isArray(source.nodeRuns)
+    && canonicalJson(source.workflowSnapshot.nodes) === canonicalJson(workflow.nodes)
+    && canonicalJson(source.workflowSnapshot.edges) === canonicalJson(workflow.edges)
+    && new Set(source.nodeRuns.map((item) => item.nodeId)).size === source.nodeRuns.length
+    && source.nodeRuns.every((item) => workflow.nodes.some((node) => node.id === item.nodeId && node.type === item.type));
+}
+
+function findResumeSource(store, workflow, episode) {
+  return store.list('workflowRuns').find((run) => run.workflowId === workflow.id && run.episodeId === episode.id
+    && run.workflowVersion === workflow.version && run.episodeVersion === episode.version && TERMINAL.includes(run.status)
+    && compatibleProvenance(workflow, episode, run));
+}
+
+function validateExecution(raw) {
+  const value = object(raw);
+  const allowed = ['mode', 'targetNodeId', 'refresh'];
+  if (Object.keys(value).some((key) => !allowed.includes(key))) throw new HttpError(400, 'Unknown execution field');
+  const mode = choice(value.mode, ['node', 'all'], 'execution mode');
+  if (mode === 'node') {
+    if (value.refresh !== undefined) throw new HttpError(400, 'execution.refresh is not valid for mode "node"');
+    return { mode, targetNodeId: identifier(value.targetNodeId, 'execution.targetNodeId'), refresh: false };
+  }
+  if (value.targetNodeId !== undefined) throw new HttpError(400, 'execution.targetNodeId is not valid for mode "all"');
+  if (value.refresh !== undefined && typeof value.refresh !== 'boolean') throw new HttpError(400, 'execution.refresh must be boolean');
+  return { mode, targetNodeId: null, refresh: value.refresh === true };
+}
+
+/** Pure, store-reading only: never writes entities, records events or calls providers. The
+ * selectedStages/resumeRunId it derives are dry-run validated through the exact same
+ * stageSelection() that start()/_quote() use, so a plan can never diverge from what they accept. */
+export function planExecution(store, workflow, episode, rawExecution) {
+  const { mode, targetNodeId, refresh } = validateExecution(rawExecution);
+  const skipped = skippedSet(workflow);
+  const skippedNodeIds = [...skipped];
+  const base = { mode, targetNodeId, refresh };
+  const blockedResult = (blocked, completedNodeIds = [], nodes = []) => ({ ...base, blocked, selectedStages: [], resumeRunId: null, requiresGeneration: false, needsDecision: false, nothingToRun: false, completedNodeIds, staleNodeIds: [], skippedNodeIds, nodes });
+
+  const activeRuns = store.list('workflowRuns').filter((run) => ['queued', 'running'].includes(run.status));
+  if (activeRuns.some((run) => run.episodeId === episode.id) || activeRuns.length >= MAX_ACTIVE_RUNS) {
+    return blockedResult({ code: 'active_run', message: BLOCK_MESSAGES.active_run });
+  }
+
+  let target = null;
+  if (mode === 'node') {
+    try { target = resolveStage(workflow, targetNodeId, 'target node'); }
+    catch (error) {
+      if (!(error instanceof HttpError)) throw error;
+      return blockedResult({ code: 'unknown_node', message: error.message });
+    }
+  }
+
+  const source = refresh ? null : findResumeSource(store, workflow, episode);
+  const sourceById = new Map((source?.nodeRuns || []).map((nodeRun) => [nodeRun.nodeId, nodeRun]));
+  const ordered = orderedNodes(workflow);
+  const completedNodeIds = ordered.filter((node) => !skipped.has(node.id) && reusableNodeRun(sourceById.get(node.id))).map((node) => node.id);
+
+  const dirty = new Map();
+  for (const node of ordered) {
+    const parentIds = workflow.edges.filter((edge) => edge.target === node.id).map((edge) => edge.source);
+    const parentDirty = parentIds.some((parentId) => dirty.get(parentId));
+    dirty.set(node.id, skipped.has(node.id) ? parentDirty : (mode === 'node' && node.id === target.id) || !reusableNodeRun(sourceById.get(node.id)) || parentDirty);
+  }
+
+  const isPublishTarget = mode === 'node' && target.type === 'publish';
+  const neededSet = isPublishTarget ? new Set([target.id])
+    : mode === 'node' ? new Set([...ancestors(workflow.edges, target.id), target.id])
+    : new Set(ordered.filter((node) => node.type !== 'publish').map((node) => node.id));
+
+  // selectedIds drives action 'run'; blockedId (when given) always wins, overriding even 'skip'.
+  // Used both for the real attempted selection and, on any block, with selectedIds forced to []
+  // (nothing actually ran) so the response's nodes[] agrees with its forced-empty selectedStages.
+  const buildNodes = (selectedIds, blockedId) => {
+    const selectedSet = new Set(selectedIds);
+    const invalidated = invalidatedBySelection(workflow, selectedIds);
+    return ordered.map((node) => {
+      if (node.id === blockedId) return { nodeId: node.id, type: node.type, action: 'blocked', reason: '실행할 수 없습니다' };
+      if (skipped.has(node.id)) return { nodeId: node.id, type: node.type, action: 'skip', reason: '건너뛰기 설정됨' };
+      if (selectedSet.has(node.id)) return { nodeId: node.id, type: node.type, action: 'run', reason: '이번 실행에서 실행됩니다' };
+      const reusable = reusableNodeRun(sourceById.get(node.id));
+      if (neededSet.has(node.id)) return (reusable && !invalidated.has(node.id)) ? { nodeId: node.id, type: node.type, action: 'reuse', reason: '이전 실행 결과를 재사용합니다' } : { nodeId: node.id, type: node.type, action: 'idle', reason: '아직 실행되지 않았습니다' };
+      if (reusable && invalidated.has(node.id)) return { nodeId: node.id, type: node.type, action: 'stale', reason: '상위 노드가 다시 실행되어 갱신이 필요합니다' };
+      if (reusable) return { nodeId: node.id, type: node.type, action: 'keep', reason: '이번 실행과 무관하게 유지됩니다' };
+      return { nodeId: node.id, type: node.type, action: 'idle', reason: '아직 실행되지 않았습니다' };
+    });
+  };
+
+  if (mode === 'node' && skipped.has(target.id)) {
+    return blockedResult({ code: 'skipped_target', message: BLOCK_MESSAGES.skipped_target }, completedNodeIds, buildNodes([], target.id));
+  }
+
+  const selectedStages = isPublishTarget ? [target.id]
+    : ordered.filter((node) => neededSet.has(node.id) && !skipped.has(node.id) && node.type !== 'publish' && dirty.get(node.id)).map((node) => node.id);
+
+  const nodes = buildNodes(selectedStages, null);
+  const selectionInvalidated = invalidatedBySelection(workflow, selectedStages);
+  const staleNodeIds = ordered.filter((node) => !selectedStages.includes(node.id) && selectionInvalidated.has(node.id) && reusableNodeRun(sourceById.get(node.id))).map((node) => node.id);
+  const needsDecision = mode === 'all' && !refresh && completedNodeIds.length > 0;
+
+  if (!selectedStages.length) {
+    return { ...base, blocked: false, selectedStages: [], resumeRunId: source ? source.id : null, requiresGeneration: false, needsDecision, nothingToRun: true, completedNodeIds, staleNodeIds: [], skippedNodeIds, nodes };
+  }
+
+  try {
+    stageSelection(workflow, { selectedStages, resumeRunId: source ? source.id : NO_RESUME }, episode, store);
+  } catch (error) {
+    if (!(error instanceof HttpError)) throw error;
+    if (isPublishTarget) return blockedResult({ code: 'publish_requires_review', message: BLOCK_MESSAGES.publish_requires_review }, completedNodeIds, buildNodes([], target.id));
+    if (error.code === 'generation_unresolved') return blockedResult({ code: 'generation_unresolved', message: error.message }, completedNodeIds, buildNodes([], error.nodeId));
+    const isSkippedPrerequisite = error.message.startsWith(BLOCK_MESSAGES.skipped_prerequisite);
+    const blockedId = isSkippedPrerequisite ? (/\(([^()]+)\)$/.exec(error.message)?.[1] ?? null) : (mode === 'node' ? target.id : null);
+    return blockedResult({ code: isSkippedPrerequisite ? 'skipped_prerequisite' : 'invalid_selection', message: error.message }, completedNodeIds, buildNodes([], blockedId));
+  }
+
+  return {
+    ...base, blocked: false, selectedStages, resumeRunId: source ? source.id : null,
+    requiresGeneration: selectedStages.some((id) => workflow.nodes.find((node) => node.id === id)?.type === 'generate'),
+    needsDecision, nothingToRun: false, completedNodeIds, staleNodeIds, skippedNodeIds, nodes,
+  };
+}
+
 
 function assertVersions(workflow, episode, options) {
   for (const [name, current] of [['expectedWorkflowVersion', workflow.version], ['expectedEpisodeVersion', episode.version]]) {
@@ -475,8 +751,26 @@ function estimateSnapshot(nodes) {
   return nodes.map(({ nodeId, quoted, cost, currency }) => ({ nodeId, quoted, cost, currency }));
 }
 
-function reviewStatus(nodeRuns) {
-  const reviews = nodeRuns.filter((node) => node.type === 'review' && node.status !== 'skipped');
+/** Review nodes that genuinely gate THIS run's aggregate status: directly selected, or the
+ * exact review a selected publish node's HARD_DEPENDENCY prerequisite resolves to (publish is
+ * the only node type that hard-depends on review -- HARD_DEPENDENCY.publish === 'review', so
+ * this generalizes to any future type with the same mapping, not just 'publish' by name).
+ * Deliberately excludes a review pulled in only by the generic edge-parent reuse loop (e.g. a
+ * render node whose direct graph parent happens to be a review in a review->render revision
+ * chain) -- that reuse is real data lineage (preserved, untouched by this function), not
+ * evidence this run required or produced a human decision. Pure: derived on demand from the
+ * immutable workflowSnapshot + this run's own already-persisted selectedStages, so it needs no
+ * new stored field, no migration and is safe to re-derive for any run at any later time -- old
+ * runs compute identically to new ones. A selected publish node's hard-dependency chain was
+ * already proven resolvable once by stageSelection at run-creation time, so resolving it again
+ * here against the same unchanged snapshot cannot throw. */
+function hardRequiredReviewIds(workflow, selectedStages) {
+  return hardRequiredIds(workflow?.nodes || [], workflow?.edges || [], selectedStages, HARD_DEPENDENCY, 'review');
+}
+
+function reviewStatus(nodeRuns, workflow, selectedStages) {
+  const relevant = new Set([...(selectedStages || []), ...hardRequiredReviewIds(workflow, selectedStages)]);
+  const reviews = nodeRuns.filter((node) => node.type === 'review' && node.status !== 'skipped' && relevant.has(node.nodeId));
   if (!reviews.length) return 'completed';
   if (reviews.some((node) => !['approved', 'changes_requested'].includes(node.status))) return 'awaiting_review';
   return reviews.some((node) => node.status === 'changes_requested') ? 'changes_requested' : 'approved';
@@ -520,6 +814,78 @@ export class WorkflowEngine {
     return this.store.rollupWorkflow(id, options, portableRollup);
   }
 
+  plan(id, episodeId, body = {}) {
+    const workflow = this.store.get('workflows', id);
+    validateWorkflow(workflow);
+    const episode = this.store.get('episodes', text(episodeId, 'episodeId', 80));
+    assertOwnership(this.store, workflow, episode);
+    assertVersions(workflow, episode, body);
+    return this.resolveExecution(workflow, episode, body.execution);
+  }
+
+  /** Pure over store reads; never writes entities, records events or calls providers. Base plan
+   * from planExecution(); if it requires generation and the REAL prepareCandidate (same function
+   * _quote()/start() use, never duplicated) would reject the full selection, derive the free
+   * preparatory prefix (selected minus any generate node and minus any selected descendant of a
+   * selected generate node) and defer the rest -- so plan()/_quote()/start() always agree. */
+  resolveExecution(workflow, episode, rawExecution) {
+    const plan = planExecution(this.store, workflow, episode, rawExecution);
+    if (plan.blocked || plan.nothingToRun || !plan.requiresGeneration) return { ...plan, deferredStages: [], notice: '' };
+    let selection;
+    try {
+      selection = stageSelection(workflow, { selectedStages: plan.selectedStages, resumeRunId: plan.resumeRunId ?? NO_RESUME }, episode, this.store);
+      this.prepareCandidate(workflow, episode, { selectedStages: plan.selectedStages }, selection);
+      return { ...plan, deferredStages: [], notice: '' };
+    } catch (error) {
+      if (!(error instanceof HttpError)) throw error;
+      if (error.code !== 'prepare_required') {
+        const blockedNodeId = plan.mode === 'node' ? plan.targetNodeId : null;
+        return {
+          ...plan, blocked: { code: 'invalid_selection', message: error.message },
+          selectedStages: [], resumeRunId: null, requiresGeneration: false, needsDecision: false, nothingToRun: false, staleNodeIds: [], deferredStages: [], notice: '',
+          nodes: plan.nodes.map((entry) => entry.nodeId === blockedNodeId ? { ...entry, action: 'blocked', reason: '실행할 수 없습니다' } : entry.action === 'run' ? { ...entry, action: 'idle', reason: '아직 실행되지 않았습니다' } : entry),
+        };
+      }
+    }
+    const deferred = new Set();
+    for (const id of plan.selectedStages) {
+      const node = workflow.nodes.find((item) => item.id === id);
+      if (node.type === 'generate' || [...ancestors(workflow.edges, id)].some((ancestorId) => deferred.has(ancestorId))) deferred.add(id);
+    }
+    const prefix = plan.selectedStages.filter((id) => !deferred.has(id));
+    const deferredStages = plan.selectedStages.filter((id) => deferred.has(id));
+    const emptyPrefixBlocked = { ...plan, blocked: { code: 'invalid_selection', message: PREPARE_FIRST_EMPTY_MESSAGE }, selectedStages: [], resumeRunId: null, requiresGeneration: false, needsDecision: false, nothingToRun: false, staleNodeIds: [], nodes: [], deferredStages: [], notice: '' };
+    if (!prefix.length) return emptyPrefixBlocked;
+    let prefixSelection;
+    try {
+      prefixSelection = stageSelection(workflow, { selectedStages: prefix, resumeRunId: plan.resumeRunId ?? NO_RESUME }, episode, this.store);
+    } catch (error) {
+      if (!(error instanceof HttpError)) throw error;
+      return { ...plan, blocked: { code: 'invalid_selection', message: error.message }, selectedStages: [], resumeRunId: null, requiresGeneration: false, needsDecision: false, nothingToRun: false, staleNodeIds: [], nodes: [], deferredStages: [], notice: '' };
+    }
+    const prefixStaleIds = new Set(prefixSelection.nodeRuns.filter((nodeRun) => nodeRun.staleFrom).map((nodeRun) => nodeRun.nodeId));
+    return {
+      ...plan, selectedStages: prefix, requiresGeneration: false, deferredStages, notice: PREPARE_FIRST_NOTICE,
+      staleNodeIds: [...prefixStaleIds],
+      nodes: plan.nodes.map((entry) => deferred.has(entry.nodeId)
+        ? (prefixStaleIds.has(entry.nodeId) ? { ...entry, action: 'stale', reason: '상위 노드가 다시 실행되어 갱신이 필요합니다' } : { ...entry, action: 'idle', reason: '준비 단계 이후 다시 실행됩니다' })
+        : entry),
+    };
+  }
+
+  deriveSelection(workflow, episode, options) {
+    // `legacy:true` is set HERE only (never spread from `options`/client body -- app.mjs's
+    // route allow-lists plus this literal return mean a client-supplied `legacy` field can
+    // never survive into stageSelection). Keep it a fresh literal; do not "simplify" this into
+    // `{ ...options, legacy: true }`, which would let a client request override it.
+    if (options.execution === undefined) return { selectedStages: options.selectedStages, startStage: options.startStage, resumeRunId: options.resumeRunId, execution: undefined, legacy: true, deferredStages: [], notice: '' };
+    if (['selectedStages', 'startStage', 'resumeRunId'].some((key) => options[key] !== undefined)) throw new HttpError(400, 'execution cannot be combined with selectedStages, startStage or resumeRunId');
+    const plan = this.resolveExecution(workflow, episode, options.execution);
+    if (plan.blocked) { const error = new HttpError(409, plan.blocked.message); error.code = plan.blocked.code; throw error; }
+    if (plan.nothingToRun) { const error = new HttpError(409, NOTHING_TO_RUN_MESSAGE); error.code = 'nothing_to_run'; throw error; }
+    return { selectedStages: plan.selectedStages, startStage: undefined, resumeRunId: plan.resumeRunId ?? NO_RESUME, execution: { mode: plan.mode, targetNodeId: plan.targetNodeId, refresh: plan.refresh }, deferredStages: plan.deferredStages, notice: plan.notice };
+  }
+
   async quote(id, episodeId, options = {}) {
     const targetId = text(episodeId, 'episodeId', 80);
     this.activeQuoteEpisodes.set(targetId, (this.activeQuoteEpisodes.get(targetId) || 0) + 1);
@@ -537,7 +903,8 @@ export class WorkflowEngine {
     const episode = this.store.get('episodes', text(episodeId, 'episodeId', 80));
     assertOwnership(this.store, workflow, episode);
     assertVersions(workflow, episode, options);
-    const selection = stageSelection(workflow, options, episode, this.store);
+    const derivedQuote = this.deriveSelection(workflow, episode, options);
+    const selection = stageSelection(workflow, derivedQuote, episode, this.store);
     const hasGeneration = selection.selectedStages.some((nodeId) => workflow.nodes.find((node) => node.id === nodeId).type === 'generate');
     if (hasGeneration) checkDisclosure(options.disclosure);
     const { verifyCandidateAssets } = candidates;
@@ -587,18 +954,20 @@ export class WorkflowEngine {
       ...(selection.source ? { resumeRunId: selection.source.id } : {}),
       candidate, preparedStages, fingerprint: candidateFingerprint(candidate), nodes, aggregate,
       disclosure: options.disclosure, expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+      deferredStages: derivedQuote.deferredStages, notice: derivedQuote.notice,
     });
   }
 
   start(id, episodeId, options = {}) {
-    const { allowGeneration = false, selectedStages, startStage, resumeRunId } = options;
+    const { allowGeneration = false } = options;
     if (this.closed) throw new HttpError(503, 'Workflow service is stopping');
     const workflow = this.store.get('workflows', id);
     validateWorkflow(workflow);
     const episode = this.store.get('episodes', text(episodeId, 'episodeId', 80));
     assertOwnership(this.store, workflow, episode);
     assertVersions(workflow, episode, options);
-    const plan = stageSelection(workflow, { selectedStages, startStage, resumeRunId }, episode, this.store);
+    const derived = this.deriveSelection(workflow, episode, options);
+    const plan = stageSelection(workflow, derived, episode, this.store);
     let generationPlan;
     if (plan.selectedStages.some((nodeId) => workflow.nodes.find((node) => node.id === nodeId)?.type === 'generate')) {
       if (allowGeneration !== true) throw new HttpError(400, 'Paid generation requires explicit allowGeneration');
@@ -623,7 +992,7 @@ export class WorkflowEngine {
       workflowId: id, workflowVersion: workflow.version, workflowSnapshot: workflow,
       episodeId: episode.id, episodeVersion: episode.version, episodeSnapshot: episode, status: 'queued',
       selectedStages: plan.selectedStages, startStage: plan.startStage,
-      ...(plan.source ? { resumedFrom: plan.source.id } : {}), reusedOutputs: plan.reusedOutputs,
+      ...(plan.source ? { resumedFrom: plan.source.id } : {}), reusedOutputs: plan.reusedOutputs, ...(derived.execution ? { execution: derived.execution } : {}),
       ...(generationPlan ? { generationPlanId: generationPlan.id, generationFingerprint: generationPlan.fingerprint, generationPlan } : {}),
       nodeRuns: plan.nodeRuns,
     });
@@ -756,16 +1125,17 @@ export class WorkflowEngine {
     let episode = originalEpisode;
     const outputs = new Map(selection.outputs);
     const selected = new Set(selection.selectedStages);
+    const hasGeneration = [...selected].some((id) => workflow.nodes.find((node) => node.id === id)?.type === 'generate');
     const preparedStages = {};
     for (const node of orderedNodes(workflow)) {
       if (!selected.has(node.id)) continue;
       if (node.type === 'news' && node.config.source === 'trend_news') {
         outputs.set(node.id, { articles: storedNewsArticles(this.store, node.config) });
       } else if (node.type === 'script') {
-        if (node.config.agent !== 'existing') throw new HttpError(409, 'Prepare and save new script output before quoting paid generation');
+        if (hasGeneration && node.config.agent !== 'existing') { const error = new HttpError(409, 'Prepare and save new script output before quoting paid generation'); error.code = 'prepare_required'; throw error; }
         outputs.set(node.id, { scenes: this.validateAssets(scenes(episode.scenes)) });
       } else if (node.type === 'storyboard' || node.type === 'layout') {
-        if ([...ancestors(workflow.edges, node.id)].some((id) => selected.has(id) && workflow.nodes.find((item) => item.id === id).type === 'generate')) throw new HttpError(409, 'Prepare downstream scene edits separately before quoting generation');
+        if ([...ancestors(workflow.edges, node.id)].some((id) => selected.has(id) && workflow.nodes.find((item) => item.id === id).type === 'generate')) { const error = new HttpError(409, 'Prepare downstream scene edits separately before quoting generation'); error.code = 'prepare_required'; throw error; }
         let staged;
         if (node.type === 'storyboard') {
           staged = outputs.get(prerequisite(workflow, node, 'script').id)?.scenes;
@@ -834,7 +1204,15 @@ export class WorkflowEngine {
   renderCandidate(workflow, node, episode, outputs) {
     const storyboard = optional(workflow, node, 'storyboard');
     const layout = optional(workflow, node, 'layout');
-    const latestInput = storyboard && layout && ancestors(workflow.edges, storyboard.id).has(layout.id) ? storyboard : (layout || storyboard);
+    // Availability-aware, mirroring stageSelection's render branch and prepareCandidate's
+    // generate branch (workflows.mjs:1111): a structurally later producer that never ran this
+    // execution (skipped with no reusable output, or simply absent from this run's selection)
+    // is omitted, never structurally preferred just because the node exists in the graph --
+    // this is the execute()-time half of finding F3; the stageSelection half alone cannot
+    // prevent this throw since renderCandidate re-derives its own producer pick independently.
+    const layoutUsable = layout && outputs.has(layout.id);
+    const storyboardUsable = storyboard && outputs.has(storyboard.id);
+    const latestInput = storyboardUsable && layoutUsable && ancestors(workflow.edges, storyboard.id).has(layout.id) ? storyboard : layoutUsable ? layout : storyboardUsable ? storyboard : null;
     const connectedScenes = latestInput ? outputs.get(latestInput.id)?.scenes : episode.scenes;
     if (!Array.isArray(connectedScenes) || !connectedScenes.length) throw new HttpError(409, 'Render requires completed scene evidence from its connected producer');
     let sceneList = structuredClone(connectedScenes);
@@ -881,6 +1259,7 @@ export class WorkflowEngine {
       const outputs = new Map(run.nodeRuns.filter((node) => node.output && ['reused', 'completed', 'awaiting_review', 'approved', 'changes_requested'].includes(node.status)).map((node) => [node.nodeId, node.output]));
       const source = run.resumedFrom ? this.store.get('workflowRuns', run.resumedFrom) : undefined;
       const sourceById = new Map((source?.nodeRuns || []).map((node) => [node.nodeId, node]));
+      const invalidated = invalidatedBySelection(workflow, run.selectedStages || []);
       const selected = new Set(run.selectedStages || workflow.nodes.map((node) => node.id));
       let episode = run.episodeSnapshot;
       let executed = false;
@@ -995,13 +1374,29 @@ export class WorkflowEngine {
             const scene = episode.scenes.find((item) => item.id === approved.sceneId);
             if (!scene) throw new HttpError(409, 'The approved target scene no longer exists');
             if (approved.slotId && !scene.slots?.some((slot) => slot.id === approved.slotId)) throw new HttpError(409, 'The approved target slot no longer exists');
-            const prior = sourceById.get(node.id);
+            const rawPrior = sourceById.get(node.id);
+            const prior = invalidated.has(node.id) ? undefined : rawPrior;
+            // Fetched once: reused below for resumingJob, hasUnresolvedNodeJob's internal scan
+            // and the requestId fallback instead of each independently re-querying+re-parsing
+            // the full tables (previously up to N+2 full scans per generate node, and
+            // workflowRuns rows -- full workflow/episode snapshots plus candidate -- are the
+            // store's heaviest entity).
+            const jobs = this.store.list('generationJobs');
+            const runs = this.store.list('workflowRuns');
+            // Same principle as stageSelection's resumingJob: exclude only the ONE specific job
+            // this execution would itself resume (when not invalidated) -- never skip the scan
+            // merely because rawPrior references some job, which could be a different, already-
+            // settled one while an older, disconnected job for this node remains unresolved.
+            const resumingJob = !invalidated.has(node.id) ? priorGenerationJob(jobs, rawPrior, run.resumedFrom || id, node.id) : null;
+            if (hasUnresolvedNodeJob(runs, jobs, workflow.id, episode.id, node.id, id, resumingJob?.id)) {
+              const error = new HttpError(409, GENERATION_UNRESOLVED_MESSAGE); error.code = 'generation_unresolved'; throw error;
+            }
             const savedIntent = nodeRun?.generationIntent || prior?.generationIntent;
             const inputFingerprint = candidateFingerprint(approved);
             if (savedIntent && savedIntent.inputFingerprint !== inputFingerprint) throw new HttpError(409, 'Original paid node input differs; recover the original job without resubmitting');
             const requestId = savedIntent?.requestId || `${run.resumedFrom || id}:${node.id}`;
             const priorJobId = nodeRun?.output?.generationJobId || prior?.output?.generationJobId || savedIntent?.generationJobId;
-            let job = priorJobId ? this.generations.get(priorJobId) : this.store.list('generationJobs').find((item) => item.requestId === requestId);
+            let job = priorJobId ? this.generations.get(priorJobId) : jobs.find((item) => item.requestId === requestId);
             if (savedIntent && !job) throw new HttpError(409, 'Original generation job identity is unavailable; reconcile it before retrying');
             const intent = savedIntent || { requestId, input: approved, inputFingerprint, generationPlanId: run.generationPlanId, createdAt: timestamp() };
             if (!this.persistNode(id, node.id, { generationIntent: intent })) throw new HttpError(503, 'Cannot persist the original generation intent before submission');
@@ -1061,7 +1456,7 @@ export class WorkflowEngine {
       }
       const latest = this.current(id);
       if (!latest) return;
-      const finalStatus = failure ? 'failed' : reviewStatus(latest.nodeRuns);
+      const finalStatus = failure ? 'failed' : reviewStatus(latest.nodeRuns, latest.workflowSnapshot, latest.selectedStages);
       this.store.save('workflowRuns', { ...latest, status: finalStatus, ...(failure ? { error: failure } : {}), completedAt: timestamp(), episodeVersion: episode.version, updatedAt: timestamp() });
       this.store.record(`workflow.${finalStatus}`, { entityId: workflow.id, runId: id, episodeId: episode.id, executed });
     } catch (error) {

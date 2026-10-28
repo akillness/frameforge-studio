@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync, renameSync, existsSync, unlinkSync, readdirSy
 import { join, resolve } from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
 import { HttpError, object, text, episodeMusic, scenes as validateScenes } from './validation.mjs';
-import { resolvePrerequisite } from './graph.mjs';
+import { resolvePrerequisite, hardRequiredIds, HARD_DEPENDENCY } from './graph.mjs';
 
 const DEFAULT_TREND_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_TREND_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
@@ -67,6 +67,31 @@ function verifyGenerationFile(dataDir, upload) {
   } catch {
     throw new HttpError(409, 'Generation output file is missing, changed or not a contained regular file');
   } finally { if (fd !== undefined) closeSync(fd); }
+}
+
+/** The scoping algorithm (hardRequiredIds) and the HARD_DEPENDENCY map it's parameterized by are
+ * both shared with workflows.mjs via a single graph.mjs source of truth, so neither can silently
+ * drift between the two files the way the hand-duplicated copy did before -- that drift is
+ * exactly how this run-status scope bug was introduced in the first place. */
+function hardRequiredReviewIds(workflow, selectedStages) {
+  return hardRequiredIds(workflow?.nodes || [], workflow?.edges || [], selectedStages, HARD_DEPENDENCY, 'review');
+}
+
+/** Review nodes that genuinely gate a run's own aggregate status: directly selected this run, or
+ * the exact review a selected publish node's hard dependency resolves to. Mirrors workflows.mjs
+ * reviewStatus (execute-end scope) so the planner, this post-decision recompute and the
+ * publication gate agree. A review pulled into nodeRuns only through the generic edge-parent
+ * reuse loop (e.g. a render node whose direct parent happens to be a review in a review->render
+ * revision chain) is real preserved lineage, not evidence this run required or decided it, and is
+ * excluded here -- untouched in workflow_node_reviews/run.reviews, just outside this run's own
+ * status. Pure/derived from the immutable workflowSnapshot + this run's own persisted
+ * selectedStages: no new stored field, safe to recompute for any run at any later time. */
+function reviewStatus(nodeRuns, workflow, selectedStages) {
+  const relevant = new Set([...(selectedStages || []), ...hardRequiredReviewIds(workflow, selectedStages)]);
+  const reviews = nodeRuns.filter((node) => node.type === 'review' && node.status !== 'skipped' && relevant.has(node.nodeId));
+  if (!reviews.length) return 'completed';
+  if (reviews.some((node) => !['approved', 'changes_requested'].includes(node.status))) return 'awaiting_review';
+  return reviews.some((node) => node.status === 'changes_requested') ? 'changes_requested' : 'approved';
 }
 
 export class Store {
@@ -631,7 +656,8 @@ export class Store {
   history(id) { this.get('episodes', id); return this.db.prepare('SELECT data FROM history WHERE episode_id=? ORDER BY version DESC').all(id).map((row) => JSON.parse(row.data)); }
 
   workflowSnapshot(workflow, reason) {
-    const entry = { id: randomUUID(), workflowId: workflow.id, version: workflow.version, reason, createdAt: now(), snapshot: workflow };
+    const { skippedNodes, ...snapshot } = workflow;
+    const entry = { id: randomUUID(), workflowId: workflow.id, version: workflow.version, reason, createdAt: now(), snapshot };
     this.db.prepare('INSERT INTO workflow_history(workflow_id,version,data) VALUES (?,?,?)').run(workflow.id, workflow.version, JSON.stringify(entry));
   }
 
@@ -646,9 +672,33 @@ export class Store {
       if (expectedVersion !== undefined && previous.version !== expectedVersion) throw new HttpError(409, `Workflow changed: current version is ${previous.version}. Reload before saving.`);
       for (const field of ['episodeId', 'channelId', 'templateId', 'templateVersion']) if (field in patch && patch[field] !== previous[field]) throw new HttpError(400, `${field} is immutable once a workflow is owned by a project`);
       next = { ...previous, ...patch, version: previous.version + 1, updatedAt: now() };
+      if (previous.skippedNodes?.length) next.skippedNodes = previous.skippedNodes.filter((nodeId) => next.nodes.some((node) => node.id === nodeId));
       this.save('workflows', next);
       this.workflowSnapshot(next, reason);
       this.record('workflows.updated', { entityId: id, version: next.version, reason });
+      this.db.exec('COMMIT');
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+    return next;
+  }
+
+  setWorkflowSkip(id, nodeId, skipped, expectedVersion) {
+    if (typeof skipped !== 'boolean') throw new HttpError(400, 'skipped must be boolean');
+    if (!Number.isInteger(expectedVersion) || expectedVersion < 1) throw new HttpError(400, 'setWorkflowSkip requires a positive expectedVersion');
+    this.db.exec('BEGIN IMMEDIATE');
+    let next;
+    try {
+      const previous = this.get('workflows', id);
+      if (previous.episodeId) this.assertEpisodeActive(previous.episodeId);
+      if (previous.version !== expectedVersion) throw new HttpError(409, `Workflow changed: current version is ${previous.version}. Reload before saving.`);
+      if (!previous.episodeId || !previous.channelId || !previous.templateId || !Number.isInteger(previous.templateVersion)) throw new HttpError(409, 'Skip applies to project workflows');
+      if (!previous.nodes.some((node) => node.id === nodeId)) throw new HttpError(400, `Unknown node: ${nodeId}`);
+      const current = new Set(previous.skippedNodes || []);
+      const already = skipped ? current.has(nodeId) : !current.has(nodeId);
+      if (already) { next = previous; this.db.exec('COMMIT'); return next; }
+      if (skipped) current.add(nodeId); else current.delete(nodeId);
+      next = { ...previous, skippedNodes: [...current].sort() };
+      this.save('workflows', next);
+      this.record('workflows.skipped', { entityId: id, nodeId, skipped });
       this.db.exec('COMMIT');
     } catch (error) { this.db.exec('ROLLBACK'); throw error; }
     return next;
@@ -672,6 +722,7 @@ export class Store {
       if (template.version !== expectedTemplateVersion) throw new HttpError(409, `Template changed: current version is ${template.version}. Reload before rollup.`);
       const patch = portableWorkflow(workflow, episode, channel);
       next = { ...template, ...patch, version: template.version + 1, updatedAt: now() };
+      delete next.skippedNodes;
       this.save('workflows', next);
       this.workflowSnapshot(next, 'project-rollup');
       this.db.exec('COMMIT');
@@ -732,8 +783,7 @@ export class Store {
       const review = { id: randomUUID(), decision, notes, reviewedAt: now(), workflowId, workflowVersion: run.workflowVersion, runId, reviewNodeId, episodeId: run.episodeId, episodeVersion: run.episodeVersion, jobId, outputUrl, sha256 };
       this.db.prepare('INSERT INTO workflow_node_reviews(id,run_id,review_node_id,data) VALUES (?,?,?,?)').run(review.id, runId, reviewNodeId, JSON.stringify(review));
       const nodeRuns = run.nodeRuns.map((node) => node.nodeId === reviewNodeId ? { ...node, status: decision, reviewedAt: review.reviewedAt, review, output: { ...node.output, review } } : node);
-      const activeReviews = nodeRuns.filter((node) => node.type === 'review' && node.status !== 'skipped');
-      const status = activeReviews.some((node) => node.status === 'awaiting_review') ? 'awaiting_review' : activeReviews.some((node) => node.status === 'changes_requested') ? 'changes_requested' : 'approved';
+      const status = reviewStatus(nodeRuns, run.workflowSnapshot, run.selectedStages);
       next = { ...run, status, reviews: { ...(run.reviews || {}), [reviewNodeId]: review }, updatedAt: review.reviewedAt, nodeRuns };
       this.save('workflowRuns', next);
       this.record('workflow.reviewed', { entityId: workflowId, runId, reviewNodeId, review });

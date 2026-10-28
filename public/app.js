@@ -50,7 +50,7 @@ const musicGenerationStates = new Map();
 const toolDescriptions = {overview:'채널과 전체 제작 현황을 확인합니다.',studio:'현재 프로젝트의 실제 장면·슬롯 초안을 편집합니다. 열기만으로 저장하지 않습니다.',workflow:'현재 프로젝트의 노드 캔버스로 돌아갑니다.',source:'소스 검색, 이용 권리와 출처를 확인합니다.',delivery:'완성 후보의 검토와 별도 공개 승인을 관리합니다. 열기만으로 공개하지 않습니다.',results:'렌더 결과와 서버 MP4, 플랫폼 브라우저를 확인합니다.',trends:'트렌드 수집 기록과 조사 도구를 엽니다.',templates:'기존 장면 템플릿을 확인합니다. 적용은 별도 명시적 동작입니다.',history:'원본 버전과 현재 초안을 비교합니다. 복원은 별도로 확인합니다.',knowledge:'채널·에피소드의 원본 관계와 지식을 확인합니다.',settings:'외부 연결과 작업 명령 기록을 확인합니다.',archived:'보관한 프로젝트를 확인하거나 원래 목록으로 복구합니다.'};
 const canMutate = () => state.session?.authenticated === true;
 const readActions = new Set(['view','channel','episode','project-section','scene','select-slot','select-platform-session','prev','next','play','reload','refresh-speech','refresh-commands','reload-history','history-version','refresh-knowledge','refresh-integrations','refresh-server-exports','trend-popular','ops-open','ops-history','project-tools','project-menu','episode-menu','channel-menu','tool-menu','sidebar-menu','open-scene-editor','close-scene-editor','close-project-tool','inspect-archived']);
-const readWorkflowActions = new Set(['select-node','minimap-select','inspector-tab','select-run','inspect-run-node','zoom-in','zoom-out','fit','reload','refresh-history','history-version','refresh-runs','refresh-generation','refresh-generation-job','open-tools','open-results','open-stage-overlay','close-overlay','select-stage','close-confirm','close-dialog','node-menu','node-tools','scene-editor','node-results','node-history','connections','open-add-node','open-workflow-settings','confirm-delete-node','input','output','canvas-history']);
+const readWorkflowActions = new Set(['select-node','minimap-select','inspector-tab','select-run','inspect-run-node','zoom-in','zoom-out','fit','reload','refresh-history','history-version','refresh-runs','refresh-generation','refresh-generation-job','open-tools','open-results','open-stage-overlay','close-overlay','select-stage','close-confirm','close-dialog','node-menu','canvas-menu','node-tools','scene-editor','node-results','node-history','connections','open-add-node','open-workflow-settings','confirm-delete-node','input','output','recent-runs-more','history-versions-more','history-page','refresh-run-history','refresh-run-detail','restore-workflow','estimate-ack']);
 const mutationForms = new Set(['modal-form','chat-form','trend-form','trend-settings-form','command-form','wf-connect-form']);
 function applySessionControls() {
   for (const control of document.querySelectorAll('[data-action],[data-wf-action],input,select,textarea,form button[type="submit"]')) {
@@ -409,6 +409,7 @@ async function api(path, options = {}) {
     }
     const error = new Error(data.error || data.message || `요청 실패 (${response.status})`);
     error.status = response.status;
+    if (data.code) error.code = data.code;
     throw error;
   }
   return data;

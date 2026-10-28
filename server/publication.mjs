@@ -221,7 +221,7 @@ export class PublicationService {
     return {
       fields, workflow, run, episode, channel, job, review, renderNode, candidate, sceneSnapshot, ownerId,
       request: { ...fields, workflowId: workflow.id, runId: run.id, reviewNodeId: body.reviewNodeId, expectedEpisodeVersion: body.expectedEpisodeVersion },
-      binding: canonicalJson({ workflow, run, episode, channel, job, candidate }),
+      binding: canonicalJson({ workflow: { ...workflow, skippedNodes: undefined }, run, episode, channel, job, candidate }),
     };
   }
 

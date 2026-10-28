@@ -117,6 +117,36 @@ export function resolveOptional(nodes, edges, nodeId, type) {
 }
 
 /**
+ * The one workflow-domain constant shared across workflows.mjs/store.mjs: which node type hard-
+ * depends on which prerequisite type (e.g. 'publish' requires an approved 'review'; see
+ * hardRequiredIds below, its primary consumer). Everything else in this module is deliberately
+ * domain-agnostic, but this single map is the one piece of shared knowledge that must not fork
+ * into separately maintained per-file copies -- that fork (workflows.mjs's own copy vs. store.mjs
+ * recomputing which decided-review node ids gate a run) is exactly how the run-status scope bug
+ * this was extracted for was introduced. Both files import this same object; neither redefines it.
+ */
+export const HARD_DEPENDENCY = { storyboard: 'script', layout: 'storyboard', generate: 'storyboard', review: 'render', publish: 'review' };
+
+/**
+ * Node ids of `type` that genuinely gate a selection: directly selected, or the exact `type`-typed
+ * prerequisite a selected node whose own type hard-depends on `type` resolves to, per the caller's
+ * {nodeType: prerequisiteType} map. Domain-agnostic like every other helper here: the caller owns
+ * its dependency map and target type, so this module needs no built-in notion of what any
+ * particular type (e.g. 'review', 'publish') means. A node pulled into a run only through generic
+ * reuse -- never itself selected, nor the hard-required prerequisite of a selected node -- is real
+ * preserved lineage, not evidence the selection required or produced it, and is correctly excluded
+ * by any caller that filters its own runtime data (e.g. nodeRuns) against this id set.
+ */
+export function hardRequiredIds(nodes, edges, selectedStages, hardDependency, type) {
+  const ids = new Set();
+  for (const nodeId of selectedStages || []) {
+    const node = nodes.find((item) => item.id === nodeId);
+    if (node && hardDependency[node.type] === type) ids.add(resolvePrerequisite(nodes, edges, node.id, type).id);
+  }
+  return ids;
+}
+
+/**
  * Deterministic JSON serialization: object keys are sorted lexically at every depth, array order
  * is preserved, and `undefined`/function values are dropped exactly like JSON.stringify. Used so
  * two structurally identical candidate manifests always hash to the same fingerprint regardless

@@ -114,10 +114,14 @@ test('saving a workflow edit starts a fresh selected stage instead of resuming s
   const response = await pending;
   const options = response.request().postDataJSON();
   assert.equal(options.expectedWorkflowVersion, updated.version);
-  assert.deepEqual(options.selectedStages, ['a']);
-  assert.equal(options.resumeRunId, undefined, 'old-version evidence must not be sent to the server');
+  // Contract 2.3: run-node/stage overlay posts a server-planned execution intent, never a
+  // client-built selectedStages/resumeRunId (old ad hoc selection logic removed).
+  assert.deepEqual(options.execution, { mode: 'node', targetNodeId: 'a' }, 'the stage overlay posts exactly a node-targeted execution intent, not a client-built selection');
+  assert.equal(options.selectedStages, undefined, 'the UI must never build selectedStages itself');
+  assert.equal(options.resumeRunId, undefined, 'the UI must never build resumeRunId itself (old-version evidence must not be client-sent)');
   assert.equal(response.status(), 202, await response.text());
   const result = await f.waitRun((await response.json()).id);
+  assert.equal(result.resumedFrom, undefined, 'the server-derived plan must not resume stale version evidence from the pre-edit run');
   assert.equal(result.status, 'completed', JSON.stringify(result));
   assert.equal(result.workflowVersion, updated.version);
   assert.deepEqual(result.nodeRuns.find(node => node.nodeId === 'a').output.trends.map(item => item.keyword), ['fixture-a']);
@@ -139,13 +143,15 @@ test('a selected trend can run when a connected optional ancestor has no output,
   await dialog.locator('#wf-stage-start').click();
   const response = await pending;
   assert.equal(response.status(), 202, await response.text());
-  assert.deepEqual(response.request().postDataJSON().selectedStages, ['c']);
+  const runPayload = response.request().postDataJSON();
+  assert.deepEqual(runPayload.execution, { mode: 'node', targetNodeId: 'c' }, 'the UI must not require every transitive ancestor when the server accepts this stage: it posts only the target node');
+  assert.equal(runPayload.selectedStages, undefined, 'the UI must never build selectedStages itself');
   const result = await f.waitRun((await response.json()).id);
   assert.equal(result.status, 'completed', JSON.stringify(result));
   assert.deepEqual(result.nodeRuns.find(node => node.nodeId === 'c').output.trends.map(item => item.keyword), ['fixture-c']);
 });
 
-test('a storyboard without its connected script output remains blocked in the UI and API', async t => {
+test('a storyboard without its connected script output stays strict for explicit API selectedStages but auto-includes the prerequisite in the UI', async t => {
   const f = await fixture(t, {
     name: 'Required script boundary',
     nodes: [
@@ -162,7 +168,20 @@ test('a storyboard without its connected script output remains blocked in the UI
   assert.match((await response.json()).error, /script|prerequisite/i);
   await f.open();
   const dialog = await f.stage('storyboard');
-  assert.equal(await dialog.locator('#wf-stage-start').isDisabled(), true);
-  assert.match(await dialog.locator('#wf-stage-status').innerText(), /선행 단계/);
-  assert.deepEqual(await f.api(`/api/workflows/${f.workflow.id}/runs`), []);
+  assert.equal(await dialog.locator('#wf-stage-start').isEnabled(), true, 'the UI auto-includes the missing script prerequisite rather than blocking the storyboard stage');
+  assert.equal(await dialog.locator('#wf-stage-status').getAttribute('data-stage-state'), 'idle', 'the stage dialog no longer reports a blocked state for a missing-but-runnable prerequisite');
+  const planPending = f.page.waitForResponse(r => r.url() === `${f.base}/api/workflows/${f.workflow.id}/plan` && r.request().method() === 'POST');
+  const runPending = f.page.waitForResponse(r => r.url() === `${f.base}/api/workflows/${f.workflow.id}/run` && r.request().method() === 'POST');
+  await dialog.locator('#wf-stage-start').click();
+  const plan = await (await planPending).json();
+  assert.equal(plan.blocked, false, 'the planner resolves the missing script prerequisite instead of blocking');
+  assert.deepEqual(plan.selectedStages, ['script', 'storyboard'], 'the plan automatically includes the missing script prerequisite ahead of the requested storyboard target');
+  const runResponse = await runPending;
+  const runPayload = runResponse.request().postDataJSON();
+  assert.deepEqual(runPayload.execution, { mode: 'node', targetNodeId: 'storyboard' }, 'the UI posts the target node only; the server plans the missing prerequisite, never a client-built selectedStages');
+  assert.equal(runPayload.selectedStages, undefined, 'the UI must never post a client-built selectedStages array');
+  assert.equal(runResponse.status(), 202, await runResponse.text());
+  const result = await f.waitRun((await runResponse.json()).id);
+  assert.equal(result.status, 'completed', JSON.stringify(result));
+  assert.deepEqual(result.selectedStages, ['script', 'storyboard'], 'the completed run confirms the planner-added prerequisite actually ran, not just the requested target');
 });

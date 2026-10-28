@@ -80,8 +80,11 @@ test('separate node runs carry the connected output into the next input and rest
     const response = await pending;
     assert.equal(response.status(), 202, await response.text());
     const payload = response.request().postDataJSON(), run = await response.json();
-    assert.deepEqual(payload.selectedStages, [id]);
-    assert.equal(payload.startStage, id);
+    // Contract 2.3: every run entry point posts a server-planned execution intent, never a
+    // client-built selectedStages/startStage/resumeRunId (old ad hoc selection logic removed).
+    assert.deepEqual(payload.execution, { mode: 'node', targetNodeId: id }, 'the UI posts exactly a node-targeted execution intent, not a client-built selection');
+    assert.equal(payload.selectedStages, undefined, 'the UI must never build selectedStages itself');
+    assert.equal(payload.startStage, undefined, 'the UI must never build startStage itself');
     assert.equal(payload.expectedWorkflowVersion, workflow.version);
     assert.equal(payload.expectedEpisodeVersion, episode.version);
     await page.waitForFunction(() => document.querySelector('#wf-stage-status')?.dataset.stageState === 'completed');
@@ -93,7 +96,7 @@ test('separate node runs carry the connected output into the next input and rest
   assert.equal(first.run.status, 'completed');
   assert.deepEqual(first.run.nodeRuns.find(node => node.nodeId === 'trend-a').output.trends.map(item => item.keyword), ['unique-connected-keyword']);
   const second = await start('script-b');
-  assert.equal(second.payload.resumeRunId, first.run.id);
+  assert.equal(second.run.resumedFrom, first.run.id, 'the server-derived plan resumes script-b from trend-a\'s completed run, matching the old client-sent resumeRunId behavior');
   assert.equal(second.run.status, 'completed');
   assert.equal(prompts.length, 1);
   assert.match(prompts[0], /unique-connected-keyword/);
@@ -104,9 +107,12 @@ test('separate node runs carry the connected output into the next input and rest
     const dialog = page.locator('#wf-results-dialog[open]'); await dialog.waitFor();
     await dialog.locator('#wf-results-run').selectOption(second.run.id);
     const inspector = dialog.locator('#wf-overlay-result-inspector');
-    assert.match(await inspector.innerText(), /Connected trend/);
-    assert.match(await inspector.innerText(), /unique-connected-keyword/);
-    assert.match(await inspector.innerText(), /Local script result/);
+    const raw = inspector.locator('[data-testid="node-result-raw"]');
+    await raw.locator('summary').click();
+    const rawText = await inspector.innerText();
+    assert.match(rawText, /Connected trend/);
+    assert.match(rawText, /unique-connected-keyword/);
+    assert.match(rawText, /Local script result/);
     await dialog.locator('[data-wf-action=close-overlay]').click();
   };
   await inspect();

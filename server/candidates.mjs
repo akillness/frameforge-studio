@@ -190,7 +190,7 @@ export function candidateManifest(store, episode, workflow, options = {}) {
     scenes: nodes.length ? allScenes.filter((scene) => targetIds.has(scene.sceneId)) : allScenes,
     // Keep the full production, including untargeted scenes, in the consent fingerprint.
     episode: { ...episode, scenes: allScenes },
-    workflow: { ...workflow, nodes: order.map((id) => byId.get(id)), edges: [...workflow.edges].sort((a, b) => String(a.id).localeCompare(String(b.id))) },
+    workflow: { ...workflow, skippedNodes: undefined, nodes: order.map((id) => byId.get(id)), edges: [...workflow.edges].sort((a, b) => String(a.id).localeCompare(String(b.id))) },
     publication: options.publication ?? null,
     assets,
   });

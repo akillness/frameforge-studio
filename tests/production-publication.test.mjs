@@ -102,6 +102,22 @@ async function connectChannel(store, channel, { testing = false, tokenOverrides 
   return { oauth, sessionId, correlationToken };
 }
 
+/** Mirrors server/app.mjs's snapshotSceneIntegrity: the real renderer's byte-verified receipt
+ * for every scene/slot asset actually referenced, bound to its registered upload hash/size. */
+function sceneAssetReceipts(store, scenes) {
+  const uploads = store.list('uploads'), receipts = [];
+  const add = (reference) => {
+    const upload = uploads.find((item) => item.url === reference.assetUrl);
+    receipts.push({ ...reference, sha256: upload.sha256, size: upload.size });
+  };
+  for (const scene of scenes) {
+    if (scene.assetUrl) add({ sceneId: scene.id, use: 'asset', assetUrl: scene.assetUrl });
+    if (scene.audioUrl) add({ sceneId: scene.id, use: 'audio', assetUrl: scene.audioUrl });
+    for (const slot of scene.slots || []) if (slot.assetUrl) add({ sceneId: scene.id, slotId: slot.id, use: 'asset', assetUrl: slot.assetUrl });
+  }
+  return receipts;
+}
+
 /** Builds a completed render + approved review candidate directly in the store (bypassing the
  * in-flight engine/store rewrite other agents own) so PublicationService can be exercised as a
  * standalone unit against the documented run.reviews[reviewNodeId] contract. */
@@ -112,14 +128,19 @@ async function renderCandidate(store, channel, scenes = [{ id: 'publication-fixt
   const filename = `${randomUUID()}.mp4`;
   await writeFile(path.join(store.dataDir, 'exports', filename), bytes);
   const outputUrl = `/api/exports/${filename}`;
-  const job = store.create('jobs', { episodeId: episode.id, episodeVersion: episode.version, status: 'completed', progress: 100, filename, outputUrl, sha256, sceneSnapshot: structuredClone(scenes) });
+  // The real renderer (server/render.mjs) always returns byte-verified scene receipts bound to
+  // the registered upload hash/size, even when there is no scene media (an empty array); mirror
+  // that contract here so PublicationService.approve's verifySceneReceipts sees real byte proof
+  // instead of a mock that silently omits it.
+  const verifiedSceneAssets = sceneAssetReceipts(store, scenes);
+  const job = store.create('jobs', { episodeId: episode.id, episodeVersion: episode.version, status: 'completed', progress: 100, filename, outputUrl, sha256, sceneSnapshot: structuredClone(scenes), sceneIntegrity: verifiedSceneAssets, verifiedSceneAssets });
   const template = store.create('workflows', defaultWorkflow());
   const workflow = store.createWorkflowCopy({ templateId: template.id, channelId: channel.id, episodeId: episode.id, expectedTemplateVersion: template.version });
   const reviewNodeId = 'review';
   let run = store.create('workflowRuns', {
     workflowId: workflow.id, workflowVersion: workflow.version, episodeId: episode.id, episodeVersion: episode.version, status: 'awaiting_review',
     nodeRuns: [
-      { nodeId: 'render', type: 'render', status: 'completed', output: { jobId: job.id, outputUrl, sha256, episodeVersion: episode.version, sceneSnapshot: structuredClone(scenes), generationNodeIds: [] } },
+      { nodeId: 'render', type: 'render', status: 'completed', output: { jobId: job.id, outputUrl, sha256, episodeVersion: episode.version, sceneSnapshot: structuredClone(scenes), generationNodeIds: [], verifiedSceneAssets } },
       { nodeId: reviewNodeId, type: 'review', status: 'awaiting_review', output: {} },
     ],
     reviews: {},

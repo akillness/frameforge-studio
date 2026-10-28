@@ -1,6 +1,7 @@
 // A dependency-free executable workflow editor. Knowledge graph remains separate.
 import {workflowChanges,nodeChanges,changesHtml,displayValue,historyReason,createDraftHistory} from './history.js';
 import {createContextMenu,installInfoTooltips} from './context-menu.js';
+import {effectiveOutput, diffNodeOutputs, summarizeRun} from './run-diff.js';
 const TYPES = {
   trend:{name:'트렌드 수집',icon:'↗',summary:'Google RSS · 관심 키워드',color:'#81cfa9'},
   news:{name:'뉴스 검색',icon:'📰',summary:'키워드 · 뉴스 시나리오 소재',color:'#70d6ff'},
@@ -18,13 +19,52 @@ const STATUS = {queued:'대기',pending:'대기',running:'실행 중',completed:
 STATUS.approved='승인됨';
 STATUS.changes_requested='수정 요청';
 const LIVE = new Set(['queued','pending','running','cancelling']);
-const TERMINAL = new Set(['completed','succeeded','awaiting_review','approved','changes_requested','failed','cancelled']);
 const WIDTH = 210;
 const HEIGHT = 140;
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const copy = value => structuredClone(value);
 const newId = () => crypto.randomUUID();
 const stamp = value => value ? new Date(value).toLocaleString('ko-KR',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+const NODE_STATE_LABELS = {running:'실행 중',queued:'대기',failed:'실패',changes_requested:'수정 요청',cancelled:'취소됨',awaiting_review:'검토 대기',approved:'승인됨',completed:'완료',stale:'갱신 필요',skipped:'건너뜀',idle:'미실행'};
+// Pure precedence table (contract 2.1): user-skip > running/queued > failed > stale > awaiting_review/approved/completed (incl. retained) > idle.
+// Works on any nodeRun record (live or historical) so history/diff rendering can reuse it.
+function nodeRunState(record, isUserSkipped = false) {
+  if (isUserSkipped) return {state:'skipped', label:NODE_STATE_LABELS.skipped};
+  if (record) {
+    if (['running','cancelling'].includes(record.status)) return {state:'running', label:NODE_STATE_LABELS.running};
+    if (['queued','pending'].includes(record.status)) return {state:'queued', label:NODE_STATE_LABELS.queued};
+    const effective = record.status==='skipped' ? record.retainedStatus : record.status;
+    if (effective==='failed') return {state:'failed', label:NODE_STATE_LABELS.failed};
+    if (effective==='changes_requested') return {state:'changes_requested', label:NODE_STATE_LABELS.changes_requested};
+    if (effective==='cancelled') return {state:'cancelled', label:NODE_STATE_LABELS.cancelled};
+    if (record.staleFrom) return {state:'stale', label:NODE_STATE_LABELS.stale};
+    if (effective==='awaiting_review' || effective==='approved') return {state:effective, label:NODE_STATE_LABELS[effective]};
+    if (['completed','succeeded','reused'].includes(effective)) return {state:'completed', label:NODE_STATE_LABELS.completed};
+  }
+  return {state:'idle', label:NODE_STATE_LABELS.idle};
+}
+
+// Historical-run provenance text for a single nodeRun record (contract 2.5's 4-state summary vocabulary).
+function resultProvenance(record) {
+  if (!record) return null;
+  if (record.status === 'skipped') {
+    if (record.skipReason === 'user') return '건너뜀';
+    if (record.retainedOutput !== null && record.retainedOutput !== undefined) return '저장 결과 재사용';
+    if (record.staleFrom) return '갱신 필요';
+    return '이번 실행에 포함되지 않음';
+  }
+  if (record.reused === true) return '저장 결과 재사용';
+  return '이번 실행에서 실행됨';
+}
+
+// Maps a nodeRun's raw error to displayable Korean text (contract 2.5): the legacy
+// English "not selected" sentinel is never rendered; the cascade sentinel gets a Korean
+// label; any other server error passes through (still escaped by the caller).
+function historyErrorText(error) {
+  if (!error || error === 'Node was not selected for this execution') return '';
+  if (error === 'A connected upstream node failed') return '선행 노드 실패로 중단됨';
+  return error;
+}
 
 function defaultNodeConfig(type, defaultModel = 'seedance_2_5') {
   if (type === 'script') return {agent:'studio',prompt:''};
@@ -163,7 +203,11 @@ export function workflowRunHistoryHtml(result = {}, query = '', { loading = fals
   const pageButtons = Array.from({ length: Math.max(0, Math.min(5, pageCount - firstPage + 1)) }, (_, index) => firstPage + index)
     .map(value => `<button type="button" class="small ${value === page ? 'primary' : ''}" data-wf-action="history-page" data-page="${value}" ${value === page ? 'aria-current="page"' : ''}>${value}</button>`).join('');
   const records = items.map(run => {
-    const nodes = (Array.isArray(run.nodeRuns) ? run.nodeRuns : []).map(node => `<li><span class="wf-status-dot ${escapeHtml(node.status || 'idle')}"></span>${escapeHtml(TYPES[node.type]?.name || node.type || node.nodeId)} · ${escapeHtml(STATUS[node.status] || node.status || '미기록')}</li>`).join('');
+    const allNodes = Array.isArray(run.nodeRuns) ? run.nodeRuns : [];
+    const selectedSet = new Set(Array.isArray(run.selectedStages) ? run.selectedStages : []);
+    const touchedNodes = allNodes.filter(node => selectedSet.has(node.nodeId) || node.status === 'failed');
+    const restCount = allNodes.length - touchedNodes.length;
+    const nodes = touchedNodes.map(node => `<li><span class="wf-status-dot ${escapeHtml(node.status || 'idle')}"></span>${escapeHtml(TYPES[node.type]?.name || node.type || node.nodeId)} · ${escapeHtml(STATUS[node.status] || node.status || '미기록')}</li>`).join('') + (restCount > 0 ? `<li class="hint">나머지 ${restCount}개 노드는 이번 실행에서 변경 없음</li>` : '');
     const title = run.episodeTitle || run.episodeId || '에피소드 미상';
     return `<details class="wf-history-record" data-run-id="${escapeHtml(run.id)}"><summary><span class="badge ${run.status === 'awaiting_review' ? 'lime' : ''}">${escapeHtml(STATUS[run.status] || run.status || '미기록')}</span><strong>${escapeHtml(title)}</strong><span class="hint">${escapeHtml(run.workflowName || run.workflowId || '워크플로우 미상')} · ${stamp(run.createdAt)}</span></summary><div class="wf-history-record-body"><dl class="wf-history-facts"><div><dt>실행 ID</dt><dd><code>${escapeHtml(run.id)}</code></dd></div><div><dt>워크플로우</dt><dd>${escapeHtml(run.workflowName || '이름 미상')} · ${escapeHtml(run.workflowId || 'ID 미상')} · v${escapeHtml(run.workflowVersion ?? '—')}</dd></div><div><dt>에피소드</dt><dd>${escapeHtml(title)} · ${escapeHtml(run.episodeId || 'ID 미상')} · v${escapeHtml(run.episodeVersion ?? '—')}</dd></div></dl><ul class="wf-history-node-status">${nodes || '<li class="hint">기록된 노드 상태가 없습니다.</li>'}</ul><div class="wf-history-detail" data-run-detail="${escapeHtml(run.id)}"><span class="hint">기록을 열면 저장된 실행 스냅샷을 불러옵니다.</span></div></div></details>`;
   }).join('');
@@ -184,6 +228,7 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
   let runHistoryError = '';
   let runHistoryRequest = 0;
   let selectedRunId = null;
+  let recentRunsExpanded = false;
   let loaded = false;
   let dirty = false;
   let revision = 0;
@@ -193,15 +238,22 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
   let versions = [];
   let compareVersion = null;
   let restoreVersion = null;
+  let historyVersionsExpanded = false;
   let generationConsent = false;
   let generationConsentSnapshot = null;
   let generationEstimate = null;
   let generationEstimateKey = '';
   let generationEstimateError = '';
   let generationEstimateLoading = false;
+  let generationEstimateRequest = 0;
   let generationEstimateAcknowledged = false;
   let generationTargetSceneId = null;
   let generationTargetEpisode = null;
+  let pendingPlan = null;
+  let pendingExecution = null;
+  let runAllDialog = null;
+  let publishReadinessRequest = 0;
+  let publishReadinessResult = null;
   let models = [];
   const modelSchemas = new Map();
   let generationStatus = null;
@@ -212,7 +264,7 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
   const generationJobErrors = new Map();
   let drafts = createDraftHistory(40);
   const graphStashes=new Map(),projectSelections=new Map();
-  let project=null,contextEpoch=0,loadRequest=0,localDraftId=null;
+  let project=null,contextEpoch=0,confirmDialogEpoch=0,loadRequest=0,localDraftId=null;
   let rollupPreview = null;
   let disclosure={containsSyntheticMedia:null,rationale:''};
   const projectKey=()=>project?JSON.stringify([project.episodeId,project.channelId]):'unbound';
@@ -220,7 +272,7 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
   const editable=()=>!project || owns(workflow);
   const stashKey=()=>workflow?.id || localDraftId;
   const mutationReason=()=>mutationBlockReason() || (!canMutate()?'로그인이 필요하거나 변경할 수 없는 상태입니다.':!editable()?'공용 템플릿은 미리보기입니다. 프로젝트용 복사본을 먼저 만드세요.':running()?'프로젝트 실행이 진행 중입니다. 완료하거나 취소한 뒤 그래프를 수정·저장하세요.':'');
-  const mutatingActions=new Set(['new','preset-full-pipeline','discard','save','add-node','delete-node','delete-edge','layout','undo','redo','run','stage-start','resume-stage','quote-generation','prepare-generation-source','confirm-generation-run','confirm-restore','restore-node','review-approve','review-changes','apply-generation-job','recover-generation-job']);
+  const mutatingActions=new Set(['new','preset-full-pipeline','discard','save','add-node','delete-node','delete-edge','layout','undo','redo','run','run-all','run-all-keep','run-all-refresh','run-node','toggle-skip','stage-start','resume-stage','quote-generation','prepare-generation-source','confirm-generation-run','confirm-restore','restore-node','review-approve','review-changes','apply-generation-job','recover-generation-job']);
   function stashGraph() {
     const key=stashKey();if(!workflow||!key)return;
     graphStashes.set(key,{workflow:copy(workflow),saved:copy(saved),selected,dirty,revision,drafts,selectedRunId,runs:copy(runs),versions:copy(versions),compareVersion,inspectorTab,scale,pan:copy(pan),autoFit,needsFit,disclosure:copy(disclosure),generationTargetSceneId});
@@ -228,9 +280,17 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
   }
   function selectGraph(next,key=next?.id) {
     contextMenu?.close();
-    contextEpoch++;pollEpoch++;clearTimeout(timer);generationLoad++;connecting=null;drag=null;
+    contextEpoch++;pollEpoch++;clearTimeout(timer);clearTimeout(generationTimer);generationTimer=null;generationLoad++;connecting=null;drag=null;
     rollupPreview=null;
-    generationConsent=false;generationConsentSnapshot=null;generationStageRun=false;generationResumeRunId=null;
+    generationConsent=false;generationConsentSnapshot=null;pendingPlan=null;pendingExecution=null;runAllDialog=null;
+    // A modal opened for the previous project must not outlive it with stale decision data --
+    // #wf-stage-dialog too: paint() re-shows any dialog still open-by-id across the repaint
+    // this causes, and stageInfo() keys publishReadinessResult by nodeId alone, so an OPEN
+    // publish-readiness dialog would otherwise silently keep showing the PREVIOUS project's
+    // cached answer for a same-named node (template copies share node ids verbatim) instead of
+    // either closing or re-checking. Closing it here reuses the existing close listener's own
+    // publishReadinessRequest++/publishReadinessResult=null reset -- no separate reset needed.
+    $('#wf-run-all-dialog')?.close();$('#wf-confirm-dialog')?.close();$('#wf-stage-dialog')?.close();
     generationTargetEpisode=null;generationTargetSceneId=null;invalidateGenerationEstimate();
     const stashed=key?graphStashes.get(key):null;
     localDraftId=next&&!next.id?(key || `draft-${newId()}`):null;
@@ -242,6 +302,7 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
       workflow=copy(next);saved=copy(next?.id?next:null);selected=next?.nodes?.[0]?.id || null;dirty=Boolean(next&&!next.id);revision=0;drafts=createDraftHistory(40);resetDrafts();
       runs=[];versions=[];compareVersion=null;selectedRunId=null;inspectorTab='settings';needsFit=true;autoFit=true;scale=1;pan={x:0,y:0};disclosure={containsSyntheticMedia:null,rationale:''};
     }
+    recentRunsExpanded=false;historyVersionsExpanded=false;
     reviewSignature='';
   }
   function chooseProjectGraph() {
@@ -299,11 +360,11 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
   let contextMenu = null;
   let infoTooltips = null;
   let overlayNodeId = null;
+  let overlayAction = null;
+  let overlayScope = null;
   let connectionNodeId = null;
   let deleteNodeId = null;
   let minimapRaf = 0;
-  let generationStageRun = false;
-  let generationResumeRunId = null;
   let overlayTrigger = null;
   let connecting = null;
   let drag = null;
@@ -322,7 +383,6 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
   const post = (path,data={}) => api(path,{method:'POST',body:JSON.stringify(data)});
   const activeRun = () => runs.find(run=>run.id===selectedRunId) || runs[0];
   const running = () => runs.some(run=>LIVE.has(run.status));
-  const resumableRun=run=>Boolean(run && TERMINAL.has(run.status) && run.workflowId===workflow?.id && run.episodeId===episodeId && run.workflowVersion===workflow?.version && run.episodeVersion===liveEpisode(episodeId)?.version);
   const selectedNode = () => workflow?.nodes.find(node=>node.id===selected) || (inspectorTab==='results' ? activeRun()?.workflowSnapshot?.nodes.find(node=>node.id===selected) : null);
   const draftContent=()=>workflow?{name:workflow.name,nodes:workflow.nodes,edges:workflow.edges}:null;
   const nodeName=node=>node?.label || TYPES[node?.type]?.name || node?.type || '노드';
@@ -412,10 +472,21 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
       const run = await api(`/api/workflow-runs/${encodeURIComponent(id)}`);
       if (!record.isConnected) return;
       const snapshotNodes = run.workflowSnapshot?.nodes || [];
-      const nodeDetails = (Array.isArray(run.nodeRuns) ? run.nodeRuns : []).map(item => {
+      const allNodeRuns = Array.isArray(run.nodeRuns) ? run.nodeRuns : [];
+      const selectedSet = new Set(Array.isArray(run.selectedStages) ? run.selectedStages : []);
+      const touchedNodes = allNodeRuns.filter(item => selectedSet.has(item.nodeId) || item.status === 'failed' || item.skipReason === 'user');
+      const restCount = allNodeRuns.length - touchedNodes.length;
+      const nodeRows = touchedNodes.map(item => {
         const snapshot = snapshotNodes.find(node => node.id === item.nodeId);
-        return `<details class="wf-history-stage"><summary><span class="badge">${escapeHtml(TYPES[item.type]?.name || snapshot?.label || item.type || item.nodeId)}</span> · ${escapeHtml(STATUS[item.status] || item.status || '미기록')}</summary><p class="hint">${escapeHtml(stamp(item.startedAt))}${item.completedAt ? ` → ${escapeHtml(stamp(item.completedAt))}` : ''}</p>${item.error ? `<p class="wf-review-warning" role="alert">${escapeHtml(item.error)}</p>` : ''}${item.output ? factsHtml(item.output) : '<p class="hint">저장된 출력이 없습니다.</p>'}</details>`;
+        const name = escapeHtml(snapshot?.label || TYPES[item.type]?.name || item.type || item.nodeId);
+        const provenance = resultProvenance(item);
+        const errorText = historyErrorText(item.error);
+        const output = effectiveOutput(run, item);
+        const facts = diffNodeOutputs(item.type, null, output).changes.slice(0, 5);
+        const factsRows = facts.map(fact => `<li><span>${escapeHtml(fact.label)}</span><strong>${escapeHtml(displayValue(fact.after))}</strong></li>`).join('');
+        return `<div class="wf-history-stage"><p class="wf-result-summary"><strong>${name}</strong> <span class="badge">${escapeHtml(STATUS[item.status] || item.status || '미기록')}</span>${provenance ? ` <span class="hint">${escapeHtml(provenance)}</span>` : ''}</p>${errorText ? `<p class="wf-review-warning" role="alert">${escapeHtml(errorText)}</p>` : ''}${facts.length ? `<ul data-testid="node-result-facts">${factsRows}</ul>` : ''}<details class="history-advanced" data-testid="node-result-raw"><summary>고급 · 입력 / 출력 원본</summary><pre class="history-snapshot">${escapeHtml(JSON.stringify({config:snapshot?.config,output:item.output,retainedOutput:item.retainedOutput},null,2))}</pre></details></div>`;
       }).join('');
+      const nodeDetails = nodeRows + (restCount > 0 ? `<p class="hint">나머지 ${restCount}개 노드는 이번 실행에서 변경 없음</p>` : '');
       panel.innerHTML = `<dl class="wf-history-facts"><div><dt>시작</dt><dd>${escapeHtml(stamp(run.createdAt))}</dd></div><div><dt>마지막 갱신</dt><dd>${escapeHtml(stamp(run.updatedAt))}</dd></div><div><dt>실행 상태</dt><dd>${escapeHtml(STATUS[run.status] || run.status || '미기록')}</dd></div></dl>${run.error ? `<p class="wf-review-warning" role="alert">${escapeHtml(run.error)}</p>` : ''}<h4>노드별 실행 기록</h4>${nodeDetails || '<p class="hint">노드 실행 기록이 없습니다.</p>'}<details class="history-advanced"><summary>실행 당시 워크플로우·에피소드 스냅샷</summary><p>${escapeHtml(run.workflowSnapshot?.name || '워크플로우 이름 없음')} · ${escapeHtml(run.episodeSnapshot?.title || '에피소드 제목 없음')}</p><p class="hint">워크플로우 v${escapeHtml(run.workflowVersion ?? '—')} · 에피소드 v${escapeHtml(run.episodeVersion ?? '—')}</p></details>`;
       record.dataset.detailLoaded = 'true';
     } catch (error) {
@@ -478,7 +549,7 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
     return `<div class="page-heading"><div><span class="eyebrow">FLOW EDITOR / 제작 설계</span><h1>콘텐츠를 만드는, 나만의 순서.</h1><p>단계를 연결하고 선택한 에피소드의 제작 흐름을 설계하세요.</p></div><div class="row"><button data-wf-action="new">＋ 새 워크플로우</button><button data-wf-action="preset-full-pipeline" title="뉴스 검색·레이아웃 연출·Higgsfield 생성·플랫폼 업로드까지 포함한 전체 파이프라인 초안">＋ 전체 파이프라인 구성</button><button data-wf-action="create-project-copy" ${!project?.episodeId || !project?.channelId || !workflow?.id || workflow?.episodeId || workflow?.channelId?'disabled':''}>프로젝트용 복사본 만들기</button><button data-wf-action="save" ${!workflow || preview?'disabled':''}>워크플로우 저장</button><button class="primary" data-wf-action="run" ${!workflow || preview || !episodeId || running()?'disabled':''}>워크플로우 실행</button></div></div>
     ${workflow ? `<nav class="wf-section-nav" aria-label="워크플로우 작업 탐색"><a href="#workflow-canvas" data-wf-section>설계 <span>${workflow.nodes.length} 단계</span></a><a href="#wf-run-history" data-wf-section>실행 히스토리</a><a href="#wf-workflow-history" data-wf-section>버전 기록</a><a href="#wf-review" data-wf-section>결과 검토</a><span class="wf-design-note">저장 후 다음 실행부터 적용 · 자동 게시 없음</span></nav>` : ''}
     <section class="panel wf-toolbar"><label>저장된 워크플로우<select id="wf-select" aria-label="워크플로우 선택"><option value="">${workflow&&!workflow.id?'저장되지 않은 새 워크플로우':'선택하세요'}</option>${choices.map(item=>`<option value="${escapeHtml(item.id)}" ${item.id===workflow?.id?'selected':''}>${escapeHtml(item.name)}${item.episodeId?' · 프로젝트':' · 템플릿 미리보기'}</option>`).join('')}</select></label><label>실행 대상 에피소드<select id="wf-episode" aria-label="워크플로우 실행 에피소드" ${project?'disabled':''}><option value="">에피소드를 선택하세요</option>${episodes.map(item=>`<option value="${escapeHtml(item.id)}" ${item.id===episodeId?'selected':''}>${escapeHtml(item.title)}</option>`).join('')}</select></label><div class="wf-save-state"><span id="wf-save-status" class="hint" role="status" aria-live="polite"></span><div class="row"><button class="small quiet" data-wf-action="undo" title="Ctrl/⌘ Z">↶ 실행 취소</button><button class="small quiet" data-wf-action="redo" title="Ctrl/⌘ Shift Z">↷ 다시 실행</button><button class="small quiet" data-wf-action="reload">새로고침</button><button class="small quiet" data-wf-action="discard">변경 되돌리기</button></div></div></section>
-    ${!workflow ? '<div class="panel empty"><div class="empty-mark">⌘</div><h2>실행 가능한 제작 흐름을 만드세요</h2><p>새 워크플로우에서 노드를 연결하고<br>에피소드를 선택해 실제 작업을 실행하세요.</p></div>' : `<div class="wf-layout"><section class="panel wf-graph-panel"><div class="panel-header"><div class="row"><span class="eyebrow">WORKFLOW CANVAS</span><span class="badge">${workflow.nodes.length} NODES</span></div><div class="row"><button class="small" data-wf-action="open-add-node">＋ 노드 추가</button><button class="small" data-wf-action="open-workflow-settings">워크플로 설정</button></div></div><div id="workflow-canvas" class="wf-canvas" tabindex="0" aria-label="워크플로우 캔버스. 노드 제목을 드래그해 이동하고 출력과 입력을 순서대로 선택해 연결하세요."><div id="wf-world" class="wf-world"><svg id="wf-edges" class="wf-edges" aria-hidden="true"></svg><div id="wf-nodes">${nodesHtml()}</div></div><div class="wf-canvas-hint" id="wf-connect-hint">빈 공간 드래그 · 휠 확대/축소 · 출력 → 입력 연결</div><div class="wf-zoom"><button class="icon-btn" data-wf-action="zoom-out" aria-label="축소">−</button><span id="wf-zoom-value">100%</span><button class="icon-btn" data-wf-action="zoom-in" aria-label="확대">+</button><button class="small" data-wf-action="fit">전체 보기</button><button class="small" data-wf-action="layout">자동 배치</button></div></div><div id="wf-validation" class="wf-validation" role="status"></div></section></div><details id="wf-workflow-history" class="panel section-spacer wf-collapsible"><summary class="wf-collapsible-summary"><h2>워크플로우 버전 기록</h2></summary><div class="panel-body"><button class="small" data-wf-action="refresh-history">↻ 기록 새로고침</button><div id="wf-history">${historyHtml()}</div></div></details><details id="wf-current-runs" class="panel section-spacer wf-collapsible"><summary class="wf-collapsible-summary"><h2>현재 워크플로우 최근 실행</h2><span class="hint">최신 상태·최대 10건</span></summary><div class="panel-body"><button class="small" data-wf-action="refresh-runs">↻ 실행 상태 확인</button><div id="wf-runs">${runsHtml()}</div></div></details><details id="wf-run-history" class="panel section-spacer wf-collapsible"><summary class="wf-collapsible-summary"><h2>전체 실행 이력</h2><span class="hint">검색 · 페이지 이동 · 실행 추적</span></summary><div class="panel-body" id="wf-run-history-content">${runHistoryLoaded ? workflowRunHistoryHtml(runHistory, runHistoryQuery, { loading: runHistoryLoading, error: runHistoryError }) : '<p class="hint">열면 저장된 실행 기록을 불러옵니다.</p>'}</div></details><div id="wf-review" tabindex="-1">${reviewHtml() || '<p class="source-note">검토할 렌더 결과가 아직 없습니다. 실행 결과를 확인한 뒤 사람이 검토하며, 외부 채널에는 자동 게시하지 않습니다.</p>'}</div>${dialogsHtml()}`}`;
+    ${!workflow ? '<div class="panel empty"><div class="empty-mark">⌘</div><h2>실행 가능한 제작 흐름을 만드세요</h2><p>새 워크플로우에서 노드를 연결하고<br>에피소드를 선택해 실제 작업을 실행하세요.</p></div>' : `<div class="wf-layout"><section class="panel wf-graph-panel"><div class="panel-header"><div class="row"><span class="eyebrow">WORKFLOW CANVAS</span><span class="badge">${workflow.nodes.length} NODES</span></div><div class="row"><button class="small" data-wf-action="open-add-node">＋ 노드 추가</button><button class="small" data-wf-action="open-workflow-settings">워크플로 설정</button></div></div><div id="workflow-canvas" class="wf-canvas" tabindex="0" aria-label="워크플로우 캔버스. 노드 제목을 드래그해 이동하고 출력과 입력을 순서대로 선택해 연결하세요."><div id="wf-world" class="wf-world"><svg id="wf-edges" class="wf-edges" aria-hidden="true"></svg><div id="wf-nodes">${nodesHtml()}</div></div><div class="wf-canvas-hint" id="wf-connect-hint">빈 공간 드래그 · 휠 확대/축소 · 출력 → 입력 연결</div><div class="wf-zoom"><button class="icon-btn" data-wf-action="zoom-out" aria-label="축소">−</button><span id="wf-zoom-value">100%</span><button class="icon-btn" data-wf-action="zoom-in" aria-label="확대">+</button><button class="small" data-wf-action="fit">전체 보기</button><button class="small" data-wf-action="layout">자동 배치</button></div></div><div id="wf-validation" class="wf-validation" role="status"></div></section></div><details id="wf-workflow-history" class="panel section-spacer wf-collapsible"><summary class="wf-collapsible-summary"><h2>워크플로우 버전 기록</h2></summary><div class="panel-body"><button class="small" data-wf-action="refresh-history">↻ 기록 새로고침</button><div id="wf-history">${historyHtml()}</div></div></details><details id="wf-current-runs" class="panel section-spacer wf-collapsible" open><summary class="wf-collapsible-summary"><h2>현재 워크플로우 최근 실행</h2><span class="hint">최신 상태·최대 10건 · 변경된 노드만 표시</span></summary><div class="panel-body"><button class="small" data-wf-action="refresh-runs">↻ 실행 상태 확인</button><div id="wf-recent-runs">${runsHtml()}</div></div></details><details id="wf-run-history" class="panel section-spacer wf-collapsible"><summary class="wf-collapsible-summary"><h2>전체 실행 이력</h2><span class="hint">검색 · 페이지 이동 · 실행 추적</span></summary><div class="panel-body" id="wf-run-history-content">${runHistoryLoaded ? workflowRunHistoryHtml(runHistory, runHistoryQuery, { loading: runHistoryLoading, error: runHistoryError }) : '<p class="hint">열면 저장된 실행 기록을 불러옵니다.</p>'}</div></details><div id="wf-review" tabindex="-1">${reviewHtml() || '<p class="source-note">검토할 렌더 결과가 아직 없습니다. 실행 결과를 확인한 뒤 사람이 검토하며, 외부 채널에는 자동 게시하지 않습니다.</p>'}</div>${dialogsHtml()}`}`;
   }
 
   function nodeControl(nodeId,actionName='node-menu') {
@@ -488,18 +559,29 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
     (nodeControl(nodeId,'select-node') || $('#workflow-canvas'))?.focus({preventScroll:true});
   }
   function rememberOverlay(trigger,nodeId=trigger?.dataset?.id) {
-    overlayTrigger=trigger;overlayNodeId=workflow?.nodes.some(node=>node.id===nodeId)?nodeId:null;
+    overlayTrigger=trigger;overlayNodeId=workflow?.nodes.some(node=>node.id===nodeId)?nodeId:null;overlayAction=trigger?.dataset?.wfAction || null;
+    overlayScope=trigger?.closest?.('#wf-focused-node')?'panel':trigger?.closest?.('.wf-node')?'card':null;
   }
   function restoreOverlayFocus(dialog) {
     const trigger=overlayTrigger,nodeId=overlayNodeId,focused=document.activeElement;
     // Native close is queued: a newer menu, modal, or user-selected control owns
     // its focus already and must not be displaced by this older dialog.
     if(focused?.isConnected && focused!==document.body && focused!==trigger && !dialog.contains(focused)) {
-      if(!host?.querySelector('dialog.wf-overlay[open]')){overlayTrigger=null;overlayNodeId=null;}
+      if(!host?.querySelector('dialog.wf-overlay[open]')){overlayTrigger=null;overlayNodeId=null;overlayAction=null;overlayScope=null;}
       return;
     }
-    overlayTrigger=null;overlayNodeId=null;
+    overlayTrigger=null;overlayNodeId=null;overlayAction=null;overlayScope=null;
     if(trigger?.isConnected)trigger.focus({preventScroll:true});else focusNode(nodeId || selected);
+  }
+  // Re-finds overlayTrigger's replacement after ANY DOM swap that may have orphaned it -- not
+  // just paint()'s own host.innerHTML=shell(), but also updateSummary()'s independent
+  // #wf-history innerHTML replacement (which runs again, standalone, from action()'s shared
+  // try/finally after an action like restore-workflow has already called paint()+showModal()).
+  // A no-op whenever overlayTrigger is already connected, so calling it repeatedly is safe.
+  function reresolveOverlayTrigger() {
+    if (!overlayTrigger || overlayTrigger.isConnected || !host) return;
+    const stale=overlayTrigger,openDialogs=[...host.querySelectorAll('dialog[open]')].map(dialog=>dialog.id),target=openDialogs.includes('wf-tools-dialog')?'open-tools':openDialogs.includes('wf-results-dialog')?'open-results':openDialogs.includes('wf-stage-dialog')?'open-stage-overlay':null;
+    overlayTrigger=(overlayScope==='card'&&overlayNodeId?nodeControl(overlayNodeId,overlayAction):null) || (overlayScope==='panel'&&overlayAction?$(`#wf-focused-node [data-wf-action="${overlayAction}"]`):null) || (overlayNodeId?nodeControl(overlayNodeId):null) || (target?host.querySelector(`[data-wf-action="${target}"]`):null) || (stale.id?$(`#${CSS.escape(stale.id)}`):null) || (stale.dataset?.wfAction?[...host.querySelectorAll(`[data-wf-action="${CSS.escape(stale.dataset.wfAction)}"]${stale.dataset.id?`[data-id="${CSS.escape(stale.dataset.id)}"]`:''}`)].find(item=>!item.closest('dialog')) || null:null);
   }
   function syncMutationControls() {
     const reason=mutationReason();
@@ -512,6 +594,28 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
     if(label && deleteNodeId)label.textContent=target?nodeName(target):'더 이상 존재하지 않는 노드';
     if(confirm)confirm.disabled=Boolean(reason) || !target || workflow.nodes.length<=1;
   }
+  function isNodeSkipped(nodeId) {
+    return Array.isArray(workflow?.skippedNodes) && workflow.skippedNodes.includes(nodeId);
+  }
+  // Convenience wrapper for callers that just want "this node's live card state" (e.g. results/history
+  // rendering) without re-deriving the active-run record lookup themselves.
+  function nodeCardState(node) {
+    return nodeRunState(activeRun()?.nodeRuns?.find(item=>item.nodeId===node.id), isNodeSkipped(node.id));
+  }
+  // Auto-save-before-run (beforeRun+save()) would throw on graph validation errors; surface that
+  // up front as a short disabled reason instead of letting run-node fail after the click.
+  function cannotImplicitSave() {
+    return Boolean(workflow) && (!workflow.id || dirty) && workflowErrors(workflow).length>0;
+  }
+  // Menu items are one line (contract 2.2): collapse mutationReason()'s long sentences to <=24 chars.
+  function shortReason(reason) {
+    if (!reason) return '';
+    if (reason.includes('로그인')) return '로그인 필요';
+    if (reason.includes('템플릿')) return '템플릿 미리보기';
+    if (reason.includes('진행 중') || reason.includes('실행 중')) return '실행 중';
+    if (reason.includes('보관')) return '보관된 프로젝트';
+    return [...reason].length>24 ? `${[...reason].slice(0,23).join('')}…` : reason;
+  }
   function openContextMenu({nodeId=null,anchor,x,y}={}) {
     if(!contextMenu || !workflow)return;
     const node=nodeId?workflow.nodes.find(item=>item.id===nodeId):null;
@@ -519,33 +623,27 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
     if(node)selectNode(node.id);
     const reason=mutationReason() || (saving || pending?'현재 작업이 끝난 뒤 다시 시도하세요.':''),locked=Boolean(reason);
     const item=(id,label,description,disabled=false,destructive=false)=>({id,label,description,disabled,destructive});
-    const saveItem=item('save','그래프 저장',reason || '전체 연결을 검증하고 현재 버전으로 저장합니다. 장면 편집본 저장·실행·게시와는 별개입니다.',locked || (!dirty&&Boolean(workflow.id)));
+    const addNodeItem=item('open-add-node','노드 추가…',locked?shortReason(reason):workflow.nodes.length>=128?'128개 한도':'',locked || workflow.nodes.length>=128);
+    const saveItem=item('save','그래프 저장',locked?shortReason(reason):(!dirty&&Boolean(workflow.id))?'변경 없음':'',locked || (!dirty&&Boolean(workflow.id)));
     const items=node?[
-      item('node-tools',locked?'노드 설정 보기':'노드 설정 편집',`${TYPES[node.type]?.summary || node.type} · ${reason || '이름·입력 설정·메모를 초안에서 편집합니다. 저장 전에는 실행에 반영되지 않습니다.'}`),
-      item('scene-editor','장면 편집기 열기',node.config?.sceneId?`설정된 장면 ${node.config.sceneId}${node.config.slotId?` · 슬롯 ${node.config.slotId}`:''}을 엽니다. 저장·실행하지 않습니다.`:'이 프로젝트의 장면 편집기를 엽니다. 노드 역할·순서로 장면을 추측하지 않습니다.',!onOpenSceneEditor || !owns(workflow)),
-      item('node-results','실행 결과·입력 보기','이 노드 ID의 실행 상태, 저장된 출력과 실행 당시 입력을 확인합니다. 새 실행은 시작하지 않습니다.'),
-      item('connections','입력·출력 연결 보기','이 노드로 들어오고 나가는 정확한 연결을 확인합니다. 연결 제거는 초안에만 적용됩니다.'),
-      item('input','입력 연결 선택',reason || '다른 노드의 출력을 이 노드의 입력에 연결합니다. 확인 전에는 변경하지 않습니다.',locked),
-      item('output','출력 연결 선택',reason || '이 노드의 출력을 받을 도착 노드를 선택합니다. 확인 전에는 변경하지 않습니다.',locked),
-      item('node-history','노드 변경 기록','저장 버전과 현재 초안의 차이를 확인합니다. 버전은 자동 복원하지 않습니다.'),
-      saveItem,
-      item('confirm-delete-node','노드 제거…',reason || (workflow.nodes.length<=1?'마지막 노드는 제거할 수 없습니다. 최소 1개가 필요합니다.':'확인 후 이 노드와 닿는 연결만 초안에서 제거합니다. 자동 재연결·미디어 삭제·자동 저장은 하지 않습니다. 단절된 초안은 다시 연결해야 저장됩니다.'),locked || workflow.nodes.length<=1,true),
+      item('run-node','실행',isNodeSkipped(node.id)?'건너뜀 해제 필요':locked?shortReason(reason):cannotImplicitSave()?'저장 필요':'',isNodeSkipped(node.id) || locked || cannotImplicitSave()),
+      item('toggle-skip',isNodeSkipped(node.id)?'건너뛰기 해제':'건너뛰기',locked?shortReason(reason):'',locked),
+      item('node-tools',locked?'노드 설정 보기':'노드 설정 편집',''),
+      addNodeItem,
+      item('confirm-delete-node','노드 제거…',locked?shortReason(reason):workflow.nodes.length<=1?'최소 1개 필요':'',locked || workflow.nodes.length<=1,true),
     ]:[
-      item('open-add-node','노드 추가…',reason || '선택한 노드 뒤에 새 단계를 추가하는 기존 대화상자를 엽니다. 그래프는 128개 노드까지 지원합니다.',locked || workflow.nodes.length>=128),
-      item('open-workflow-settings',locked?'워크플로 설정 보기':'워크플로 설정 편집',reason || '프로젝트 그래프 이름을 초안에서 편집합니다. 명시적인 그래프 저장이 필요합니다.'),
-      item('fit','전체 보기','모든 노드를 화면에 맞춥니다. 노드 좌표나 초안은 바꾸지 않습니다.'),
-      item('canvas-history','실행 히스토리 보기','저장된 실행 기록을 엽니다. 실행·생성·게시 요청은 하지 않습니다.'),
-      item('undo','실행 취소',reason || '현재 그래프 초안의 마지막 편집을 되돌립니다. 서버 버전·미디어·실행 기록은 변경하지 않습니다.',locked || !drafts.canUndo),
-      item('redo','다시 실행',reason || '되돌린 그래프 초안 편집을 다시 적용합니다. 제작 실행을 시작하는 버튼이 아닙니다.',locked || !drafts.canRedo),
+      addNodeItem,
+      item('run-all','전체 실행',locked?shortReason(reason):!episodeId?'에피소드 선택 필요':cannotImplicitSave()?'저장 필요':'',locked || !episodeId || cannotImplicitSave()),
       saveItem,
     ];
-    contextMenu.open({anchor:anchor || (node?nodeControl(node.id):$('#workflow-canvas')),x,y,title:node?`${nodeName(node)} · ${nodeSummary(node)}`:'프로젝트 캔버스',items,context:{nodeId:node?.id || null,key:stashKey(),epoch:contextEpoch}});
+    const opener=anchor || (node?nodeControl(node.id):$('#workflow-canvas'));
+    contextMenu.open({anchor:opener,x,y,title:node?`${nodeName(node)} · ${nodeSummary(node)}`:'프로젝트 캔버스',items,context:{nodeId:node?.id || null,key:stashKey(),epoch:contextEpoch,opener}});
   }
   async function contextAction(id,context) {
     if(!host?.isConnected || context.epoch!==contextEpoch || context.key!==stashKey())return;
     if(context.nodeId && !workflow.nodes.some(node=>node.id===context.nodeId))throw new Error('선택한 노드를 찾을 수 없습니다.');
     if(context.nodeId)selectNode(context.nodeId);
-    await action(context.nodeId?nodeControl(context.nodeId):$('#workflow-canvas'),id);
+    await action(context.nodeId?nodeControl(context.nodeId):(context.opener?.isConnected?context.opener:$('#workflow-canvas')),id);
   }
 
   function nodesHtml() {
@@ -556,7 +654,8 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
       const outgoing=workflow.edges.filter(edge=>edge.source===node.id).map(edge=>nodeName(workflow.nodes.find(item=>item.id===edge.target))).filter(Boolean);
       const mobileLinks=`입력: ${incoming.join(', ') || '없음'} · 출력: ${outgoing.join(', ') || '없음'}`;
       const description=`${type.summary} · ${nodeSummary(node)} · ${mobileLinks}`;
-      return `<article class="wf-node ${selected===node.id?'selected':''}" data-node-id="${escapeHtml(node.id)}" data-tooltip="${escapeHtml(description)}" style="left:${Number(node.x)||0}px;top:${Number(node.y)||0}px;--node-color:${type.color}"><button type="button" class="wf-node-menu" data-wf-action="node-menu" data-id="${escapeHtml(node.id)}" data-tooltip="${escapeHtml(description)} · 설정·결과·연결·제거 메뉴" aria-haspopup="menu" aria-label="${escapeHtml(nodeName(node))} 더보기">⋯</button><button type="button" class="wf-node-header" data-wf-action="select-node" data-id="${escapeHtml(node.id)}" data-tooltip="${escapeHtml(description)} · 우클릭 또는 Shift+F10으로 메뉴 · 드래그·방향키로 위치 이동"><span class="wf-stage-index">${String(index+1).padStart(2,'0')}</span><span class="wf-node-icon" aria-hidden="true">${type.icon}</span><span class="wf-node-label">${escapeHtml(nodeName(node))}</span><span class="wf-grip" aria-hidden="true">⠿</span></button><div class="wf-node-content"><p>${escapeHtml(nodeSummary(node))}</p><span class="wf-node-status ${record?.status || 'idle'}" data-status-node="${escapeHtml(node.id)}">${STATUS[record?.status] || '실행 전'}</span><small class="wf-mobile-links">${escapeHtml(mobileLinks)}</small></div><button type="button" class="wf-port input" data-wf-action="input" data-id="${escapeHtml(node.id)}" aria-label="${escapeHtml(nodeName(node))} 입력 연결" data-tooltip="이 노드로 들어올 출발 노드를 선택합니다. ${escapeHtml(mobileLinks)}"><span></span>입력</button><button type="button" class="wf-port output" data-wf-action="output" data-id="${escapeHtml(node.id)}" aria-label="${escapeHtml(nodeName(node))} 출력 연결" data-tooltip="이 노드의 출력을 받을 노드를 선택합니다. ${escapeHtml(mobileLinks)}">출력<span></span></button></article>`;
+      const cardState=nodeRunState(record,isNodeSkipped(node.id));
+      return `<article class="wf-node ${selected===node.id?'selected':''} ${cardState.state==='skipped'?'is-skipped':''}" data-node-id="${escapeHtml(node.id)}" data-node-state="${cardState.state}" data-tooltip="${escapeHtml(description)}" style="left:${Number(node.x)||0}px;top:${Number(node.y)||0}px;--node-color:${type.color}"><button type="button" class="wf-node-menu" data-wf-action="node-menu" data-id="${escapeHtml(node.id)}" data-tooltip="${escapeHtml(description)} · 설정·결과·연결·제거 메뉴" aria-haspopup="menu" aria-label="${escapeHtml(nodeName(node))} 더보기">⋯</button><button type="button" class="wf-node-header" data-wf-action="select-node" data-id="${escapeHtml(node.id)}" data-tooltip="${escapeHtml(description)} · 우클릭 또는 Shift+F10으로 메뉴 · 드래그·방향키로 위치 이동"><span class="wf-stage-index">${String(index+1).padStart(2,'0')}</span><span class="wf-node-icon" aria-hidden="true">${type.icon}</span><span class="wf-node-label">${escapeHtml(nodeName(node))}</span><span class="wf-grip" aria-hidden="true">⠿</span></button><div class="wf-node-content"><span class="badge wf-state-badge wf-node-status ${record?.status || 'idle'}" data-testid="wf-node-badge" data-status-node="${escapeHtml(node.id)}">${cardState.label}</span><p>${escapeHtml(nodeSummary(node))}</p><small class="wf-mobile-links">${escapeHtml(mobileLinks)}</small></div><button type="button" class="wf-port input" data-wf-action="input" data-id="${escapeHtml(node.id)}" aria-label="${escapeHtml(nodeName(node))} 입력 연결" data-tooltip="이 노드로 들어올 출발 노드를 선택합니다. ${escapeHtml(mobileLinks)}"><span></span>입력</button><button type="button" class="wf-port output" data-wf-action="output" data-id="${escapeHtml(node.id)}" aria-label="${escapeHtml(nodeName(node))} 출력 연결" data-tooltip="이 노드의 출력을 받을 노드를 선택합니다. ${escapeHtml(mobileLinks)}">출력<span></span></button></article>`;
     }).join('');
   }
   function minimapHtml() {
@@ -622,13 +721,37 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
     if(Array.isArray(value.outputs)) html+=value.outputs.slice(0,8).map(output=>factsHtml(output)).join('');
     return html || '<p class="hint">아래 원본 기록에서 결과를 확인하세요.</p>';
   }
+  // Nearest OLDER run (by position in the full runs list, not just the displayed slice) that has
+  // an effective output for this node, so a first-of-N-displayed row still diffs correctly.
+  function previousNodeOutput(nodeId) {
+    const index=runs.findIndex(item=>item.id===activeRun()?.id);
+    if (index<0) return undefined;
+    for (let i=index+1;i<runs.length;i++) {
+      const candidate=effectiveOutput(runs[i],runs[i].nodeRuns?.find(item=>item.nodeId===nodeId));
+      if (candidate!==undefined) return candidate;
+    }
+    return undefined;
+  }
   function nodeResultsHtml(node,runControlId='wf-inspector-run') {
     const run=activeRun(),record=run?.nodeRuns?.find(item=>item.nodeId===node.id);
     const snapshotNode=run?.workflowSnapshot?.nodes.find(item=>item.id===node.id);
     const inputIds=run?.workflowSnapshot?.edges.filter(edge=>edge.target===node.id).map(edge=>edge.source) || [];
     const seconds=record?.startedAt && record?.completedAt ? Math.max(0,(new Date(record.completedAt)-new Date(record.startedAt))/1000).toFixed(1):null;
-    if (record?.status==='skipped') return `<h3>${escapeHtml(nodeName(node))}</h3><label>실행 선택<select id="${escapeHtml(runControlId)}" aria-label="노드 실행 선택">${runs.map(item=>`<option value="${escapeHtml(item.id)}" ${item.id===run?.id?'selected':''}>${stamp(item.createdAt)} · v${escapeHtml(item.workflowVersion)} · ${escapeHtml(STATUS[item.status] || item.status)}</option>`).join('')}</select></label><p class="hint">실행 당시 워크플로우 v${escapeHtml(run.workflowVersion)} · 에피소드 v${escapeHtml(run.episodeVersion)}</p><span class="badge">건너뜀</span>${record.error?`<p class="wf-review-warning" role="alert">${escapeHtml(record.error)}</p>`:''}<p class="history-empty">이 실행에서 이 노드는 실행되지 않았습니다.</p>${record.retainedOutput!=null?`<h4>이전 실행에서 보존된 결과</h4><p class="hint">보존 상태: ${escapeHtml(STATUS[record.retainedStatus] || record.retainedStatus || '확인 불가')} · 이 실행에서 새로 생성된 결과가 아닙니다.</p>${factsHtml(record.retainedOutput)}<details class="history-advanced"><summary>고급 · 보존된 출력 원본</summary><pre class="history-snapshot">${escapeHtml(JSON.stringify(record.retainedOutput,null,2))}</pre></details>`:''}`;
-    return `<h3>${escapeHtml(nodeName(node))}</h3><label>실행 선택<select id="${escapeHtml(runControlId)}" aria-label="노드 실행 선택">${runs.length?runs.map(item=>`<option value="${escapeHtml(item.id)}" ${item.id===run?.id?'selected':''}>${stamp(item.createdAt)} · v${escapeHtml(item.workflowVersion)} · ${escapeHtml(STATUS[item.status] || item.status)}</option>`).join(''):'<option>실행 기록 없음</option>'}</select></label>${run?`<p class="hint">실행 당시 워크플로우 v${escapeHtml(run.workflowVersion)} · 에피소드 v${escapeHtml(run.episodeVersion)}<br>${stamp(record?.startedAt || run.createdAt)}${seconds?` · ${seconds}초`:''}</p>`:''}${!record?'<p class="history-empty">이 노드는 선택한 실행에 포함되지 않았습니다.</p>':`<span class="badge">${escapeHtml(STATUS[record.status] || record.status)}</span>${record.reused===true?'<p class="hint">저장 결과 재사용 · 이 실행에서 새로 생성된 결과가 아닙니다.</p>':''}${record.error?`<p class="wf-review-warning" role="alert">${escapeHtml(record.error)}</p>`:''}${record.output?.generationJobId?generationJobHtml(record.output.generationJobId):''}<h4>실행 입력</h4>${snapshotNode?factsHtml(snapshotNode.config):''}${inputIds.length?`<p class="hint">실행 당시 직접 연결된 선행 노드의 기록입니다. 실제 입력으로 사용되었는지는 이 기록만으로 확인할 수 없습니다.</p><ul class="result-list">${inputIds.map(id=>{const source=run.workflowSnapshot.nodes.find(item=>item.id===id),result=run.nodeRuns.find(item=>item.nodeId===id),retained=result?.status==='skipped' && result.retainedOutput!=null;return `<li><strong>${escapeHtml(nodeName(source))} [${escapeHtml(id)}]</strong><span class="hint"> · ${escapeHtml(STATUS[result?.status] || result?.status || '기록 없음')}${retained?` · 이전 결과 보존 (${escapeHtml(STATUS[result.retainedStatus] || result.retainedStatus || '상태 확인 불가')})`:result?.reused===true?' · 저장 결과 재사용':''}</span>${factsHtml(retained?result.retainedOutput:result?.output)}</li>`;}).join('')}</ul>`:'<p class="hint">실행 당시 직접 연결된 선행 노드가 없습니다.</p>'}<h4>실행 결과</h4>${record.output?factsHtml(record.output):'<p class="hint">아직 결과가 없습니다.</p>'}<details class="history-advanced"><summary>고급 · 입력 / 출력 원본</summary><pre class="history-snapshot">${escapeHtml(JSON.stringify({config:snapshotNode?.config,connectedNodes:inputIds.map(id=>{const result=run.nodeRuns.find(item=>item.nodeId===id);return {nodeId:id,status:result?.status,output:result?.output,retainedStatus:result?.retainedStatus,retainedOutput:result?.retainedOutput};}),output:record.output},null,2))}</pre></details>`}`;
+    const runSelect=`<label>실행 선택<select id="${escapeHtml(runControlId)}" aria-label="노드 실행 선택">${runs.length?runs.map(item=>`<option value="${escapeHtml(item.id)}" ${item.id===run?.id?'selected':''}>${stamp(item.createdAt)} · v${escapeHtml(item.workflowVersion)} · ${escapeHtml(STATUS[item.status] || item.status)}</option>`).join(''):'<option>실행 기록 없음</option>'}</select></label>`;
+    if (!record) return `<h3>${escapeHtml(nodeName(node))}</h3>${runSelect}<p class="history-empty">이 노드는 선택한 실행에 포함되지 않았습니다.</p>`;
+    const cardState=nodeRunState(record,record.skipReason==='user');
+    const provenance=resultProvenance(record);
+    const errorText=record.error && record.error!=='Node was not selected for this execution' ? record.error : '';
+    const afterOutput=effectiveOutput(run,record);
+    const beforeOutput=previousNodeOutput(node.id);
+    const diff=diffNodeOutputs(node.type,beforeOutput,afterOutput);
+    const diffText=beforeOutput===undefined ? '첫 실행입니다' : diff.state==='same' ? '변경 없음' : '';
+    const diffRows=diffText?'':diff.changes.map(change=>`<li><span>${escapeHtml(change.label)}</span> <span class="wf-run-diff-field">${escapeHtml(displayValue(change.before))} → ${escapeHtml(displayValue(change.after))}</span></li>`).join('');
+    const facts=diffNodeOutputs(node.type,null,afterOutput).changes.slice(0,5);
+    const factsRows=facts.map(fact=>`<li><span>${escapeHtml(fact.label)}</span><strong>${escapeHtml(displayValue(fact.after))}</strong></li>`).join('');
+    const connectedNodes=inputIds.map(id=>{const result=run.nodeRuns.find(item=>item.nodeId===id);const sourceNode=run.workflowSnapshot?.nodes.find(item=>item.id===id);return {nodeId:id,name:nodeName(sourceNode),status:result?.status,output:effectiveOutput(run,result)};});
+    const connectedInputsHtml=connectedNodes.length?`<p class="hint">연결된 입력: ${connectedNodes.map(item=>`${escapeHtml(item.name)} [${escapeHtml(item.nodeId)}]`).join(', ')}</p>`:'';
+    return `<h3>${escapeHtml(nodeName(node))}</h3>${runSelect}<p class="hint">실행 당시 워크플로우 v${escapeHtml(run.workflowVersion)} · 에피소드 v${escapeHtml(run.episodeVersion)}<br>${stamp(record.startedAt || run.createdAt)}${seconds?` · ${seconds}초`:''}</p><p class="wf-result-summary"><span class="badge ${cardState.state}">${escapeHtml(cardState.label)}</span>${provenance?` <span class="hint">${escapeHtml(provenance)}</span>`:''}</p>${connectedInputsHtml}${errorText?`<p class="wf-review-warning" role="alert">${escapeHtml(errorText)}</p>`:''}${record.output?.generationJobId?generationJobHtml(record.output.generationJobId):''}<div data-testid="node-result-diff">${diffText?`<p class="hint">${diffText}</p>`:`<ul class="wf-run-diff-list">${diffRows}</ul>`}</div><ul data-testid="node-result-facts">${factsRows}</ul>${!facts.length?'<p class="hint">기록된 결과가 없습니다.</p>':''}<details class="history-advanced" data-testid="node-result-raw"><summary>고급 · 입력 / 출력 원본</summary><pre class="history-snapshot">${escapeHtml(JSON.stringify({config:snapshotNode?.config,output:record.output,retainedOutput:record.retainedOutput,connectedNodes},null,2))}</pre></details>`;
   }
   function nodeHistoryHtml(node) {
     const entry=selectedVersion(),previous=entry?.snapshot?.nodes.find(item=>item.id===node.id);
@@ -637,7 +760,9 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
   function historyHtml() {
     const entry=selectedVersion();
     if (!entry) return '<div class="panel-body hint">처음 저장한 뒤 버전 비교와 복원을 사용할 수 있습니다.</div>';
-    return `<div class="history-layout"><nav class="history-versions" aria-label="워크플로우 버전">${versions.map(item=>`<button class="history-version ${item.version===entry.version?'selected':''}" data-wf-action="history-version" data-version="${item.version}" aria-pressed="${item.version===entry.version}"><strong>v${item.version}${item.version===workflow.version?' · 현재':''}</strong><span>${escapeHtml(historyReason(item.reason))}</span><small>${stamp(item.createdAt)}</small></button>`).join('')}</nav><div class="history-comparison"><div class="row between history-compare-heading"><div><h3>v${entry.version} → ${dirty?'현재 초안':`현재 v${workflow.version}`}</h3><p class="hint">노드 설정, 위치와 연결 변경을 비교합니다.</p></div><button data-wf-action="restore-workflow" ${dirty || saving || entry.version===workflow.version?'disabled':''}>이 버전으로 복원</button></div>${dirty?'<p class="wf-review-warning">먼저 현재 초안을 저장해야 복원할 수 있습니다.</p>':''}${changesHtml(workflowChanges(entry.snapshot,workflow),escapeHtml,`선택 v${entry.version}`,dirty?'현재 초안':`현재 v${workflow.version}`)}<details class="history-advanced"><summary>고급 · 원본 기록 JSON</summary><pre class="history-snapshot">${escapeHtml(JSON.stringify(entry.snapshot,null,2))}</pre></details></div></div>`;
+    const visibleVersions = historyVersionsExpanded ? versions : versions.slice(0, 5);
+    const versionsMore = !historyVersionsExpanded && versions.length > 5 ? `<button type="button" class="small quiet" data-wf-action="history-versions-more">이전 버전 더 보기</button>` : '';
+    return `<div class="history-layout"><nav class="history-versions" aria-label="워크플로우 버전">${visibleVersions.map(item=>`<button class="history-version ${item.version===entry.version?'selected':''}" data-wf-action="history-version" data-version="${item.version}" aria-pressed="${item.version===entry.version}"><strong>v${item.version}${item.version===workflow.version?' · 현재':''}</strong><span>${escapeHtml(historyReason(item.reason))}</span><small>${stamp(item.createdAt)}</small></button>`).join('')}${versionsMore}</nav><div class="history-comparison"><div class="row between history-compare-heading"><div><h3>v${entry.version} → ${dirty?'현재 초안':`현재 v${workflow.version}`}</h3><p class="hint">노드 설정, 위치와 연결 변경을 비교합니다.</p></div><button data-wf-action="restore-workflow" ${dirty || saving || entry.version===workflow.version?'disabled':''}>이 버전으로 복원</button></div>${dirty?'<p class="wf-review-warning">먼저 현재 초안을 저장해야 복원할 수 있습니다.</p>':''}${changesHtml(workflowChanges(entry.snapshot,workflow),escapeHtml,`선택 v${entry.version}`,dirty?'현재 초안':`현재 v${workflow.version}`)}<details class="history-advanced"><summary>고급 · 원본 기록 JSON</summary><pre class="history-snapshot">${escapeHtml(JSON.stringify(entry.snapshot,null,2))}</pre></details></div></div>`;
   }
   function generationInput(node=selectedNode()) {
     const target=liveEpisode(episodeId) || (generationTargetEpisode?.id===episodeId?generationTargetEpisode:null);
@@ -648,17 +773,13 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
     const slotId=node.config?.slotId || null,slot=slotId?scene?.slots?.find(item=>item.id===slotId):null;
     return {nodeId:node.id,episodeId,sceneId:scene?.id || null,sceneIndex:index,sceneTitle:scene?.title || '',slotId,model:node.config?.model || '',prompt:node.config?.prompt || slot?.prompt || scene?.text || target?.topic || '',params:copy(node.config?.params || {}),stableTargetMissing:!scene || Boolean(slotId&&!slot)};
   }
+  // Single source of truth for "what will this execution touch": the server's last /plan
+  // response. No client-built selectedStages/startStage/resumeRunId anywhere downstream.
   function generationSelection() {
-    if(generationStageRun)return selectedNode()?.type==='generate'?[selected]:[];
-    const prior=runs.find(run=>run.id===generationResumeRunId);
-    if(!dirty && resumableRun(prior))return workflow.nodes.filter(node=>node.type!=='publish' && (['generate','render','review'].includes(node.type)||!['completed','succeeded','reused'].includes(prior.nodeRuns?.find(item=>item.nodeId===node.id)?.status))).map(node=>node.id);
-    return workflow?.nodes.filter(node=>node.type!=='publish').map(node=>node.id) || [];
+    return pendingPlan?.selectedStages || [];
   }
   function generationOptions() {
-    const selectedStages=generationSelection(),options={selectedStages,disclosure:copy(disclosure),expectedWorkflowVersion:workflow?.version,expectedEpisodeVersion:liveEpisode(episodeId)?.version};
-    if(generationStageRun)options.startStage=selectedStages[0];
-    if(!dirty && resumableRun(runs.find(run=>run.id===generationResumeRunId)))options.resumeRunId=generationResumeRunId;
-    return options;
+    return {execution:pendingExecution,disclosure:copy(disclosure),expectedWorkflowVersion:workflow?.version,expectedEpisodeVersion:liveEpisode(episodeId)?.version};
   }
   function generationInputKey() {
     return JSON.stringify({workflow,episode:liveEpisode(episodeId),options:generationOptions()});
@@ -674,29 +795,48 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
   function quoteLabel(plan) {
     return plan?.aggregate?.quoted===true?`${JSON.stringify(plan.aggregate.totalCost ?? plan.aggregate)} ${plan.aggregate.currency || ''}`.trim():'';
   }
-  function sourcePreparation() {
-    const ids=new Set(generationSelection()),candidate=runs.find(item=>item.id===generationResumeRunId),run=!dirty && resumableRun(candidate)?candidate:null;
-    const sourceNodes=workflow?.nodes.filter(node=>ids.has(node.id)&&!['generate','render','review','publish'].includes(node.type)) || [];
-    return sourceNodes.filter(node=>!run || run.workflowVersion!==workflow.version || !['completed','succeeded','reused'].includes(run.nodeRuns?.find(item=>item.nodeId===node.id)?.status));
+  // "소스 준비": the FIRST generate node in topological order. The server planner (contract 5C)
+  // computes what free preparation that node's own chain needs (plan.deferredStages/notice);
+  // the client no longer statically guesses a storyboard/script ancestor (that missed
+  // intermediate producers like layout -- see the 'all ten roles' regression).
+  function firstGenerationNode() {
+    return graphOrder(workflow.nodes,workflow.edges).map(id=>workflow.nodes.find(node=>node.id===id)).find(node=>node?.type==='generate') || null;
   }
   async function loadGenerationEstimate() {
     if(typeof disclosure.containsSyntheticMedia!=='boolean'||!disclosure.rationale.trim())throw new Error('AI 사용 공개 여부와 판단 근거를 먼저 선택하세요.');
-    if(sourcePreparation().length)throw new Error('소스·대본·스토리보드를 먼저 준비하고 새 견적을 요청하세요.');
-    const epoch=contextEpoch,targetId=workflow?.id,targetEpisodeId=episodeId;
+    const epoch=contextEpoch,dialogEpoch=confirmDialogEpoch,targetId=workflow?.id,targetEpisodeId=episodeId;
     await beforeRun?.(targetEpisodeId);
     if(epoch!==contextEpoch)throw new Error('프로젝트 또는 워크플로우가 변경되었습니다.');
     await save();
     if(epoch!==contextEpoch || workflow?.id!==targetId)throw new Error('프로젝트 또는 워크플로우가 변경되었습니다.');
+    // Woke from the save() await after the user already closed/switched the dialog (U-shaped:
+    // dialogEpoch only moves forward via the close listener) -- save() itself still completed
+    // (never skipped), but this session is over: stop before the quote POST and loading state.
+    if(dialogEpoch!==confirmDialogEpoch)return;
     for(const node of workflow.nodes.filter(node=>generationSelection().includes(node.id)&&node.type==='generate'))assertGenerationInput(generationInput(node));
-    const key=generationInputKey(),options=generationOptions();
+    const key=generationInputKey(),options=generationOptions(),request=++generationEstimateRequest;
+    // Per-request guard (not just contextEpoch): a response is stale if the dialog session that
+    // asked for it has since closed/switched (dialogEpoch) or a newer quote superseded it
+    // (request) -- either way it must never write result/error/loading into a different session.
+    const stale=()=>epoch!==contextEpoch || dialogEpoch!==confirmDialogEpoch || request!==generationEstimateRequest;
     generationEstimateLoading=true;invalidateGenerationEstimate();
     try {
       const plan=await post(`/api/workflows/${targetId}/quote`,{episodeId:targetEpisodeId,...options});
-      if(epoch!==contextEpoch || key!==generationInputKey())return;
+      if(stale() || key!==generationInputKey())return;
       if(!plan?.id || !plan.fingerprint || !plan.candidate || !Array.isArray(plan.nodes))throw new Error('서버의 전체 후보 견적을 확인할 수 없습니다.');
       generationEstimate=plan;generationEstimateKey=key;generationConsentSnapshot={workflowId:targetId,episodeId:targetEpisodeId,key,options};
-    } catch(error) {if(epoch===contextEpoch)generationEstimateError=error.message;}
-    finally {if(epoch===contextEpoch){generationEstimateLoading=false;paint();$('#wf-confirm-dialog')?.showModal();}}
+    } catch(error) {if(!stale())generationEstimateError=error.message;}
+    finally {
+      // generationEstimateLoading must release whenever THIS is still the most-recently-issued
+      // request, independent of dialogEpoch/contextEpoch: it is a simple in-flight lock on the
+      // 견적 button (line ~829) and the confirm button (refreshDialogConfirmation), not session
+      // data. Gating it on the full stale() (as the reopen below correctly does) meant the very
+      // first Escape/취소 before a quote resolved left it stuck true forever -- no other call
+      // ever both re-ran loadGenerationEstimate() (to reset it) and was still "the latest"
+      // (since the button that starts a new request was itself disabled by the stuck flag).
+      if(request===generationEstimateRequest)generationEstimateLoading=false;
+      if(!stale()){paint();$('#wf-confirm-dialog')?.showModal();}
+    }
   }
   function refreshDialogConfirmation() {
     const dialog=$('#wf-confirm-dialog');if(!dialog||!generationConsent)return;
@@ -714,7 +854,7 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
     const targets=workflow?.nodes.filter(node=>generationSelection().includes(node.id)&&node.type==='generate').map(node=>generationInput(node)) || [];
     const quotedNodes=plan?.nodes?.map(node=>({...plan.candidate.nodes?.find(input=>input.nodeId===node.nodeId),...node})) || targets;
     const rows=quotedNodes.map(node=>`<li data-generation-node="${escapeHtml(node.nodeId)}"><strong>${escapeHtml(node.nodeId)}</strong><dl class="wf-review-facts"><div><dt>장면 / 슬롯</dt><dd>${escapeHtml(node.sceneId)} / ${escapeHtml(node.slotId || '장면 전체')}</dd></div><div><dt>모델</dt><dd>${escapeHtml(node.model)}</dd></div><div><dt>입력 / 매개변수</dt><dd><pre class="history-snapshot">${escapeHtml(JSON.stringify(node.input || {prompt:node.prompt,params:node.params},null,2))}</pre></dd></div><div><dt>비용</dt><dd data-generation-cost>${node.quoted===true?escapeHtml(JSON.stringify(node.cost)):'견적 미확인'}</dd></div></dl></li>`).join('');
-    const generationDialog=`<p>선택한 모든 생성 노드와 대상의 정확한 입력·비용을 확인하세요. 견적과 실행은 명시적으로 요청할 때만 진행합니다.</p><p>에피소드: ${escapeHtml(episodeId)} · 선택 노드: ${escapeHtml(generationSelection().join(', '))}</p><label>플랫폼 AI 사용 공개 결정<select id="wf-disclosure"><option value="" ${disclosure.containsSyntheticMedia===null?'selected':''}>아직 답하지 않음</option><option value="true" ${disclosure.containsSyntheticMedia===true?'selected':''}>공개 필요</option><option value="false" ${disclosure.containsSyntheticMedia===false?'selected':''}>공개 불필요</option></select></label><label>판단 근거<textarea id="wf-disclosure-rationale" maxlength="2000">${escapeHtml(disclosure.rationale)}</textarea></label><ul class="result-list">${rows}</ul>${sourcePreparation().length?'<p class="wf-review-warning">소스·대본·스토리보드를 먼저 준비하고 결과를 확인하세요. 새 결과가 바뀌면 이전 견적은 사용할 수 없습니다.</p><button data-wf-action="prepare-generation-source">소스·대본 먼저 준비</button>':''}<button data-wf-action="quote-generation" ${generationEstimateLoading?'disabled':''}>전체 후보 견적 확인</button>${generationEstimateError?`<p class="wf-review-warning" role="alert">${escapeHtml(generationEstimateError)}</p>`:''}${plan?`<div data-generation-quote><p class="generation-quote">전체 비용: ${escapeHtml(quoteLabel(plan) || '견적 미확인')}</p><p>후보 fingerprint: <code data-testid="generation-fingerprint">${escapeHtml(plan.fingerprint)}</code></p><p>견적 만료: ${escapeHtml(plan.expiresAt)}</p><details><summary>서버의 정확한 전체 후보</summary><pre class="history-snapshot">${escapeHtml(JSON.stringify(plan.candidate,null,2))}</pre></details>${!plan.aggregate?.quoted?`<label class="generation-checkbox"><input id="wf-estimate-ack" type="checkbox" data-wf-action="estimate-ack" ${generationEstimateAcknowledged?'checked':''}> 모든 미확인 견적에 대해 비용을 모르는 상태로 실행함을 확인합니다.</label>`:''}</div>`:''}`;
+    const generationDialog=`<p>선택한 모든 생성 노드와 대상의 정확한 입력·비용을 확인하세요. 견적과 실행은 명시적으로 요청할 때만 진행합니다.</p><p>에피소드: ${escapeHtml(episodeId)} · 선택 노드: ${escapeHtml(generationSelection().join(', '))}</p><label>플랫폼 AI 사용 공개 결정<select id="wf-disclosure"><option value="" ${disclosure.containsSyntheticMedia===null?'selected':''}>아직 답하지 않음</option><option value="true" ${disclosure.containsSyntheticMedia===true?'selected':''}>공개 필요</option><option value="false" ${disclosure.containsSyntheticMedia===false?'selected':''}>공개 불필요</option></select></label><label>판단 근거<textarea id="wf-disclosure-rationale" maxlength="2000">${escapeHtml(disclosure.rationale)}</textarea></label><ul class="result-list">${rows}</ul><button data-wf-action="prepare-generation-source" data-tooltip="비용이 드는 생성 전에 대본·스토리보드 등 준비 단계만 먼저 실행합니다. 이미 준비됐다면 비용 확인으로 바로 진행해도 됩니다.">소스·대본 먼저 준비</button><button data-wf-action="quote-generation" ${generationEstimateLoading?'disabled':''}>전체 후보 견적 확인</button>${generationEstimateError?`<p class="wf-review-warning" role="alert">${escapeHtml(generationEstimateError)}</p>`:''}${plan?`<div data-generation-quote><p class="generation-quote">전체 비용: ${escapeHtml(quoteLabel(plan) || '견적 미확인')}</p><p>후보 fingerprint: <code data-testid="generation-fingerprint">${escapeHtml(plan.fingerprint)}</code></p><p>견적 만료: ${escapeHtml(plan.expiresAt)}</p><details><summary>서버의 정확한 전체 후보</summary><pre class="history-snapshot">${escapeHtml(JSON.stringify(plan.candidate,null,2))}</pre></details>${!plan.aggregate?.quoted?`<label class="generation-checkbox"><input id="wf-estimate-ack" type="checkbox" data-wf-action="estimate-ack" ${generationEstimateAcknowledged?'checked':''}> 모든 미확인 견적에 대해 비용을 모르는 상태로 실행함을 확인합니다.</label>`:''}</div>`:''}`;
     return `<dialog id="wf-confirm-dialog"><h2>${generationConsent?'전체 후보 생성 승인':'이전 버전을 새 버전으로 복원'}</h2>${generationConsent?generationDialog:`<p>현재 v${workflow?.version}은 기록에 보존됩니다. 선택한 v${entry?.version || ''}의 내용을 새 버전으로 저장합니다.</p>${entry?changesHtml(workflowChanges(workflow,entry.snapshot),escapeHtml,'현재 내용','복원할 내용'):''}`}<div class="dialog-actions"><button data-wf-action="close-dialog">취소</button><button class="primary" data-wf-action="${generationConsent?'confirm-generation-run':'confirm-restore'}" ${generationConsent&&(!valid||generationEstimateLoading||(!plan?.aggregate?.quoted&&!generationEstimateAcknowledged))?'disabled':''}>${generationConsent?'전체 비용 확인 후 생성 실행':'새 버전으로 복원'}</button></div></dialog>`;
   }
   function generationControlsHtml(node) {
@@ -787,60 +927,78 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
     panels.forEach(panel=>{const active=panel.contains(focused),start=active?focused.selectionStart:null,end=active?focused.selectionEnd:null,scroll=panel.scrollTop;panel.innerHTML=inspectorHtml();panel.scrollTop=scroll;if(active && selector){const replacement=panel.querySelector(selector);replacement?.focus({preventScroll:true});if(typeof start==='number' && replacement?.setSelectionRange && !['number','checkbox'].includes(replacement.type))replacement.setSelectionRange(start,end);}});
     syncMutationControls();
   }
+  // Prerequisite walking is server-authoritative now (POST /plan via executionRequest). This
+  // stays a cheap synchronous pre-check for things the client already knows for free -- EXCEPT
+  // for a publish target's nearest-review approval, which only the server's planExecution()
+  // (via a dry-run stageSelection(), the exact same check the real run enforces) can answer
+  // correctly -- see checkPublishReadiness(). publishReadinessResult is that answer, fetched
+  // read-only and cached per node/request by the open-stage-overlay handler before this runs.
   function stageInfo() {
-    const node=selectedNode(),selectedRun=activeRun(),run=!dirty && resumableRun(selectedRun)?selectedRun:null,record=run?.nodeRuns?.find(item=>item.nodeId===node?.id);
-    if (!node) return {node:null,state:'blocked',text:'노드를 선택하면 실행할 단계를 확인할 수 있습니다.',resumeRunId:null,canResume:false};
-    if(mutationReason())return {node,state:'blocked',text:mutationReason(),resumeRunId:null,canResume:false};
-    const nodeState=entry=>entry?.status==='skipped'?entry.retainedStatus:entry?.status;
-    const output=entry=>entry?.output || entry?.retainedOutput;
-    const reusable=entry=>Boolean(output(entry)) && ['completed','reused','awaiting_review','approved','changes_requested'].includes(nodeState(entry));
-    const required=new Map(),hard={storyboard:'script',layout:'storyboard',generate:'storyboard',review:'render',publish:'review'};
-    let problem='';
-    const boundary=(target,type,optional=false)=>{
-      const found=upstreamBoundary(workflow.nodes,workflow.edges,target.id,type);
-      if(found.length>1 || (!optional && !found.length))problem=`${nodeName(target)}의 연결된 ${TYPES[type]?.name || type} 선행 단계를 확인하세요.`;
-      return found.length===1?found[0]:null;
-    };
-    const requireNode=dep=>{
-      if(!dep || dep.id===node.id || required.has(dep.id))return;
-      required.set(dep.id,dep);
-      const type=hard[dep.type];if(type)requireNode(boundary(dep,type));
-    };
-    if(hard[node.type])requireNode(boundary(node,hard[node.type]));
-    if(['news','script','layout'].includes(node.type))boundary(node,node.type==='news'?'trend':'news',true);
-    if(node.type==='render') {
-      requireNode(boundary(node,'storyboard',true));requireNode(boundary(node,'layout',true));
-      if(run) {
-        const seen=new Set([node.id]),stack=[node.id];
-        while(stack.length) {
-          const current=stack.pop();
-          for(const edge of workflow.edges.filter(item=>item.target===current)) {
-            if(seen.has(edge.source))continue;seen.add(edge.source);stack.push(edge.source);
-            const dep=workflow.nodes.find(item=>item.id===edge.source);if(dep?.type==='generate')requireNode(dep);
-          }
-        }
-      }
+    const node=selectedNode();
+    if (!node) return {node:null,state:'blocked',text:'노드를 선택하면 실행할 단계를 확인할 수 있습니다.',canResume:false};
+    if (mutationReason()) return {node,state:'blocked',text:mutationReason(),canResume:false};
+    if (isNodeSkipped(node.id)) return {node,state:'blocked',text:'건너뛰기가 설정된 노드입니다. 건너뛰기를 해제한 뒤 실행하세요.',canResume:false};
+    if (node.type==='publish') {
+      const result=publishReadinessResult?.nodeId===node.id ? publishReadinessResult : null;
+      // No settled answer yet (still in flight, or none was ever requested for this node): fail
+      // closed rather than show a false 'idle'. The open-stage-overlay handler always awaits
+      // checkPublishReadiness() before first paint, so in practice this only shows transiently.
+      if (!result) return {node,state:'blocked',text:'서버에서 게시 준비 상태를 확인하는 중입니다…',canResume:false};
+      if (result.blocked) return {node,state:'blocked',text:result.message || '게시할 수 없습니다. 다시 열어 확인하세요.',canResume:false};
     }
-    if(node.type==='publish')requireNode(boundary(node,'render'));
-    const blocked=[...required.values()].filter(dep=>{
-      const entry=run?.nodeRuns?.find(item=>item.nodeId===dep.id),value=output(entry);
-      return !reusable(entry) || (['storyboard','layout'].includes(dep.type) && (!Array.isArray(value?.scenes) || !value.scenes.length));
-    });
-    const priorRunId=run?.id || null;
-    const canResume=Boolean(run && ['failed','cancelled'].includes(run.status) && !reusable(record));
-    if(problem)return {node,state:'blocked',text:problem,resumeRunId:null,canResume:false};
-    if(blocked.length)return {node,state:'blocked',text:`선행 단계가 필요합니다: ${blocked.map(dep=>nodeName(dep)).join(', ')}`,resumeRunId:null,canResume:false};
-    if(node.type==='publish') {
-      const review=boundary(node,'review'),entry=run?.nodeRuns?.find(item=>item.nodeId===review?.id);
-      if(nodeState(entry)!=='approved' || output(entry)?.review?.decision!=='approved')return {node,state:'blocked',text:'연결된 후보의 명시적인 검토 승인이 필요합니다.',resumeRunId:null,canResume:false};
+    const record=activeRun()?.nodeRuns?.find(item=>item.nodeId===node.id);
+    const cardState=nodeRunState(record,false);
+    if (cardState.state==='failed') return {node,state:'failed',text:'이전 실행이 실패했습니다. 완료된 선행 단계는 재사용하며 다시 시작할 수 있습니다.',canResume:true};
+    if (['completed','approved','awaiting_review'].includes(cardState.state)) return {node,state:'completed',text:'선택한 단계가 완료되었습니다. 새 실행으로 다시 시작할 수 있습니다.',canResume:false};
+    return {node,state:'idle',text:'선택한 단계부터 실행할 준비가 되었습니다. 필요한 선행 단계는 함께 실행되거나 재사용됩니다.',canResume:false};
+  }
+  // Read-only, version-guarded /plan probe for ONE publish target node -- never requestPlan()
+  // (which does beforeRun+save, both mutating), so merely opening the overlay can never save,
+  // run, or call a provider. The server's planExecution() dry-runs the exact same stageSelection()
+  // a real run uses (workflows.mjs:387-397), so this is never a second, divergent algorithm --
+  // it is the server's own answer, only displayed. Deliberately NOT awaited by its caller: the
+  // dialog must open immediately in the 'checking'/disabled state (stageInfo()'s own default
+  // while publishReadinessResult is unset for this node) so a slow or unresponsive server never
+  // leaves the user with no dialog and no way to Escape/cancel -- this only patches the live DOM
+  // via updateOverlayUi() once an answer actually lands (self-contained on every outcome, so any
+  // future caller doesn't also have to remember to re-render). Fails closed (state stays
+  // 'blocked') on dirty drafts (would check the stale saved graph, not what's on screen), missing
+  // project/episode, network/HTTP errors, and any response that arrives after local state moved
+  // on (a newer check superseded it, a draft edit landed, the project/episode/workflow version
+  // changed, or nothing is awaiting an answer anymore because the dialog already closed -- see
+  // the close listener's own publishReadinessRequest++).
+  async function checkPublishReadiness(node) {
+    const request=++publishReadinessRequest,epoch=contextEpoch,startRevision=revision,targetId=workflow?.id,workflowVersion=workflow?.version,targetEpisodeId=episodeId,episodeVersion=liveEpisode(targetEpisodeId)?.version;
+    const stale=()=>request!==publishReadinessRequest || epoch!==contextEpoch || revision!==startRevision || workflow?.id!==targetId || workflow?.version!==workflowVersion || episodeId!==targetEpisodeId || liveEpisode(targetEpisodeId)?.version!==episodeVersion;
+    if (dirty) { publishReadinessResult={nodeId:node.id,blocked:true,message:'저장되지 않은 변경이 있습니다. 먼저 저장한 뒤 게시 준비 상태를 확인하세요.'}; updateOverlayUi(); return; }
+    // Separate from `dirty` (the workflow graph's own draft flag): hasEpisodeChanges tracks
+    // unsaved edits made elsewhere (e.g. the scene/Studio editor) against the SAME episode.
+    // Those are invisible to `dirty` but requestPlan's real beforeRun()->save() path silently
+    // persists them and bumps episode.version the moment the user actually clicks Start --
+    // invalidating the exact episodeVersion match this readiness check just said was fine.
+    if (hasEpisodeChanges?.(targetEpisodeId)) { publishReadinessResult={nodeId:node.id,blocked:true,message:'에피소드에 저장되지 않은 변경이 있습니다. 먼저 저장한 뒤 게시 준비 상태를 확인하세요.'}; updateOverlayUi(); return; }
+    if (!targetId || !targetEpisodeId) { publishReadinessResult={nodeId:node.id,blocked:true,message:'프로젝트와 에피소드를 선택하세요.'}; updateOverlayUi(); return; }
+    try {
+      const plan=await post(`/api/workflows/${targetId}/plan`,{episodeId:targetEpisodeId,execution:{mode:'node',targetNodeId:node.id},expectedWorkflowVersion:workflowVersion,expectedEpisodeVersion:episodeVersion});
+      if (stale()) return;
+      publishReadinessResult={nodeId:node.id,blocked:Boolean(plan.blocked),message:plan.blocked?.message || ''};
+      updateOverlayUi();
+    } catch (error) {
+      if (stale()) return;
+      publishReadinessResult={nodeId:node.id,blocked:true,message:'게시 준비 상태를 확인하지 못했습니다. 다시 열어 확인하세요.'};
+      updateOverlayUi();
     }
-    if (record?.status==='failed' || canResume) return {node,state:'blocked',text:'이전 실행이 실패했습니다. 완료된 출력은 재사용하고 이 단계부터 재개할 수 있습니다.',resumeRunId:priorRunId,canResume:Boolean(canResume && priorRunId)};
-    if (reusable(record)) return {node,state:'completed',text:'선택한 단계가 완료되었습니다. 새 실행으로 다시 시작할 수 있습니다.',resumeRunId:priorRunId,canResume:false};
-    return {node,state:'idle',text:'선택한 단계부터 실행할 준비가 되었습니다.',resumeRunId:priorRunId,canResume:false};
   }
   function stageDialogHtml() {
     const info=stageInfo();
     return `<div class="wf-overlay-header"><div><span class="eyebrow">STAGE CONTROL</span><h2 id="wf-stage-title">선택 단계 실행</h2></div><button type="button" data-wf-action="close-overlay" aria-label="단계 실행 닫기">닫기</button></div><p id="wf-stage-status" aria-live="polite" data-stage-state="${info.state}"><strong>${escapeHtml(info.node ? nodeName(info.node) : '선택된 노드 없음')}</strong><br>${escapeHtml(info.text)}</p><p class="hint">필수 선행 출력과 현재 에피소드·워크플로우 버전을 확인한 뒤 요청합니다. 생성 단계는 비용 확인 후 실행됩니다.</p><div class="dialog-actions"><button type="button" data-wf-action="stage-start" id="wf-stage-start" ${info.state==='blocked'||info.state==='running'||!info.node?'disabled':''}>선택 단계 시작</button>${info.canResume?`<button type="button" class="primary" data-wf-action="resume-stage">실패 실행에서 재개</button>`:''}</div>`;
+  }
+  // "전체 실행" keep/refresh/cancel decision when the plan found already-completed nodes (contract 2.3).
+  function runAllDialogHtml() {
+    const plan=runAllDialog?.plan;
+    const completed=plan?.completedNodeIds.length ?? 0;
+    const keepHint = plan?.nothingToRun ? '<small id="wf-run-all-keep-hint" class="hint">남은 노드 없음</small>' : '';
+    return `<div class="wf-overlay-header"><h2 id="wf-run-all-title">전체 실행</h2><button type="button" data-wf-action="close-overlay" aria-label="전체 실행 닫기">닫기</button></div><div class="wf-overlay-body"><p>이미 완료된 노드 ${completed}개가 있습니다. 새로 실행할까요?</p></div><div class="dialog-actions"><span class="wf-run-all-keep"><button type="button" data-wf-action="run-all-keep" ${plan?.nothingToRun?'disabled':''} ${plan?.nothingToRun?'aria-describedby="wf-run-all-keep-hint"':''}>완료 노드 유지, 남은 노드만 실행</button>${keepHint}</span><button type="button" class="primary" data-wf-action="run-all-refresh">완료 노드도 새로 실행</button><button type="button" data-wf-action="close-overlay">취소</button></div>`;
   }
   function resultsDialogHtml() {
     const node=selectedNode();
@@ -866,16 +1024,17 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
       return;
     }
     const layout=$('.wf-layout');
-    if (layout && !$('#wf-focused-node')) layout.insertAdjacentHTML('beforebegin', `<section id="wf-focused-node" class="panel wf-focused-node" aria-label="선택한 노드"><div><span class="eyebrow">SELECTED NODE</span><h2 data-focused-name></h2><p class="hint" data-focused-id></p><p class="hint" data-focused-status></p></div><div class="row"><button type="button" data-wf-action="node-tools" aria-haspopup="dialog">노드 설정 편집</button><button type="button" data-wf-action="node-results" aria-haspopup="dialog">실행 결과·입력 보기</button></div></section>`);
+    if (layout && !$('#wf-focused-node')) layout.insertAdjacentHTML('beforebegin', `<section id="wf-focused-node" class="panel wf-focused-node" aria-label="선택한 노드"><div><span class="eyebrow">SELECTED NODE</span><h2 data-focused-name></h2><p class="hint" data-focused-id></p><p class="hint" data-focused-status></p></div><div class="row"><button type="button" data-wf-action="node-tools" aria-haspopup="dialog">노드 설정 편집</button><button type="button" data-wf-action="node-results" aria-haspopup="dialog">실행 결과·입력 보기</button><button type="button" data-wf-action="scene-editor" aria-haspopup="dialog">장면 편집기</button><button type="button" data-wf-action="connections" aria-haspopup="dialog">연결 보기</button><button type="button" data-wf-action="input" aria-haspopup="dialog">입력 선택</button><button type="button" data-wf-action="output" aria-haspopup="dialog">출력 선택</button><button type="button" data-wf-action="node-history" aria-haspopup="dialog">변경 기록</button></div></section>`);
     const toolbar=$('.wf-toolbar');
     if (toolbar && owns(workflow) && workflow.templateId && !toolbar.querySelector('[data-wf-action="rollup-preview"]')) toolbar.insertAdjacentHTML('beforeend', '<button type="button" class="small" data-wf-action="rollup-preview" aria-haspopup="dialog">공용 템플릿 반영 미리보기</button>');
     if (!$('#wf-rollup-dialog')) host.insertAdjacentHTML('beforeend', '<dialog id="wf-rollup-dialog" class="wf-overlay" aria-labelledby="wf-rollup-title"><div class="wf-overlay-header"><h2 id="wf-rollup-title">공용 템플릿 반영 미리보기</h2><button type="button" data-wf-action="close-overlay">닫기</button></div><div class="wf-overlay-body" id="wf-rollup-body"></div><div class="dialog-actions"><button type="button" data-wf-action="close-overlay">취소</button><button type="button" class="primary" data-wf-action="rollup-confirm">확인하고 템플릿 새 버전 만들기</button></div></dialog>');
     const canvas=$('#workflow-canvas');
     if (canvas && !$('#wf-minimap')) canvas.insertAdjacentHTML('beforeend',`<div id="wf-minimap" class="wf-minimap" tabindex="0" role="application" aria-label="워크플로우 미니맵. 화살표로 이동하고 노드를 선택하세요."><div id="wf-minimap-world">${minimapHtml()}</div><div id="wf-minimap-viewport" aria-hidden="true"></div></div>`);
     const header=host?.querySelector('.wf-graph-panel .panel-header .row:last-child');
-    if (header && !header.querySelector('[data-wf-action="open-tools"]')) header.insertAdjacentHTML('beforeend','<button class="small" type="button" data-wf-action="open-tools">노드 도구</button><button class="small" type="button" data-wf-action="open-results">결과·기록</button><button class="small" type="button" data-wf-action="open-stage-overlay">단계 실행</button>');
+    if (header && !header.querySelector('[data-wf-action="open-tools"]')) header.insertAdjacentHTML('beforeend','<button class="small" type="button" data-wf-action="open-tools">노드 도구</button><button class="small" type="button" data-wf-action="open-results">결과·기록</button><button class="small" type="button" data-wf-action="open-stage-overlay">단계 실행</button><button class="small" type="button" data-wf-action="canvas-menu" aria-haspopup="menu" aria-label="캔버스 메뉴">⋯ 메뉴</button>');
     if (host && !$('#wf-tools-dialog')) host.insertAdjacentHTML('beforeend',`<dialog id="wf-tools-dialog" class="wf-overlay" aria-labelledby="wf-tools-title"><div class="wf-overlay-header"><div><span class="eyebrow">NODE TOOLS</span><h2 id="wf-tools-title">선택한 노드 도구</h2></div><button type="button" data-wf-action="close-overlay" aria-label="노드 도구 닫기">닫기</button></div><div class="wf-inspector-tabs" role="tablist" aria-label="노드 도구 탭">${inspectorTabsHtml()}</div><div class="wf-overlay-body" id="wf-overlay-inspector" role="tabpanel" tabindex="0">${inspectorHtml()}</div></dialog><dialog id="wf-results-dialog" class="wf-overlay" aria-labelledby="wf-results-title"><div class="wf-overlay-body">${resultsDialogHtml()}</div></dialog><dialog id="wf-stage-dialog" class="wf-overlay" aria-labelledby="wf-stage-title">${stageDialogHtml()}</dialog>`);
     if (host && !$('#wf-add-node-dialog')) host.insertAdjacentHTML('beforeend', `<dialog id="wf-add-node-dialog" class="wf-overlay" aria-labelledby="wf-add-node-title">${addNodeDialogHtml()}</dialog><dialog id="wf-connect-dialog" class="wf-overlay" aria-labelledby="wf-connect-title">${connectDialogHtml()}</dialog><dialog id="wf-workflow-dialog" class="wf-overlay" aria-labelledby="wf-workflow-title"><div class="wf-overlay-header"><div><span class="eyebrow">WORKFLOW SETTINGS</span><h2 id="wf-workflow-title">워크플로 설정</h2></div><button type="button" data-wf-action="close-overlay" aria-label="워크플로 설정 닫기">닫기</button></div><div class="wf-overlay-body"><label>워크플로 이름<input id="wf-workflow-name" data-workflow-name maxlength="160" value="${escapeHtml(workflow?.name || '')}"></label><p class="hint">대본 → 스토리보드 → 렌더 → 사람의 검토가 필수입니다. 트렌드와 리서치는 선택 단계입니다.</p></div></dialog><dialog id="wf-delete-node-dialog" class="wf-overlay" aria-labelledby="wf-delete-node-title"><div class="wf-overlay-header"><div><span class="eyebrow">REMOVE NODE</span><h2 id="wf-delete-node-title">노드 삭제 확인</h2></div><button type="button" data-wf-action="close-overlay" aria-label="노드 삭제 취소">닫기</button></div><div class="wf-overlay-body"><p><strong id="wf-delete-node-name">${escapeHtml(nodeName(selectedNode()))}</strong> 노드를 삭제할까요?</p><p class="hint">연결된 선도 함께 삭제됩니다. 초안을 저장하기 전까지 변경을 되돌릴 수 있습니다.</p><div class="dialog-actions"><button type="button" data-wf-action="close-overlay">취소</button><button type="button" class="danger" data-wf-action="delete-node">노드 삭제</button></div></div></dialog>`);
+    if (host && !$('#wf-run-all-dialog')) host.insertAdjacentHTML('beforeend', `<dialog id="wf-run-all-dialog" class="wf-overlay" aria-labelledby="wf-run-all-title">${runAllDialogHtml()}</dialog>`);
     const descriptions={save:'이 그래프 초안의 모든 연결을 검증해 새 버전으로 저장합니다. 장면 저장·실행·게시와는 별개입니다.',undo:'마지막 그래프 초안 편집을 되돌립니다. 서버 기록은 변경하지 않습니다.',redo:'되돌린 그래프 초안 편집을 다시 적용합니다. 제작 실행을 시작하지 않습니다.',fit:'노드 좌표를 바꾸지 않고 전체 그래프가 보이도록 확대·이동합니다.',layout:'현재 연결 순서에 맞춰 노드 위치를 초안에서 정렬합니다. 저장 전 실행에는 반영되지 않습니다.','open-add-node':'같은 역할의 노드도 새 ID로 추가할 수 있습니다. 최대 128개 노드까지 지원합니다.','open-workflow-settings':'프로젝트 그래프 이름과 저장 전 설정을 확인합니다.','open-tools':'선택한 노드의 설정·실행 결과·변경 기록을 확인합니다.','open-results':'선택한 노드의 실행 당시 입력과 실제 출력을 확인합니다. 새 실행을 요청하지 않습니다.','open-stage-overlay':'정확한 선택 노드의 선행 조건을 확인합니다. 실행은 별도 시작 버튼과 생성 비용 승인 후에만 요청합니다.','confirm-delete-node':'확인 후 선택 노드와 해당 연결을 초안에서 제거합니다. 마지막 노드 제거·자동 재연결·자동 저장은 하지 않습니다.'};
     host?.querySelectorAll('[data-wf-action]').forEach(control=>{if(!control.dataset.tooltip && descriptions[control.dataset.wfAction])control.dataset.tooltip=descriptions[control.dataset.wfAction];});
     drawMinimap();
@@ -917,7 +1076,23 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
 
   function runsHtml() {
     if (!runs.length) return '<div class="panel-body hint">실행하면 각 노드의 상태와 결과가 이곳에 남습니다. 그래프의 기록용 연결이 아니라 실제 서버 작업을 실행합니다.</div>';
-    return runs.slice(0,10).map(run=>`<article class="wf-run ${activeRun()?.id===run.id?'selected':''}"><div class="row between"><button class="quiet" data-wf-action="select-run" data-id="${escapeHtml(run.id)}"><span class="badge ${run.status==='awaiting_review'?'lime':''}">${escapeHtml(STATUS[run.status] || run.status)}</span> <span class="hint">${stamp(run.createdAt)} · 워크플로우 v${run.workflowVersion} · 에피소드 v${run.episodeVersion}</span></button>${LIVE.has(run.status)?`<button class="small danger" data-wf-action="cancel-run" data-id="${escapeHtml(run.id)}">실행 취소</button>`:''}</div><div class="wf-run-nodes">${(run.nodeRuns || []).map(node=>`<div class="wf-run-node"><button class="quiet" data-wf-action="inspect-run-node" data-id="${escapeHtml(node.nodeId)}" data-run="${escapeHtml(run.id)}"><span class="wf-status-dot ${escapeHtml(node.status)}"></span>${escapeHtml(nodeName(run.workflowSnapshot?.nodes.find(item=>item.id===node.nodeId) || node))}<span class="hint">${escapeHtml(STATUS[node.status] || node.status)} · 상세 보기 ↗</span></button>${node.error?`<p class="danger">${escapeHtml(node.error)}</p>`:''}</div>`).join('')}</div>${run.error?`<p class="danger">${escapeHtml(run.error)}</p>`:''}${outputLinks(run)}</article>`).join('');
+    const visible = runs.slice(0, recentRunsExpanded ? 10 : 3);
+    const diffRow = (run, entry) => {
+      const node = run.workflowSnapshot?.nodes.find(item => item.id === entry.nodeId);
+      const stateLabel = entry.state === 'added' ? '새로 생성됨' : entry.state === 'removed' ? '결과 없음' : '변경됨';
+      const fields = entry.changes.map(change => `<span class="wf-run-diff-field">${escapeHtml(change.label)} ${escapeHtml(displayValue(change.before))} → ${escapeHtml(displayValue(change.after))}</span>`).join('');
+      return `<button type="button" class="quiet wf-run-diff-row" data-wf-action="inspect-run-node" data-id="${escapeHtml(entry.nodeId)}" data-run="${escapeHtml(run.id)}"><strong>${escapeHtml(nodeName(node || { type: entry.type }))}</strong> <span class="hint">${stateLabel}</span>${fields}</button>`;
+    };
+    const rows = visible.map((run, index) => {
+      const summary = summarizeRun(run, runs[index + 1]);
+      const changedRows = summary.changed.slice(0, 6).map(entry => diffRow(run, entry)).join('');
+      const overflowCount = Math.max(0, summary.changed.length - 6);
+      const badgeClass = run.status === 'awaiting_review' ? 'lime' : run.status === 'failed' ? 'coral' : '';
+      const extra = [summary.counts.failed ? `실패 ${summary.counts.failed}` : '', summary.counts.blocked ? `보류 ${summary.counts.blocked}` : ''].filter(Boolean).join(' · ');
+      return `<article class="wf-run wf-recent-run ${activeRun()?.id === run.id ? 'selected' : ''}" data-testid="wf-recent-run"><div class="row between"><button class="quiet" data-wf-action="select-run" data-id="${escapeHtml(run.id)}"><span class="badge ${badgeClass}">${escapeHtml(STATUS[run.status] || run.status)}</span> <span class="hint">${stamp(run.createdAt)} · 워크플로우 v${run.workflowVersion} · 에피소드 v${run.episodeVersion} · ${escapeHtml(summary.trigger)}</span></button>${LIVE.has(run.status) ? `<button class="small danger" data-wf-action="cancel-run" data-id="${escapeHtml(run.id)}">실행 취소</button>` : ''}</div><p class="wf-run-counts hint">실행 ${summary.counts.ran} · 재사용 ${summary.counts.reused} · 유지 ${summary.counts.kept} · 건너뜀 ${summary.counts.skipped}${extra ? ` · ${extra}` : ''}</p><div class="wf-run-diff" data-testid="wf-run-diff">${changedRows}${overflowCount > 0 ? `<p class="hint wf-run-diff-overflow">외 ${overflowCount}개 노드 변경</p>` : ''}${summary.untouched > 0 ? `<p class="hint wf-run-diff-rest">변경 없는 노드 ${summary.untouched}개</p>` : ''}</div>${run.error ? `<p class="danger">${escapeHtml(run.error)}</p>` : ''}${outputLinks(run)}</article>`;
+    }).join('');
+    const more = !recentRunsExpanded && runs.length > 3 ? `<button type="button" class="small quiet" data-wf-action="recent-runs-more">이전 실행 더 보기</button>` : '';
+    return `<div class="wf-recent-runs">${rows}${more}</div>`;
   }
 
   function outputLinks(run) {
@@ -990,7 +1165,6 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
     syncMutationControls();
     observeCanvas();
     openDisclosures.forEach(id=>{const details=$(`#${id}`);if(details)details.open=true;});
-    if (overlayTrigger && !overlayTrigger.isConnected) { const target=openDialogs.includes('wf-tools-dialog')?'open-tools':openDialogs.includes('wf-results-dialog')?'open-results':openDialogs.includes('wf-stage-dialog')?'open-stage-overlay':null; overlayTrigger=(overlayNodeId?nodeControl(overlayNodeId):null) || (target?host.querySelector(`[data-wf-action="${target}"]`):null); }
     openDialogs.forEach(id=>{const dialog=$(`#${id}`);if(dialog && !dialog.open) try{dialog.showModal();}catch{} });
     reviewSignature=reviewKey();
     updateSummary();
@@ -1005,17 +1179,20 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
     }
     infoTooltips?.refresh();
     if(!openDialogs.length && !focused?.isConnected){if(focusedNodeId)(nodeControl(focusedNodeId,focusedAction) || nodeControl(selected,'select-node'))?.focus({preventScroll:true});else if(canvasFocused)$('#workflow-canvas')?.focus({preventScroll:true});}
+    // Must run LAST in paint(): see reresolveOverlayTrigger's own comment for why.
+    reresolveOverlayTrigger();
   }
 
   function updateSummary() {
     const status=$('#wf-save-status');
-    if (status) { status.textContent=saving?'저장 중…':dirty?'● 저장되지 않은 변경':workflow?.id?`✓ 버전 ${workflow.version} · 저장됨`:'워크플로우 없음'; status.className=dirty?'unsaved':'hint'; }
+    if (status) { status.textContent=saving?'저장 중…':dirty?'● 저장되지 않은 변경':workflow?.id?`✓ 버전 ${workflow.version} · 저장됨`:'워크플로우 없음'; status.className=dirty?'unsaved':workflow?.id?'saved':'hint'; }
     const focus=$('#wf-focused-node'),node=selectedNode();
     if (focus) {
       focus.querySelector('[data-focused-name]').textContent=node ? nodeName(node) : '선택된 노드 없음';
       focus.querySelector('[data-focused-id]').textContent=node ? `노드 ID · ${node.id}` : '캔버스에서 노드를 선택하세요.';
       const record=node && activeRun()?.nodeRuns?.find(item=>item.nodeId===node.id);
-      focus.querySelector('[data-focused-status]').textContent=record ? `선택 실행 · ${STATUS[record.status] || record.status}` : '이 노드의 선택 실행 결과가 없습니다.';
+      const provenance=resultProvenance(record);
+      focus.querySelector('[data-focused-status]').textContent=node ? `${nodeCardState(node).label}${provenance?` · ${provenance}`:''}` : '캔버스에서 노드를 선택하세요.';
       focus.querySelectorAll('[data-wf-action]').forEach(button=>{button.disabled=!node;button.dataset.id=node?.id || '';});
     }
     const rollupConfirm=$('[data-wf-action="rollup-confirm"]');
@@ -1030,6 +1207,7 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
     if (badge) badge.textContent=selectedNode()?.type?.toUpperCase() || 'SELECT';
     if ($('#wf-history')) $('#wf-history').innerHTML=historyHtml();
     syncMutationControls();
+    reresolveOverlayTrigger();
   }
 
   function updateExecution() {
@@ -1038,10 +1216,17 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
     updateSummary();
     host.querySelectorAll('[data-status-node]').forEach(element=>{
       const record=run?.nodeRuns?.find(node=>node.nodeId===element.dataset.statusNode);
-      const nextText=STATUS[record?.status] || '실행 전';if(element.textContent!==nextText)element.textContent=nextText;
-      const nextClassName=`wf-node-status ${record?.status || 'idle'}`;if(element.className!==nextClassName)element.className=nextClassName;
+      const cardState=nodeRunState(record,isNodeSkipped(element.dataset.statusNode));
+      // One visible badge per card: the precedence label, never the raw run status (which reads 건너뜀 for merely-unselected nodes).
+      if(element.textContent!==cardState.label)element.textContent=cardState.label;
+      const nextClassName=`badge wf-state-badge wf-node-status ${record?.status || 'idle'}`;if(element.className!==nextClassName)element.className=nextClassName;
+      const article=element.closest('.wf-node');
+      if(article) {
+        if(article.dataset.nodeState!==cardState.state)article.dataset.nodeState=cardState.state;
+        article.classList.toggle('is-skipped',cardState.state==='skipped');
+      }
     });
-    if ($('#wf-runs')) $('#wf-runs').innerHTML=runsHtml();
+    if ($('#wf-recent-runs')) $('#wf-recent-runs').innerHTML=runsHtml();
     updateOverlayUi();
     if (inspectorTab==='results' && !$('#wf-overlay-inspector')?.contains(document.activeElement)) refreshInspector();
     refreshReview();
@@ -1145,34 +1330,74 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
     paint();
   }
 
-  async function runSelectedStage(stageId,resumeRunId=null) {
+  // Single run path (contract 2.3): every entry point (run-node, run-all, stage overlay,
+  // prepare-generation-source) asks the server "what would this run?" via POST /plan, then
+  // posts the SAME execution intent to /run. No client-built selectedStages/startStage/resumeRunId.
+  async function requestPlan(execution) {
     if (!episodeId) throw new Error('실행할 에피소드를 선택하세요.');
     const epoch=contextEpoch,targetEpisodeId=episodeId;
     await beforeRun?.(targetEpisodeId);
     if(epoch!==contextEpoch)throw new Error('프로젝트가 변경되었습니다.');
     await save();
     if(epoch!==contextEpoch)throw new Error('프로젝트가 변경되었습니다.');
-    const targetId=workflow.id,expectedWorkflowVersion=Number(workflow?.version),expectedEpisodeVersion=Number(liveEpisode(targetEpisodeId)?.version);
-    if (!Number.isInteger(expectedWorkflowVersion) || !Number.isInteger(expectedEpisodeVersion)) throw new Error('단계 실행 전에 에피소드와 워크플로우 버전을 확인할 수 없습니다.');
-    const payload={episodeId:targetEpisodeId,expectedWorkflowVersion,expectedEpisodeVersion,selectedStages:[stageId],startStage:stageId};
-    const prior=runs.find(run=>run.id===resumeRunId) || (!resumeRunId?activeRun():null);
-    const priorRunId=resumableRun(prior)?prior.id:null;
-    const info=stageInfo();
-    if(info.node?.id!==stageId || (info.state==='blocked' && !info.canResume) || info.state==='running')throw new Error(info.text);
-    if (priorRunId) payload.resumeRunId=priorRunId;
-    const stage=workflow.nodes.find(node=>node.id===stageId);
-    if (!stage || stage.type==='generate') throw new Error('생성은 전체 후보 승인 대화상자에서 시작하세요.');
-    const result=await post(`/api/workflows/${targetId}/run`,payload);
-    if(epoch!==contextEpoch)return;
-    runs.unshift(result); selectedRunId=result.id; inspectorTab='results'; paint(); schedulePoll(); toast(priorRunId?'기존 실행 출력을 재사용해 선택 단계를 시작했습니다.':'선택한 단계를 시작했습니다.');
+    const targetId=workflow.id,workflowVersion=workflow.version,episodeVersion=liveEpisode(targetEpisodeId)?.version;
+    const plan=await post(`/api/workflows/${targetId}/plan`,{episodeId:targetEpisodeId,execution,expectedWorkflowVersion:workflowVersion,expectedEpisodeVersion:episodeVersion});
+    if(epoch!==contextEpoch)throw new Error('프로젝트가 변경되었습니다.');
+    return {plan,epoch,targetId,targetEpisodeId,workflowVersion,episodeVersion};
   }
-
+  // Act on an already-fetched plan: route a generate-node run through the existing paid-generation
+  // consent dialog, or post straight to /run for everything else. `opener` (U9) is remembered so
+  // Cancel/Escape on whichever dialog this opens restores focus to the control that triggered it.
+  async function runFromPlan(execution,{plan,epoch,targetId,targetEpisodeId,workflowVersion,episodeVersion},opener=null) {
+    if (plan.blocked) throw new Error(plan.blocked.message);
+    if (plan.nothingToRun) throw new Error('실행할 노드가 없습니다. 완료된 결과를 유지합니다.');
+    // U5: the plan's pinned versions may be stale if a decision dialog sat open a while.
+    if (workflow?.id!==targetId || workflow.version!==workflowVersion || liveEpisode(targetEpisodeId)?.version!==episodeVersion) {
+      $('#wf-confirm-dialog')?.close();$('#wf-run-all-dialog')?.close();
+      throw new Error('프로젝트가 바뀌었습니다. 다시 확인하세요.');
+    }
+    pendingPlan=plan;pendingExecution=execution;
+    // Addendum 5C: a prepare-first plan (deferredStages.length) runs its free prefix straight
+    // away, no consent dialog, even though the deferred generate node's own quote would set
+    // requiresGeneration -- so this is checked BEFORE the requiresGeneration branch.
+    const deferring=Boolean(plan.deferredStages?.length);
+    if (plan.requiresGeneration && !deferring) {
+      generationConsent=true;restoreVersion=null;generationConsentSnapshot=null;invalidateGenerationEstimate();
+      rememberOverlay(opener);paint();$('#wf-confirm-dialog')?.showModal();return;
+    }
+    // Reaching here means no paid-generation consent is pending (deferring or a plain run) --
+    // close a stale confirm dialog left open by an earlier plan on this same node (U3).
+    $('#wf-confirm-dialog')?.close();generationConsent=false;generationConsentSnapshot=null;
+    const result=await post(`/api/workflows/${targetId}/run`,{episodeId:targetEpisodeId,execution,expectedWorkflowVersion:workflowVersion,expectedEpisodeVersion:episodeVersion});
+    if (epoch!==contextEpoch) return;
+    const reused=plan.nodes.filter(node=>node.action==='reuse').length;
+    pendingPlan=null;pendingExecution=null;invalidateGenerationEstimate();
+    runs.unshift(result);selectedRunId=result.id;inspectorTab='results';paint();schedulePoll();
+    toast(deferring ? `${plan.notice ? `${plan.notice} ` : ''}${plan.selectedStages.length}개 노드를 먼저 실행합니다.` : `${plan.selectedStages.length}개 노드를 실행합니다 (재사용 ${reused}개).`);
+  }
+  // run-node and stage overlay: plan then run in one step. prepare-generation-source has its
+  // own extra branch (see the action() handler) and calls requestPlan/runFromPlan directly.
+  async function executionRequest(execution,opener=null) {
+    await runFromPlan(execution,await requestPlan(execution),opener);
+  }
+  // run-all additionally offers a keep/refresh/cancel decision when nodes are already complete.
+  async function requestRunAll(refresh=false,opener=null) {
+    const execution={mode:'all',refresh};
+    const context=await requestPlan(execution);
+    if (context.plan.blocked) throw new Error(context.plan.blocked.message);
+    if (!refresh && context.plan.needsDecision) {
+      runAllDialog={...context,opener};
+      rememberOverlay(opener);paint();$('#wf-run-all-dialog')?.showModal();return;
+    }
+    await runFromPlan(execution,context,opener);
+  }
   async function action(button,name=button?.dataset.wfAction) {
     if(!button)return;
     if(mutatingActions.has(name) && mutationReason())throw new Error(mutationReason());
     if(name==='create-project-copy' && (!canMutate() || mutationBlockReason() || running()))throw new Error(mutationBlockReason() || (!canMutate()?'로그인이 필요하거나 변경할 수 없는 상태입니다.':'프로젝트 실행이 종료된 뒤 복사하세요.'));
     if (name==='select-node' || name==='minimap-select') { selectNode(button.dataset.id); return; }
     if(name==='node-menu') {openContextMenu({nodeId:button.dataset.id,anchor:button});return;}
+    if(name==='canvas-menu') {openContextMenu({anchor:button});return;}
     if(name==='rollup-preview') {
       if (!canMutate() || !owns(workflow) || !saved?.id || !saved.templateId || dirty || saving || pending) throw new Error('저장된 프로젝트 그래프를 선택하고 저장되지 않은 변경을 먼저 처리하세요.');
       const epoch=contextEpoch, targetId=workflow.id, targetRevision=revision, templateId=saved.templateId, projectVersion=saved.version;
@@ -1204,24 +1429,31 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
       refreshInspector();updateOverlayUi();rememberOverlay(button);
       const dialog=$(name==='node-history'?'#wf-tools-dialog':'#wf-results-dialog');if(dialog&&!dialog.open)dialog.showModal();return;
     }
-    if(name==='canvas-history') {const section=$('#wf-run-history');if(section){section.open=true;section.scrollIntoView({block:'start'});section.querySelector('summary')?.focus({preventScroll:true});}return;}
     if (name==='node-tools') { selectNode(button.dataset.id); inspectorTab='settings';host.querySelectorAll('.wf-inspector-tabs').forEach(tab=>tab.innerHTML=inspectorTabsHtml());refreshInspector(); const dialog=$('#wf-tools-dialog'); rememberOverlay(button); if(dialog && !dialog.open)dialog.showModal(); return; }
     if (name==='open-add-node') { const dialog=$('#wf-add-node-dialog'); if(!dialog)return; rememberOverlay(button); if(!dialog.open)dialog.showModal(); return; }
     if (name==='open-workflow-settings') { const dialog=$('#wf-workflow-dialog'); if(!dialog)return; const input=dialog.querySelector('#wf-workflow-name'); if(input)input.value=workflow?.name || ''; rememberOverlay(button); if(!dialog.open)dialog.showModal(); return; }
     if (name==='confirm-delete-node') { if(mutationReason())throw new Error(mutationReason());if(workflow.nodes.length<=1)throw new Error('마지막 노드는 제거할 수 없습니다. 최소 1개가 필요합니다.');const target=button.dataset.id || selected;if(!workflow.nodes.some(node=>node.id===target))return;selectNode(target);deleteNodeId=target;const dialog=$('#wf-delete-node-dialog');if(!dialog)return;syncMutationControls();rememberOverlay(button,target);if(!dialog.open)dialog.showModal();return; }
     if (name==='history-page') { const page=Number(button.dataset.page); if(Number.isSafeInteger(page) && page>0)await loadRunHistory({page}); return; }
+    if (name==='recent-runs-more') { recentRunsExpanded=true; updateExecution(); return; }
+    if (name==='history-versions-more') { historyVersionsExpanded=true; if($('#wf-history'))$('#wf-history').innerHTML=historyHtml(); return; }
     if (name==='refresh-run-history') { runHistoryQuery=''; const input=$('[data-run-history-search] input[name="q"]'); if(input)input.value=''; await loadRunHistory({page:1,query:''}); return; }
     if (name==='refresh-run-detail') { const record=[...host.querySelectorAll('.wf-history-record')].find(item=>item.dataset.runId===button.dataset.id); if(record){delete record.dataset.detailLoaded;await loadRunHistoryDetail(record);} return; }
     if (name==='open-tools' || name==='open-results' || name==='open-stage-overlay') {
       const id=name==='open-tools'?'wf-tools-dialog':name==='open-results'?'wf-results-dialog':'wf-stage-dialog';
-      const dialog=$(`#${id}`); if (!dialog) return; rememberOverlay(button); if (name==='open-results') inspectorTab='results'; refreshInspector(); updateOverlayUi(); if (!dialog.open) dialog.showModal(); return;
+      const dialog=$(`#${id}`); if (!dialog) return; rememberOverlay(button); if (name==='open-results') inspectorTab='results';
+      // Deliberately NOT awaited: the dialog must open immediately (stageInfo()'s own
+      // 'checking'/blocked-disabled default covers the gap) rather than leave the user with no
+      // dialog and no way to Escape/cancel while a slow or unresponsive server is still being
+      // asked. checkPublishReadiness() patches the live DOM itself once a non-stale answer lands.
+      if (name==='open-stage-overlay' && selectedNode()?.type==='publish') checkPublishReadiness(selectedNode());
+      refreshInspector(); updateOverlayUi(); if (!dialog.open) dialog.showModal(); return;
     }
     if (name==='close-overlay') { button.closest('dialog')?.close(); return; }
     if (name==='inspector-tab') { inspectorTab=button.dataset.tab; drafts.closeGroup(); host.querySelectorAll('.wf-inspector-tabs').forEach(tab=>tab.innerHTML=inspectorTabsHtml()); refreshInspector();  return; }
     if (name==='undo' || name==='redo') { undoDraft(name==='redo'); return; }
     if (name==='history-version') {compareVersion=Number(button.dataset.version);if($('#wf-history'))$('#wf-history').innerHTML=historyHtml();if(inspectorTab==='history')refreshInspector();return;}
     if (name==='inspect-run-node') {selectedRunId=button.dataset.run;inspectorTab='results';selectNode(button.dataset.id);if($('.wf-inspector-tabs'))$('.wf-inspector-tabs').innerHTML=inspectorTabsHtml();updateExecution();rememberOverlay(button);const dialog=$('#wf-results-dialog');if(dialog&&!dialog.open)dialog.showModal();return;}
-    if (name==='close-dialog') {$('#wf-confirm-dialog')?.close();restoreVersion=null;generationConsent=false;generationStageRun=false;generationResumeRunId=null;generationConsentSnapshot=null;generationTargetEpisode=null;generationEstimate=null;generationEstimateKey='';generationEstimateError='';generationEstimateAcknowledged=false;return;}
+    if (name==='close-dialog') {$('#wf-confirm-dialog')?.close();restoreVersion=null;generationConsent=false;generationConsentSnapshot=null;pendingPlan=null;pendingExecution=null;generationTargetEpisode=null;generationEstimate=null;generationEstimateKey='';generationEstimateError='';generationEstimateAcknowledged=false;return;}
     if (name==='estimate-ack') {generationEstimateAcknowledged=Boolean(button.checked);refreshDialogConfirmation();return;}
     if (name==='output' || name==='input' || name==='connections') {
       const nodeId=button.dataset.id || selected;
@@ -1252,12 +1484,10 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
         return;
       }
       if (name==='stage-start' || name==='resume-stage') {
-        const info=stageInfo(); if (!info.node || info.state==='running' || (info.state==='blocked' && !(name==='resume-stage' && info.canResume))) throw new Error(info.text);
-        const resumeId=info.resumeRunId;
-        if(info.node.type==='generate') {
-          assertGenerationInput(generationInput(info.node));generationConsent=true;generationStageRun=true;generationResumeRunId=resumeId;invalidateGenerationEstimate();generationConsentSnapshot=null;paint();$('#wf-confirm-dialog')?.showModal();return;
-        }
-        await runSelectedStage(info.node.id,resumeId); return;
+        const info=stageInfo();
+        if (!info.node || info.state==='blocked') throw new Error(info.text);
+        await executionRequest({mode:'node',targetNodeId:info.node.id},button);
+        return;
       }
       if(name==='create-project-copy') {
         if(!project?.episodeId||!project?.channelId||!workflow?.id||workflow.episodeId||workflow.channelId)throw new Error('공용 템플릿과 프로젝트를 선택하세요.');
@@ -1299,43 +1529,56 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
       else if (name==='layout') { const ids=graphOrder(workflow.nodes,workflow.edges),ordered=ids.map(id=>workflow.nodes.find(node=>node.id===id)); ordered.forEach((node,index)=>{node.x=50+index%3*285;node.y=65+Math.floor(index/3)*230;}); changed(); needsFit=true; paint(); }
       else if(name==='quote-generation') {await loadGenerationEstimate();}
       else if(name==='prepare-generation-source') {
-        const epoch=contextEpoch,targetEpisodeId=episodeId;
-        await beforeRun?.(targetEpisodeId);if(epoch!==contextEpoch)throw new Error('프로젝트 또는 워크플로우가 변경되었습니다.');
-        await save();if(epoch!==contextEpoch)throw new Error('프로젝트 또는 워크플로우가 변경되었습니다.');
-        const targetId=workflow.id,selectedStages=workflow.nodes.filter(node=>generationSelection().includes(node.id)&&!['generate','render','review','publish'].includes(node.type)).map(node=>node.id);
-        if(!selectedStages.length)throw new Error('준비할 소스 노드가 없습니다.');
-        const result=await post(`/api/workflows/${targetId}/run`,{episodeId:targetEpisodeId,selectedStages,expectedWorkflowVersion:workflow.version,expectedEpisodeVersion:liveEpisode(targetEpisodeId)?.version});
-        if(epoch!==contextEpoch)return;
-        runs.unshift(result);selectedRunId=result.id;generationResumeRunId=result.id;invalidateGenerationEstimate();generationConsent=false;generationConsentSnapshot=null;inspectorTab='results';paint();schedulePoll();toast('소스와 대본 준비를 시작했습니다. 완료 결과를 확인하고 새 견적을 요청하세요.');
+        const target=firstGenerationNode();
+        if(!target)throw new Error('준비할 생성 노드가 없습니다.');
+        const execution={mode:'node',targetNodeId:target.id};
+        const context=await requestPlan(execution);
+        if (context.plan.blocked) throw new Error(context.plan.blocked.message);
+        if (context.plan.requiresGeneration && !context.plan.deferredStages?.length) { toast('준비할 소스 노드가 없습니다. 비용 확인으로 진행하세요.'); return; }
+        await runFromPlan(execution,context,button);
       }
-      else if(name==='run'||name==='confirm-generation-run') {
-        if(!episodeId)throw new Error('실행할 에피소드를 선택하세요.');
-        if(name==='run'&&workflow.nodes.some(node=>node.type==='generate')) {
-          generationConsent=true;generationStageRun=false;restoreVersion=null;generationConsentSnapshot=null;invalidateGenerationEstimate();
-          const prior=activeRun();generationResumeRunId=!dirty && resumableRun(prior)?prior.id:null;
-          paint();$('#wf-confirm-dialog')?.showModal();return;
-        }
-        if(name==='confirm-generation-run') {
-          const snapshot=generationConsentSnapshot,plan=generationEstimate;
-          if(!snapshot||!plan?.id||snapshot.key!==generationInputKey()||generationEstimateKey!==snapshot.key||Date.parse(plan.expiresAt)<=Date.now())throw new Error('후보·입력·버전·공개 결정이 바뀌었거나 견적이 만료되었습니다. 새 견적을 확인하세요.');
-          if(!plan.aggregate?.quoted&&!generationEstimateAcknowledged)throw new Error('모든 미확인 견적에 대한 비용 동의가 필요합니다.');
-          if(dirty||hasEpisodeChanges?.(snapshot.episodeId))throw new Error('견적 후 편집이 바뀌었습니다. 저장하고 새 견적을 확인하세요.');
-          const epoch=contextEpoch,targetId=snapshot.workflowId,targetEpisodeId=snapshot.episodeId;
-          const payload={episodeId:targetEpisodeId,...copy(snapshot.options),allowGeneration:true,generationPlanId:plan.id,generationFingerprint:plan.fingerprint,acceptUnquotedEstimate:generationEstimateAcknowledged};
-          $('#wf-confirm-dialog')?.close();generationConsent=false;generationConsentSnapshot=null;generationStageRun=false;generationResumeRunId=null;invalidateGenerationEstimate();
-          const result=await post(`/api/workflows/${targetId}/run`,payload);
-          if(epoch!==contextEpoch)return;
-          runs.unshift(result);selectedRunId=result.id;inspectorTab='results';paint();schedulePoll();toast('승인한 전체 후보의 생성을 시작했습니다.');return;
-        }
-        const epoch=contextEpoch,targetEpisodeId=episodeId;
-        await beforeRun?.(targetEpisodeId);if(epoch!==contextEpoch)throw new Error('프로젝트 또는 워크플로우가 변경되었습니다.');
-        await save();if(epoch!==contextEpoch)throw new Error('프로젝트 또는 워크플로우가 변경되었습니다.');
-        const targetId=workflow.id,result=await post(`/api/workflows/${targetId}/run`,{episodeId:targetEpisodeId,selectedStages:workflow.nodes.filter(node=>node.type!=='publish').map(node=>node.id),expectedWorkflowVersion:workflow.version,expectedEpisodeVersion:liveEpisode(targetEpisodeId)?.version});
+      else if(name==='run'||name==='run-all') {
+        await requestRunAll(false,button);
+      }
+      else if(name==='run-all-keep') {
+        if(!runAllDialog || runAllDialog.epoch!==contextEpoch || runAllDialog.targetId!==workflow?.id)throw new Error('프로젝트 또는 워크플로우가 변경되었습니다. 전체 실행을 다시 여세요.');
+        if(runAllDialog.plan.nothingToRun)throw new Error('실행할 노드가 없습니다. 완료된 결과를 유지합니다.');
+        const context=runAllDialog;runAllDialog=null;$('#wf-run-all-dialog')?.close();
+        await runFromPlan({mode:'all',refresh:false},context,context.opener);
+      }
+      else if(name==='run-all-refresh') {
+        if(!runAllDialog || runAllDialog.epoch!==contextEpoch || runAllDialog.targetId!==workflow?.id)throw new Error('프로젝트 또는 워크플로우가 변경되었습니다. 전체 실행을 다시 여세요.');
+        const opener=runAllDialog.opener;runAllDialog=null;$('#wf-run-all-dialog')?.close();
+        await requestRunAll(true,opener);
+      }
+      else if(name==='run-node') {
+        const targetNodeId=button.dataset.id || selected;
+        if(!workflow.nodes.some(node=>node.id===targetNodeId))throw new Error('선택한 노드를 찾을 수 없습니다.');
+        await executionRequest({mode:'node',targetNodeId},button);
+      }
+      else if(name==='toggle-skip') {
+        const targetNodeId=button.dataset.id || selected;
+        if(!workflow.nodes.some(node=>node.id===targetNodeId))throw new Error('선택한 노드를 찾을 수 없습니다.');
+        if(!workflow.id || dirty || !owns(workflow))throw new Error('저장한 뒤 건너뛰기를 설정할 수 있습니다.');
+        const epoch=contextEpoch,targetId=workflow.id,targetKey=stashKey(),skipped=!isNodeSkipped(targetNodeId);
+        const result=await post(`/api/workflows/${targetId}/skips`,{nodeId:targetNodeId,skipped,expectedVersion:workflow.version});
+        if(epoch===contextEpoch && workflow?.id===targetId) {workflow.skippedNodes=result.skippedNodes;if(saved)saved.skippedNodes=result.skippedNodes;paint();}
+        else {const stashed=graphStashes.get(targetKey);if(stashed){stashed.workflow.skippedNodes=result.skippedNodes;if(stashed.saved)stashed.saved.skippedNodes=result.skippedNodes;}}
+      }
+      else if(name==='confirm-generation-run') {
+        const snapshot=generationConsentSnapshot,plan=generationEstimate;
+        if(!snapshot||!plan?.id||snapshot.key!==generationInputKey()||generationEstimateKey!==snapshot.key||Date.parse(plan.expiresAt)<=Date.now())throw new Error('후보·입력·버전·공개 결정이 바뀌었거나 견적이 만료되었습니다. 새 견적을 확인하세요.');
+        if(!plan.aggregate?.quoted&&!generationEstimateAcknowledged)throw new Error('모든 미확인 견적에 대한 비용 동의가 필요합니다.');
+        if(dirty||hasEpisodeChanges?.(snapshot.episodeId))throw new Error('견적 후 편집이 바뀌었습니다. 저장하고 새 견적을 확인하세요.');
+        const epoch=contextEpoch,targetId=snapshot.workflowId,targetEpisodeId=snapshot.episodeId;
+        const payload={episodeId:targetEpisodeId,...copy(snapshot.options),allowGeneration:true,generationPlanId:plan.id,generationFingerprint:plan.fingerprint,acceptUnquotedEstimate:generationEstimateAcknowledged};
+        $('#wf-confirm-dialog')?.close();generationConsent=false;generationConsentSnapshot=null;pendingPlan=null;pendingExecution=null;invalidateGenerationEstimate();
+        const result=await post(`/api/workflows/${targetId}/run`,payload);
         if(epoch!==contextEpoch)return;
-        runs.unshift(result);selectedRunId=result.id;inspectorTab='results';paint();schedulePoll();toast('제작을 시작했습니다. 결과를 확인하세요.');
+        runs.unshift(result);selectedRunId=result.id;inspectorTab='results';paint();schedulePoll();toast('승인한 전체 후보의 생성을 시작했습니다.');
       }
       else if (name==='refresh-history') {await loadVersions();updateSummary();if(inspectorTab==='history')refreshInspector();}
-      else if (name==='restore-workflow') {if(dirty || saving)throw new Error('현재 초안을 먼저 저장해 주세요.');restoreVersion=selectedVersion()?.version;generationConsent=false;paint();$('#wf-confirm-dialog')?.showModal();}
+      else if (name==='restore-workflow') {if(dirty || saving)throw new Error('현재 초안을 먼저 저장해 주세요.');restoreVersion=selectedVersion()?.version;generationConsent=false;rememberOverlay(button);paint();$('#wf-confirm-dialog')?.showModal();}
       else if (name==='confirm-restore') {
         if(dirty || saving || !restoreVersion)throw new Error('현재 초안을 저장하고 복원 버전을 다시 선택해 주세요.');
         const epoch=contextEpoch,startRevision=revision,target=workflow.id,result=await post(`/api/workflows/${target}/restore`,{version:restoreVersion,expectedVersion:workflow.version});
@@ -1401,7 +1644,7 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
     mountController=new AbortController();
     const listen=(type,listener,options={})=>host.addEventListener(type,listener,{...(typeof options==='boolean'?{capture:options}:options),signal:mountController.signal});
     paint();
-    contextMenu=createContextMenu({onAction:(id,context)=>contextAction(id,context).catch(error=>toast(error.status===409?'워크플로우가 다른 작업에서 변경됐습니다. 현재 초안을 보존했습니다.':error.message,true))});
+    contextMenu=createContextMenu({onAction:(id,context)=>contextAction(id,context).catch(error=>toast(error.status===409&&!error.code?'워크플로우가 다른 작업에서 변경됐습니다. 현재 초안을 보존했습니다.':error.message,true))});
     infoTooltips=document.body.dataset.workbench==='project'?null:installInfoTooltips(host);
     
     listen('contextmenu',event=>{
@@ -1409,8 +1652,8 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
       const node=event.target.closest('.wf-node');event.preventDefault();
       openContextMenu({nodeId:node?.dataset.nodeId || null,anchor:node?nodeControl(node.dataset.nodeId):canvas,x:event.clientX,y:event.clientY});
     });
-    listen('click',event=>{const link=event.target.closest('[data-wf-section]');if(link){event.preventDefault();const section=$(link.getAttribute('href'));if(section){if(section.tagName==='DETAILS')section.open=true;section.scrollIntoView({block:'start'});(section.tagName==='DETAILS'?section.querySelector('summary'):section)?.focus({preventScroll:true});}return;}const button=event.target.closest('[data-wf-action]');if(button) action(button).catch(error=>toast(error.status===409?'워크플로우가 다른 작업에서 변경됐습니다. 현재 편집을 보존했습니다. 새 이름으로 복사하거나 변경을 되돌린 뒤 새로고침하세요.':error.message,true));});
-    listen('close',event=>{if(!event.target.matches('dialog.wf-overlay') || event.target.open)return;if(event.target.id==='wf-delete-node-dialog')deleteNodeId=null;restoreOverlayFocus(event.target);},true);
+    listen('click',event=>{const link=event.target.closest('[data-wf-section]');if(link){event.preventDefault();const section=$(link.getAttribute('href'));if(section){if(section.tagName==='DETAILS')section.open=true;section.scrollIntoView({block:'start'});(section.tagName==='DETAILS'?section.querySelector('summary'):section)?.focus({preventScroll:true});}return;}const button=event.target.closest('[data-wf-action]');if(button) action(button).catch(error=>toast(error.status===409&&!error.code?'워크플로우가 다른 작업에서 변경됐습니다. 현재 편집을 보존했습니다. 새 이름으로 복사하거나 변경을 되돌린 뒤 새로고침하세요.':error.message,true));});
+    listen('close',event=>{const dialog=event.target;if(!dialog.matches?.('dialog') || dialog.open)return;if(dialog.id==='wf-confirm-dialog'){confirmDialogEpoch++;generationEstimateRequest++;generationEstimateLoading=false;restoreVersion=null;generationConsent=false;generationConsentSnapshot=null;pendingPlan=null;pendingExecution=null;generationTargetEpisode=null;generationEstimate=null;generationEstimateKey='';generationEstimateError='';generationEstimateAcknowledged=false;restoreOverlayFocus(dialog);return;}if(!dialog.matches('dialog.wf-overlay'))return;if(dialog.id==='wf-delete-node-dialog')deleteNodeId=null;if(dialog.id==='wf-run-all-dialog')runAllDialog=null;if(dialog.id==='wf-stage-dialog'){publishReadinessRequest++;publishReadinessResult=null;}restoreOverlayFocus(dialog);},true);
     listen('toggle',event=>{const target=event.target;if(target?.id==='wf-run-history' && target.open && !runHistoryLoaded && !runHistoryLoading)loadRunHistory();else if(target?.matches?.('.wf-history-record') && target.open)loadRunHistoryDetail(target);},true);
     listen('input',event=>{
       const target=event.target;
@@ -1535,7 +1778,7 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
     contextMenu?.destroy();contextMenu=null;infoTooltips?.destroy();infoTooltips=null;
     mountController?.abort(); mountController=null;
     if (host) { host.dataset.wfMounted=''; host.innerHTML=''; }
-    host=null;overlayTrigger=null;overlayNodeId=null;connectionNodeId=null;deleteNodeId=null;drag=null;
+    host=null;overlayTrigger=null;overlayNodeId=null;overlayAction=null;overlayScope=null;connectionNodeId=null;deleteNodeId=null;drag=null;
   }
   return {load,mount,destroy,save,openGeneration,bindProject,getContext,getActivity,selectNode,hasChanges:()=>dirty,hasAnyChanges:()=>dirty || [...graphStashes.entries()].some(([key,value])=>key!==stashKey()&&value.dirty),html:()=>'<div id="workflow-host"></div>'};
 }

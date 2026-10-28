@@ -16,11 +16,11 @@ const baseIntegrations = {
 async function setup(t, overrides = {}) {
   const dataDir = await mkdtemp(path.join(tmpdir(), 'frameforge-workflow-'));
   let renderCount = 0;
-  const renderer = async (episode, { dataDir }) => {
+  const renderer = async (episode, { dataDir, sceneIntegrity }) => {
     renderCount++;
     const filename = `workflow-fixture-${renderCount}.mp4`;
     await writeFile(path.join(dataDir, 'exports', filename), 'fixture only');
-    return { filename, outputUrl: `/api/exports/${filename}` };
+    return { filename, outputUrl: `/api/exports/${filename}`, ...(sceneIntegrity ? { verifiedSceneAssets: sceneIntegrity } : {}) };
   };
   let server, base;
   const start = async () => { server = createApp({ dataDir, loginToken: '', publicOrigin: '', integrations: baseIntegrations, renderer, ...overrides }); await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve)); base = `http://127.0.0.1:${server.address().port}`; };
@@ -433,6 +433,150 @@ test('completed generation resume rejects storyboard rerun before episode mutati
   assert.deepEqual(after.scenes, beforeScenes);
   assert.equal((await f.request(`/api/workflows/${workflow.id}/runs`)).status, 200);
   assert.equal((await (await f.request(`/api/workflows/${workflow.id}/runs`)).json()).length, 2);
+});
+
+test('legacy selectedStages with resumeRunId strictly rejects rerunning an upstream producer while a paid generation job is already applied', async (t) => {
+  let createCalls = 0;
+  const generation = {
+    transport: 'api',
+    capability: async () => ({ available: true }),
+    models: async () => [],
+    modelSchema: async () => ({ type: 'image', parameters: [{ name: 'prompt', type: 'string', required: true }] }),
+    create: async () => { createCalls++; return { requestId: 'fixture-provider', status: 'completed', outputs: [{ url: 'https://images.higgs.ai/fixture.png', type: 'image' }] }; },
+    status: async () => { throw new Error('unexpected poll'); },
+  };
+  const f = await setup(t, { generation, generationOptions: { pollIntervalMs: 1, download: async (_url, file) => { await writeFile(file, 'fixture bytes'); return { bytes: 13, contentType: 'image/png' }; }, probe: async () => ({ kind: 'image', width: 64, height: 64 }) } });
+  const workflow = await createOwnedWorkflow(f, await (await f.request('/api/workflows', 'POST', generationWorkflow())).json());
+  const fixture = { ...f, workflow };
+
+  const firstResponse = await consentedRun(f, workflow.id, { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['script', 'storyboard', 'generate', 'render', 'review'], startStage: 'script' });
+  assert.equal(firstResponse.status, 202, await firstResponse.clone().text());
+  const first = await waitRun(fixture, (await firstResponse.json()).id);
+  assert.equal(first.status, 'awaiting_review', JSON.stringify(first));
+  assert.equal(createCalls, 1);
+  const jobId = first.nodeRuns.find((node) => node.type === 'generate').output.generationJobId;
+  assert.equal(typeof jobId, 'string');
+
+  const before = (await (await f.request('/api/state')).json()).episodes.find((episode) => episode.id === f.episode.id);
+
+  // Single-hop legacy resume straight off the completed paid run: reselecting an upstream
+  // scene producer (storyboard) alongside the already-paid generate node must stay strictly
+  // blocked. This is the client-authored selectedStages+resumeRunId shape, never derived via
+  // `execution`, and the existing guard (server/workflows.mjs ~419) must reject it regardless
+  // of how the planner-driven execution-intent path treats the equivalent dirty propagation.
+  const rerun = await consentedRun(f, workflow.id, { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['storyboard', 'generate', 'render'], startStage: 'storyboard', resumeRunId: first.id });
+  assert.equal(rerun.status, 409, await rerun.clone().text());
+  assert.equal((await rerun.json()).error, 'Cannot rerun script, storyboard or layout while reusing a paid generation job');
+  assert.equal(createCalls, 1, 'a rejected legacy rerun must never reach the provider a second time');
+
+  const after = (await (await f.request('/api/state')).json()).episodes.find((episode) => episode.id === f.episode.id);
+  assert.equal(after.version, before.version);
+  assert.deepEqual(after.scenes, before.scenes);
+  const runs = await (await f.request(`/api/workflows/${workflow.id}/runs`)).json();
+  assert.equal(runs.length, 1, 'a rejected rerun must not persist a second run entity');
+  assert.equal(runs[0].nodeRuns.find((node) => node.type === 'generate').output.generationJobId, jobId, 'the original paid job reference stays untouched');
+});
+
+test('execution-intent refresh re-quotes a fresh paid generation after an upstream producer invalidates the prior job, but only with explicit consent', async (t) => {
+  let createCalls = 0;
+  const generation = {
+    transport: 'api',
+    capability: async () => ({ available: true }),
+    models: async () => [],
+    modelSchema: async () => ({ type: 'image', parameters: [{ name: 'prompt', type: 'string', required: true }] }),
+    create: async () => { createCalls++; return { requestId: `fixture-provider-${createCalls}`, status: 'completed', outputs: [{ url: 'https://images.higgs.ai/fixture.png', type: 'image' }] }; },
+    status: async () => { throw new Error('unexpected poll'); },
+  };
+  const f = await setup(t, { generation, generationOptions: { pollIntervalMs: 1, download: async (_url, file) => { await writeFile(file, 'fixture bytes'); return { bytes: 13, contentType: 'image/png' }; }, probe: async () => ({ kind: 'image', width: 64, height: 64 }) } });
+  const workflow = await createOwnedWorkflow(f, await (await f.request('/api/workflows', 'POST', generationWorkflow())).json());
+  const fixture = { ...f, workflow };
+
+  const firstResponse = await consentedRun(f, workflow.id, { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['script', 'storyboard', 'generate', 'render', 'review'], startStage: 'script' });
+  assert.equal(firstResponse.status, 202, await firstResponse.clone().text());
+  const first = await waitRun(fixture, (await firstResponse.json()).id);
+  assert.equal(first.status, 'awaiting_review', JSON.stringify(first));
+  assert.equal(createCalls, 1);
+  const firstJobId = first.nodeRuns.find((node) => node.type === 'generate').output.generationJobId;
+
+  // Contract 1.3 step 4 (mode 'all', refresh:true): source is dropped so paid generation is
+  // re-quoted, never inherited. Submitting straight to /run without a persisted quote must
+  // still be refused -- a fresh execution-intent rerun is never exempt from the quote/consent
+  // gate that already protects the legacy path.
+  const execution = { mode: 'all', refresh: true };
+  const disclosure = { containsSyntheticMedia: true, rationale: 'Synthetic fixture illustration; owner reviewed complete candidate' };
+  const noConsent = await f.request(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, allowGeneration: true, execution, disclosure });
+  assert.equal(noConsent.status, 400, await noConsent.clone().text());
+  assert.match((await noConsent.json()).error, /quote/i);
+  assert.equal(createCalls, 1, 'an execution-intent rerun must never submit without a persisted quote');
+
+  const planResponse = await f.request(`/api/workflows/${workflow.id}/plan`, 'POST', { episodeId: f.episode.id, execution });
+  assert.equal(planResponse.status, 200, await planResponse.clone().text());
+  const plan = await planResponse.json();
+  assert.equal(plan.blocked, false, JSON.stringify(plan));
+  assert.equal(plan.resumeRunId, null, 'refresh must drop resume so paid generation is never inherited');
+  assert.equal(plan.requiresGeneration, true);
+  assert.deepEqual(plan.selectedStages, ['script', 'storyboard', 'generate', 'render', 'review']);
+
+  const refreshed = await consentedRun(f, workflow.id, { episodeId: f.episode.id, allowGeneration: true, execution });
+  assert.equal(refreshed.status, 202, await refreshed.clone().text());
+  const refreshedRun = await waitRun(fixture, (await refreshed.json()).id);
+  assert.equal(refreshedRun.status, 'awaiting_review', JSON.stringify(refreshedRun));
+  assert.equal(createCalls, 2, 'the invalidated-by-refresh generate node must submit a genuinely new paid generation');
+  const refreshedGenerate = refreshedRun.nodeRuns.find((node) => node.type === 'generate');
+  assert.notEqual(refreshedGenerate.reused, true, 'a refreshed generation is fresh, never a silent reuse');
+  assert.notEqual(refreshedGenerate.output.generationJobId, firstJobId, 'refresh must never carry forward the prior paid job id');
+});
+
+test('an unresolved paid generation job left by cancelled run history blocks a fresh submission for the same node', async (t) => {
+  let releaseStatus;
+  let announceStatus;
+  const pendingStatus = new Promise((resolve) => { releaseStatus = resolve; });
+  const statusStarted = new Promise((resolve) => { announceStatus = resolve; });
+  let statusCalls = 0;
+  let createCalls = 0;
+  const generation = {
+    transport: 'api',
+    capability: async () => ({ available: true }),
+    models: async () => [],
+    modelSchema: async () => ({ type: 'image', parameters: [{ name: 'prompt', type: 'string', required: true }] }),
+    create: async () => { createCalls++; return { requestId: 'fixture-provider', status: 'pending' }; },
+    status: async () => {
+      statusCalls++;
+      if (statusCalls === 1) { announceStatus(); return pendingStatus; }
+      return { requestId: 'fixture-provider', status: 'completed', outputs: [{ url: 'https://images.higgs.ai/fixture.png', type: 'image' }] };
+    },
+  };
+  const f = await setup(t, { generation, generationOptions: { pollIntervalMs: 1, download: async (_url, file) => { await writeFile(file, 'fixture bytes'); return { bytes: 13, contentType: 'image/png' }; }, probe: async () => ({ kind: 'image', width: 64, height: 64 }) } });
+  const workflow = await createOwnedWorkflow(f, await (await f.request('/api/workflows', 'POST', generationWorkflow())).json());
+  const fixture = { ...f, workflow };
+
+  const firstResponse = await consentedRun(f, workflow.id, { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['script', 'storyboard', 'generate', 'render', 'review'], startStage: 'script' });
+  assert.equal(firstResponse.status, 202);
+  const firstId = (await firstResponse.json()).id;
+  await statusStarted;
+  assert.equal((await f.request(`/api/workflows/${workflow.id}/runs/${firstId}/cancel`, 'POST', {})).status, 200);
+  const cancelled = await waitRun(fixture, firstId);
+  assert.equal(cancelled.status, 'cancelled');
+  const orphanedJobId = cancelled.nodeRuns.find((node) => node.type === 'generate').output.generationJobId;
+  assert.equal(typeof orphanedJobId, 'string');
+  assert.equal(createCalls, 1);
+  const runsBefore = await (await f.request(`/api/workflows/${workflow.id}/runs`)).json();
+
+  // The cancelled run's job never settled (no terminal provider status, never recovered/applied).
+  // A brand-new attempt that never references that run (no resumeRunId) must still find it via
+  // the lineage-independent scan and refuse a second paid submission for the same node -- this
+  // protection is independent of, and must survive, whatever fix restores the legacy guard above.
+  const second = await consentedRun(f, workflow.id, { episodeId: f.episode.id, allowGeneration: true, selectedStages: ['script', 'storyboard', 'generate', 'render', 'review'], startStage: 'script' });
+  assert.equal(second.status, 409, await second.clone().text());
+  const secondBody = await second.json();
+  assert.equal(secondBody.code, 'generation_unresolved');
+  assert.match(secondBody.error, /복구|적용/);
+  assert.equal(createCalls, 1, 'a second submission must never reach the provider while the first job is unresolved');
+
+  const runsAfter = await (await f.request(`/api/workflows/${workflow.id}/runs`)).json();
+  assert.equal(runsAfter.length, runsBefore.length, 'a blocked attempt must not persist a new run');
+
+  releaseStatus({ requestId: 'fixture-provider', status: 'completed', outputs: [{ url: 'https://images.higgs.ai/fixture.png', type: 'image' }] });
 });
 
 test('typed DAG validator rejects cycles, unknown/disconnected nodes, invalid ports and missing agent config', () => {

@@ -108,6 +108,29 @@ async function screenshot(page, name, target) {
   await page.setViewportSize({ width: 1600, height: 1120 });
 }
 async function terminal(f, workflowId, id) { for (let i = 0; i < 1200; i++) { const run = (await f.api(`/api/workflows/${workflowId}/runs`)).find(r => r.id === id); if (['awaiting_review', 'approved', 'completed', 'failed', 'cancelled'].includes(run?.status)) return run; await new Promise(done => setTimeout(done, 50)); } assert.fail(`run ${id} did not settle`); }
+// UIFocusFix's publish-stage-overlay fix (2026-10-28): opening the stage overlay on a
+// 'publish' node now fires a read-only POST /plan to get the server's authoritative
+// nearest-review-approval answer (including retained/reused-forward approvals), instead of
+// a synchronous client-only check. waitForResponse MUST be registered before the click that
+// triggers it (race-safe), and the DOM must be bounded-polled afterward since the network
+// response landing and the DOM reflecting it are two separate ticks (same class of timing
+// gap documented for focus restoration elsewhere in this test suite's sibling files).
+async function openPublishStageAwaitingPlan(f, p) {
+  await f.page.locator('.wf-node-header[data-id=publish]').click();
+  const pending = f.page.waitForResponse(r => r.url() === `${f.base}/api/workflows/${p.workflow.id}/plan` && r.request().method() === 'POST');
+  await f.page.locator('[data-wf-action=open-stage-overlay]').first().click();
+  const response = await pending;
+  assert.equal(response.status(), 200, `publish stage overlay's read-only /plan: ${await response.text()}`);
+  return f.page.locator('#wf-stage-dialog');
+}
+async function waitForStageSettled(dialog, expectedState, expectedStartEnabled) {
+  const status = dialog.locator('#wf-stage-status'), start = dialog.locator('#wf-stage-start');
+  for (let i = 0; i < 100; i++) {
+    if (await status.getAttribute('data-stage-state') === expectedState && await start.isEnabled() === expectedStartEnabled) return;
+    await new Promise(done => setTimeout(done, 20));
+  }
+  assert.fail(`stage overlay never settled to state=${expectedState} startEnabled=${expectedStartEnabled} -- got state=${await status.getAttribute('data-stage-state')} startEnabled=${await start.isEnabled()}`);
+}
 scenario('two channels own independent copied graphs, histories and versions with no execution on copy', ['PW-06'], async t => {
   const f = await fixture(t), a = await project(f), b = await project(f, 'B', a.template);
   assert.notEqual(a.workflow.id, b.workflow.id);
@@ -250,21 +273,17 @@ scenario('whole-candidate consent displays every generate node and exact costs, 
   assert.equal(await dialog.locator('#wf-disclosure').inputValue(), '', 'AI decision starts unanswered');
   assert.equal(await dialog.locator('[data-wf-action=confirm-generation-run]').isDisabled(), true);
   await dialog.locator('#wf-disclosure').selectOption('true'); await dialog.locator('#wf-disclosure-rationale').fill('Every realistic generated illustration requires explicit disclosure');
-  if (await dialog.locator('[data-wf-action=prepare-generation-source]').count()) {
-    const pending = f.page.waitForResponse(r => r.url().endsWith(`/api/workflows/${p.workflow.id}/run`) && r.request().method() === 'POST');
-    await dialog.locator('[data-wf-action=prepare-generation-source]').click();
-    const response = await pending; assert.equal(response.status(), 202);
-    const run = await response.json(); assert.equal((await terminal(f, p.workflow.id, run.id)).status, 'completed');
-    if (await dialog.isVisible()) await f.page.keyboard.press('Escape');
-    await mode(f.page, 'studio'); await mode(f.page, 'workflow');
-    const refreshRuns = f.page.locator('[data-wf-action=refresh-runs]').first();
-    const runHistory = refreshRuns.locator('xpath=ancestor::details[1]');
-    if (await runHistory.count() && !await runHistory.evaluate(e => e.open)) await runHistory.locator('summary').click();
-    const refreshed = f.page.waitForResponse(r => r.url().endsWith(`/api/workflows/${p.workflow.id}/runs`) && r.request().method() === 'GET');
-    await refreshRuns.click(); assert.equal((await refreshed).status(), 200);
-    await f.page.locator('[data-wf-action=run]').click();
-    await dialog.locator('#wf-disclosure').selectOption('true'); await dialog.locator('#wf-disclosure-rationale').fill('Every realistic generated illustration requires explicit disclosure');
-  }
+  // Contract 5C: prepare-generation-source now targets the first generate node directly and
+  // plans through the server (never a static storyboard/script ancestor guess, and the button
+  // is always rendered -- unlike the old sourcePreparation()-gated version). For this graph the
+  // real prepareCandidate check does not reject running script+storyboard+generate-1 together
+  // in one call (verified by direct diagnostic instrumentation), so the server plan has no
+  // deferredStages: prepare-generation-source correctly no-ops with a toast and keeps the
+  // consent dialog open, instead of posting a separate preparatory run.
+  const stray = f.page.waitForResponse(r => r.url().endsWith(`/api/workflows/${p.workflow.id}/run`) && r.request().method() === 'POST', { timeout: 1500 }).then(() => true, () => false);
+  await dialog.locator('[data-wf-action=prepare-generation-source]').click();
+  assert.equal(await stray, false, 'prepare-generation-source must not post a redundant /run when the server plan has no deferredStages');
+  assert.equal(await dialog.isVisible(), true, 'a no-op prepare click keeps the open consent dialog in place');
   const pending = f.page.waitForResponse(r => r.url().endsWith(`/api/workflows/${p.workflow.id}/quote`) && r.request().method() === 'POST');
   await dialog.locator('[data-wf-action=quote-generation]').click(); const response = await pending; assert.equal(response.status(), 200); const plan = await response.json();
   assert.deepEqual(plan.nodes.map(n => n.nodeId).sort(), ['generate-1', 'generate-2']);
@@ -350,21 +369,24 @@ scenario('all ten roles prepare and quote through the UI while publish stays out
   await openProject(f, p); await mode(f.page, 'workflow');
   assert.deepEqual(estimates, []);
   await f.page.locator('[data-wf-action=run]').click();
-  let dialog = f.page.locator('#wf-confirm-dialog'); await dialog.waitFor();
-  const prepared = f.page.waitForResponse(r => r.url().endsWith(`/api/workflows/${p.workflow.id}/run`) && r.request().method() === 'POST');
-  await dialog.locator('[data-wf-action=prepare-generation-source]').click(); const response = await prepared;
-  assert.equal(response.status(), 202, await response.text());
-  assert.deepEqual(response.request().postDataJSON().selectedStages.sort(), ['trend', 'news', 'research', 'script', 'storyboard', 'layout'].sort());
-  const run = await terminal(f, p.workflow.id, (await response.json()).id); assert.equal(run.status, 'completed', JSON.stringify(run));
-  assert.equal(run.nodeRuns.find(n => n.nodeId === 'publish').status, 'skipped');
-  await openProject(f, p); await mode(f.page, 'workflow'); await f.page.locator('[data-wf-action=run]').click();
-  dialog = f.page.locator('#wf-confirm-dialog');
+  const dialog = f.page.locator('#wf-confirm-dialog'); await dialog.waitFor();
+  assert.equal(await dialog.locator('#wf-disclosure').inputValue(), '', 'AI decision starts unanswered');
+  assert.equal(await dialog.locator('[data-wf-action=confirm-generation-run]').isDisabled(), true);
   await dialog.locator('#wf-disclosure').selectOption('true'); await dialog.locator('#wf-disclosure-rationale').fill('Realistic fixture illustrations need disclosure');
+  // Contract 5C: prepare-generation-source now targets the first generate node directly and
+  // plans through the server (never a static storyboard/script ancestor guess). For this graph
+  // the real prepareCandidate check does not reject running every producer alongside generate
+  // in one call, so the server plan has no deferredStages: prepare-generation-source correctly
+  // no-ops with a toast instead of posting a redundant separate run.
+  const stray = f.page.waitForResponse(r => r.url().endsWith(`/api/workflows/${p.workflow.id}/run`) && r.request().method() === 'POST', { timeout: 1500 }).then(() => true, () => false);
+  await dialog.locator('[data-wf-action=prepare-generation-source]').click();
+  assert.equal(await stray, false, 'prepare-generation-source must not post a redundant /run when the server plan has no deferredStages');
+  assert.equal(await dialog.isVisible(), true, 'a no-op prepare click keeps the open consent dialog in place');
   const quoted = f.page.waitForResponse(r => r.url().endsWith(`/api/workflows/${p.workflow.id}/quote`) && r.request().method() === 'POST');
   await dialog.locator('[data-wf-action=quote-generation]').click(); const quote = await quoted;
   assert.equal(quote.status(), 200, await quote.text());
-  const options = quote.request().postDataJSON(); assert.ok(!options.selectedStages.includes('publish')); assert.ok(options.selectedStages.includes('generate')); assert.equal(options.resumeRunId, run.id);
-  const plan = await quote.json(); assert.equal(plan.nodes.length, 1); assert.equal(await dialog.locator('[data-testid=generation-fingerprint]').innerText(), plan.fingerprint); assert.equal(await dialog.locator('[data-wf-action=confirm-generation-run]').isEnabled(), true);
+  const options = quote.request().postDataJSON(); assert.deepEqual(options.execution, { mode: 'all', refresh: false }, 'quote posts the run-all execution intent chosen by the original run click, never a client-built selectedStages');
+  const plan = await quote.json(); assert.ok(!plan.selectedStages.includes('publish'), 'the server-resolved generation plan still excludes publish'); assert.ok(plan.selectedStages.includes('generate'), 'the server-resolved generation plan still includes the generate node'); assert.equal(plan.resumeRunId, undefined, 'nothing has run yet, so the fresh whole-candidate plan has no source run to resume'); assert.equal(plan.nodes.length, 1); assert.equal(await dialog.locator('[data-testid=generation-fingerprint]').innerText(), plan.fingerprint); assert.equal(await dialog.locator('[data-wf-action=confirm-generation-run]').isEnabled(), true);
   assert.equal((await f.api('/api/state')).generationJobs.length, 0);
   assert.equal(f.writes.filter(w => w.path.startsWith('/api/publication/')).length, 0);
   assert.equal(estimates.length, 1);
@@ -377,8 +399,9 @@ scenario('source-only whole execution excludes publish and stops at the real loc
   const pending = f.page.waitForResponse(r => r.url().endsWith(`/api/workflows/${p.workflow.id}/run`) && r.request().method() === 'POST');
   await f.page.locator('[data-wf-action=run]').click(); const response = await pending;
   assert.equal(response.status(), 202, await response.text());
-  assert.deepEqual(response.request().postDataJSON().selectedStages.sort(), template.nodes.filter(n => n.type !== 'publish').map(n => n.id).sort());
+  assert.deepEqual(response.request().postDataJSON().execution, { mode: 'all', refresh: false }, 'the UI posts the run-all execution intent, never a client-built selectedStages');
   const run = await terminal(f, p.workflow.id, (await response.json()).id);
+  assert.deepEqual(run.selectedStages.sort(), template.nodes.filter(n => n.type !== 'publish').map(n => n.id).sort(), 'the server-resolved run-all plan still selects every non-publish node');
   assert.equal(run.status, 'awaiting_review', JSON.stringify(run));
   assert.equal(run.nodeRuns.find(n => n.nodeId === 'publish').status, 'skipped');
   const render = run.nodeRuns.find(n => n.nodeId === 'render'); assert.equal(render.status, 'completed'); assert.match(render.output.sha256, /^[a-f0-9]{64}$/);
@@ -396,15 +419,23 @@ scenario('sequential reviewed producers enable the next render in the UI while p
   await openProject(f, p); await mode(f.page, 'workflow'); await f.page.locator('.wf-node-header[data-id=render-2]').click(); await f.page.locator('[data-wf-action=open-stage-overlay]').first().click();
   let dialog = f.page.locator('#wf-stage-dialog'); assert.equal(await dialog.locator('#wf-stage-status').getAttribute('data-stage-state'), 'idle'); assert.equal(await dialog.locator('#wf-stage-start').isEnabled(), true);
   const pending = f.page.waitForResponse(r => r.url().endsWith(`/api/workflows/${p.workflow.id}/run`) && r.request().method() === 'POST'); await dialog.locator('#wf-stage-start').click(); const response = await pending;
-  assert.equal(response.status(), 202, await response.text()); const options = response.request().postDataJSON(); assert.deepEqual(options.selectedStages, ['render-2']); assert.equal(options.resumeRunId, first.id);
+  assert.equal(response.status(), 202, await response.text()); const options = response.request().postDataJSON();
+  assert.deepEqual(options.execution, { mode: 'node', targetNodeId: 'render-2' }, 'the stage overlay posts an execution intent targeting the invoked node, never a client-built selectedStages');
+  assert.equal(options.selectedStages, undefined, 'the UI must never build selectedStages itself');
+  assert.equal(options.resumeRunId, undefined, 'the UI must never build resumeRunId itself');
   const second = await terminal(f, p.workflow.id, (await response.json()).id); assert.equal(second.status, 'completed', JSON.stringify(second)); assert.notEqual(second.nodeRuns.find(n => n.nodeId === 'render-2').output.jobId, first.nodeRuns.find(n => n.nodeId === 'render-1').output.jobId);
+  assert.equal(second.resumedFrom, first.id, 'the server-derived plan still resumes render-2 from the first approved run');
   const review = await terminal(f, p.workflow.id, (await f.api(`/api/workflows/${p.workflow.id}/run`, 'POST', { episodeId: p.episode.id, selectedStages: ['review-2'], startStage: 'review-2', resumeRunId: second.id })).id); assert.equal(review.status, 'awaiting_review');
-  await openProject(f, p); await mode(f.page, 'workflow'); await f.page.locator('.wf-node-header[data-id=publish]').click(); await f.page.locator('[data-wf-action=open-stage-overlay]').first().click();
-  dialog = f.page.locator('#wf-stage-dialog'); assert.equal(await dialog.locator('#wf-stage-status').getAttribute('data-stage-state'), 'blocked'); assert.equal(await dialog.locator('#wf-stage-start').isDisabled(), true, 'approval of review-1 cannot approve nearest review-2');
+  await openProject(f, p); await mode(f.page, 'workflow');
+  dialog = await openPublishStageAwaitingPlan(f, p);
+  await waitForStageSettled(dialog, 'blocked', false);
+  assert.equal(await dialog.locator('#wf-stage-start').isDisabled(), true, 'approval of review-1 cannot approve nearest review-2');
   await f.page.keyboard.press('Escape');
   await f.api(`/api/workflows/${p.workflow.id}/runs/${review.id}/review`, 'POST', { reviewNodeId: 'review-2', decision: 'approved', expectedEpisodeVersion: review.episodeVersion, notes: 'Second exact artifact' });
-  await openProject(f, p); await mode(f.page, 'workflow'); await f.page.locator('.wf-node-header[data-id=publish]').click(); await f.page.locator('[data-wf-action=open-stage-overlay]').first().click();
-  dialog = f.page.locator('#wf-stage-dialog'); assert.equal(await dialog.locator('#wf-stage-status').getAttribute('data-stage-state'), 'idle'); assert.equal(await dialog.locator('#wf-stage-start').isEnabled(), true);
+  await openProject(f, p); await mode(f.page, 'workflow');
+  dialog = await openPublishStageAwaitingPlan(f, p);
+  await waitForStageSettled(dialog, 'idle', true);
+  assert.equal(await dialog.locator('#wf-stage-start').isEnabled(), true);
   assert.equal(f.writes.filter(w => w.path.startsWith('/api/publication/')).length, 0, 'readiness does not publish');
   await screenshot(f.page, 'sequential-readiness', dialog);
 });

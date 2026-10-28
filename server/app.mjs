@@ -539,6 +539,8 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       if (request.method === 'POST' && publicationResume) return json(response, 202, await publication.resume(decodeURIComponent(publicationResume[1]), { ownerId: 'admin' }));
       const workflowQuote = /^\/api\/workflows\/([^/]+)\/quote$/.exec(path);
       if (request.method === 'POST' && workflowQuote) return json(response, 200, await workflows.quote(decodeURIComponent(workflowQuote[1]), body.episodeId, body));
+      const workflowPlan = /^\/api\/workflows\/([^/]+)\/plan$/.exec(path);
+      if (request.method === 'POST' && workflowPlan) return json(response, 200, workflows.plan(decodeURIComponent(workflowPlan[1]), body.episodeId, body));
       if (request.method === 'POST' && path === '/api/sources/import') return json(response, 201, await media.importMedia(body));
       if (request.method === 'POST' && uploadRights) return json(response, 201, await media.clearRights(decodeURIComponent(uploadRights[1]), body));
       const episodeSource = /^\/api\/episodes\/([^/]+)\/(source|card)$/.exec(path);
@@ -554,6 +556,8 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       if (request.method === 'POST' && workflowCopy) return json(response, 201, workflows.copy(decodeURIComponent(workflowCopy[1]), body));
       const workflowRollup = /^\/api\/workflows\/([^/]+)\/rollup$/.exec(path);
       if (request.method === 'POST' && workflowRollup) return json(response, 200, workflows.rollup(decodeURIComponent(workflowRollup[1]), body));
+      const workflowSkip = /^\/api\/workflows\/([^/]+)\/skips$/.exec(path);
+      if (request.method === 'POST' && workflowSkip) return json(response, 200, store.setWorkflowSkip(decodeURIComponent(workflowSkip[1]), body.nodeId, body.skipped, body.expectedVersion));
       const knowledgeNode = /^\/api\/knowledge\/nodes\/([a-zA-Z0-9_-]+)$/.exec(path);
       if (request.method === 'PUT' && knowledgeNode) return json(response, 200, { record: store.editKnowledgeNode(knowledgeNode[1], body), graph: store.knowledge() });
       if (request.method === 'PUT' && path === '/api/knowledge/edges') return json(response, 200, { record: store.editKnowledgeEdge(body), graph: store.knowledge() });
@@ -616,7 +620,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       const workflowRoute = /^\/api\/workflows\/([^/]+)(?:\/(run)|\/runs\/([^/]+)\/(cancel))?$/.exec(path);
       if (workflowRoute) {
         if (request.method === 'PUT' && !workflowRoute[2] && !workflowRoute[3]) return json(response, 200, workflows.update(workflowRoute[1], body));
-        if (request.method === 'POST' && workflowRoute[2]) return json(response, 202, await workflows.start(workflowRoute[1], body.episodeId, { allowGeneration: body.allowGeneration, selectedStages: body.selectedStages, startStage: body.startStage, resumeRunId: body.resumeRunId, expectedWorkflowVersion: body.expectedWorkflowVersion, expectedEpisodeVersion: body.expectedEpisodeVersion, generationPlanId: body.generationPlanId, generationFingerprint: body.generationFingerprint, acceptUnquotedEstimate: body.acceptUnquotedEstimate, disclosure: body.disclosure }));
+        if (request.method === 'POST' && workflowRoute[2]) return json(response, 202, await workflows.start(workflowRoute[1], body.episodeId, { allowGeneration: body.allowGeneration, selectedStages: body.selectedStages, startStage: body.startStage, resumeRunId: body.resumeRunId, execution: body.execution, expectedWorkflowVersion: body.expectedWorkflowVersion, expectedEpisodeVersion: body.expectedEpisodeVersion, generationPlanId: body.generationPlanId, generationFingerprint: body.generationFingerprint, acceptUnquotedEstimate: body.acceptUnquotedEstimate, disclosure: body.disclosure }));
         if (request.method === 'POST' && workflowRoute[4]) return json(response, 200, workflows.cancel(workflowRoute[1], workflowRoute[3]));
       }
       if (request.method === 'POST' && path === '/api/channels') {
@@ -701,7 +705,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     route(request, response).catch((error) => {
       if (response.headersSent) return response.destroy();
       if (!(error instanceof HttpError)) console.error('Request failed:', error.message);
-      json(response, error instanceof HttpError ? error.status : 500, { error: safeError(error) });
+      json(response, error instanceof HttpError ? error.status : 500, { error: safeError(error), ...(error instanceof HttpError && error.code ? { code: error.code } : {}) });
     });
   });
   server.requestTimeout = 120_000;

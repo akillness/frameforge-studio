@@ -10,7 +10,7 @@ edges:
     condition: when changing product scope or architectural decisions
   - target: patterns/knowledge-refresh.md
     condition: when retrieving knowledge or refreshing structural indexes
-last_updated: 2026-10-26
+last_updated: 2026-10-28
 ---
 
 # Architecture map
@@ -23,7 +23,7 @@ Authenticated browser JSON reaches `server/app.mjs`; validation precedes persist
 |---|---|
 | Workbench and editor | `public/app.js`, `public/workflow.js`: sole project node canvas, native overlays, one live inspector, stable scene/node/edge identity, hidden scene/graph drafts and active-editor Save. Opening tools does not save/run/spend. |
 | Personal presentation | `public/workspace.js`, `public/workspace-state.js`, `public/workspace.css`: local sizing, presets, queue/views and dialog presentation; browser-local profiles and drafts, no server layout writes or invented task state. |
-| Production DAG and history | `server/graph.mjs`, `server/workflows.mjs`, `public/history.js`: edge-based repeated-role branches, version snapshots, exact node selection/resume, per-node review and new-version restore, not history rewriting. Explicit news query owns RSS input. `public/workflow.js` separates ownership-bound lightweight `getActivity()` from full graph/run snapshots in `getContext()`; background authority/activity reads do not require copying the whole graph. |
+| Production DAG and history | `server/graph.mjs`, `server/workflows.mjs`, `public/history.js`, `public/run-diff.js`: edge-based repeated-role branches, version snapshots, exact node selection/resume, per-node review and new-version restore, not history rewriting. Explicit news query owns RSS input. `planExecution` in `server/workflows.mjs` is the only selection authority: read-only `POST /api/workflows/:id/plan` and the `execution` body of `/quote` and `/run` share it, so a UI action, its quote and its run cannot disagree. Per-node skip (`POST /api/workflows/:id/skips`) is project-only state kept outside versions, history snapshots, candidate manifests and publication bindings. `public/run-diff.js` is the pure compact-history/diff module. `public/workflow.js` separates ownership-bound lightweight `getActivity()` from full graph/run snapshots in `getContext()`; background authority/activity reads do not require copying the whole graph. See [workflow-execution](../patterns/workflow-execution.md). |
 | Generation | `server/generations.mjs`, `server/candidates.mjs`, `Store.completeGeneration/applyGeneration`: exact-input consent/quotes, persistent known job identity, bounded probe/hash/provenance import and version-guarded atomic apply. Confirmed full workflows apply before render; retained/recovered outputs require Apply. Ambiguous submissions are not automatically replayed. |
 | Provider transports | `server/higgsfield.mjs`, `server/higgsfield-cli.mjs`, `scripts/higgsfield-mcp.mjs`: Developer REST, official CLI and authenticated project MCP are distinct from vendor remote-MCP OAuth. Configuration is not authentication or availability. |
 | Media and rendering | `server/media-sources.mjs`, `server/media-credits.mjs`, `enqueueRender`: original source/rights/hash/trim evidence, actual-source credits and persisted branch `sceneSnapshot`; standalone-media demuxer/local-protocol limits apply to both FFprobe and FFmpeg. |

@@ -135,6 +135,8 @@ const node = (page, id) => page.locator(`.wf-node[data-node-id="${id}"]`);
 const header = (page, id) => page.locator(`.wf-node-header[data-id="${id}"]`);
 const menu = page => page.locator('.ff-context-menu[role=menu]');
 const item = (page, name) => menu(page).getByRole('menuitem', { name, exact: true });
+const focused = page => page.locator('#wf-focused-node');
+const focusedButton = (page, action) => focused(page).locator(`[data-wf-action="${action}"]`);
 async function openNodeMenu(page, id, via = 'right-click') {
   if (via === 'more') await node(page, id).locator('[data-wf-action=node-menu]').click();
   else if (via === 'touch') await node(page, id).locator('[data-wf-action=node-menu]').tap();
@@ -221,8 +223,10 @@ test('generation scene switch clears the old slot and allows a new scene slot wi
   assert.deepEqual((await f.api('/api/state')).episodes.find(e => e.id === f.episode.id), f.episode);
 });
 
+// Removed from the node menu (contract 2.2); reachable via the always-visible #wf-focused-node
+// panel. Select/invoke the node first (syncs data-id via updateSummary), then click its button.
 async function connections(page, id) {
-  await openNodeMenu(page, id, 'more'); await item(page, '입력·출력 연결 보기').click();
+  await header(page, id).click(); await focusedButton(page, 'connections').click();
   await page.locator('#wf-connect-dialog[open]').waitFor();
   return page.locator('#wf-connect-dialog .wf-connection-list [data-wf-action=delete-edge]');
 }
@@ -390,7 +394,7 @@ for (const { width, height } of [{ width: 390, height: 844 }, { width: 430, heig
     await openNodeMenu(page, 'c', 'touch'); await withinViewport(menu(page));
     assert.match(await menu(page).locator('.ff-context-menu__title').innerText(), /^Node C ·/);
     await page.locator('#project-navigation .project-context').tap(); await menu(page).waitFor({ state: 'hidden' });
-    await openNodeMenu(page, 'c', 'touch'); await item(page, '장면 편집기 열기').tap();
+    await header(page, 'c').tap(); await focusedButton(page, 'scene-editor').tap();
     const sceneDialog = page.locator('#project-scene-dialog[open]');
     await sceneDialog.waitFor(); await withinViewport(sceneDialog); await assertNoOverflow();
     assert.equal(await sceneDialog.locator('[data-scene=title]').inputValue(), f.episode.scenes.at(-1).title, 'node C opens its explicit second scene, not the first scene');
@@ -399,19 +403,19 @@ for (const { width, height } of [{ width: 390, height: 844 }, { width: 430, heig
     await reachable(sceneDialog.locator('[data-action=close-scene-editor]'));
     await sceneDialog.locator('[data-action=close-scene-editor]').tap();
     await sceneDialog.waitFor({ state: 'hidden' });
-    await page.waitForFunction(() => document.querySelector('.wf-node[data-node-id="c"] [data-wf-action=node-menu]') === document.activeElement);
+    await page.waitForFunction(() => document.querySelector('#wf-focused-node [data-wf-action="scene-editor"]') === document.activeElement);
 
     await channel.tap(); await page.locator('#workflow-canvas').waitFor();
     assert.equal(await page.locator('#project-episode').inputValue(), f.episode.id);
     assert.equal(await page.locator('#wf-select').inputValue(), f.workflow.id);
     assert.equal(await node(page, 'b').locator('.wf-node-label').innerText(), graphDraft, 'channel reselect retains the exact unsaved graph label');
     assert.equal(await node(page, 'a').locator('.wf-node-label').innerText(), 'Node A', 'the previously selected node was not edited');
-    await openNodeMenu(page, 'c', 'touch'); await item(page, '입력·출력 연결 보기').tap();
+    await header(page, 'c').tap(); await focusedButton(page, 'connections').tap();
     const connectionsDialog = page.locator('#wf-connect-dialog[open]');
     await connectionsDialog.waitFor(); await withinViewport(connectionsDialog);
     assert.deepEqual((await connectionsDialog.locator('[data-wf-action=delete-edge]').evaluateAll(elements => elements.map(element => element.dataset.id))).sort(), ['bc', 'cd'], 'touch context browsing preserves both exact incident connections');
     await connectionsDialog.getByRole('button', { name: '노드 연결 닫기', exact: true }).tap(); await connectionsDialog.waitFor({ state: 'hidden' });
-    await openNodeMenu(page, 'c', 'touch'); await item(page, '장면 편집기 열기').tap();
+    await header(page, 'c').tap(); await focusedButton(page, 'scene-editor').tap();
     await sceneDialog.waitFor();
     assert.equal(await sceneDialog.locator('[data-scene=title]').inputValue(), sceneDraft, 'channel reselect and node context reopening retain the unsaved exact-scene draft');
     assert.equal(await sceneDialog.locator('#save-status').getAttribute('class'), 'unsaved');
@@ -428,7 +432,7 @@ test('scene overlay binds the selected scene and Ctrl+S saves only the active ep
   const f = await fixture(t, { sceneTarget: true }), { page } = f;
   await openNodeMenu(page, 'c', 'more'); await item(page, '노드 설정 편집').click();
   await page.locator('#wf-tools-dialog [data-wf-field=label]').fill('Independent graph draft'); await page.keyboard.press('Escape');
-  await openNodeMenu(page, 'c', 'ContextMenu'); await item(page, '장면 편집기 열기').click();
+  await header(page, 'c').click(); await focusedButton(page, 'scene-editor').click();
   await page.locator('#project-scene-dialog.project-scene-dialog[open]').waitFor();
   assert.equal(await page.locator('#project-episode').inputValue(), f.episode.id);
   assert.equal(await page.locator('[data-scene=title]').inputValue(), f.episode.scenes.at(-1).title);
@@ -442,7 +446,7 @@ test('scene overlay binds the selected scene and Ctrl+S saves only the active ep
   const graphSave = page.waitForResponse(r => r.url() === `${f.base}/api/workflows/${f.workflow.id}` && r.request().method() === 'PUT');
   await page.keyboard.press('Control+s'); assert.equal((await graphSave).status(), 200);
   assert.equal(f.writes.filter(w => w.path === `/api/episodes/${f.episode.id}`).length, 1, 'canvas Save cannot resave episode');
-  await openNodeMenu(page, 'c', 'more'); await item(page, '장면 편집기 열기').click();
+  await header(page, 'c').click(); await focusedButton(page, 'scene-editor').click();
   assert.equal(await page.locator('[data-scene=title]').inputValue(), 'Selected scene draft');
   const saved = (await f.api('/api/state')).episodes.find(e => e.id === f.episode.id);
   assert.equal(saved.scenes.at(-1).title, 'Selected scene draft');
@@ -750,11 +754,25 @@ test('configured-token native login hydrates workflows before fast nonlatest pro
 
 test('persisted node results survive fast nonlatest project remount and reject a delayed previous-owner history response', async t => {
   const f = await fixture(t, { persistedHistory: true }), { page } = f;
+  // MenuImpl3 consolidated the node card to ONE visible status element: the precedence badge
+  // now ALSO carries [data-status-node] and [data-testid="wf-node-badge"] (same element, no
+  // separate legacy raw-status sibling). Its visible label follows the precedence rules
+  // (contract 2.1: skipped(user) > running/queued > failed > stale >
+  // awaiting_review/approved/completed (incl. retained output of unselected nodes) > idle),
+  // NOT the raw nodeRun.status -- an unselected node with no output is '미실행' (idle), never
+  // '건너뜀' (that used to be the bug: the old legacy span showed raw STATUS['skipped']
+  // regardless of why a node was skipped). Its CSS class suffix is still the raw status (or
+  // 'idle' with no record) for styling, independent of the precedence label text.
   const badgeProjection = () => page.locator('.wf-node [data-status-node]').evaluateAll(elements => elements.map(element => ({ nodeId: element.dataset.statusNode, label: element.textContent.trim(), visualClasses: [...element.classList].sort() })));
-  const statusLabels = { completed: '완료', skipped: '건너뜀' };
+  // Independent precedence derivation straight from the fixture's own persisted nodeRun
+  // records (never copied from the implementation's rendered output): this run has no
+  // user-skip, no live/stale state and no retained output on the unselected nodes (first run
+  // ever for this workflow), so it reduces to completed-family statuses -> their label, else idle.
+  const PRECEDENCE_LABELS = { completed: '완료', succeeded: '완료', reused: '완료', awaiting_review: '검토 대기', approved: '승인됨' };
+  const precedenceLabel = record => PRECEDENCE_LABELS[record?.status] || '미실행';
   const persistedBadgeProjection = f.workflow.nodes.map(node => {
-    const status = f.run.nodeRuns.find(record => record.nodeId === node.id).status;
-    return { nodeId: node.id, label: statusLabels[status], visualClasses: ['wf-node-status', status].sort() };
+    const record = f.run.nodeRuns.find(item => item.nodeId === node.id);
+    return { nodeId: node.id, label: precedenceLabel(record), visualClasses: ['badge', 'wf-node-status', 'wf-state-badge', record?.status || 'idle'].sort() };
   });
   await page.goto(f.base); await page.locator('#app .shell').waitFor();
   const initialChannel = page.locator(`[data-action=channel]:not([data-id="${f.channel.id}"])`).first();
@@ -795,11 +813,11 @@ test('persisted node results survive fast nonlatest project remount and reject a
     const rendered = await page.locator('.wf-node').evaluateAll(elements => elements.map(element => ({ id: element.dataset.nodeId, label: element.querySelector('.wf-node-label').textContent.trim() })));
     assert.deepEqual(rendered, f.workflow.nodes.map(node => ({ id: node.id, label: node.label })), 'remount must bind A content even though B uses the same node IDs and types');
     assert.equal(await node(page, 'a').locator('[data-status-node]').isVisible(), true);
-    assert.deepEqual(await badgeProjection(), f.workflow.nodes.map(node => ({ nodeId: node.id, label: '실행 전', visualClasses: ['wf-node-status', 'idle'].sort() })), 'while the real owner history is held, no badge may claim another project’s persisted execution status');
+    assert.deepEqual(await badgeProjection(), f.workflow.nodes.map(node => ({ nodeId: node.id, label: '미실행', visualClasses: ['badge', 'idle', 'wf-node-status', 'wf-state-badge'].sort() })), 'while the real owner history is held, no badge may claim another project’s persisted execution status');
     await header(page, 'a').focus(); await page.keyboard.press('ArrowRight');
     const draftLeft = `${f.workflow.nodes[0].x + 10}px`;
     assert.equal(await node(page, 'a').evaluate(element => element.style.left), draftLeft);
-    await openNodeMenu(page, 'a'); await item(page, '실행 결과·입력 보기').click();
+    await header(page, 'a').click(); await focusedButton(page, 'node-results').click();
     const dialog = page.locator('#wf-results-dialog[open]');
     await dialog.waitFor();
     const targetCompleted = page.waitForResponse(response => response.url() === `${f.base}/api/workflows/${f.workflow.id}/runs` && response.request().method() === 'GET');
@@ -809,7 +827,7 @@ test('persisted node results survive fast nonlatest project remount and reject a
     const assertTargetResults = async () => {
       assert.deepEqual(await dialog.locator('#wf-results-run option').evaluateAll(options => options.map(option => option.value)), [f.run.id], 'saved A execution must be selectable without an active run, polling, reload or manual run selection');
       assert.equal(await dialog.locator('#wf-results-run').inputValue(), f.run.id);
-      assert.deepEqual(await dialog.locator('.result-list strong').allTextContents(), ['Persisted project A evidence'], 'rendered node output must come from A persisted HTTP execution, never the same-ID B node');
+      assert.deepEqual(await dialog.locator('[data-testid="node-result-facts"] strong').allTextContents(), ['1', 'Persisted project A evidence'], 'rendered node output must come from A persisted HTTP execution, never the same-ID B node');
       assert.equal((await dialog.innerText()).includes('Persisted project B evidence'), false);
       assert.equal(await node(page, 'a').locator('[data-status-node]').isVisible(), true);
       assert.deepEqual(await badgeProjection(), persistedBadgeProjection, 'hydrating the selected real run must update both readable status labels and visual status classes; stale owner history cannot overwrite either');
@@ -818,7 +836,7 @@ test('persisted node results survive fast nonlatest project remount and reject a
       assert.equal(await node(page, 'a').evaluate(element => element.style.left), draftLeft, 'read completion cannot discard the current owner graph draft');
       assert.equal(await dialog.evaluate(element => element.contains(document.activeElement)), true, 'late owner history cannot dismiss the result dialog or steal its focus');
     };
-    await dialog.locator('.result-list strong').getByText('Persisted project A evidence', { exact: true }).waitFor();
+    await dialog.locator('[data-testid="node-result-facts"] strong').getByText('Persisted project A evidence', { exact: true }).waitFor();
     await assertTargetResults();
     const oldCompleted = page.waitForResponse(response => response.url() === `${f.base}/api/workflows/${f.otherWorkflow.id}/runs` && response.request().method() === 'GET');
     oldHistory.release();
@@ -878,7 +896,7 @@ test('maximum owned graph opens all 127 pinned hub connections and preserves unl
   assert.equal(await page.locator('#wf-edges path').count(), 256);
   const hub = f.workflow.nodes[0], incident = f.workflow.edges.filter(edge => edge.source === hub.id || edge.target === hub.id), unrelated = f.workflow.edges.filter(edge => edge.source !== hub.id && edge.target !== hub.id);
   assert.equal(incident.length, 127); assert.equal(unrelated.length, 129);
-  await openNodeMenu(page, hub.id, 'Shift+F10'); await item(page, '입력·출력 연결 보기').click();
+  await header(page, hub.id).click(); await focusedButton(page, 'connections').click();
   const dialog = page.locator('#wf-connect-dialog'), edgeButtons = dialog.locator('.wf-connection-list [data-wf-action=delete-edge]');
   await dialog.waitFor({ state: 'visible' });
   assert.equal(await dialog.locator('#wf-connect-title').innerText(), `${hub.label} · 입력·출력 연결`);
@@ -897,13 +915,13 @@ test('maximum owned graph opens all 127 pinned hub connections and preserves unl
   assert.deepEqual(f.writes, [], 'opening and unlinking remain local draft operations');
   assert.deepEqual((await f.api('/api/workflows')).find(graph => graph.id === f.workflow.id), f.workflow, 'the server still owns the exact saved 256-edge graph before explicit Save');
   await page.keyboard.press('Escape');
-  await page.waitForFunction(id => !document.querySelector('#wf-connect-dialog')?.open && document.querySelector(`.wf-node[data-node-id="${id}"]`)?.contains(document.activeElement), hub.id);
+  await page.waitForFunction(() => !document.querySelector('#wf-connect-dialog')?.open && document.querySelector('#wf-focused-node [data-wf-action="connections"]') === document.activeElement);
   await page.mouse.move(1000, 40); await page.keyboard.press('Escape');
   assert.equal(await canvasHint.isVisible(), true);
   assert.equal(await canvasHint.innerText(), cancelledHint, 'native Escape closes connections and exposes its cancellation hint');
   await page.locator('[data-wf-action=fit]').click();
   assert.equal(await canvasHint.innerText(), canonicalFitHint, 'native Fit restores the visible mode hint after Escape even when the layout mode does not change');
-  await openNodeMenu(page, hub.id, 'ContextMenu'); await item(page, '입력·출력 연결 보기').click();
+  await header(page, hub.id).click(); await focusedButton(page, 'connections').click();
   await dialog.waitFor({ state: 'visible' });
   assert.deepEqual((await edgeButtons.evaluateAll(elements => elements.map(element => element.dataset.id))).sort(), remainingIncident.map(edge => edge.id).sort(), 'closing and reopening retains every exact remaining draft incident');
   assert.equal(await dialog.locator('#wf-connect-title').innerText(), `${hub.label} · 입력·출력 연결`);
@@ -911,7 +929,7 @@ test('maximum owned graph opens all 127 pinned hub connections and preserves unl
   assert.equal(await page.locator('#wf-select').inputValue(), f.workflow.id);
   assert.equal(await page.locator('#wf-episode').inputValue(), f.episode.id);
   await dialog.locator('[data-wf-action=close-overlay]').first().click();
-  await page.waitForFunction(id => !document.querySelector('#wf-connect-dialog')?.open && document.querySelector(`.wf-node[data-node-id="${id}"]`)?.contains(document.activeElement), hub.id);
+  await page.waitForFunction(() => !document.querySelector('#wf-connect-dialog')?.open && document.querySelector('#wf-focused-node [data-wf-action="connections"]') === document.activeElement);
   const response = await saveGraph(f), request = response.request().postDataJSON();
   assert.deepEqual(request.edges, expectedEdges, 'explicit Save submits exactly the intended 255-edge draft with all unrelated connections unchanged');
   assert.deepEqual(request.nodes, f.workflow.nodes);
@@ -937,7 +955,7 @@ test('undoing an added pinned node keeps the native connection fallback on the c
   assert.equal(f.workflow.nodes.some(node => node.id === addedId), false, 'the native add action selected a genuinely new draft node');
   assert.equal(await node(page, addedId).locator('.wf-node-label').innerText(), 'Transient pinned node');
   await page.keyboard.press('Escape');
-  await openNodeMenu(page, addedId, 'Shift+F10'); await item(page, '입력·출력 연결 보기').click();
+  await header(page, addedId).click(); await focusedButton(page, 'connections').click();
   const dialog = page.locator('#wf-connect-dialog');
   await dialog.waitFor({ state: 'visible' });
   assert.equal(await dialog.locator('#wf-connect-title').innerText(), 'Transient pinned node · 입력·출력 연결');
@@ -963,7 +981,7 @@ test('undoing an added pinned node keeps the native connection fallback on the c
   assert.deepEqual((await f.api('/api/state')).episodes.find(episode => episode.id === f.episode.id), f.episode);
 });
 
-test('visible node tooltips cannot intercept native pointer activation of the target connections menu item', async t => {
+test('visible node tooltips cannot intercept native pointer activation of the focused-panel connections control', async t => {
   const f = await fixture(t, { maximumConnections: true }), { page } = f;
   const target = f.workflow.nodes[0], trigger = header(page, target.id);
   assert.equal(await page.locator('#wf-select').inputValue(), f.workflow.id);
@@ -977,10 +995,7 @@ test('visible node tooltips cannot intercept native pointer activation of the ta
     assert.ok(description.text.includes(f.workflow.nodes.at(-1).label), 'the actual visible node tooltip describes its real outgoing connections');
     assert.ok(describedBy.includes(description.id), 'every visible explanation is linked to the real hovered and focused node');
   }
-  await openNodeMenu(page, target.id, 'Shift+F10');
-  const actions = page.getByRole('menu', { name: new RegExp(`^${target.label} ·`) });
-  await actions.waitFor();
-  await actions.getByRole('menuitem', { name: '입력·출력 연결 보기', exact: true }).click();
+  await focusedButton(page, 'connections').click();
   const dialog = page.getByRole('dialog', { name: `${target.label} · 입력·출력 연결`, exact: true });
   await dialog.waitFor();
   assert.equal(await dialog.evaluate(element => element.open && element.contains(document.activeElement)), true, 'pointer activation opens the correctly labelled native dialog with keyboard focus');
@@ -1051,8 +1066,8 @@ test('focused node actions show the selected node results and preserve a draft a
   await focus.locator('[data-wf-action=node-results]').click();
   const results = page.locator('#wf-results-dialog[open]'); await results.waitFor();
   await results.locator(`#wf-results-run option[value="${f.run.id}"]`).waitFor({ state: 'attached' });
-  await results.locator('.result-list strong').filter({ hasText: /^Persisted project A evidence$/ }).waitFor();
-  assert.deepEqual(await results.locator('.result-list strong').allTextContents(), ['Persisted project A evidence']);
+  await results.locator('[data-testid="node-result-facts"] strong').filter({ hasText: /^Persisted project A evidence$/ }).waitFor();
+  assert.deepEqual(await results.locator('[data-testid="node-result-facts"] strong').allTextContents(), ['1', 'Persisted project A evidence']);
   assert.equal((await results.innerText()).includes('Persisted project B evidence'), false);
   await page.keyboard.press('Escape');
   await page.locator('#project-stage').selectOption('b');
@@ -1060,7 +1075,7 @@ test('focused node actions show the selected node results and preserve a draft a
   assert.equal(await tools.locator('[data-wf-field=label]').inputValue(), 'Unsaved B focus draft', 'changing focus does not discard another node draft');
   await page.keyboard.press('Escape');
   await focus.locator('[data-wf-action=node-results]').click(); await results.waitFor();
-  assert.equal((await results.innerText()).includes('Persisted project A evidence'), false, 'skipped B cannot show A output');
+  assert.equal((await results.locator('#wf-overlay-result-inspector').innerText()).includes('Persisted project A evidence'), false, 'skipped B cannot show A output');
   assert.deepEqual(f.writes, [], 'selection, editing drafts and inspecting results never write');
   assert.deepEqual((await f.api('/api/workflows')).find(graph => graph.id === f.workflow.id), f.workflow);
   assert.deepEqual(await f.api(`/api/workflow-runs/${f.run.id}`), f.run);
