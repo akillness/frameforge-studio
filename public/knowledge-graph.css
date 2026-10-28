@@ -1,0 +1,37 @@
+/* Knowledge graph: pan/zoom/node-placement interactions. Scoped additions only — styles.css and workspace.css own base .graph/.panel rules. */
+.graph-panel { position: relative; }
+.graph-viewport { position: relative; }
+#knowledge-graph-svg { touch-action: none; user-select: none; cursor: grab; }
+#knowledge-graph-svg:active { cursor: grabbing; }
+#knowledge-graph-svg:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+#graph-world { will-change: transform; }
+.graph-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px; }
+.graph-toolbar-group { display: flex; align-items: center; gap: 4px; padding: 3px; border: 1px solid var(--border-strong); border-radius: var(--radius-panel); background: var(--raised); }
+.graph-toolbar-group > span.hint { min-width: 40px; text-align: center; font-variant-numeric: tabular-nums; }
+.graph-node-toolbar { background: var(--primary-soft); border-color: var(--primary); }
+.graph-selected-label { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 2px; }
+.graph-usage-hint { margin: 0 0 10px; }
+.graph-node { cursor: pointer; }
+.graph .graph-node-hit { fill: transparent; stroke: none; pointer-events: all; }
+.graph-node-dot { transition: r .08s ease; }
+.graph-node:focus { outline: none; }
+.graph-node:focus .graph-node-dot, .graph-node.selected .graph-node-dot { stroke: var(--focus); stroke-width: 3; filter: drop-shadow(0 0 2px var(--primary)); }
+.graph-node.dragging { cursor: grabbing; }
+.graph-node.dragging .graph-node-dot { stroke: var(--primary); stroke-width: 3; }
+#graph-world line { pointer-events: none; }
+@media (max-width: 600px) {
+  .graph-toolbar { gap: 6px; }
+  .graph-toolbar-group { gap: 2px; padding: 2px; }
+  .graph-viewport { min-width: 0; max-width: 100%; overflow-x: auto; }
+  .graph-toolbar, .graph-usage-hint { position: sticky; left: 0; width: 100%; box-sizing: border-box; }
+  .graph-toolbar-group { max-width: 100%; flex-wrap: wrap; }
+  .graph-toolbar-group button { flex: 0 0 auto; white-space: nowrap; }
+  .graph-node-toolbar .graph-selected-label { flex: 1 0 100%; max-width: 100%; text-align: left; }
+  #knowledge-graph-svg { width: 980px; max-width: none; height: 546px; }
+}
+@media (pointer: coarse) {
+  .graph-toolbar-group .icon-btn, .graph-toolbar-group .small { min-width: var(--control-height); min-height: var(--control-height); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .graph-node-dot, #graph-world { transition: none !important; }
+}

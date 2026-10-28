@@ -49,7 +49,7 @@ let musicUploads = [];
 const musicGenerationStates = new Map();
 const toolDescriptions = {overview:'채널과 전체 제작 현황을 확인합니다.',studio:'현재 프로젝트의 실제 장면·슬롯 초안을 편집합니다. 열기만으로 저장하지 않습니다.',workflow:'현재 프로젝트의 노드 캔버스로 돌아갑니다.',source:'소스 검색, 이용 권리와 출처를 확인합니다.',delivery:'완성 후보의 검토와 별도 공개 승인을 관리합니다. 열기만으로 공개하지 않습니다.',results:'렌더 결과와 서버 MP4, 플랫폼 브라우저를 확인합니다.',trends:'트렌드 수집 기록과 조사 도구를 엽니다.',templates:'기존 장면 템플릿을 확인합니다. 적용은 별도 명시적 동작입니다.',history:'원본 버전과 현재 초안을 비교합니다. 복원은 별도로 확인합니다.',knowledge:'채널·에피소드의 원본 관계와 지식을 확인합니다.',settings:'외부 연결과 작업 명령 기록을 확인합니다.',archived:'보관한 프로젝트를 확인하거나 원래 목록으로 복구합니다.'};
 const canMutate = () => state.session?.authenticated === true;
-const readActions = new Set(['view','channel','episode','project-section','scene','select-slot','select-platform-session','prev','next','play','reload','refresh-speech','refresh-commands','reload-history','history-version','refresh-knowledge','refresh-integrations','refresh-server-exports','trend-popular','ops-open','ops-history','project-tools','project-menu','episode-menu','channel-menu','tool-menu','sidebar-menu','open-scene-editor','close-scene-editor','close-project-tool','inspect-archived']);
+const readActions = new Set(['view','channel','episode','project-section','scene','select-slot','select-platform-session','prev','next','play','reload','refresh-speech','refresh-commands','reload-history','history-version','refresh-knowledge','refresh-integrations','refresh-server-exports','trend-popular','ops-open','ops-history','project-tools','project-menu','episode-menu','channel-menu','tool-menu','sidebar-menu','open-scene-editor','close-scene-editor','close-project-tool','inspect-archived','graph-pan','graph-zoom-in','graph-zoom-out','graph-zoom-reset','graph-node-move','graph-node-reset']);
 const readWorkflowActions = new Set(['select-node','minimap-select','inspector-tab','select-run','inspect-run-node','zoom-in','zoom-out','fit','reload','refresh-history','history-version','refresh-runs','refresh-generation','refresh-generation-job','open-tools','open-results','open-stage-overlay','close-overlay','select-stage','close-confirm','close-dialog','node-menu','canvas-menu','node-tools','scene-editor','node-results','node-history','connections','open-add-node','open-workflow-settings','confirm-delete-node','input','output','recent-runs-more','history-versions-more','history-page','refresh-run-history','refresh-run-detail','restore-workflow','estimate-ack']);
 const mutationForms = new Set(['modal-form','chat-form','trend-form','trend-settings-form','command-form','wf-connect-form']);
 function applySessionControls() {
@@ -150,7 +150,8 @@ function captureProjectOverlay() {
   for (const dialog of document.querySelectorAll('#project-scene-dialog[open],#project-tool-dialog[open]')) {
     const fields = [...dialog.querySelectorAll('input:not([type="file"]),textarea,select')];
     const focused = fields.indexOf(document.activeElement);
-    overlaySnapshots.set(dialog.dataset.context, {fields:fields.map(field=>({value:field.value,checked:field.checked,preserve:!field.matches('[data-scene],[data-caption],[data-music],[data-music-source],[data-episode],[data-slot-field],[data-slot-style]')})),details:[...dialog.querySelectorAll('details')].map(item=>item.open),focused,start:focused < 0 ? null : fields[focused].selectionStart,end:focused < 0 ? null : fields[focused].selectionEnd,scrollTop:dialog.scrollTop});
+    const graphViewport = dialog.querySelector('#graph-viewport');
+    overlaySnapshots.set(dialog.dataset.context, {fields:fields.map(field=>({value:field.value,checked:field.checked,preserve:!field.matches('[data-scene],[data-caption],[data-music],[data-music-source],[data-episode],[data-slot-field],[data-slot-style]')})),details:[...dialog.querySelectorAll('details')].map(item=>item.open),focused,start:focused < 0 ? null : fields[focused].selectionStart,end:focused < 0 ? null : fields[focused].selectionEnd,scrollTop:dialog.scrollTop,graphScrollLeft:graphViewport?.querySelector('.graph-node-dot') ? graphViewport.scrollLeft : null});
   }
 }
 function restoreProjectOverlay(dialog) {
@@ -173,6 +174,7 @@ function closeSceneEditor(restoreFocus = true) {
   if (restoreFocus) (overlayOpener?.isConnected && overlayOpener.matches('button,a[href],input,select,textarea,[tabindex]') && !overlayOpener.matches(':disabled') ? overlayOpener : $('[data-action="open-scene-editor"]'))?.focus({preventScroll:true});
 }
 function closeProjectTool(restoreFocus = true) {
+  finishGraphDrag(false);
   projectToolRequest += 1;
   captureProjectOverlay(); activeTool = null;
   const grid = $('#project-tool-body .production-tools-grid');
@@ -234,6 +236,18 @@ function mountProjectTool() {
   } else body.innerHTML = renderView(activeTool);
   if (activeTool === 'overview') operations.mount();
   applySessionControls(); decorateTooltips(); dialog.showModal(); restoreProjectOverlay(dialog);
+  if (activeTool === 'knowledge') {
+    const viewport = dialog.querySelector('#graph-viewport');
+    const node = viewport?.querySelector('.graph-node.selected .graph-node-dot') || viewport?.querySelector('.graph-node-dot');
+    const savedScroll = overlaySnapshots.get(dialog.dataset.context)?.graphScrollLeft;
+    if (viewport && node && viewport.scrollWidth > viewport.clientWidth) {
+      if (savedScroll != null) viewport.scrollLeft = savedScroll;
+      else {
+        const nodeBox = node.getBoundingClientRect(), viewportBox = viewport.getBoundingClientRect();
+        viewport.scrollLeft += (nodeBox.left + nodeBox.right) / 2 - (viewportBox.left + viewportBox.right) / 2;
+      }
+    }
+  }
 }
 async function openProjectTool(tool) {
   if (!views.some(([key])=>key === tool)) return;
@@ -1188,16 +1202,252 @@ function restoreEpisode(version) {
     reconcileEpisode(restored);sceneIndex=0;historyVersion=restored.version;await refresh();await loadHistory();render();toast(`v${version}의 내용을 새 버전 v${restored.version}으로 복원했습니다.`);
   },'새 버전으로 복원');
 }
+
+// --- Knowledge graph: pan/zoom + node placement (session-only UI state; never persisted, never mutates graph data/index) ---
+const GRAPH_VIEWBOX = {w:700,h:390};
+const GRAPH_BOUNDS = {minX:70,maxX:630,minY:24,maxY:352};
+const GRAPH_MIN_GAP = 14;
+const GRAPH_ZOOM_MIN = 0.5, GRAPH_ZOOM_MAX = 2.5, GRAPH_ZOOM_STEP = 1.25;
+const GRAPH_PAN_STEP = 40, GRAPH_NODE_STEP = 10;
+const graphNodePositions = new Map();
+const graphLayoutPositions = new Map();
+let graphPan = {x:0,y:0};
+let graphZoom = 1;
+let graphSelectedNodeId = null;
+let graphLastMovedId = null;
+let graphLiveMessage = '';
+let graphDrag = null;
+let graphDragRaf = 0;
+function graphVisibleNodes() { return (state.graph?.nodes || []).slice(0,36); }
+function graphNodeRadius(node) { return (node.type || node.kind) === 'channel' ? 20 : 12; }
+function graphNodeLabel(node) { return node.label || node.title || node.name || node.id; }
+function graphNodeLabelById(nodeId) {
+  const node = graphVisibleNodes().find(item => item.id === nodeId) || (state.graph?.nodes || []).find(item => item.id === nodeId);
+  return node ? graphNodeLabel(node) : '';
+}
+function graphClampXY(point) {
+  point.x = Math.min(GRAPH_BOUNDS.maxX, Math.max(GRAPH_BOUNDS.minX, point.x));
+  point.y = Math.min(GRAPH_BOUNDS.maxY, Math.max(GRAPH_BOUNDS.minY, point.y));
+  return point;
+}
+function graphBaseLayout(visible) {
+  const positions = new Map();
+  visible.forEach((node,index) => positions.set(node.id, {x:350 + Math.cos(index * Math.PI * 2 / visible.length) * (index % 2 ? 245 : 155), y:195 + Math.sin(index * Math.PI * 2 / visible.length) * (index % 2 ? 140 : 85)}));
+  return positions;
+}
+function graphResolveOverlaps(positions, visible) {
+  for (let pass = 0; pass < 48; pass++) {
+    for (let i = 0; i < visible.length; i++) {
+      for (let j = i + 1; j < visible.length; j++) {
+        const a = visible[i], b = visible[j];
+        const pa = positions.get(a.id), pb = positions.get(b.id);
+        if (!pa || !pb) continue;
+        const minDist = graphNodeRadius(a) + graphNodeRadius(b) + GRAPH_MIN_GAP;
+        let dx = pb.x - pa.x, dy = pb.y - pa.y;
+        let dist = Math.hypot(dx,dy);
+        if (dist < 0.01) { dx = 1; dy = 0; dist = 1; }
+        if (dist >= minDist) continue;
+        const deficit = minDist - dist;
+        const ux = dx / dist, uy = dy / dist;
+        const bAnchored = graphLastMovedId === b.id && graphLastMovedId !== a.id;
+        const aAnchored = graphLastMovedId === a.id && graphLastMovedId !== b.id;
+        const moving = aAnchored ? pb : bAnchored ? pa : null;
+        const origin = moving && {x:moving.x, y:moving.y};
+        if (bAnchored) { pa.x -= ux * deficit; pa.y -= uy * deficit; }
+        else if (aAnchored) { pb.x += ux * deficit; pb.y += uy * deficit; }
+        else { pa.x -= ux * deficit / 2; pa.y -= uy * deficit / 2; pb.x += ux * deficit / 2; pb.y += uy * deficit / 2; }
+        graphClampXY(pa); graphClampXY(pb);
+        if (moving) {
+          const anchor = aAnchored ? pa : pb;
+          if (Math.hypot(moving.x - anchor.x, moving.y - anchor.y) < minDist - 1e-7) {
+            const candidates = [
+              {x:anchor.x - minDist, y:anchor.y}, {x:anchor.x + minDist, y:anchor.y},
+              {x:anchor.x, y:anchor.y - minDist}, {x:anchor.x, y:anchor.y + minDist}
+            ].filter(point => point.x >= GRAPH_BOUNDS.minX && point.x <= GRAPH_BOUNDS.maxX && point.y >= GRAPH_BOUNDS.minY && point.y <= GRAPH_BOUNDS.maxY);
+            const nearest = candidates.reduce((best, point) => !best || Math.hypot(point.x - origin.x, point.y - origin.y) < Math.hypot(best.x - origin.x, best.y - origin.y) ? point : best, null);
+            if (nearest) { moving.x = nearest.x; moving.y = nearest.y; }
+          }
+        }
+      }
+    }
+  }
+}
+function currentGraphPositions(visible) {
+  const positions = graphBaseLayout(visible);
+  for (const node of visible) {
+    const position = graphLayoutPositions.get(node.id) || graphNodePositions.get(node.id);
+    if (position) positions.set(node.id, {x:position.x,y:position.y});
+  }
+  for (const point of positions.values()) graphClampXY(point);
+  graphResolveOverlaps(positions, visible);
+  return positions;
+}
+function graphPruneOverrides(nodes) {
+  const ids = new Set(nodes.map(node => node.id));
+  for (const key of graphNodePositions.keys()) if (!ids.has(key)) graphNodePositions.delete(key);
+  for (const key of graphLayoutPositions.keys()) if (!ids.has(key)) graphLayoutPositions.delete(key);
+  if (graphSelectedNodeId && !ids.has(graphSelectedNodeId)) graphSelectedNodeId = null;
+  if (graphLastMovedId && !ids.has(graphLastMovedId)) graphLastMovedId = null;
+}
+function graphSvgEl() { return document.getElementById('knowledge-graph-svg'); }
+function graphWorldEl() { return document.getElementById('graph-world'); }
+function graphDeltaToLocal(el, dxScreen, dyScreen) {
+  const ctm = el?.getScreenCTM?.();
+  const scale = ctm ? (Math.hypot(ctm.a, ctm.b) || 1) : 1;
+  return {dx: dxScreen / scale, dy: dyScreen / scale};
+}
+function graphLabelLayout(visible, positions) {
+  const labels = new Map(), occupied = [];
+  const context = document.createElement('canvas').getContext('2d');
+  if (context) context.font = `11px ${getComputedStyle(document.body).fontFamily}`;
+  const ordered = [...visible].sort((a,b) => Number(b.id === graphSelectedNodeId) - Number(a.id === graphSelectedNodeId));
+  for (const node of ordered) {
+    const point = positions.get(node.id), chars = Array.from(String(graphNodeLabel(node)));
+    const radius = graphNodeRadius(node);
+    for (let limit = Math.min(chars.length,16); limit >= Math.min(chars.length,4); limit--) {
+      const text = chars.length > limit ? `${chars.slice(0,limit-1).join('')}…` : chars.join('');
+      const width = Math.min(GRAPH_VIEWBOX.w - 8, (context?.measureText(text).width ?? limit * 12) + 8);
+      const x = Math.max(width / 2 + 4, Math.min(GRAPH_VIEWBOX.w - width / 2 - 4, point.x));
+      for (const y of [point.y + radius + 16, point.y - radius - 6]) {
+        const box = {left:x-width/2, right:x+width/2, top:y-12, bottom:y+3};
+        if (box.top < 2 || box.bottom > GRAPH_VIEWBOX.h - 2) continue;
+        if (occupied.some(other => box.left < other.right && box.right > other.left && box.top < other.bottom && box.bottom > other.top)) continue;
+        if (visible.some(other => {
+          const center = positions.get(other.id), r = graphNodeRadius(other) + 2;
+          const dx = center.x - Math.max(box.left, Math.min(center.x, box.right));
+          const dy = center.y - Math.max(box.top, Math.min(center.y, box.bottom));
+          return dx * dx + dy * dy < r * r;
+        })) continue;
+        occupied.push(box); labels.set(node.id,{x,y,text}); break;
+      }
+      if (labels.has(node.id)) break;
+    }
+  }
+  return labels;
+}
+function graphSectionMarkup() {
+  const visible = graphVisibleNodes();
+  const total = (state.graph?.nodes || []).length;
+  if (!visible.length) return '<div class="empty">채널과 에피소드를 만들면 연결된 지식이 여기에 나타납니다.</div>';
+  graphPruneOverrides(state.graph.nodes || []);
+  const positions = currentGraphPositions(visible);
+  for (const [id, position] of positions) graphLayoutPositions.set(id, {...position});
+  const labels = graphLabelLayout(visible, positions);
+  const edges = state.graph.edges || [];
+  const lineEls = edges.map((edge,index) => {
+    const from = positions.get(edge.source || edge.from), to = positions.get(edge.target || edge.to);
+    return from && to ? `<line data-edge-index="${index}" x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}"/>` : '';
+  }).join('');
+  const nodeEls = visible.map(node => {
+    const pos = positions.get(node.id);
+    const selected = graphSelectedNodeId === node.id;
+    const label = graphNodeLabel(node);
+    const radius = graphNodeRadius(node);
+    const placed = labels.get(node.id);
+    return `<g class="graph-node${selected ? ' selected' : ''}" data-node-id="${esc(node.id)}" data-x="${pos.x.toFixed(2)}" data-y="${pos.y.toFixed(2)}" tabindex="0" role="button" aria-pressed="${selected}" aria-label="${esc(label)} · 화살표 키로 이동, Enter로 선택, Home으로 위치 초기화"><circle class="graph-node-hit" cx="${pos.x}" cy="${pos.y}" r="${radius + 6}"/><circle class="graph-node-dot${(node.type || node.kind) === 'episode' ? ' episode-node' : ''}" cx="${pos.x}" cy="${pos.y}" r="${radius}"/><text x="${placed?.x ?? pos.x}" y="${placed?.y ?? pos.y}" text-anchor="middle" visibility="${placed ? 'visible' : 'hidden'}">${esc(placed?.text || '')}</text><title>${esc(label)}</title></g>`;
+  }).join('');
+  const selectedNode = graphSelectedNodeId ? visible.find(node => node.id === graphSelectedNodeId) : null;
+  return `<div class="graph-toolbar" role="group" aria-label="그래프 보기 조정"><div class="graph-toolbar-group" role="group" aria-label="화면 이동"><button type="button" id="graph-pan-up" class="small icon-btn" data-action="graph-pan" data-dir="up" aria-label="위로 이동">↑</button><button type="button" id="graph-pan-left" class="small icon-btn" data-action="graph-pan" data-dir="left" aria-label="왼쪽으로 이동">←</button><button type="button" id="graph-pan-down" class="small icon-btn" data-action="graph-pan" data-dir="down" aria-label="아래로 이동">↓</button><button type="button" id="graph-pan-right" class="small icon-btn" data-action="graph-pan" data-dir="right" aria-label="오른쪽으로 이동">→</button></div><div class="graph-toolbar-group" role="group" aria-label="확대 축소"><button type="button" id="graph-zoom-out" class="small" data-action="graph-zoom-out" aria-label="축소">−</button><span id="graph-zoom-value" class="hint">${Math.round(graphZoom*100)}%</span><button type="button" id="graph-zoom-in" class="small" data-action="graph-zoom-in" aria-label="확대">+</button><button type="button" id="graph-zoom-reset" class="small quiet" data-action="graph-zoom-reset">보기 초기화</button></div>${selectedNode ? `<div class="graph-toolbar-group graph-node-toolbar" role="group" aria-label="${esc(graphNodeLabel(selectedNode))} 위치 이동"><span class="hint graph-selected-label">${esc(graphNodeLabel(selectedNode))}</span><button type="button" id="graph-node-move-up" class="small icon-btn" data-action="graph-node-move" data-dir="up" aria-label="선택한 노드 위로 이동">↑</button><button type="button" id="graph-node-move-left" class="small icon-btn" data-action="graph-node-move" data-dir="left" aria-label="선택한 노드 왼쪽으로 이동">←</button><button type="button" id="graph-node-move-down" class="small icon-btn" data-action="graph-node-move" data-dir="down" aria-label="선택한 노드 아래로 이동">↓</button><button type="button" id="graph-node-move-right" class="small icon-btn" data-action="graph-node-move" data-dir="right" aria-label="선택한 노드 오른쪽으로 이동">→</button><button type="button" id="graph-node-reset" class="small quiet" data-action="graph-node-reset">위치 초기화</button></div>` : ''}</div><p class="hint graph-usage-hint" id="graph-usage-hint">그래프는 드래그하거나 화살표 키로 이동합니다. 노드를 클릭하거나 Enter로 선택하면 이동 버튼이 나타납니다.${total > visible.length ? ` 전체 ${total}개 중 ${visible.length}개만 표시됩니다 · 아래 목록에서 전체를 확인하세요.` : ''}</p><svg id="knowledge-graph-svg" class="graph" viewBox="0 0 ${GRAPH_VIEWBOX.w} ${GRAPH_VIEWBOX.h}" role="graphics-document" aria-roledescription="지식 그래프" aria-label="채널, 에피소드 및 소재의 관계 그래프" aria-describedby="graph-usage-hint" tabindex="0" data-testid="knowledge-graph-svg"><g id="graph-world" data-testid="graph-world" transform="translate(${graphPan.x} ${graphPan.y}) scale(${graphZoom})">${lineEls}${nodeEls}</g></svg><p class="sr-only" id="graph-live-region" role="status" aria-live="polite">${esc(graphLiveMessage)}</p>`;
+}
+function renderGraphOnly(focusSelector) {
+  const viewport = document.getElementById('graph-viewport');
+  if (!viewport) return;
+  const scrollLeft = viewport.scrollLeft;
+  viewport.innerHTML = graphSectionMarkup();
+  viewport.scrollLeft = scrollLeft;
+  if (focusSelector) viewport.querySelector(focusSelector)?.focus?.({preventScroll:true});
+}
+function graphPatchTransform() {
+  const world = graphWorldEl();
+  if (world) world.setAttribute('transform', `translate(${graphPan.x} ${graphPan.y}) scale(${graphZoom})`);
+  const label = document.getElementById('graph-zoom-value');
+  if (label) label.textContent = `${Math.round(graphZoom * 100)}%`;
+  const live = document.getElementById('graph-live-region');
+  if (live && graphLiveMessage) live.textContent = graphLiveMessage;
+}
+function graphPatchNodePositions() {
+  const world = graphWorldEl();
+  if (!world) return;
+  const visible = graphVisibleNodes();
+  const positions = currentGraphPositions(visible);
+  for (const [id, position] of positions) graphLayoutPositions.set(id, {...position});
+  const labels = graphLabelLayout(visible, positions);
+  for (const node of visible) {
+    const pos = positions.get(node.id);
+    const g = world.querySelector(`[data-node-id="${CSS.escape(node.id)}"]`);
+    if (!pos || !g) continue;
+    g.setAttribute('data-x', pos.x.toFixed(2));
+    g.setAttribute('data-y', pos.y.toFixed(2));
+    for (const circle of g.querySelectorAll('circle')) { circle.setAttribute('cx', pos.x); circle.setAttribute('cy', pos.y); }
+    const text = g.querySelector('text');
+    if (text) { const placed = labels.get(node.id); text.setAttribute('x', placed?.x ?? pos.x); text.setAttribute('y', placed?.y ?? pos.y); text.setAttribute('visibility', placed ? 'visible' : 'hidden'); text.textContent = placed?.text || ''; }
+  }
+  (state.graph?.edges || []).forEach((edge,index) => {
+    const line = world.querySelector(`[data-edge-index="${index}"]`);
+    const from = positions.get(edge.source || edge.from), to = positions.get(edge.target || edge.to);
+    if (!line || !from || !to) return;
+    line.setAttribute('x1', from.x); line.setAttribute('y1', from.y);
+    line.setAttribute('x2', to.x); line.setAttribute('y2', to.y);
+  });
+  const live = document.getElementById('graph-live-region');
+  if (live && graphLiveMessage) live.textContent = graphLiveMessage;
+}
+function graphPanBy(dx, dy) {
+  graphPan = {x: graphPan.x + dx, y: graphPan.y + dy};
+  graphLiveMessage = '보기를 이동했습니다.';
+  graphPatchTransform();
+}
+function graphApplyZoom(nextZoomRaw, anchor) {
+  anchor ||= {x:GRAPH_VIEWBOX.w/2, y:GRAPH_VIEWBOX.h/2};
+  const nextZoom = Math.min(GRAPH_ZOOM_MAX, Math.max(GRAPH_ZOOM_MIN, nextZoomRaw));
+  if (nextZoom === graphZoom) return;
+  graphPan = {x: anchor.x - (nextZoom / graphZoom) * (anchor.x - graphPan.x), y: anchor.y - (nextZoom / graphZoom) * (anchor.y - graphPan.y)};
+  graphZoom = nextZoom;
+  graphLiveMessage = `확대 ${Math.round(graphZoom * 100)}%`;
+  graphPatchTransform();
+}
+function graphResetView() {
+  graphPan = {x:0,y:0};
+  graphZoom = 1;
+  graphLiveMessage = '보기를 초기화했습니다.';
+  graphPatchTransform();
+}
+function graphMoveNode(nodeId, dx, dy) {
+  const positions = currentGraphPositions(graphVisibleNodes());
+  const current = positions.get(nodeId);
+  if (!current) return;
+  graphNodePositions.set(nodeId, graphClampXY({x: current.x + dx, y: current.y + dy}));
+  graphLayoutPositions.set(nodeId, {...graphNodePositions.get(nodeId)});
+  graphLastMovedId = nodeId;
+  graphLiveMessage = `${graphNodeLabelById(nodeId)} 위치를 이동했습니다.`;
+  graphPatchNodePositions();
+}
+function graphResetNode(nodeId) {
+  if (!graphNodePositions.has(nodeId)) return;
+  graphNodePositions.delete(nodeId);
+  graphLayoutPositions.delete(nodeId);
+  if (graphLastMovedId === nodeId) graphLastMovedId = null;
+  graphLiveMessage = `${graphNodeLabelById(nodeId)} 위치를 기본값으로 되돌렸습니다.`;
+  graphPatchNodePositions();
+}
+function graphToggleNodeSelection(nodeId) {
+  graphSelectedNodeId = graphSelectedNodeId === nodeId ? null : nodeId;
+  graphLiveMessage = graphSelectedNodeId ? `${graphNodeLabelById(nodeId)} 선택됨. 이동 버튼이나 화살표 키로 위치를 조정하세요.` : '선택을 해제했습니다.';
+  renderGraphOnly(graphSelectedNodeId ? `[data-node-id="${CSS.escape(nodeId)}"]` : '#knowledge-graph-svg');
+}
+function graphDeselectNode() {
+  if (!graphSelectedNodeId) return;
+  graphSelectedNodeId = null;
+  graphLiveMessage = '선택을 해제했습니다.';
+  renderGraphOnly('#knowledge-graph-svg');
+}
+
 function knowledgeView() {
   const graph = state.graph || {nodes:[],edges:[]};
   const nodes = graph.nodes || [];
-  const visible = nodes.slice(0,36);
-  const positions = new Map(visible.map((node,index) => [node.id, {x:350 + Math.cos(index * Math.PI * 2 / visible.length) * (index % 2 ? 245 : 155), y:195 + Math.sin(index * Math.PI * 2 / visible.length) * (index % 2 ? 140 : 85)}]));
-  const lines = (graph.edges || []).map(edge => { const from = positions.get(edge.source || edge.from); const to = positions.get(edge.target || edge.to); return from && to ? `<line x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}"/>` : ''; }).join('');
-  const circles = visible.map(node => { const pos = positions.get(node.id); return `<g><circle class="${(node.type || node.kind) === 'episode' ? 'episode-node' : ''}" cx="${pos.x}" cy="${pos.y}" r="${(node.type || node.kind) === 'channel' ? 20 : 12}"/><text x="${pos.x}" y="${pos.y + 31}" text-anchor="middle">${esc((node.label || node.title || node.name || node.id).slice(0,16))}</text><title>${esc(node.label || node.title || node.id)}</title></g>`; }).join('');
   const byId = new Map(nodes.map(node=>[node.id,node]));
   const access = item => item.editable ? '<span class="badge">원본 편집 가능</span>' : `<p class="hint graph-readonly" data-testid="graph-readonly">읽기 전용 · ${esc(item.readOnlyReason || '편집 가능한 원본이 없습니다.')}</p>`;
-  return heading('지식 그래프', '원본 기록을 편집하면 그래프와 내보내기가 갱신됩니다.', '<button data-action="refresh-knowledge">그래프 새로고침</button>') + `<p class="source-note">채널 이름과 에피소드 제목·주제·소속 채널을 편집할 수 있습니다. 주제 노드는 에피소드에서 파생됩니다. 나머지 노드와 연결은 읽기 전용입니다.</p><div class="row" style="margin-bottom:17px"><span class="badge lime">${nodes.length}개 노드</span><span class="badge">${graph.edges?.length || 0}개 연결</span></div><section class="panel">${nodes.length ? `<svg class="graph" viewBox="0 0 700 390" role="img" aria-label="채널, 에피소드 및 소재의 관계 그래프">${lines}${circles}</svg>` : '<div class="empty">채널과 에피소드를 만들면 연결된 지식이 여기에 나타납니다.</div>'}</section><div class="cards section-spacer graph-records">${nodes.map(node => `<article class="panel panel-body" data-graph-node="${esc(node.id)}"><span class="eyebrow">${esc(node.type || node.kind || '지식')}</span><h3>${esc(node.label || node.title || node.name || node.id)}</h3><p class="hint graph-record-id">${esc(node.id)}</p>${access(node)}${node.editable ? `<button class="small" data-action="edit-graph-node" data-id="${esc(node.id)}" ${!canMutate()?'disabled':''}>원본 편집</button>`:''}</article>`).join('')}</div><section class="panel section-spacer graph-relations"><div class="panel-header"><h2>연결</h2></div>${(graph.edges || []).map((edge,index)=>`<article class="data-row" data-graph-edge="${index}"><div><h3>${esc(byId.get(edge.source)?.label || edge.source)} → ${esc(byId.get(edge.target)?.label || edge.target)}</h3><p class="hint">${esc(edge.relation)}</p>${access(edge)}</div>${edge.editable?`<button class="small" data-action="edit-graph-edge" data-index="${index}" ${!canMutate()?'disabled':''}>연결 원본 편집</button>`:''}</article>`).join('') || '<p class="panel-body hint">연결이 없습니다.</p>'}</section>`;
+  return heading('지식 그래프', '원본 기록을 편집하면 그래프와 내보내기가 갱신됩니다.', '<button data-action="refresh-knowledge">그래프 새로고침</button>') + `<p class="source-note">채널 이름과 에피소드 제목·주제·소속 채널을 편집할 수 있습니다. 주제 노드는 에피소드에서 파생됩니다. 나머지 노드와 연결은 읽기 전용입니다.</p><div class="row" style="margin-bottom:17px"><span class="badge lime">${nodes.length}개 노드</span><span class="badge">${graph.edges?.length || 0}개 연결</span></div><section class="panel graph-panel">${nodes.length ? `<div class="graph-viewport" id="graph-viewport">${graphSectionMarkup()}</div>` : '<div class="empty">채널과 에피소드를 만들면 연결된 지식이 여기에 나타납니다.</div>'}</section><div class="cards section-spacer graph-records">${nodes.map(node => `<article class="panel panel-body" data-graph-node="${esc(node.id)}"><span class="eyebrow">${esc(node.type || node.kind || '지식')}</span><h3>${esc(node.label || node.title || node.name || node.id)}</h3><p class="hint graph-record-id">${esc(node.id)}</p>${access(node)}${node.editable ? `<button class="small" data-action="edit-graph-node" data-id="${esc(node.id)}" ${!canMutate()?'disabled':''}>원본 편집</button>`:''}</article>`).join('')}</div><section class="panel section-spacer graph-relations"><div class="panel-header"><h2>연결</h2></div>${(graph.edges || []).map((edge,index)=>`<article class="data-row" data-graph-edge="${index}"><div><h3>${esc(byId.get(edge.source)?.label || edge.source)} → ${esc(byId.get(edge.target)?.label || edge.target)}</h3><p class="hint">${esc(edge.relation)}</p>${access(edge)}</div>${edge.editable?`<button class="small" data-action="edit-graph-edge" data-index="${index}" ${!canMutate()?'disabled':''}>연결 원본 편집</button>`:''}</article>`).join('') || '<p class="panel-body hint">연결이 없습니다.</p>'}</section>`;
 }
 function guardGraphEdit() {
   if (!canMutate()) throw new Error('변경하려면 로그인하세요.');
@@ -1445,6 +1695,12 @@ async function handleAction(button) {
   if (episode && ['save','render','restore-episode','save-history-draft','narrate-scene','narrate-all','load-narration-result','apply-layout-preset','add-slot','delete-slot','upload-slot-media','remove-slot-media','add-scene','duplicate-scene','delete-scene','move-left','move-right','add-caption','delete-caption','upload-audio','remove-audio','upload','remove-media','apply-template'].includes(action)) requireProjectEdit();
   if (action === 'edit-graph-node') { editGraphNode(button.dataset.id); return; }
   if (action === 'edit-graph-edge') { editGraphEdge(Number(button.dataset.index)); return; }
+  if (action === 'graph-pan') { const dir=button.dataset.dir; const delta={left:[GRAPH_PAN_STEP,0],right:[-GRAPH_PAN_STEP,0],up:[0,GRAPH_PAN_STEP],down:[0,-GRAPH_PAN_STEP]}[dir] || [0,0]; graphPanBy(delta[0],delta[1]); return; }
+  if (action === 'graph-zoom-in') { graphApplyZoom(graphZoom * GRAPH_ZOOM_STEP); return; }
+  if (action === 'graph-zoom-out') { graphApplyZoom(graphZoom / GRAPH_ZOOM_STEP); return; }
+  if (action === 'graph-zoom-reset') { graphResetView(); return; }
+  if (action === 'graph-node-move') { if (!graphSelectedNodeId) return; const dir=button.dataset.dir; const delta={left:[-GRAPH_NODE_STEP,0],right:[GRAPH_NODE_STEP,0],up:[0,-GRAPH_NODE_STEP],down:[0,GRAPH_NODE_STEP]}[dir] || [0,0]; graphMoveNode(graphSelectedNodeId,delta[0],delta[1]); return; }
+  if (action === 'graph-node-reset') { if (!graphSelectedNodeId) return; graphResetNode(graphSelectedNodeId); return; }
   if (action === 'ops-open' || action === 'ops-history') {
     const target=state.episodes.find(item=>item.id===button.dataset.id);
     if (!target) throw new Error('에피소드가 현재 자료에 없습니다. 자료를 새로고침하세요.');
@@ -1913,6 +2169,80 @@ document.addEventListener('pointerup', event => {
   const wasMoved = slotDrag.moved;
   slotDrag = null;
   if (wasMoved || sceneEditorOpen) render();
+});
+
+// --- Knowledge graph: pointer pan/drag and keyboard pan/move. Session-only view state; never touches graph data. ---
+document.addEventListener('pointerdown', event => {
+  const svg = event.target.closest('#knowledge-graph-svg');
+  if (!svg || event.button !== 0 || graphDrag || !event.isPrimary) return;
+  const nodeEl = event.target.closest('.graph-node');
+  if (nodeEl) {
+    const nodeId = nodeEl.dataset.nodeId;
+    const positions = currentGraphPositions(graphVisibleNodes());
+    const origin = positions.get(nodeId);
+    if (!origin) return;
+    const hadOverride = graphNodePositions.has(nodeId);
+    graphDrag = {type:'node', pointerId:event.pointerId, nodeId, startX:event.clientX, startY:event.clientY, originX:origin.x, originY:origin.y, hadOverride, origOverride: hadOverride ? {...graphNodePositions.get(nodeId)} : null, origLayout:new Map([...graphLayoutPositions].map(([id,position]) => [id,{...position}])), origLastMovedId:graphLastMovedId, moved:false, scaleEl:graphWorldEl()};
+  } else {
+    graphDrag = {type:'pan', pointerId:event.pointerId, startX:event.clientX, startY:event.clientY, originPan:{...graphPan}, moved:false, scaleEl:svg};
+  }
+  try { svg.setPointerCapture?.(event.pointerId); } catch { /* Pointer already released (e.g. synthetic test dispatch); drag state above still applies. */ }
+});
+document.addEventListener('pointermove', event => {
+  if (!graphDrag || event.pointerId !== graphDrag.pointerId) return;
+  const dxScreen = event.clientX - graphDrag.startX, dyScreen = event.clientY - graphDrag.startY;
+  if (!graphDrag.moved && Math.hypot(dxScreen,dyScreen) < 4) return;
+  graphDrag.moved = true;
+  event.preventDefault();
+  if (graphDrag.type === 'node') {
+    document.querySelector(`[data-node-id="${CSS.escape(graphDrag.nodeId)}"]`)?.classList.add('dragging');
+    const {dx,dy} = graphDeltaToLocal(graphDrag.scaleEl, dxScreen, dyScreen);
+    graphNodePositions.set(graphDrag.nodeId, graphClampXY({x: graphDrag.originX + dx, y: graphDrag.originY + dy}));
+    graphLayoutPositions.set(graphDrag.nodeId, {...graphNodePositions.get(graphDrag.nodeId)});
+    graphLastMovedId = graphDrag.nodeId;
+    if (graphDragRaf) return;
+    graphDragRaf = requestAnimationFrame(() => { graphDragRaf = 0; graphPatchNodePositions(); });
+  } else {
+    const {dx,dy} = graphDeltaToLocal(graphDrag.scaleEl, dxScreen, dyScreen);
+    graphPan = {x: graphDrag.originPan.x + dx, y: graphDrag.originPan.y + dy};
+    if (graphDragRaf) return;
+    graphDragRaf = requestAnimationFrame(() => { graphDragRaf = 0; graphPatchTransform(); });
+  }
+});
+function finishGraphDrag(commit) {
+  if (!graphDrag) return;
+  if (graphDragRaf) { cancelAnimationFrame(graphDragRaf); graphDragRaf = 0; }
+  document.querySelector('.graph-node.dragging')?.classList.remove('dragging');
+  if (graphDrag.type === 'node') {
+    if (!commit) { if (graphDrag.hadOverride) graphNodePositions.set(graphDrag.nodeId, graphDrag.origOverride); else graphNodePositions.delete(graphDrag.nodeId); graphLayoutPositions.clear(); for (const [id,position] of graphDrag.origLayout) graphLayoutPositions.set(id,position); graphLastMovedId = graphDrag.origLastMovedId; graphPatchNodePositions(); }
+    else if (graphDrag.moved) { graphLiveMessage = `${graphNodeLabelById(graphDrag.nodeId)} 위치를 이동했습니다.`; graphPatchNodePositions(); }
+    else { graphToggleNodeSelection(graphDrag.nodeId); }
+  } else {
+    if (!commit) { graphPan = graphDrag.originPan; graphPatchTransform(); }
+    else if (graphDrag.moved) { graphPatchTransform(); }
+    else { graphDeselectNode(); }
+  }
+  graphDrag = null;
+}
+document.addEventListener('pointerup', event => { if (graphDrag && event.pointerId === graphDrag.pointerId) finishGraphDrag(true); });
+document.addEventListener('pointercancel', event => { if (graphDrag && event.pointerId === graphDrag.pointerId) finishGraphDrag(false); });
+document.addEventListener('keydown', event => {
+  if (event.ctrlKey || event.metaKey || event.altKey) return;
+  const nodeEl = event.target.closest?.('.graph-node');
+  if (nodeEl) {
+    const nodeId = nodeEl.dataset.nodeId;
+    if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) { event.preventDefault(); const delta={ArrowLeft:[-GRAPH_NODE_STEP,0],ArrowRight:[GRAPH_NODE_STEP,0],ArrowUp:[0,-GRAPH_NODE_STEP],ArrowDown:[0,GRAPH_NODE_STEP]}[event.key]; graphMoveNode(nodeId,delta[0],delta[1]); return; }
+    if (event.key === 'Home') { event.preventDefault(); graphResetNode(nodeId); return; }
+    if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); graphToggleNodeSelection(nodeId); return; }
+    if (event.key === 'Escape') { event.preventDefault(); graphDeselectNode(); graphSvgEl()?.focus(); return; }
+    return;
+  }
+  if (event.target === graphSvgEl()) {
+    if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) { event.preventDefault(); const delta={ArrowLeft:[GRAPH_PAN_STEP,0],ArrowRight:[-GRAPH_PAN_STEP,0],ArrowUp:[0,GRAPH_PAN_STEP],ArrowDown:[0,-GRAPH_PAN_STEP]}[event.key]; graphPanBy(delta[0],delta[1]); return; }
+    if (event.key === '+' || event.key === '=') { event.preventDefault(); graphApplyZoom(graphZoom * GRAPH_ZOOM_STEP); return; }
+    if (event.key === '-' || event.key === '_') { event.preventDefault(); graphApplyZoom(graphZoom / GRAPH_ZOOM_STEP); return; }
+    if (event.key === '0') { event.preventDefault(); graphResetView(); return; }
+  }
 });
 
 $('#audio-file').addEventListener('change', async event => {
