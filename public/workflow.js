@@ -19,8 +19,8 @@ const STATUS = {queued:'대기',pending:'대기',running:'실행 중',completed:
 STATUS.approved='승인됨';
 STATUS.changes_requested='수정 요청';
 const LIVE = new Set(['queued','pending','running','cancelling']);
-const WIDTH = 210;
-const HEIGHT = 140;
+export const WIDTH = 210;
+export const HEIGHT = 140;
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const copy = value => structuredClone(value);
 const newId = () => crypto.randomUUID();
@@ -175,6 +175,84 @@ export function addWorkflowNode(workflow, type, { id = newId(), x = 30, y = 30, 
   if(edges.length>256)throw new Error('연결은 256개까지 사용할 수 있습니다.');
   nodes.splice(anchor?nodes.indexOf(anchor)+1:successor?nodes.indexOf(successor):nodes.length,0,node);
   return {...workflow,nodes,edges};
+}
+
+export const NODE_PLACEMENT_MARGIN = 40;
+
+// Border cells of the (2*ring+1)x(2*ring+1) square centered on the origin, walked
+// clockwise from the top-left corner -- used by findWorkflowNodeSlot's phase-1 search.
+function ringOffsets(ring) {
+  const offsets = [];
+  for (let dx = -ring; dx <= ring; dx++) offsets.push([dx, -ring]);
+  for (let dy = -ring + 1; dy <= ring; dy++) offsets.push([ring, dy]);
+  for (let dx = ring - 1; dx >= -ring; dx--) offsets.push([dx, ring]);
+  for (let dy = ring - 1; dy >= -ring + 1; dy--) offsets.push([-ring, dy]);
+  return offsets;
+}
+
+// Free-slot search for a NEWLY CREATED node (add-node / scene generation). NOT used for
+// repositioning an EXISTING node -- drag/arrow-key moves use introducesNewOverlap below
+// instead, which reverts a move rather than relocating it, so direct manipulation never
+// jumps a node away from where the user actually dropped/nudged it.
+// Phase 1: starting at `desired`, expands outward ring by ring (fast; keeps the new node
+// visually near its anchor) for positions whose width x height footprint clears every
+// existing node's real footprint by >= `margin` on some axis.
+// Phase 2 (only reached if phase 1's `maxRing` rings are all blocked): an EXHAUSTIVE scan
+// of every grid-aligned point across the full [minX,maxX]x[minY,maxY] bounds at the same
+// width+margin / height+margin spacing. This is a complete search of that grid by
+// construction (plain nested loop over every column/row), so if it also finds nothing, no
+// collision-free grid-aligned slot exists in bounds -- `maxCells` just caps the loop so a
+// pathological tiny-margin/huge-bounds options object can't hang instead of returning.
+// Returns null on total exhaustion. Callers MUST treat null as "no space available" and
+// must NOT fall back to the colliding `desired` point -- leave the existing graph
+// unmutated and surface an explicit error instead.
+// Pure: only reads `nodes`, never mutates it; every saved node's existing x/y is
+// untouched regardless of outcome.
+export function findWorkflowNodeSlot(nodes, desired = {}, {width = WIDTH, height = HEIGHT, margin = NODE_PLACEMENT_MARGIN, minX = 0, minY = 0, maxX = 10000, maxY = 10000, maxRing = 64, maxCells = 20000} = {}) {
+  const obstacles = Array.isArray(nodes) ? nodes.filter(node => Number.isFinite(node?.x) && Number.isFinite(node?.y)) : [];
+  const clampX = x => Math.max(minX, Math.min(maxX, x));
+  const clampY = y => Math.max(minY, Math.min(maxY, y));
+  const free = (x, y) => obstacles.every(node => x >= node.x + width + margin || node.x >= x + width + margin || y >= node.y + height + margin || node.y >= y + height + margin);
+  const baseX = clampX(Math.round(Number(desired.x) || 0)), baseY = clampY(Math.round(Number(desired.y) || 0));
+  if (free(baseX, baseY)) return {x: baseX, y: baseY};
+  const stepX = Math.max(1, width + margin), stepY = Math.max(1, height + margin);
+  for (let ring = 1; ring <= maxRing; ring++) {
+    for (const [dx, dy] of ringOffsets(ring)) {
+      const x = clampX(baseX + dx * stepX), y = clampY(baseY + dy * stepY);
+      if (free(x, y)) return {x, y};
+    }
+  }
+  const cols = Math.floor((maxX - minX) / stepX) + 1, rows = Math.floor((maxY - minY) / stepY) + 1;
+  if (!(cols > 0 && rows > 0) || cols * rows > maxCells) return null;
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const x = clampX(minX + col * stepX), y = clampY(minY + row * stepY);
+      if (free(x, y)) return {x, y};
+    }
+  }
+  return null;
+}
+
+// True rectangle intersection (margin 0 -- real pixel overlap, distinct from
+// findWorkflowNodeSlot's comfortable placement `margin`). Touching edges do not count.
+function rectsOverlap(ax, ay, bx, by, width = WIDTH, height = HEIGHT) {
+  return ax < bx + width && bx < ax + width && ay < by + height && by < ay + height;
+}
+
+// Direct-manipulation guard for an EXISTING node's drag, arrow-key or coordinate move
+// (not used for new-node placement -- see findWorkflowNodeSlot above). Returns true only when moving
+// from (fromX,fromY) to (toX,toY) would create a brand-new full overlap with a node that
+// was NOT already overlapping at the pre-move position -- i.e. the move genuinely stacks
+// the node onto a previously-clear neighbor. A pair that was already overlapping (legacy
+// data, or mid-rearrange) stays exempt so it can keep moving/escaping freely; this never
+// blocks a node from moving relative to a node it already overlapped. Callers revert to
+// `fromX,fromY` on true rather than relocating elsewhere, so a rejected move always lands
+// back exactly where the user started it, never at some other free slot.
+// Pure; never mutates `others`.
+export function introducesNewOverlap(fromX, fromY, toX, toY, others, {width = WIDTH, height = HEIGHT} = {}) {
+  const obstacles = Array.isArray(others) ? others.filter(node => Number.isFinite(node?.x) && Number.isFinite(node?.y)) : [];
+  const before = new Set(obstacles.filter(node => rectsOverlap(fromX, fromY, node.x, node.y, width, height)).map(node => node.id));
+  return obstacles.some(node => rectsOverlap(toX, toY, node.x, node.y, width, height) && !before.has(node.id));
 }
 
 export function fitWorkflowCanvas(nodes, width, height) {
@@ -1290,6 +1368,16 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
     transform();
   }
 
+  function revealNode(node) {
+    const canvas=$('#workflow-canvas');
+    if (!canvas || !canvas.clientWidth || !canvas.clientHeight) return;
+    if (canvas.dataset.layout==='stacked') {canvas.querySelector(`[data-node-id="${CSS.escape(node.id)}"]`)?.scrollIntoView({block:'nearest',inline:'nearest'});return;}
+    const x=node.x*scale+pan.x,y=node.y*scale+pan.y;
+    const dx=Math.max(0,Math.min(x,canvas.clientWidth-WIDTH*scale))-x;
+    const dy=Math.max(0,Math.min(y,canvas.clientHeight-HEIGHT*scale))-y;
+    if (dx || dy) { pan={x:pan.x+dx,y:pan.y+dy};autoFit=false;transform(); }
+  }
+
   function zoom(factor,point) {
     const canvas=$('#workflow-canvas');
     if (!canvas) return;
@@ -1508,7 +1596,7 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
       }
       else if (name==='reload') { await load(true); paint(); }
       else if (name==='discard') { workflow=copy(saved || null);graphStashes.delete(stashKey()); selected=workflow?.nodes[0]?.id || null; dirty=false; connecting=null; needsFit=true; revision++;resetDrafts(); await Promise.all([loadRuns(),loadVersions()]); paint(); }
-      else if (name==='add-node') { const type=$('#wf-add-type')?.value,label=$('#wf-add-label')?.value || '',config=type==='generate'?generationConfig(0):defaultNodeConfig(type, models[0]?.id || DEFAULT_GENERATION_MODEL);$('#wf-add-node-dialog')?.close();const id=newId();workflow=addWorkflowNode(workflow,type,{id,x:Math.max(30,Math.round((100-pan.x)/scale)),y:Math.max(30,Math.round((120-pan.y)/scale)),label,config,afterNodeId:selected});selected=id;inspectorTab='settings';changed();paint();const dialog=$('#wf-tools-dialog'),trigger=host.querySelector('[data-wf-action="open-tools"]');if(dialog){overlayTrigger=trigger;if(!dialog.open)dialog.showModal();} }
+      else if (name==='add-node') { const type=$('#wf-add-type')?.value,label=$('#wf-add-label')?.value || '',config=type==='generate'?generationConfig(0):defaultNodeConfig(type, models[0]?.id || DEFAULT_GENERATION_MODEL);const slot=findWorkflowNodeSlot(workflow.nodes,{x:Math.max(30,Math.round((100-pan.x)/scale)),y:Math.max(30,Math.round((120-pan.y)/scale))});if(!slot)throw new Error('캔버스에 새 노드를 놓을 빈 공간이 없습니다. 기존 노드를 정리한 뒤 다시 시도하세요.');$('#wf-add-node-dialog')?.close();const id=newId();workflow=addWorkflowNode(workflow,type,{id,x:slot.x,y:slot.y,label,config,afterNodeId:selected});selected=id;inspectorTab='settings';changed();paint();revealNode(selectedNode());const dialog=$('#wf-tools-dialog'),trigger=host.querySelector('[data-wf-action="open-tools"]');if(dialog){overlayTrigger=trigger;if(!dialog.open)dialog.showModal();} }
       else if (name==='delete-node') {
         const target=deleteNodeId;
         if(!target || !workflow.nodes.some(node=>node.id===target))throw new Error('제거할 노드를 다시 선택하세요.');
@@ -1628,7 +1716,7 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
       const storyboards=workflow.nodes.filter(item=>item.type==='storyboard');
       const anchor=selectedNode()?.type==='storyboard'?selectedNode():storyboards.length===1?storyboards[0]:null;
       if(!anchor)throw new Error('생성 입력의 스토리보드 노드를 정확히 선택하세요.');
-      const id=newId();workflow=addWorkflowNode(workflow,'generate',{id,afterNodeId:anchor.id,x:anchor.x+270,y:anchor.y,config:{...generationConfig(index),sceneId:scene.id,...(targetSlotId?{slotId:targetSlotId,targetMode:'slot'}:{})}});
+      const slot=findWorkflowNodeSlot(workflow.nodes,{x:anchor.x+270,y:anchor.y});if(!slot)throw new Error('캔버스에 새 노드를 놓을 빈 공간이 없습니다. 기존 노드를 정리한 뒤 다시 시도하세요.');const id=newId();workflow=addWorkflowNode(workflow,'generate',{id,afterNodeId:anchor.id,x:slot.x,y:slot.y,config:{...generationConfig(index),sceneId:scene.id,...(targetSlotId?{slotId:targetSlotId,targetMode:'slot'}:{})}});
       node=workflow.nodes.find(item=>item.id===id);
     }
     node.config.sceneId=scene.id;node.config.sceneIndex=index;
@@ -1684,10 +1772,18 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
         changed(`${selected}:param:${key}`);
         if (selectedNode().type==='generate') invalidateGenerationEstimate();
       }
-      else if (target.dataset.wfCoordinate && selectedNode() && target.checkValidity() && target.value!=='') {selectedNode()[target.dataset.wfCoordinate]=Number(target.value);updateNodePosition(selectedNode());changed(`${selected}:coordinate:${target.dataset.wfCoordinate}`);}
     });
     listen('focusout',()=>drafts.closeGroup());
     listen('change',async event=>{
+      const target=event.target;
+      if (target.dataset.wfCoordinate) {
+        const node=selectedNode(),coord=target.dataset.wfCoordinate;
+        if (!node || mutationReason() || !target.checkValidity() || target.value==='') return;
+        const value=Number(target.value),toX=coord==='x'?value:node.x,toY=coord==='y'?value:node.y;
+        if (introducesNewOverlap(node.x,node.y,toX,toY,workflow.nodes.filter(item=>item.id!==node.id))) {target.value=node[coord];return;}
+        if (node[coord]!==value) {node[coord]=value;updateNodePosition(node);changed(`${selected}:coordinate:${coord}`);}
+        return;
+      }
       if(event.target.id==='wf-disclosure') {
         disclosure.containsSyntheticMedia=event.target.value===''?null:event.target.value==='true';invalidateGenerationEstimate();return;
       }
@@ -1727,7 +1823,7 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
       if(header&&(mutationReason() || saving || pending)){selectNode(header.dataset.id);return;}
       if (header && canvas.dataset.layout==='stacked') return;
       if (header) {selectNode(header.dataset.id);const node=selectedNode();drag={type:'node',id:node.id,x:event.clientX,y:event.clientY,nodeX:node.x,nodeY:node.y,moved:false};}
-      else if (!event.target.closest('.wf-node')) drag={type:'pan',x:event.clientX,y:event.clientY,panX:pan.x,panY:pan.y};
+      else if (!event.target.closest('.wf-node')) drag={type:'pan',x:event.clientX,y:event.clientY,panX:pan.x,panY:pan.y,autoFit};
       else return;
       host.setPointerCapture(event.pointerId);
       canvas.classList.add('dragging');
@@ -1737,7 +1833,7 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
       if (drag.type==='pan') {autoFit=false;pan={x:drag.panX+event.clientX-drag.x,y:drag.panY+event.clientY-drag.y};transform();}
       else {if(mutationReason() || saving || pending)return;const node=workflow.nodes.find(item=>item.id===drag.id);if(!node)return;node.x=Math.max(0,Math.min(10000,drag.nodeX+(event.clientX-drag.x)/scale));node.y=Math.max(0,Math.min(10000,drag.nodeY+(event.clientY-drag.y)/scale));drag.moved=true;updateNodePosition(node);}
     });
-    const finishDrag=()=>{if(drag?.type==='node'&&drag.moved){const node=workflow.nodes.find(item=>item.id===drag.id);if(node){if(mutationReason() || saving || pending){node.x=drag.nodeX;node.y=drag.nodeY;updateNodePosition(node);}else{node.x=Math.round(node.x/10)*10;node.y=Math.round(node.y/10)*10;updateNodePosition(node);changed();}}}drag=null;$('#workflow-canvas')?.classList.remove('dragging');};
+    const finishDrag=event=>{if(drag?.type==='node'&&drag.moved){const node=workflow.nodes.find(item=>item.id===drag.id);if(node){if(event.type==='pointercancel' || mutationReason() || saving || pending){node.x=drag.nodeX;node.y=drag.nodeY;updateNodePosition(node);}else{const toX=Math.round(node.x/10)*10,toY=Math.round(node.y/10)*10;if(introducesNewOverlap(drag.nodeX,drag.nodeY,toX,toY,workflow.nodes.filter(item=>item.id!==node.id))){node.x=drag.nodeX;node.y=drag.nodeY;updateNodePosition(node);}else{node.x=toX;node.y=toY;updateNodePosition(node);changed();}}}}else if(drag?.type==='pan'&&event.type==='pointercancel'){pan={x:drag.panX,y:drag.panY};autoFit=drag.autoFit;transform();}drag=null;$('#workflow-canvas')?.classList.remove('dragging');};
     listen('pointerup',finishDrag);
     listen('pointercancel',finishDrag);
     listen('keydown',event=>{
@@ -1751,7 +1847,7 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
       if (!mutationReason() && (event.ctrlKey || event.metaKey) && !event.target.closest('input,textarea,select,[contenteditable="true"]') && ['z','y'].includes(event.key.toLowerCase())) {event.preventDefault();undoDraft(event.shiftKey || event.key.toLowerCase()==='y');return;}
       if (event.key==='Escape') {connecting=null;if($('#wf-connect-hint'))$('#wf-connect-hint').textContent='연결 선택 취소됨 · 출력 → 입력으로 다시 연결하세요.';}
       const header=event.target.closest('.wf-node-header');
-      if (!mutationReason() && !saving && !pending && header && ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) {event.preventDefault();const node=workflow.nodes.find(item=>item.id===header.dataset.id);node.x=Math.max(0,Math.min(10000,node.x+(event.key==='ArrowLeft'?-10:event.key==='ArrowRight'?10:0)));node.y=Math.max(0,Math.min(10000,node.y+(event.key==='ArrowUp'?-10:event.key==='ArrowDown'?10:0)));updateNodePosition(node);changed();}
+      if (!mutationReason() && !saving && !pending && header && ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) {event.preventDefault();const node=workflow.nodes.find(item=>item.id===header.dataset.id);const fromX=node.x,fromY=node.y,toX=Math.max(0,Math.min(10000,node.x+(event.key==='ArrowLeft'?-10:event.key==='ArrowRight'?10:0))),toY=Math.max(0,Math.min(10000,node.y+(event.key==='ArrowUp'?-10:event.key==='ArrowDown'?10:0)));if(!introducesNewOverlap(fromX,fromY,toX,toY,workflow.nodes.filter(item=>item.id!==node.id))){node.x=toX;node.y=toY;updateNodePosition(node);changed();}}
     });
     if(workflow?.id && (!project || owns(workflow))) {
       const mountedHost=host,epoch=pollEpoch,context=contextEpoch,targetId=workflow.id,targetEpisodeId=episodeId;
