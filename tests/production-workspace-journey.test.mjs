@@ -107,6 +107,123 @@ async function screenshot(page, name, target) {
   for (const width of [1600, 1024, 375, 320]) { await page.setViewportSize({ width, height: width >= 1024 ? 1120 : 844 }); if (target) await target.scrollIntoViewIfNeeded(); const geometry = await page.evaluate(() => ({ client: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth, reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches })); const path = join(dir, `${name}-${width}.png`); const bytes = await page.screenshot({ path, fullPage: true, animations: 'disabled' }); receipt.screenshots.push({ name, width, path: path.slice(root.length + 1).replaceAll('\\', '/'), sha256: hash(bytes), geometry }); assert.equal(geometry.reducedMotion, true); assert.ok(geometry.scroll <= geometry.client, `${name} overflow ${width}: ${JSON.stringify(geometry)}`); }
   await page.setViewportSize({ width: 1600, height: 1120 });
 }
+// Chromium's single-pass fullPage capture rasterizes the whole document into one GPU
+// texture (node_modules/playwright-core/lib/server/screenshotter.js: fullPage branch
+// sets documentRect to the full page size and passes captureBeyondViewport:true). Past
+// the GPU's max texture height (measured ~16384px on this host; may differ elsewhere)
+// the compositor silently wraps and repeats earlier rows instead of erroring, so the
+// resulting PNG decodes fine but is corrupted -- confirmed in-repo: 375px/320px B-large
+// content after y=16384 repeats the image from y=0 exactly (docs/verification.md). The
+// 128-node mobile stacked grid (~28000px tall) is the only screenshot() call site that
+// reaches that boundary; the other seven call sites target short open dialogs and stay
+// on the untouched native fullPage path via the unmodified screenshot() above.
+//
+// This helper leaves screenshot() and all its other callers byte-for-byte unchanged.
+// Per width it measures the real scrollHeight: under a conservative safety margin it
+// takes the exact same native fullPage screenshot as before (byte-identical call); over
+// the margin it scrolls the real document in viewport-height bands, takes a plain
+// (non-fullPage) clipped page.screenshot() per band -- each one bounded by one viewport
+// height, far below the GPU texture limit, so the wraparound bug cannot trigger inside
+// a single capture -- then losslessly vstacks the PNG tiles with the same FFmpeg this
+// suite already depends on (e.g. line 213). Every tile is geometrically verified, not
+// just arithmetically assumed: landed.top can never exceed target (Chromium clamps
+// scrollTo only downward, never past the requested position), each tile's crop height
+// must be strictly positive, each tile must make strictly forward progress, and the
+// final covered height must land exactly on documentHeight -- no gap, no overlap, no
+// silently dropped or duplicated rows. A real position:fixed/sticky overlay still
+// visible when a tile would be captured renders at the same screen position in every
+// band, which would bake a false duplicate into the stitched evidence; this is never
+// papered over with DOM mutation or hiding -- the helper either waits (pure
+// observation of real, already-running app state, e.g. a toast's own auto-hide timer)
+// or fails closed with a descriptive error identifying the offending element.
+const MAX_SINGLE_CAPTURE_HEIGHT = 15000; // safety margin under Chromium's measured ~16384px GPU texture-height limit
+async function waitForNoVisibleOverlay(page) {
+  // Pure observation of real page state, never DOM mutation or hiding: waits for any
+  // currently-running app timer (e.g. the workflow-save toast's 4500/9000ms auto-hide,
+  // public/app.js) to clear naturally before tiling begins. Scans for any element
+  // whose computed position is fixed or sticky, is actually rendered (not
+  // display:none/visibility:hidden, non-zero rect), and intersects the viewport
+  // vertically -- exactly the class of element that would render at the same screen
+  // position in every scrolled capture band. If it does not clear in time this fails
+  // closed (throws) rather than silently tiling over it.
+  await page.waitForFunction(() => [...document.querySelectorAll('*')].every(el => {
+    const style = getComputedStyle(el);
+    if (style.position !== 'fixed' && style.position !== 'sticky') return true;
+    if (style.visibility === 'hidden' || style.display === 'none') return true;
+    const rect = el.getBoundingClientRect();
+    return !(rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight);
+  }), undefined, { timeout: 9500 });
+}
+async function screenshotBandedMobile(page, name) {
+  const dir = join(root, 'artifacts/production-workspace-implementation/journey-evidence'); await mkdir(dir, { recursive: true });
+  for (const width of [1600, 1024, 375, 320]) {
+    await page.setViewportSize({ width, height: width >= 1024 ? 1120 : 844 });
+    const geometry = await page.evaluate(() => ({ client: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth, documentHeight: document.documentElement.scrollHeight, reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches }));
+    const path = join(dir, `${name}-${width}.png`);
+    let bytes, tiles;
+    if (geometry.documentHeight <= MAX_SINGLE_CAPTURE_HEIGHT) {
+      bytes = await page.screenshot({ path, fullPage: true, animations: 'disabled' });
+    } else {
+      await waitForNoVisibleOverlay(page);
+      const tileDir = await mkdtemp(join(tmpdir(), 'frameforge-mobile-tile-'));
+      try {
+        const tilePaths = [];
+        let covered = 0;
+        while (covered < geometry.documentHeight) {
+          const target = covered;
+          const landed = await page.evaluate(top => {
+            window.scrollTo(0, top);
+            return new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => {
+              const offenders = [...document.querySelectorAll('*')].filter(el => {
+                const style = getComputedStyle(el);
+                if (style.position !== 'fixed' && style.position !== 'sticky') return false;
+                if (style.visibility === 'hidden' || style.display === 'none') return false;
+                const rect = el.getBoundingClientRect();
+                return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight;
+              }).map(el => el.tagName.toLowerCase() + (el.id ? `#${el.id}` : '') + (el.className ? `.${String(el.className).trim().replace(/\s+/g, '.')}` : ''));
+              resolve({ top: window.scrollY, clientHeight: document.documentElement.clientHeight, scrollHeight: document.documentElement.scrollHeight, offenders });
+            })));
+          }, target);
+          // Fail closed on any real fixed/sticky overlay still visible during capture
+          // -- never hidden or mutated, just refused.
+          assert.deepEqual(landed.offenders, [], `${name} ${width}px tile at scrollY=${landed.top}: visible fixed/sticky overlay would duplicate across bands: ${landed.offenders.join(', ')}`);
+          // scrollHeight must still match the settled measurement taken for this width
+          // -- a mid-capture layout shift would otherwise silently drop or misplace rows.
+          assert.equal(landed.scrollHeight, geometry.documentHeight, `${name} ${width}px: scrollHeight changed mid-capture (was ${geometry.documentHeight}, now ${landed.scrollHeight}) at scrollY=${landed.top}`);
+          // Chromium's scrollTo clamps only downward, never past the requested target.
+          assert.ok(landed.top <= target, `${name} ${width}px: scrollTo overshot (target=${target}, landed=${landed.top})`);
+          const cropTop = target - landed.top;
+          const tileHeight = landed.clientHeight - cropTop;
+          assert.ok(tileHeight > 0, `${name} ${width}px: non-positive tile height ${tileHeight} at scrollY=${landed.top}`);
+          // Immediately-before-capture re-check: confirm neither scrollY nor
+          // scrollHeight shifted between the settle read above and the capture that is
+          // about to happen, so the clip region about to be captured is still accurate.
+          const precapture = await page.evaluate(() => ({ top: window.scrollY, scrollHeight: document.documentElement.scrollHeight }));
+          assert.equal(precapture.top, landed.top, `${name} ${width}px: scrollY drifted immediately before capture (expected ${landed.top}, now ${precapture.top})`);
+          assert.equal(precapture.scrollHeight, geometry.documentHeight, `${name} ${width}px: scrollHeight drifted immediately before capture (expected ${geometry.documentHeight}, now ${precapture.scrollHeight})`);
+          const tilePath = join(tileDir, `tile-${String(tilePaths.length).padStart(4, '0')}.png`);
+          await page.screenshot({ path: tilePath, clip: { x: 0, y: cropTop, width, height: tileHeight }, animations: 'disabled' });
+          tilePaths.push(tilePath);
+          const nextCovered = landed.top + landed.clientHeight;
+          assert.ok(nextCovered > covered, `${name} ${width}px: tiling made no progress at scrollY=${landed.top} (stalled, covered=${covered})`);
+          covered = nextCovered;
+        }
+        assert.equal(covered, geometry.documentHeight, `${name} ${width}px: tiling finished at covered=${covered}, expected exactly documentHeight=${geometry.documentHeight}`);
+        const stitched = join(tileDir, 'stitched.png');
+        await execute(process.env.FFMPEG_PATH || 'ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', ...tilePaths.flatMap(tile => ['-i', tile]), '-filter_complex', `vstack=inputs=${tilePaths.length}`, '-frames:v', '1', stitched]);
+        bytes = await readFile(stitched);
+        await writeFile(path, bytes);
+        tiles = tilePaths.length;
+      } finally {
+        await rm(tileDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+      }
+    }
+    receipt.screenshots.push({ name, width, path: path.slice(root.length + 1).replaceAll('\\', '/'), sha256: hash(bytes), geometry, ...(tiles ? { tiles } : {}) });
+    assert.equal(geometry.reducedMotion, true);
+    assert.ok(geometry.scroll <= geometry.client, `${name} overflow ${width}: ${JSON.stringify(geometry)}`);
+  }
+  await page.setViewportSize({ width: 1600, height: 1120 });
+}
 async function terminal(f, workflowId, id) { for (let i = 0; i < 1200; i++) { const run = (await f.api(`/api/workflows/${workflowId}/runs`)).find(r => r.id === id); if (['awaiting_review', 'approved', 'completed', 'failed', 'cancelled'].includes(run?.status)) return run; await new Promise(done => setTimeout(done, 50)); } assert.fail(`run ${id} did not settle`); }
 // UIFocusFix's publish-stage-overlay fix (2026-10-28): opening the stage overlay on a
 // 'publish' node now fires a read-only POST /plan to get the server's authoritative
@@ -177,7 +294,7 @@ scenario('128-node/256-edge owned canvas fits, pans, inspects and saves the last
     const history = document.querySelector(`#wf-history [data-wf-action="history-version"][data-version="${version}"]`);
     return selected?.value === id && status?.textContent?.trim() === `✓ 버전 ${version} · 저장됨` && save?.disabled === true && history?.isConnected === true && history.querySelector('strong')?.textContent?.trim() === `v${version} · 현재`;
   }, { id: saved.id, version: saved.version });
-  await screenshot(f.page, 'B-large');
+  await screenshotBandedMobile(f.page, 'B-large');
 });
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64');
 function commonsTransport(assets, calls) { return async (raw, options = {}) => { const url = new URL(raw); calls.push(url.href); assert.match(new Headers(options.headers).get('user-agent') || '', /FrameForge-Fixture/); if (url.origin === 'https://commons.wikimedia.org' && url.pathname === '/w/api.php') { const id = Number(url.searchParams.get('pageids')), kind = /video/.test(url.searchParams.get('gsrsearch') || '') ? 'video' : 'image'; return Response.json({ batchcomplete: true, query: { pages: assets.filter(a => id ? a.pageid === id : a.kind === kind).map(a => ({ pageid: a.pageid, ns: 6, title: `File:${a.name}`, imageinfo: [{ url: `https://upload.wikimedia.org/wikipedia/commons/a/ab/${a.name}`, descriptionurl: `https://commons.wikimedia.org/wiki/File:${a.name}`, mime: a.mime, mediatype: a.kind === 'video' ? 'VIDEO' : 'BITMAP', size: a.bytes.length, width: 320, height: 180, sha1: createHash('sha1').update(a.bytes).digest('hex'), timestamp: '2026-01-01T00:00:00Z', extmetadata: { Artist: { value: a.author }, Attribution: { value: a.author }, LicenseShortName: { value: 'CC BY 4.0' }, LicenseUrl: { value: 'https://creativecommons.org/licenses/by/4.0/' }, AttributionRequired: { value: 'true' } } }] })) } }); } const a = assets.find(a => url.href === `https://upload.wikimedia.org/wikipedia/commons/a/ab/${a.name}`); assert.ok(a, `unexpected Commons transport: ${url.href}`); return new Response(a.bytes, { headers: { 'content-type': a.mime } }); }; }
