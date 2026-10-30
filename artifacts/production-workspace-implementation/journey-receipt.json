@@ -1,7 +1,7 @@
 {
   "schema": "frameforge-real-journey/v2",
   "command": "node --test tests/production-workspace-journey.test.mjs",
-  "startedAt": "2026-10-26T11:43:40.924Z",
+  "startedAt": "2026-10-30T12:24:34.167Z",
   "scenarios": [
     {
       "name": "two channels own independent copied graphs, histories and versions with no execution on copy",
@@ -111,7 +111,7 @@
       "name": "B",
       "width": 1600,
       "path": "artifacts/production-workspace-implementation/journey-evidence/B-1600.png",
-      "sha256": "84279a1b2d3d7b98b786a4a3a2eca9e742ee01c93f25102f9b7d13c32687ad2b",
+      "sha256": "2fe5ec9eef92f1c6dabe96ab8787dddbc638df8caa50de1cb57ed1e2815400cc",
       "geometry": {
         "client": 1600,
         "scroll": 1600,
@@ -122,7 +122,7 @@
       "name": "B",
       "width": 1024,
       "path": "artifacts/production-workspace-implementation/journey-evidence/B-1024.png",
-      "sha256": "89ce7a5619049b231d3ef30e31e3d56f59e58cbd347f904f7a7c539f92f95599",
+      "sha256": "149d045ee40d8700ae3d7292a673a01b2734de801ab820fee613be99a43bfbaf",
       "geometry": {
         "client": 1024,
         "scroll": 1024,
@@ -133,7 +133,7 @@
       "name": "B",
       "width": 375,
       "path": "artifacts/production-workspace-implementation/journey-evidence/B-375.png",
-      "sha256": "3fc7631c0dc772de1464a857fef92ec59eb7927a734ac8578d44721929478f73",
+      "sha256": "2727754d0a83a5faac5d1408424b98f1f53935ae5b5057a8f8b8321f946eed06",
       "geometry": {
         "client": 375,
         "scroll": 375,
@@ -144,7 +144,7 @@
       "name": "B",
       "width": 320,
       "path": "artifacts/production-workspace-implementation/journey-evidence/B-320.png",
-      "sha256": "4935a0209bd3fc910ee00fbbbb07f843e7db9a26e461a61ece3521ebd8fcfeb6",
+      "sha256": "b02eb83a272827ee3b7abdb4649e32be57a10fa20f2a1e8e323020d1609060b2",
       "geometry": {
         "client": 320,
         "scroll": 320,
@@ -155,7 +155,7 @@
       "name": "A",
       "width": 1600,
       "path": "artifacts/production-workspace-implementation/journey-evidence/A-1600.png",
-      "sha256": "18ffbb52321c2b30bac3ed82635f3b8d5e4e4b85572b3c7f47d491943388e956",
+      "sha256": "2716019416ed3f919dfa5f9835b5721011f27760d7d6fde403617f0e3697402b",
       "geometry": {
         "client": 1600,
         "scroll": 1600,
@@ -166,7 +166,7 @@
       "name": "A",
       "width": 1024,
       "path": "artifacts/production-workspace-implementation/journey-evidence/A-1024.png",
-      "sha256": "fa4ecd33df226c80ae9096d2cf67ca7c0ea8a46f74ba18528be89239a14d70b8",
+      "sha256": "fb2d86558e0f3e821950177fe6349a593fde7a26a8d9dd9a99bb2e9d1c78cf0c",
       "geometry": {
         "client": 1024,
         "scroll": 1024,
@@ -177,7 +177,7 @@
       "name": "A",
       "width": 375,
       "path": "artifacts/production-workspace-implementation/journey-evidence/A-375.png",
-      "sha256": "5cbdedf7aa9301b66c45b8ae72d969f12e833073ef3a1ef937098afda90439f9",
+      "sha256": "b41c7895693035ed2092c1f7c24bf4b38911653cec2d0cd1fa2eff4d49896f07",
       "geometry": {
         "client": 375,
         "scroll": 375,
@@ -188,7 +188,7 @@
       "name": "A",
       "width": 320,
       "path": "artifacts/production-workspace-implementation/journey-evidence/A-320.png",
-      "sha256": "d3f90a4814cde2adc65ef0ac72ee1669a27ad967ffcfbe2ff048d449d103b1d1",
+      "sha256": "a368d2d7c0f0fc3a2da0448872d51c4cce29ace4f2bdc68961932068c0b0f4c8",
       "geometry": {
         "client": 320,
         "scroll": 320,
@@ -199,10 +199,11 @@
       "name": "B-large",
       "width": 1600,
       "path": "artifacts/production-workspace-implementation/journey-evidence/B-large-1600.png",
-      "sha256": "056580fc1e1e65c9f0f04895865062eda5e0a3a2e1f93bef5add051eb6fc1184",
+      "sha256": "899f77035a726e89844aeafeae0d59bf5ed2b36d1ad3f613188309115d9b132f",
       "geometry": {
         "client": 1600,
         "scroll": 1600,
+        "documentHeight": 1832,
         "reducedMotion": true
       }
     },
@@ -210,10 +211,11 @@
       "name": "B-large",
       "width": 1024,
       "path": "artifacts/production-workspace-implementation/journey-evidence/B-large-1024.png",
-      "sha256": "c1f867168c09a4d09161248b28a6f9b6205bf642f3945c2a34ae03df4e2c8d37",
+      "sha256": "aff5ba1af3ed0cc699043de557fd339938dc83d5cd5dc2b4b99db6e34fb82d25",
       "geometry": {
         "client": 1024,
         "scroll": 1024,
+        "documentHeight": 2027,
         "reducedMotion": true
       }
     },
@@ -221,29 +223,33 @@
       "name": "B-large",
       "width": 375,
       "path": "artifacts/production-workspace-implementation/journey-evidence/B-large-375.png",
-      "sha256": "17f28f53928db7a597b61fa20a9b489db680aa0cdda1d919f46dd4812847786b",
+      "sha256": "503750c2c3cdade6185a7eb3cd5138b55ff6d4729e3976f2696e753beb734422",
       "geometry": {
         "client": 375,
         "scroll": 375,
+        "documentHeight": 28251,
         "reducedMotion": true
-      }
+      },
+      "tiles": 34
     },
     {
       "name": "B-large",
       "width": 320,
       "path": "artifacts/production-workspace-implementation/journey-evidence/B-large-320.png",
-      "sha256": "7b74cfc5b1af5bf57d5f6ddd402c502d4dbc693b384332665d1eb84cf65a7f36",
+      "sha256": "f87a71c22d3bc18735060d0237466ae3fadb3c801695d2b5fb7dce21f22c8fe5",
       "geometry": {
         "client": 320,
         "scroll": 320,
+        "documentHeight": 28435,
         "reducedMotion": true
-      }
+      },
+      "tiles": 34
     },
     {
       "name": "source-initial",
       "width": 1600,
       "path": "artifacts/production-workspace-implementation/journey-evidence/source-initial-1600.png",
-      "sha256": "9dbb0892f5469b13d81f472ba4d9a06a6e4cd66d7cbca505a8701bf0bdb22fb7",
+      "sha256": "30832251dd188a7b6e1381ed2f79264125a75569812af4daf46fbb6382ac7766",
       "geometry": {
         "client": 1600,
         "scroll": 1600,
@@ -254,7 +260,7 @@
       "name": "source-initial",
       "width": 1024,
       "path": "artifacts/production-workspace-implementation/journey-evidence/source-initial-1024.png",
-      "sha256": "24961c0b2bffb237260f20bfc8d386ea5cc6ed20bdc41f21c74de2a1bf87f265",
+      "sha256": "472eb7552927ded12ca246135903736f74241d4bac11d853b5a17045e0f55efb",
       "geometry": {
         "client": 1024,
         "scroll": 1024,
@@ -265,7 +271,7 @@
       "name": "source-initial",
       "width": 375,
       "path": "artifacts/production-workspace-implementation/journey-evidence/source-initial-375.png",
-      "sha256": "854d213dd78c7ccd0a37267d91a7ecd47f574d4b944cce0d5bffd4930d31e48f",
+      "sha256": "71eafb13de590e25201915fb95675383fcb1ea644096c167abe17001e24f9f56",
       "geometry": {
         "client": 375,
         "scroll": 375,
@@ -276,7 +282,7 @@
       "name": "source-initial",
       "width": 320,
       "path": "artifacts/production-workspace-implementation/journey-evidence/source-initial-320.png",
-      "sha256": "b564d4e4bfb3f11a991d8c8d8faf94711e09214f47834c668f6786886b734899",
+      "sha256": "84f9b77e600b7bcacc64968230b0840e89c2b843c101c5fa35ed8bc3c911c739",
       "geometry": {
         "client": 320,
         "scroll": 320,
@@ -287,7 +293,7 @@
       "name": "source",
       "width": 1600,
       "path": "artifacts/production-workspace-implementation/journey-evidence/source-1600.png",
-      "sha256": "fdd3a67a24e04d5a47b16cda8925e6738fde306e9fb60ad324c476576f1ab1a3",
+      "sha256": "a2e3d857b8f9f791500b876bf0babf434b1316cbc3f1a48f3bf44225751d7762",
       "geometry": {
         "client": 1600,
         "scroll": 1600,
@@ -298,7 +304,7 @@
       "name": "source",
       "width": 1024,
       "path": "artifacts/production-workspace-implementation/journey-evidence/source-1024.png",
-      "sha256": "94db41bc83507d71822459d31c3e3aca6d9a6ee5d2cb718e8a086ce0635abd5a",
+      "sha256": "333c9aa4345a79d4ff93ec32bdf594cd1f5b7afc5ec3511832befa8e5e9829ed",
       "geometry": {
         "client": 1024,
         "scroll": 1024,
@@ -309,7 +315,7 @@
       "name": "source",
       "width": 375,
       "path": "artifacts/production-workspace-implementation/journey-evidence/source-375.png",
-      "sha256": "64665776719ed5772a6f1dc97ed398642e08b6d2eed111c00f2dab671ede5fa9",
+      "sha256": "6994b039ce4c8c97b5a265a3681f463328e9c86cf24eafcdc4a2921abb332dc0",
       "geometry": {
         "client": 375,
         "scroll": 375,
@@ -320,7 +326,7 @@
       "name": "source",
       "width": 320,
       "path": "artifacts/production-workspace-implementation/journey-evidence/source-320.png",
-      "sha256": "4deed4361d8932009bb39f40661cb4ed593e15c31e62b7c5acdb479be6ecc4f1",
+      "sha256": "34cc197865ef82f59db302339e1905e76af7d9487f7bcefb5ec0d5baba6fe79b",
       "geometry": {
         "client": 320,
         "scroll": 320,
@@ -331,7 +337,7 @@
       "name": "delivery",
       "width": 1600,
       "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-1600.png",
-      "sha256": "8049070cd5f313072c4833f92be6c690b5735af46f98d1b700bdbdca0fd56d12",
+      "sha256": "56710f9b0c9d7da89b47e12373cbe897ec742929ecfcc4772930d402f5409192",
       "geometry": {
         "client": 1600,
         "scroll": 1600,
@@ -342,7 +348,7 @@
       "name": "delivery",
       "width": 1024,
       "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-1024.png",
-      "sha256": "e074a78a0a3b57100f54b1b12c896b0f9d9d4fa161435647e6f5bda1048e81c2",
+      "sha256": "d964067695dd9b49480789124fdb09320d1bacb3322ecbb05c049c432717e755",
       "geometry": {
         "client": 1024,
         "scroll": 1024,
@@ -353,7 +359,7 @@
       "name": "delivery",
       "width": 375,
       "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-375.png",
-      "sha256": "ecd92cadbfd404c7876159e91e737ff36d7a5d6b0f95a5a9641360a09799ed21",
+      "sha256": "cf92042465fed6d9ec1efa0df45c9b6c55b840220b148b49bfcc8bcb8e4a9afe",
       "geometry": {
         "client": 375,
         "scroll": 375,
@@ -364,7 +370,7 @@
       "name": "delivery",
       "width": 320,
       "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-320.png",
-      "sha256": "8a418bbba5a94ce3130638b3e8d44079578f26fc848c147d1cd07e58220278b5",
+      "sha256": "f683559b48ed7a0a5b9093ddb7eeadadbb24532bdfab39e194b3afdcca066da3",
       "geometry": {
         "client": 320,
         "scroll": 320,
@@ -375,7 +381,7 @@
       "name": "delivery-preview",
       "width": 1600,
       "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-1600.png",
-      "sha256": "8fd3030556ebf7f7bafb7f0a34d40213916c76254d435da575dcd76ea0d93222",
+      "sha256": "cd87cb45bcc4a53b743acdfbd9e7b5b82edfb20e3b7dc8feb9d0c8e83faf5391",
       "geometry": {
         "client": 1600,
         "scroll": 1600,
@@ -386,7 +392,7 @@
       "name": "delivery-preview",
       "width": 1024,
       "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-1024.png",
-      "sha256": "0fee3a9582291d02fc5bb670b021d3f3b29577ed543ed087ac7b1b41c890f6ce",
+      "sha256": "11c7fb07aeb9f3ad542621dc3e906fdd351bee338f4993e53492ae5ee37de8db",
       "geometry": {
         "client": 1024,
         "scroll": 1024,
@@ -397,7 +403,7 @@
       "name": "delivery-preview",
       "width": 375,
       "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-375.png",
-      "sha256": "b08f4ac9c6b87d6133b4979de3cf781c1a3ecd814c1d35c9e9f6da05f11324ea",
+      "sha256": "6bfe92f43a139afbc38373c86982b2a1edfbcc20e1955db2bcdd471d35662595",
       "geometry": {
         "client": 375,
         "scroll": 375,
@@ -408,7 +414,7 @@
       "name": "delivery-preview",
       "width": 320,
       "path": "artifacts/production-workspace-implementation/journey-evidence/delivery-preview-320.png",
-      "sha256": "36704f30b5f56ad2ee9ba2d94de5265208b7453b49de3e23a93ae9db818ff9a9",
+      "sha256": "2cf3174900e88c02aca534a8bae43c42f5b0a1c8a5e2faac116892b651f06a32",
       "geometry": {
         "client": 320,
         "scroll": 320,
@@ -419,7 +425,7 @@
       "name": "generation-consent",
       "width": 1600,
       "path": "artifacts/production-workspace-implementation/journey-evidence/generation-consent-1600.png",
-      "sha256": "1ad84949df3d5dcb6dabe7522155834d0ff819a1cc32c361ad8e926c4cade3b5",
+      "sha256": "2638ec3cc20d6f1ae55f4102d38569396740daf8252ae7f3a406ac8614cdd80b",
       "geometry": {
         "client": 1600,
         "scroll": 1600,
@@ -430,7 +436,7 @@
       "name": "generation-consent",
       "width": 1024,
       "path": "artifacts/production-workspace-implementation/journey-evidence/generation-consent-1024.png",
-      "sha256": "58ace53e401fc8d2bf5e572e93526871717a7af216fc8bd60d37e5a4dac1fca9",
+      "sha256": "20fea3e789c655565961532c834fb188f7ff5a6b684b6bd00d99b406a4a35056",
       "geometry": {
         "client": 1024,
         "scroll": 1024,
@@ -441,7 +447,7 @@
       "name": "generation-consent",
       "width": 375,
       "path": "artifacts/production-workspace-implementation/journey-evidence/generation-consent-375.png",
-      "sha256": "04349c72ff17832887b3e0e1e50c04883030c1115f69ed8b626ebec4eef2b94b",
+      "sha256": "f04deef66eec100b35522d4c99092f6bfe9d3f37d4d44244f6820cc84bbc93c3",
       "geometry": {
         "client": 375,
         "scroll": 375,
@@ -452,7 +458,7 @@
       "name": "generation-consent",
       "width": 320,
       "path": "artifacts/production-workspace-implementation/journey-evidence/generation-consent-320.png",
-      "sha256": "3713c59615e2c8ddae1e069585454faf2ec53ee682994a65c9aec3e6c31395f6",
+      "sha256": "e686ef2ddaf244725a1191c4e48b8ccf9ef9351d7ecafcd12094ed5fc5f537cc",
       "geometry": {
         "client": 320,
         "scroll": 320,
@@ -463,7 +469,7 @@
       "name": "ten-role-quote",
       "width": 1600,
       "path": "artifacts/production-workspace-implementation/journey-evidence/ten-role-quote-1600.png",
-      "sha256": "aab9bb296218e4ac8ff8849ab0b576ce8e2153be35b0c522e5b16d2ceb96845a",
+      "sha256": "245983ad907cd1daba2807cde1e7055b9197964042751e2ff8e7b58b95b1dca5",
       "geometry": {
         "client": 1600,
         "scroll": 1600,
@@ -474,7 +480,7 @@
       "name": "ten-role-quote",
       "width": 1024,
       "path": "artifacts/production-workspace-implementation/journey-evidence/ten-role-quote-1024.png",
-      "sha256": "4daea7214757bd5879a7147b096480162f7b605c7e0302c45e7e3bfae4bc5cfc",
+      "sha256": "071aee3cfef7b03805cb4520d56cdc8a5e97ed27eaaafdf5136c9294c6aaa0d6",
       "geometry": {
         "client": 1024,
         "scroll": 1024,
@@ -485,7 +491,7 @@
       "name": "ten-role-quote",
       "width": 375,
       "path": "artifacts/production-workspace-implementation/journey-evidence/ten-role-quote-375.png",
-      "sha256": "c5a22ec41ab0f0e569e7cc5c8ba09b8b6bed4454568c113f566cdabe91d54c01",
+      "sha256": "90df9f3d56e22cb47ab01738292395a5a65bec29eecf90b8653f127727454e17",
       "geometry": {
         "client": 375,
         "scroll": 375,
@@ -496,7 +502,7 @@
       "name": "ten-role-quote",
       "width": 320,
       "path": "artifacts/production-workspace-implementation/journey-evidence/ten-role-quote-320.png",
-      "sha256": "2ddfa70a79b1d40941e8b84949de6e42750748007ce60dc02bd7bf72d05a1cf2",
+      "sha256": "9ff75235acd4796289670eb5d1d0921c1d38ff516d1eacc7fc3ddf17a04dba83",
       "geometry": {
         "client": 320,
         "scroll": 320,
@@ -507,7 +513,7 @@
       "name": "sequential-readiness",
       "width": 1600,
       "path": "artifacts/production-workspace-implementation/journey-evidence/sequential-readiness-1600.png",
-      "sha256": "b2e4377f0bbd3bff95eaec084eaa749ab038ff6ec11e3eb668441a9caba4f4b4",
+      "sha256": "6098ca4f2386ce261490214f87b8ce1f8475961e8ec53e049466fbec251856cc",
       "geometry": {
         "client": 1600,
         "scroll": 1600,
@@ -518,7 +524,7 @@
       "name": "sequential-readiness",
       "width": 1024,
       "path": "artifacts/production-workspace-implementation/journey-evidence/sequential-readiness-1024.png",
-      "sha256": "433a2c4c9e66718847f3b0b1d1c36be7df6c0575d8e7f794e9920b06d682118a",
+      "sha256": "54f9359bd56f4ec594cb8f20b5510ef49b130ec233e678113dfd9dd73d63301d",
       "geometry": {
         "client": 1024,
         "scroll": 1024,
@@ -529,7 +535,7 @@
       "name": "sequential-readiness",
       "width": 375,
       "path": "artifacts/production-workspace-implementation/journey-evidence/sequential-readiness-375.png",
-      "sha256": "dbb72786f735c04d116841c837b33410a70d33dfce32c8e6941cab126075f2a3",
+      "sha256": "1652bfa1be4108e6463c8298713b8de3cf3d12a684924ffcca7d68994c5fee33",
       "geometry": {
         "client": 375,
         "scroll": 375,
@@ -540,7 +546,7 @@
       "name": "sequential-readiness",
       "width": 320,
       "path": "artifacts/production-workspace-implementation/journey-evidence/sequential-readiness-320.png",
-      "sha256": "43cc1feb34e67b9bd143d976950ddb108c5a8871ef1467d24b16227cc0e2eba7",
+      "sha256": "e2a758eb61eb00eb61faa6cbe9763c0466603c40311eb367b0f2e53b43f9a25c",
       "geometry": {
         "client": 320,
         "scroll": 320,
@@ -550,22 +556,22 @@
   ],
   "network": [
     {
-      "base": "http://127.0.0.1:64370",
+      "base": "http://127.0.0.1:57472",
       "writes": [],
       "external": [],
       "errors": []
     },
     {
-      "base": "http://127.0.0.1:64397",
+      "base": "http://127.0.0.1:57549",
       "writes": [
         {
           "method": "PUT",
-          "path": "/api/episodes/945243f4-5b95-4e18-bded-0c1d4aaa0b0f",
-          "body": "{\"title\":\"Project A\",\"topic\":\"Keep story A\",\"status\":\"draft\",\"format\":\"9:16\",\"scenes\":[{\"id\":\"26db1032-3d0b-496c-9faf-ac80eeaaba0d\",\"title\":\"Unsaved A scene\",\"text\":\"Original source-backed card\",\"duration\":1,\"background\":\"#282544\",\"kind\":\"title\",\"layout\":\"center\",\"trimStart\":0,\"audioVolume\":1,\"narration\":\"\"}],\"notes\":\"\",\"expectedVersion\":2}"
+          "path": "/api/episodes/49c7aa77-d1de-438e-b86c-577efc99c7d7",
+          "body": "{\"title\":\"Project A\",\"topic\":\"Keep story A\",\"status\":\"draft\",\"format\":\"9:16\",\"scenes\":[{\"id\":\"341367b3-b8d3-42dc-8f86-a8c8416a410b\",\"title\":\"Unsaved A scene\",\"text\":\"Original source-backed card\",\"duration\":1,\"background\":\"#282544\",\"kind\":\"title\",\"layout\":\"center\",\"trimStart\":0,\"audioVolume\":1,\"narration\":\"\"}],\"notes\":\"\",\"expectedVersion\":2}"
         },
         {
           "method": "PUT",
-          "path": "/api/workflows/93218303-b7b1-457e-a1d1-33ca9a86b95c",
+          "path": "/api/workflows/cc4070a2-2d29-4545-897e-97ec32cf5e72",
           "body": "{\"name\":\"Unsaved A graph\",\"nodes\":[{\"id\":\"script\",\"type\":\"script\",\"x\":60,\"y\":80,\"config\":{\"agent\":\"existing\",\"prompt\":\"\"}},{\"id\":\"storyboard\",\"type\":\"storyboard\",\"x\":340,\"y\":80,\"config\":{}},{\"id\":\"render\",\"type\":\"render\",\"x\":620,\"y\":80,\"config\":{}},{\"id\":\"review\",\"type\":\"review\",\"x\":900,\"y\":80,\"config\":{}}],\"edges\":[{\"id\":\"e0\",\"source\":\"script\",\"target\":\"storyboard\"},{\"id\":\"e1\",\"source\":\"storyboard\",\"target\":\"render\"},{\"id\":\"e2\",\"source\":\"render\",\"target\":\"review\"}],\"expectedVersion\":1}"
         }
       ],
@@ -573,11 +579,11 @@
       "errors": []
     },
     {
-      "base": "http://127.0.0.1:64477",
+      "base": "http://127.0.0.1:57708",
       "writes": [
         {
           "method": "PUT",
-          "path": "/api/workflows/2deb8101-9c38-44f8-b45f-221857e6e944",
+          "path": "/api/workflows/cb452319-e536-4a8a-960c-4e131487082b",
           "body": "{\"name\":\"Maximum graph\",\"nodes\":[{\"id\":\"node-000\",\"type\":\"trend\",\"x\":40,\"y\":50,\"label\":\"Unique node 0\",\"config\":{}},{\"id\":\"node-001\",\"type\":\"trend\",\"x\":300,\"y\":50,\"label\":\"Unique node 1\",\"config\":{}},{\"id\":\"node-002\",\"type\":\"trend\",\"x\":560,\"y\":50,\"label\":\"Unique node 2\",\"config\":{}},{\"id\":\"node-003\",\"type\":\"trend\",\"x\":820,\"y\":50,\"label\":\"Unique node 3\",\"config\":{}},{\"id\":\"node-004\",\"type\":\"trend\",\"x\":1080,\"y\":50,\"label\":\"Unique node 4\",\"config\":{}},{\"id\":\"node-005\",\"type\":\"trend\",\"x\":1340,\"y\":50,\"label\":\"Unique node 5\",\"config\":{}},{\"id\":\"node-006\",\"type\":\"trend\",\"x\":1600,\"y\":50,\"label\":\"Unique node 6\",\"config\":{}},{\"id\":\"node-007\",\"type\":\"trend\",\"x\":1860,\"y\":50,\"label\":\"Unique node 7\",\"config\":{}},{\"id\":\"node-008\",\"type\":\"trend\",\"x\":2120,\"y\":50,\"label\":\"Unique node 8\",\"config\":{}},{\"id\":\"node-009\",\"type\":\"trend\",\"x\":2380,\"y\":50,\"label\":\"Unique node 9\",\"config\":{}},{\"id\":\"node-010\",\"type\":\"trend\",\"x\":2640,\"y\":50,\"label\":\"Unique node 10\",\"config\":{}},{\"id\":\"node-011\",\"type\":\"trend\",\"x\":2900,\"y\":50,\"label\":\"Unique node 11\",\"config\":{}},{\"id\":\"node-012\",\"type\":\"trend\",\"x\":3160,\"y\":50,\"label\":\"Unique node 12\",\"config\":{}},{\"id\":\"node-013\",\"type\":\"trend\",\"x\":3420,\"y\":50,\"label\":\"Unique node 13\",\"config\":{}},{\"id\":\"node-014\",\"type\":\"trend\",\"x\":3680,\"y\":50,\"label\":\"Unique node 14\",\"config\":{}},{\"id\":\"node-015\",\"type\":\"trend\",\"x\":3940,\"y\":50,\"label\":\"Unique node 15\",\"config\":{}},{\"id\":\"node-016\",\"type\":\"trend\",\"x\":40,\"y\":240,\"label\":\"Unique node 16\",\"config\":{}},{\"id\":\"node-017\",\"type\":\"trend\",\"x\":300,\"y\":240,\"label\":\"Unique node 17\",\"config\":{}},{\"id\":\"node-018\",\"type\":\"trend\",\"x\":560,\"y\":240,\"label\":\"Unique node 18\",\"config\":{}},{\"id\":\"node-019\",\"type\":\"trend\",\"x\":820,\"y\":240,\"label\":\"Unique node 19\",\"config\":{}},{\"id\":\"node-020\",\"type\":\"trend\",\"x\":1080,\"y\":240,\"label\":\"Unique node 20\",\"config\":{}},{\"id\":\"node-021\",\"type\":\"trend\",\"x\":1340,\"y\":240,\"label\":\"Unique node 21\",\"config\":{}},{\"id\":\"node-022\",\"type\":\"trend\",\"x\":1600,\"y\":240,\"label\":\"Unique node 22\",\"config\":{}},{\"id\":\"node-023\",\"type\":\"trend\",\"x\":1860,\"y\":240,\"label\":\"Unique node 23\",\"config\":{}},{\"id\":\"node-024\",\"type\":\"trend\",\"x\":2120,\"y\":240,\"label\":\"Unique node 24\",\"config\":{}},{\"id\":\"node-025\",\"type\":\"trend\",\"x\":2380,\"y\":240,\"label\":\"Unique node 25\",\"config\":{}},{\"id\":\"node-026\",\"type\":\"trend\",\"x\":2640,\"y\":240,\"label\":\"Unique node 26\",\"config\":{}},{\"id\":\"node-027\",\"type\":\"trend\",\"x\":2900,\"y\":240,\"label\":\"Unique node 27\",\"config\":{}},{\"id\":\"node-028\",\"type\":\"trend\",\"x\":3160,\"y\":240,\"label\":\"Unique node 28\",\"config\":{}},{\"id\":\"node-029\",\"type\":\"trend\",\"x\":3420,\"y\":240,\"label\":\"Unique node 29\",\"config\":{}},{\"id\":\"node-030\",\"type\":\"trend\",\"x\":3680,\"y\":240,\"label\":\"Unique node 30\",\"config\":{}},{\"id\":\"node-031\",\"type\":\"trend\",\"x\":3940,\"y\":240,\"label\":\"Unique node 31\",\"config\":{}},{\"id\":\"node-032\",\"type\":\"trend\",\"x\":40,\"y\":430,\"label\":\"Unique node 32\",\"config\":{}},{\"id\":\"node-033\",\"type\":\"trend\",\"x\":300,\"y\":430,\"label\":\"Unique node 33\",\"config\":{}},{\"id\":\"node-034\",\"type\":\"trend\",\"x\":560,\"y\":430,\"label\":\"Unique node 34\",\"config\":{}},{\"id\":\"node-035\",\"type\":\"trend\",\"x\":820,\"y\":430,\"label\":\"Unique node 35\",\"config\":{}},{\"id\":\"node-036\",\"type\":\"trend\",\"x\":1080,\"y\":430,\"label\":\"Unique node 36\",\"config\":{}},{\"id\":\"node-037\",\"type\":\"trend\",\"x\":1340,\"y\":430,\"label\":\"Unique node 37\",\"config\":{}},{\"id\":\"node-038\",\"type\":\"trend\",\"x\":1600,\"y\":430,\"label\":\"Unique node 38\",\"config\":{}},{\"id\":\"node-039\",\"type\":\"trend\",\"x\":1860,\"y\":430,\"label\":\"Unique node 39\",\"config\":{}},{\"id\":\"node-040\",\"type\":\"trend\",\"x\":2120,\"y\":430,\"label\":\"Unique node 40\",\"config\":{}},{\"id\":\"node-041\",\"type\":\"trend\",\"x\":2380,\"y\":430,\"label\":\"Unique node 41\",\"config\":{}},{\"id\":\"node-042\",\"type\":\"trend\",\"x\":2640,\"y\":430,\"label\":\"Unique node 42\",\"config\":{}},{\"id\":\"node-043\",\"type\":\"trend\",\"x\":2900,\"y\":430,\"label\":\"Unique node 43\",\"config\":{}},{\"id\":\"node-044\",\"type\":\"trend\",\"x\":3160,\"y\":430,\"label\":\"Unique node 44\",\"config\":{}},{\"id\":\"node-045\",\"type\":\"trend\",\"x\":3420,\"y\":430,\"label\":\"Unique node 45\",\"config\":{}},{\"id\":\"node-046\",\"type\":\"trend\",\"x\":3680,\"y\":430,\"label\":\"Unique node 46\",\"config\":{}},{\"id\":\"node-047\",\"type\":\"trend\",\"x\":3940,\"y\":430,\"label\":\"Unique node 47\",\"config\":{}},{\"id\":\"node-048\",\"type\":\"trend\",\"x\":40,\"y\":620,\"label\":\"Unique node 48\",\"config\":{}},{\"id\":\"node-049\",\"type\":\"trend\",\"x\":300,\"y\":620,\"label\":\"Unique node 49\",\"config\":{}},{\"id\":\"node-050\",\"type\":\"trend\",\"x\":560,\"y\":620,\"label\":\"Unique node 50\",\"config\":{}},{\"id\":\"node-051\",\"type\":\"trend\",\"x\":820,\"y\":620,\"label\":\"Unique node 51\",\"config\":{}},{\"id\":\"node-052\",\"type\":\"trend\",\"x\":1080,\"y\":620,\"label\":\"Unique node 52\",\"config\":{}},{\"id\":\"node-053\",\"type\":\"trend\",\"x\":1340,\"y\":620,\"label\":\"Unique node 53\",\"config\":{}},{\"id\":\"node-054\",\"type\":\"trend\",\"x\":1600,\"y\":620,\"label\":\"Unique node 54\",\"config\":{}},{\"id\":\"node-055\",\"type\":\"trend\",\"x\":1860,\"y\":620,\"label\":\"Unique node 55\",\"config\":{}},{\"id\":\"node-056\",\"type\":\"trend\",\"x\":2120,\"y\":620,\"label\":\"Unique node 56\",\"config\":{}},{\"id\":\"node-057\",\"type\":\"trend\",\"x\":2380,\"y\":620,\"label\":\"Unique node 57\",\"config\":{}},{\"id\":\"node-058\",\"type\":\"trend\",\"x\":2640,\"y\":620,\"label\":\"Unique node 58\",\"config\":{}},{\"id\":\"node-059\",\"type\":\"trend\",\"x\":2900,\"y\":620,\"label\":\"Unique node 59\",\"config\":{}},{\"id\":\"node-060\",\"type\":\"trend\",\"x\":3160,\"y\":620,\"label\":\"Unique node 60\",\"config\":{}},{\"id\":\"node-061\",\"type\":\"trend\",\"x\":3420,\"y\":620,\"label\":\"Unique node 61\",\"config\":{}},{\"id\":\"node-062\",\"type\":\"trend\",\"x\":3680,\"y\":620,\"label\":\"Unique node 62\",\"config\":{}},{\"id\":\"node-063\",\"type\":\"trend\",\"x\":3940,\"y\":620,\"label\":\"Unique node 63\",\"config\":{}},{\"id\":\"node-064\",\"type\":\"trend\",\"x\":40,\"y\":810,\"label\":\"Unique node 64\",\"config\":{}},{\"id\":\"node-065\",\"type\":\"trend\",\"x\":300,\"y\":810,\"label\":\"Unique node 65\",\"config\":{}},{\"id\":\"node-066\",\"type\":\"trend\",\"x\":560,\"y\":810,\"label\":\"Unique node 66\",\"config\":{}},{\"id\":\"node-067\",\"type\":\"trend\",\"x\":820,\"y\":810,\"label\":\"Unique node 67\",\"config\":{}},{\"id\":\"node-068\",\"type\":\"trend\",\"x\":1080,\"y\":810,\"label\":\"Unique node 68\",\"config\":{}},{\"id\":\"node-069\",\"type\":\"trend\",\"x\":1340,\"y\":810,\"label\":\"Unique node 69\",\"config\":{}},{\"id\":\"node-070\",\"type\":\"trend\",\"x\":1600,\"y\":810,\"label\":\"Unique node 70\",\"config\":{}},{\"id\":\"node-071\",\"type\":\"trend\",\"x\":1860,\"y\":810,\"label\":\"Unique node 71\",\"config\":{}},{\"id\":\"node-072\",\"type\":\"trend\",\"x\":2120,\"y\":810,\"label\":\"Unique node 72\",\"config\":{}},{\"id\":\"node-073\",\"type\":\"trend\",\"x\":2380,\"y\":810,\"label\":\"Unique node 73\",\"config\":{}},{\"id\":\"node-074\",\"type\":\"trend\",\"x\":2640,\"y\":810,\"label\":\"Unique node 74\",\"config\":{}},{\"id\":\"node-075\",\"type\":\"trend\",\"x\":2900,\"y\":810,\"label\":\"Unique node 75\",\"config\":{}},{\"id\":\"node-076\",\"type\":\"trend\",\"x\":3160,\"y\":810,\"label\":\"Unique node 76\",\"config\":{}},{\"id\":\"node-077\",\"type\":\"trend\",\"x\":3420,\"y\":810,\"label\":\"Unique node 77\",\"config\":{}},{\"id\":\"node-078\",\"type\":\"trend\",\"x\":3680,\"y\":810,\"label\":\"Unique node 78\",\"config\":{}},{\"id\":\"node-079\",\"type\":\"trend\",\"x\":3940,\"y\":810,\"label\":\"Unique node 79\",\"config\":{}},{\"id\":\"node-080\",\"type\":\"trend\",\"x\":40,\"y\":1000,\"label\":\"Unique node 80\",\"config\":{}},{\"id\":\"node-081\",\"type\":\"trend\",\"x\":300,\"y\":1000,\"label\":\"Unique node 81\",\"config\":{}},{\"id\":\"node-082\",\"type\":\"trend\",\"x\":560,\"y\":1000,\"label\":\"Unique node 82\",\"config\":{}},{\"id\":\"node-083\",\"type\":\"trend\",\"x\":820,\"y\":1000,\"label\":\"Unique node 83\",\"config\":{}},{\"id\":\"node-084\",\"type\":\"trend\",\"x\":1080,\"y\":1000,\"label\":\"Unique node 84\",\"config\":{}},{\"id\":\"node-085\",\"type\":\"trend\",\"x\":1340,\"y\":1000,\"label\":\"Unique node 85\",\"config\":{}},{\"id\":\"node-086\",\"type\":\"trend\",\"x\":1600,\"y\":1000,\"label\":\"Unique node 86\",\"config\":{}},{\"id\":\"node-087\",\"type\":\"trend\",\"x\":1860,\"y\":1000,\"label\":\"Unique node 87\",\"config\":{}},{\"id\":\"node-088\",\"type\":\"trend\",\"x\":2120,\"y\":1000,\"label\":\"Unique node 88\",\"config\":{}},{\"id\":\"node-089\",\"type\":\"trend\",\"x\":2380,\"y\":1000,\"label\":\"Unique node 89\",\"config\":{}},{\"id\":\"node-090\",\"type\":\"trend\",\"x\":2640,\"y\":1000,\"label\":\"Unique node 90\",\"config\":{}},{\"id\":\"node-091\",\"type\":\"trend\",\"x\":2900,\"y\":1000,\"label\":\"Unique node 91\",\"config\":{}},{\"id\":\"node-092\",\"type\":\"trend\",\"x\":3160,\"y\":1000,\"label\":\"Unique node 92\",\"config\":{}},{\"id\":\"node-093\",\"type\":\"trend\",\"x\":3420,\"y\":1000,\"label\":\"Unique node 93\",\"config\":{}},{\"id\":\"node-094\",\"type\":\"trend\",\"x\":3680,\"y\":1000,\"label\":\"Unique node 94\",\"config\":{}},{\"id\":\"node-095\",\"type\":\"trend\",\"x\":3940,\"y\":1000,\"label\":\"Unique node 95\",\"config\":{}},{\"id\":\"node-096\",\"type\":\"trend\",\"x\":40,\"y\":1190,\"label\":\"Unique node 96\",\"config\":{}},{\"id\":\"node-097\",\"type\":\"trend\",\"x\":300,\"y\":1190,\"label\":\"Unique node 97\",\"config\":{}},{\"id\":\"node-098\",\"type\":\"trend\",\"x\":560,\"y\":1190,\"label\":\"Unique node 98\",\"config\":{}},{\"id\":\"node-099\",\"type\":\"trend\",\"x\":820,\"y\":1190,\"label\":\"Unique node 99\",\"config\":{}},{\"id\":\"node-100\",\"type\":\"trend\",\"x\":1080,\"y\":1190,\"label\":\"Unique node 100\",\"config\":{}},{\"id\":\"node-101\",\"type\":\"trend\",\"x\":1340,\"y\":1190,\"label\":\"Unique node 101\",\"config\":{}},{\"id\":\"node-102\",\"type\":\"trend\",\"x\":1600,\"y\":1190,\"label\":\"Unique node 102\",\"config\":{}},{\"id\":\"node-103\",\"type\":\"trend\",\"x\":1860,\"y\":1190,\"label\":\"Unique node 103\",\"config\":{}},{\"id\":\"node-104\",\"type\":\"trend\",\"x\":2120,\"y\":1190,\"label\":\"Unique node 104\",\"config\":{}},{\"id\":\"node-105\",\"type\":\"trend\",\"x\":2380,\"y\":1190,\"label\":\"Unique node 105\",\"config\":{}},{\"id\":\"node-106\",\"type\":\"trend\",\"x\":2640,\"y\":1190,\"label\":\"Unique node 106\",\"config\":{}},{\"id\":\"node-107\",\"type\":\"trend\",\"x\":2900,\"y\":1190,\"label\":\"Unique node 107\",\"config\":{}},{\"id\":\"node-108\",\"type\":\"trend\",\"x\":3160,\"y\":1190,\"label\":\"Unique node 108\",\"config\":{}},{\"id\":\"node-109\",\"type\":\"trend\",\"x\":3420,\"y\":1190,\"label\":\"Unique node 109\",\"config\":{}},{\"id\":\"node-110\",\"type\":\"trend\",\"x\":3680,\"y\":1190,\"label\":\"Unique node 110\",\"config\":{}},{\"id\":\"node-111\",\"type\":\"trend\",\"x\":3940,\"y\":1190,\"label\":\"Unique node 111\",\"config\":{}},{\"id\":\"node-112\",\"type\":\"trend\",\"x\":40,\"y\":1380,\"label\":\"Unique node 112\",\"config\":{}},{\"id\":\"node-113\",\"type\":\"trend\",\"x\":300,\"y\":1380,\"label\":\"Unique node 113\",\"config\":{}},{\"id\":\"node-114\",\"type\":\"trend\",\"x\":560,\"y\":1380,\"label\":\"Unique node 114\",\"config\":{}},{\"id\":\"node-115\",\"type\":\"trend\",\"x\":820,\"y\":1380,\"label\":\"Unique node 115\",\"config\":{}},{\"id\":\"node-116\",\"type\":\"trend\",\"x\":1080,\"y\":1380,\"label\":\"Unique node 116\",\"config\":{}},{\"id\":\"node-117\",\"type\":\"trend\",\"x\":1340,\"y\":1380,\"label\":\"Unique node 117\",\"config\":{}},{\"id\":\"node-118\",\"type\":\"trend\",\"x\":1600,\"y\":1380,\"label\":\"Unique node 118\",\"config\":{}},{\"id\":\"node-119\",\"type\":\"trend\",\"x\":1860,\"y\":1380,\"label\":\"Unique node 119\",\"config\":{}},{\"id\":\"node-120\",\"type\":\"trend\",\"x\":2120,\"y\":1380,\"label\":\"Unique node 120\",\"config\":{}},{\"id\":\"node-121\",\"type\":\"trend\",\"x\":2380,\"y\":1380,\"label\":\"Unique node 121\",\"config\":{}},{\"id\":\"node-122\",\"type\":\"trend\",\"x\":2640,\"y\":1380,\"label\":\"Unique node 122\",\"config\":{}},{\"id\":\"node-123\",\"type\":\"trend\",\"x\":2900,\"y\":1380,\"label\":\"Unique node 123\",\"config\":{}},{\"id\":\"node-124\",\"type\":\"trend\",\"x\":3160,\"y\":1380,\"label\":\"Unique node 124\",\"config\":{}},{\"id\":\"node-125\",\"type\":\"trend\",\"x\":3420,\"y\":1380,\"label\":\"Unique node 125\",\"config\":{}},{\"id\":\"node-126\",\"type\":\"trend\",\"x\":3680,\"y\":1380,\"label\":\"Unique node 126\",\"config\":{}},{\"id\":\"node-127\",\"type\":\"trend\",\"x\":3950,\"y\":1380,\"label\":\"Unique node 127\",\"config\":{}}],\"edges\":[{\"id\":\"chain-0\",\"source\":\"node-000\",\"target\":\"node-001\"},{\"id\":\"chain-1\",\"source\":\"node-001\",\"target\":\"node-002\"},{\"id\":\"chain-2\",\"source\":\"node-002\",\"target\":\"node-003\"},{\"id\":\"chain-3\",\"source\":\"node-003\",\"target\":\"node-004\"},{\"id\":\"chain-4\",\"source\":\"node-004\",\"target\":\"node-005\"},{\"id\":\"chain-5\",\"source\":\"node-005\",\"target\":\"node-006\"},{\"id\":\"chain-6\",\"source\":\"node-006\",\"target\":\"node-007\"},{\"id\":\"chain-7\",\"source\":\"node-007\",\"target\":\"node-008\"},{\"id\":\"chain-8\",\"source\":\"node-008\",\"target\":\"node-009\"},{\"id\":\"chain-9\",\"source\":\"node-009\",\"target\":\"node-010\"},{\"id\":\"chain-10\",\"source\":\"node-010\",\"target\":\"node-011\"},{\"id\":\"chain-11\",\"source\":\"node-011\",\"target\":\"node-012\"},{\"id\":\"chain-12\",\"source\":\"node-012\",\"target\":\"node-013\"},{\"id\":\"chain-13\",\"source\":\"node-013\",\"target\":\"node-014\"},{\"id\":\"chain-14\",\"source\":\"node-014\",\"target\":\"node-015\"},{\"id\":\"chain-15\",\"source\":\"node-015\",\"target\":\"node-016\"},{\"id\":\"chain-16\",\"source\":\"node-016\",\"target\":\"node-017\"},{\"id\":\"chain-17\",\"source\":\"node-017\",\"target\":\"node-018\"},{\"id\":\"chain-18\",\"source\":\"node-018\",\"target\":\"node-019\"},{\"id\":\"chain-19\",\"source\":\"node-019\",\"target\":\"node-020\"},{\"id\":\"chain-20\",\"source\":\"node-020\",\"target\":\"node-021\"},{\"id\":\"chain-21\",\"source\":\"node-021\",\"target\":\"node-022\"},{\"id\":\"chain-22\",\"source\":\"node-022\",\"target\":\"node-023\"},{\"id\":\"chain-23\",\"source\":\"node-023\",\"target\":\"node-024\"},{\"id\":\"chain-24\",\"source\":\"node-024\",\"target\":\"node-025\"},{\"id\":\"chain-25\",\"source\":\"node-025\",\"target\":\"node-026\"},{\"id\":\"chain-26\",\"source\":\"node-026\",\"target\":\"node-027\"},{\"id\":\"chain-27\",\"source\":\"node-027\",\"target\":\"node-028\"},{\"id\":\"chain-28\",\"source\":\"node-028\",\"target\":\"node-029\"},{\"id\":\"chain-29\",\"source\":\"node-029\",\"target\":\"node-030\"},{\"id\":\"chain-30\",\"source\":\"node-030\",\"target\":\"node-031\"},{\"id\":\"chain-31\",\"source\":\"node-031\",\"target\":\"node-032\"},{\"id\":\"chain-32\",\"source\":\"node-032\",\"target\":\"node-033\"},{\"id\":\"chain-33\",\"source\":\"node-033\",\"target\":\"node-034\"},{\"id\":\"chain-34\",\"source\":\"node-034\",\"target\":\"node-035\"},{\"id\":\"chain-35\",\"source\":\"node-035\",\"target\":\"node-036\"},{\"id\":\"chain-36\",\"source\":\"node-036\",\"target\":\"node-037\"},{\"id\":\"chain-37\",\"source\":\"node-037\",\"target\":\"node-038\"},{\"id\":\"chain-38\",\"source\":\"node-038\",\"target\":\"node-039\"},{\"id\":\"chain-39\",\"source\":\"node-039\",\"target\":\"node-040\"},{\"id\":\"chain-40\",\"source\":\"node-040\",\"target\":\"node-041\"},{\"id\":\"chain-41\",\"source\":\"node-041\",\"target\":\"node-042\"},{\"id\":\"chain-42\",\"source\":\"node-042\",\"target\":\"node-043\"},{\"id\":\"chain-43\",\"source\":\"node-043\",\"target\":\"node-044\"},{\"id\":\"chain-44\",\"source\":\"node-044\",\"target\":\"node-045\"},{\"id\":\"chain-45\",\"source\":\"node-045\",\"target\":\"node-046\"},{\"id\":\"chain-46\",\"source\":\"node-046\",\"target\":\"node-047\"},{\"id\":\"chain-47\",\"source\":\"node-047\",\"target\":\"node-048\"},{\"id\":\"chain-48\",\"source\":\"node-048\",\"target\":\"node-049\"},{\"id\":\"chain-49\",\"source\":\"node-049\",\"target\":\"node-050\"},{\"id\":\"chain-50\",\"source\":\"node-050\",\"target\":\"node-051\"},{\"id\":\"chain-51\",\"source\":\"node-051\",\"target\":\"node-052\"},{\"id\":\"chain-52\",\"source\":\"node-052\",\"target\":\"node-053\"},{\"id\":\"chain-53\",\"source\":\"node-053\",\"target\":\"node-054\"},{\"id\":\"chain-54\",\"source\":\"node-054\",\"target\":\"node-055\"},{\"id\":\"chain-55\",\"source\":\"node-055\",\"target\":\"node-056\"},{\"id\":\"chain-56\",\"source\":\"node-056\",\"target\":\"node-057\"},{\"id\":\"chain-57\",\"source\":\"node-057\",\"target\":\"node-058\"},{\"id\":\"chain-58\",\"source\":\"node-058\",\"target\":\"node-059\"},{\"id\":\"chain-59\",\"source\":\"node-059\",\"target\":\"node-060\"},{\"id\":\"chain-60\",\"source\":\"node-060\",\"target\":\"node-061\"},{\"id\":\"chain-61\",\"source\":\"node-061\",\"target\":\"node-062\"},{\"id\":\"chain-62\",\"source\":\"node-062\",\"target\":\"node-063\"},{\"id\":\"chain-63\",\"source\":\"node-063\",\"target\":\"node-064\"},{\"id\":\"chain-64\",\"source\":\"node-064\",\"target\":\"node-065\"},{\"id\":\"chain-65\",\"source\":\"node-065\",\"target\":\"node-066\"},{\"id\":\"chain-66\",\"source\":\"node-066\",\"target\":\"node-067\"},{\"id\":\"chain-67\",\"source\":\"node-067\",\"target\":\"node-068\"},{\"id\":\"chain-68\",\"source\":\"node-068\",\"target\":\"node-069\"},{\"id\":\"chain-69\",\"source\":\"node-069\",\"target\":\"node-070\"},{\"id\":\"chain-70\",\"source\":\"node-070\",\"target\":\"node-071\"},{\"id\":\"chain-71\",\"source\":\"node-071\",\"target\":\"node-072\"},{\"id\":\"chain-72\",\"source\":\"node-072\",\"target\":\"node-073\"},{\"id\":\"chain-73\",\"source\":\"node-073\",\"target\":\"node-074\"},{\"id\":\"chain-74\",\"source\":\"node-074\",\"target\":\"node-075\"},{\"id\":\"chain-75\",\"source\":\"node-075\",\"target\":\"node-076\"},{\"id\":\"chain-76\",\"source\":\"node-076\",\"target\":\"node-077\"},{\"id\":\"chain-77\",\"source\":\"node-077\",\"target\":\"node-078\"},{\"id\":\"chain-78\",\"source\":\"node-078\",\"target\":\"node-079\"},{\"id\":\"chain-79\",\"source\":\"node-079\",\"target\":\"node-080\"},{\"id\":\"chain-80\",\"source\":\"node-080\",\"target\":\"node-081\"},{\"id\":\"chain-81\",\"source\":\"node-081\",\"target\":\"node-082\"},{\"id\":\"chain-82\",\"source\":\"node-082\",\"target\":\"node-083\"},{\"id\":\"chain-83\",\"source\":\"node-083\",\"target\":\"node-084\"},{\"id\":\"chain-84\",\"source\":\"node-084\",\"target\":\"node-085\"},{\"id\":\"chain-85\",\"source\":\"node-085\",\"target\":\"node-086\"},{\"id\":\"chain-86\",\"source\":\"node-086\",\"target\":\"node-087\"},{\"id\":\"chain-87\",\"source\":\"node-087\",\"target\":\"node-088\"},{\"id\":\"chain-88\",\"source\":\"node-088\",\"target\":\"node-089\"},{\"id\":\"chain-89\",\"source\":\"node-089\",\"target\":\"node-090\"},{\"id\":\"chain-90\",\"source\":\"node-090\",\"target\":\"node-091\"},{\"id\":\"chain-91\",\"source\":\"node-091\",\"target\":\"node-092\"},{\"id\":\"chain-92\",\"source\":\"node-092\",\"target\":\"node-093\"},{\"id\":\"chain-93\",\"source\":\"node-093\",\"target\":\"node-094\"},{\"id\":\"chain-94\",\"source\":\"node-094\",\"target\":\"node-095\"},{\"id\":\"chain-95\",\"source\":\"node-095\",\"target\":\"node-096\"},{\"id\":\"chain-96\",\"source\":\"node-096\",\"target\":\"node-097\"},{\"id\":\"chain-97\",\"source\":\"node-097\",\"target\":\"node-098\"},{\"id\":\"chain-98\",\"source\":\"node-098\",\"target\":\"node-099\"},{\"id\":\"chain-99\",\"source\":\"node-099\",\"target\":\"node-100\"},{\"id\":\"chain-100\",\"source\":\"node-100\",\"target\":\"node-101\"},{\"id\":\"chain-101\",\"source\":\"node-101\",\"target\":\"node-102\"},{\"id\":\"chain-102\",\"source\":\"node-102\",\"target\":\"node-103\"},{\"id\":\"chain-103\",\"source\":\"node-103\",\"target\":\"node-104\"},{\"id\":\"chain-104\",\"source\":\"node-104\",\"target\":\"node-105\"},{\"id\":\"chain-105\",\"source\":\"node-105\",\"target\":\"node-106\"},{\"id\":\"chain-106\",\"source\":\"node-106\",\"target\":\"node-107\"},{\"id\":\"chain-107\",\"source\":\"node-107\",\"target\":\"node-108\"},{\"id\":\"chain-108\",\"source\":\"node-108\",\"target\":\"node-109\"},{\"id\":\"chain-109\",\"source\":\"node-109\",\"target\":\"node-110\"},{\"id\":\"chain-110\",\"source\":\"node-110\",\"target\":\"node-111\"},{\"id\":\"chain-111\",\"source\":\"node-111\",\"target\":\"node-112\"},{\"id\":\"chain-112\",\"source\":\"node-112\",\"target\":\"node-113\"},{\"id\":\"chain-113\",\"source\":\"node-113\",\"target\":\"node-114\"},{\"id\":\"chain-114\",\"source\":\"node-114\",\"target\":\"node-115\"},{\"id\":\"chain-115\",\"source\":\"node-115\",\"target\":\"node-116\"},{\"id\":\"chain-116\",\"source\":\"node-116\",\"target\":\"node-117\"},{\"id\":\"chain-117\",\"source\":\"node-117\",\"target\":\"node-118\"},{\"id\":\"chain-118\",\"source\":\"node-118\",\"target\":\"node-119\"},{\"id\":\"chain-119\",\"source\":\"node-119\",\"target\":\"node-120\"},{\"id\":\"chain-120\",\"source\":\"node-120\",\"target\":\"node-121\"},{\"id\":\"chain-121\",\"source\":\"node-121\",\"target\":\"node-122\"},{\"id\":\"chain-122\",\"source\":\"node-122\",\"target\":\"node-123\"},{\"id\":\"chain-123\",\"source\":\"node-123\",\"target\":\"node-124\"},{\"id\":\"chain-124\",\"source\":\"node-124\",\"target\":\"node-125\"},{\"id\":\"chain-125\",\"source\":\"node-125\",\"target\":\"node-126\"},{\"id\":\"chain-126\",\"source\":\"node-126\",\"target\":\"node-127\"},{\"id\":\"extra-0-2\",\"source\":\"node-000\",\"target\":\"node-002\"},{\"id\":\"extra-1-2\",\"source\":\"node-001\",\"target\":\"node-003\"},{\"id\":\"extra-2-2\",\"source\":\"node-002\",\"target\":\"node-004\"},{\"id\":\"extra-3-2\",\"source\":\"node-003\",\"target\":\"node-005\"},{\"id\":\"extra-4-2\",\"source\":\"node-004\",\"target\":\"node-006\"},{\"id\":\"extra-5-2\",\"source\":\"node-005\",\"target\":\"node-007\"},{\"id\":\"extra-6-2\",\"source\":\"node-006\",\"target\":\"node-008\"},{\"id\":\"extra-7-2\",\"source\":\"node-007\",\"target\":\"node-009\"},{\"id\":\"extra-8-2\",\"source\":\"node-008\",\"target\":\"node-010\"},{\"id\":\"extra-9-2\",\"source\":\"node-009\",\"target\":\"node-011\"},{\"id\":\"extra-10-2\",\"source\":\"node-010\",\"target\":\"node-012\"},{\"id\":\"extra-11-2\",\"source\":\"node-011\",\"target\":\"node-013\"},{\"id\":\"extra-12-2\",\"source\":\"node-012\",\"target\":\"node-014\"},{\"id\":\"extra-13-2\",\"source\":\"node-013\",\"target\":\"node-015\"},{\"id\":\"extra-14-2\",\"source\":\"node-014\",\"target\":\"node-016\"},{\"id\":\"extra-15-2\",\"source\":\"node-015\",\"target\":\"node-017\"},{\"id\":\"extra-16-2\",\"source\":\"node-016\",\"target\":\"node-018\"},{\"id\":\"extra-17-2\",\"source\":\"node-017\",\"target\":\"node-019\"},{\"id\":\"extra-18-2\",\"source\":\"node-018\",\"target\":\"node-020\"},{\"id\":\"extra-19-2\",\"source\":\"node-019\",\"target\":\"node-021\"},{\"id\":\"extra-20-2\",\"source\":\"node-020\",\"target\":\"node-022\"},{\"id\":\"extra-21-2\",\"source\":\"node-021\",\"target\":\"node-023\"},{\"id\":\"extra-22-2\",\"source\":\"node-022\",\"target\":\"node-024\"},{\"id\":\"extra-23-2\",\"source\":\"node-023\",\"target\":\"node-025\"},{\"id\":\"extra-24-2\",\"source\":\"node-024\",\"target\":\"node-026\"},{\"id\":\"extra-25-2\",\"source\":\"node-025\",\"target\":\"node-027\"},{\"id\":\"extra-26-2\",\"source\":\"node-026\",\"target\":\"node-028\"},{\"id\":\"extra-27-2\",\"source\":\"node-027\",\"target\":\"node-029\"},{\"id\":\"extra-28-2\",\"source\":\"node-028\",\"target\":\"node-030\"},{\"id\":\"extra-29-2\",\"source\":\"node-029\",\"target\":\"node-031\"},{\"id\":\"extra-30-2\",\"source\":\"node-030\",\"target\":\"node-032\"},{\"id\":\"extra-31-2\",\"source\":\"node-031\",\"target\":\"node-033\"},{\"id\":\"extra-32-2\",\"source\":\"node-032\",\"target\":\"node-034\"},{\"id\":\"extra-33-2\",\"source\":\"node-033\",\"target\":\"node-035\"},{\"id\":\"extra-34-2\",\"source\":\"node-034\",\"target\":\"node-036\"},{\"id\":\"extra-35-2\",\"source\":\"node-035\",\"target\":\"node-037\"},{\"id\":\"extra-36-2\",\"source\":\"node-036\",\"target\":\"node-038\"},{\"id\":\"extra-37-2\",\"source\":\"node-037\",\"target\":\"node-039\"},{\"id\":\"extra-38-2\",\"source\":\"node-038\",\"target\":\"node-040\"},{\"id\":\"extra-39-2\",\"source\":\"node-039\",\"target\":\"node-041\"},{\"id\":\"extra-40-2\",\"source\":\"node-040\",\"target\":\"node-042\"},{\"id\":\"extra-41-2\",\"source\":\"node-041\",\"target\":\"node-043\"},{\"id\":\"extra-42-2\",\"source\":\"node-042\",\"target\":\"node-044\"},{\"id\":\"extra-43-2\",\"source\":\"node-043\",\"target\":\"node-045\"},{\"id\":\"extra-44-2\",\"source\":\"node-044\",\"target\":\"node-046\"},{\"id\":\"extra-45-2\",\"source\":\"node-045\",\"target\":\"node-047\"},{\"id\":\"extra-46-2\",\"source\":\"node-046\",\"target\":\"node-048\"},{\"id\":\"extra-47-2\",\"source\":\"node-047\",\"target\":\"node-049\"},{\"id\":\"extra-48-2\",\"source\":\"node-048\",\"target\":\"node-050\"},{\"id\":\"extra-49-2\",\"source\":\"node-049\",\"target\":\"node-051\"},{\"id\":\"extra-50-2\",\"source\":\"node-050\",\"target\":\"node-052\"},{\"id\":\"extra-51-2\",\"source\":\"node-051\",\"target\":\"node-053\"},{\"id\":\"extra-52-2\",\"source\":\"node-052\",\"target\":\"node-054\"},{\"id\":\"extra-53-2\",\"source\":\"node-053\",\"target\":\"node-055\"},{\"id\":\"extra-54-2\",\"source\":\"node-054\",\"target\":\"node-056\"},{\"id\":\"extra-55-2\",\"source\":\"node-055\",\"target\":\"node-057\"},{\"id\":\"extra-56-2\",\"source\":\"node-056\",\"target\":\"node-058\"},{\"id\":\"extra-57-2\",\"source\":\"node-057\",\"target\":\"node-059\"},{\"id\":\"extra-58-2\",\"source\":\"node-058\",\"target\":\"node-060\"},{\"id\":\"extra-59-2\",\"source\":\"node-059\",\"target\":\"node-061\"},{\"id\":\"extra-60-2\",\"source\":\"node-060\",\"target\":\"node-062\"},{\"id\":\"extra-61-2\",\"source\":\"node-061\",\"target\":\"node-063\"},{\"id\":\"extra-62-2\",\"source\":\"node-062\",\"target\":\"node-064\"},{\"id\":\"extra-63-2\",\"source\":\"node-063\",\"target\":\"node-065\"},{\"id\":\"extra-64-2\",\"source\":\"node-064\",\"target\":\"node-066\"},{\"id\":\"extra-65-2\",\"source\":\"node-065\",\"target\":\"node-067\"},{\"id\":\"extra-66-2\",\"source\":\"node-066\",\"target\":\"node-068\"},{\"id\":\"extra-67-2\",\"source\":\"node-067\",\"target\":\"node-069\"},{\"id\":\"extra-68-2\",\"source\":\"node-068\",\"target\":\"node-070\"},{\"id\":\"extra-69-2\",\"source\":\"node-069\",\"target\":\"node-071\"},{\"id\":\"extra-70-2\",\"source\":\"node-070\",\"target\":\"node-072\"},{\"id\":\"extra-71-2\",\"source\":\"node-071\",\"target\":\"node-073\"},{\"id\":\"extra-72-2\",\"source\":\"node-072\",\"target\":\"node-074\"},{\"id\":\"extra-73-2\",\"source\":\"node-073\",\"target\":\"node-075\"},{\"id\":\"extra-74-2\",\"source\":\"node-074\",\"target\":\"node-076\"},{\"id\":\"extra-75-2\",\"source\":\"node-075\",\"target\":\"node-077\"},{\"id\":\"extra-76-2\",\"source\":\"node-076\",\"target\":\"node-078\"},{\"id\":\"extra-77-2\",\"source\":\"node-077\",\"target\":\"node-079\"},{\"id\":\"extra-78-2\",\"source\":\"node-078\",\"target\":\"node-080\"},{\"id\":\"extra-79-2\",\"source\":\"node-079\",\"target\":\"node-081\"},{\"id\":\"extra-80-2\",\"source\":\"node-080\",\"target\":\"node-082\"},{\"id\":\"extra-81-2\",\"source\":\"node-081\",\"target\":\"node-083\"},{\"id\":\"extra-82-2\",\"source\":\"node-082\",\"target\":\"node-084\"},{\"id\":\"extra-83-2\",\"source\":\"node-083\",\"target\":\"node-085\"},{\"id\":\"extra-84-2\",\"source\":\"node-084\",\"target\":\"node-086\"},{\"id\":\"extra-85-2\",\"source\":\"node-085\",\"target\":\"node-087\"},{\"id\":\"extra-86-2\",\"source\":\"node-086\",\"target\":\"node-088\"},{\"id\":\"extra-87-2\",\"source\":\"node-087\",\"target\":\"node-089\"},{\"id\":\"extra-88-2\",\"source\":\"node-088\",\"target\":\"node-090\"},{\"id\":\"extra-89-2\",\"source\":\"node-089\",\"target\":\"node-091\"},{\"id\":\"extra-90-2\",\"source\":\"node-090\",\"target\":\"node-092\"},{\"id\":\"extra-91-2\",\"source\":\"node-091\",\"target\":\"node-093\"},{\"id\":\"extra-92-2\",\"source\":\"node-092\",\"target\":\"node-094\"},{\"id\":\"extra-93-2\",\"source\":\"node-093\",\"target\":\"node-095\"},{\"id\":\"extra-94-2\",\"source\":\"node-094\",\"target\":\"node-096\"},{\"id\":\"extra-95-2\",\"source\":\"node-095\",\"target\":\"node-097\"},{\"id\":\"extra-96-2\",\"source\":\"node-096\",\"target\":\"node-098\"},{\"id\":\"extra-97-2\",\"source\":\"node-097\",\"target\":\"node-099\"},{\"id\":\"extra-98-2\",\"source\":\"node-098\",\"target\":\"node-100\"},{\"id\":\"extra-99-2\",\"source\":\"node-099\",\"target\":\"node-101\"},{\"id\":\"extra-100-2\",\"source\":\"node-100\",\"target\":\"node-102\"},{\"id\":\"extra-101-2\",\"source\":\"node-101\",\"target\":\"node-103\"},{\"id\":\"extra-102-2\",\"source\":\"node-102\",\"target\":\"node-104\"},{\"id\":\"extra-103-2\",\"source\":\"node-103\",\"target\":\"node-105\"},{\"id\":\"extra-104-2\",\"source\":\"node-104\",\"target\":\"node-106\"},{\"id\":\"extra-105-2\",\"source\":\"node-105\",\"target\":\"node-107\"},{\"id\":\"extra-106-2\",\"source\":\"node-106\",\"target\":\"node-108\"},{\"id\":\"extra-107-2\",\"source\":\"node-107\",\"target\":\"node-109\"},{\"id\":\"extra-108-2\",\"source\":\"node-108\",\"target\":\"node-110\"},{\"id\":\"extra-109-2\",\"source\":\"node-109\",\"target\":\"node-111\"},{\"id\":\"extra-110-2\",\"source\":\"node-110\",\"target\":\"node-112\"},{\"id\":\"extra-111-2\",\"source\":\"node-111\",\"target\":\"node-113\"},{\"id\":\"extra-112-2\",\"source\":\"node-112\",\"target\":\"node-114\"},{\"id\":\"extra-113-2\",\"source\":\"node-113\",\"target\":\"node-115\"},{\"id\":\"extra-114-2\",\"source\":\"node-114\",\"target\":\"node-116\"},{\"id\":\"extra-115-2\",\"source\":\"node-115\",\"target\":\"node-117\"},{\"id\":\"extra-116-2\",\"source\":\"node-116\",\"target\":\"node-118\"},{\"id\":\"extra-117-2\",\"source\":\"node-117\",\"target\":\"node-119\"},{\"id\":\"extra-118-2\",\"source\":\"node-118\",\"target\":\"node-120\"},{\"id\":\"extra-119-2\",\"source\":\"node-119\",\"target\":\"node-121\"},{\"id\":\"extra-120-2\",\"source\":\"node-120\",\"target\":\"node-122\"},{\"id\":\"extra-121-2\",\"source\":\"node-121\",\"target\":\"node-123\"},{\"id\":\"extra-122-2\",\"source\":\"node-122\",\"target\":\"node-124\"},{\"id\":\"extra-123-2\",\"source\":\"node-123\",\"target\":\"node-125\"},{\"id\":\"extra-124-2\",\"source\":\"node-124\",\"target\":\"node-126\"},{\"id\":\"extra-125-2\",\"source\":\"node-125\",\"target\":\"node-127\"},{\"id\":\"extra-0-3\",\"source\":\"node-000\",\"target\":\"node-003\"},{\"id\":\"extra-1-3\",\"source\":\"node-001\",\"target\":\"node-004\"},{\"id\":\"extra-2-3\",\"source\":\"node-002\",\"target\":\"node-005\"}],\"expectedVersion\":1}"
         }
       ],
@@ -585,7 +591,7 @@
       "errors": []
     },
     {
-      "base": "http://127.0.0.1:64574",
+      "base": "http://127.0.0.1:57880",
       "writes": [
         {
           "method": "POST",
@@ -594,13 +600,13 @@
         },
         {
           "method": "POST",
-          "path": "/api/uploads/7b0378c5-758b-40e8-8127-eff43a6f02ec/rights",
+          "path": "/api/uploads/29580c1b-5fca-4b23-8efe-edfd71b93580/rights",
           "body": "{\"origin\":\"third-party\",\"sourceUrl\":\"https://commons.wikimedia.org/wiki/File:Fixture.webm\",\"licenseId\":\"CC-BY-4.0\",\"attribution\":\"Video Fixture Author\"}"
         },
         {
           "method": "POST",
-          "path": "/api/episodes/1e21a0aa-8ce6-4d2b-b546-4f7f1d6a3107/source",
-          "body": "{\"sceneId\":\"7139c895-511e-4d54-91e3-99cf4c9d263d\",\"uploadId\":\"7b0378c5-758b-40e8-8127-eff43a6f02ec\",\"expectedVersion\":2,\"useAs\":\"illustration\",\"trimStart\":0.1,\"trimEnd\":0.9}"
+          "path": "/api/episodes/a71e84da-cf8c-4e00-b726-8c5d9542c741/source",
+          "body": "{\"sceneId\":\"a3b42ec9-4cd5-4399-9df3-46dd1177823b\",\"uploadId\":\"29580c1b-5fca-4b23-8efe-edfd71b93580\",\"expectedVersion\":2,\"useAs\":\"illustration\",\"trimStart\":0.1,\"trimEnd\":0.9}"
         },
         {
           "method": "POST",
@@ -609,45 +615,45 @@
         },
         {
           "method": "POST",
-          "path": "/api/uploads/e552b85a-0722-44d1-8303-b5cbe93ad667/rights",
+          "path": "/api/uploads/30cc1b4e-2e18-45da-9b28-5c810b362e9b/rights",
           "body": "{\"origin\":\"third-party\",\"sourceUrl\":\"https://commons.wikimedia.org/wiki/File:Fixture.png\",\"licenseId\":\"CC-BY-4.0\",\"attribution\":\"Still Fixture Author\"}"
         },
         {
           "method": "POST",
-          "path": "/api/episodes/1e21a0aa-8ce6-4d2b-b546-4f7f1d6a3107/source",
-          "body": "{\"sceneId\":\"7139c895-511e-4d54-91e3-99cf4c9d263d\",\"uploadId\":\"e552b85a-0722-44d1-8303-b5cbe93ad667\",\"expectedVersion\":3,\"useAs\":\"illustration\"}"
+          "path": "/api/episodes/a71e84da-cf8c-4e00-b726-8c5d9542c741/source",
+          "body": "{\"sceneId\":\"a3b42ec9-4cd5-4399-9df3-46dd1177823b\",\"uploadId\":\"30cc1b4e-2e18-45da-9b28-5c810b362e9b\",\"expectedVersion\":3,\"useAs\":\"illustration\"}"
         },
         {
           "method": "POST",
-          "path": "/api/episodes/1e21a0aa-8ce6-4d2b-b546-4f7f1d6a3107/card",
-          "body": "{\"sceneId\":\"7139c895-511e-4d54-91e3-99cf4c9d263d\",\"expectedVersion\":4}"
+          "path": "/api/episodes/a71e84da-cf8c-4e00-b726-8c5d9542c741/card",
+          "body": "{\"sceneId\":\"a3b42ec9-4cd5-4399-9df3-46dd1177823b\",\"expectedVersion\":4}"
         }
       ],
       "external": [],
       "errors": []
     },
     {
-      "base": "http://127.0.0.1:64637",
+      "base": "http://127.0.0.1:57951",
       "writes": [],
       "external": [],
       "errors": []
     },
     {
-      "base": "http://127.0.0.1:64672",
+      "base": "http://127.0.0.1:57972",
       "writes": [
         {
           "method": "POST",
           "path": "/api/publication/approvals",
-          "body": "{\"workflowId\":\"550817b5-bf39-44dc-b5e0-582c717048f3\",\"runId\":\"479088b0-52e7-4292-b028-005abf22259e\",\"reviewNodeId\":\"review\",\"expectedEpisodeVersion\":4,\"title\":\"Fixture approved title\",\"description\":\"Fixture final description\",\"categoryId\":\"25\",\"tags\":[],\"selfDeclaredMadeForKids\":false,\"containsSyntheticMedia\":false,\"disclosureRationale\":\"Original factual cards, no realistic synthetic evidence\",\"rightsAcknowledged\":true}"
+          "body": "{\"workflowId\":\"31d8cf8c-442f-4428-979b-7c53fd0bab1c\",\"runId\":\"eabc3a0d-b88e-47b9-aa3b-5b9aa5ce98f6\",\"reviewNodeId\":\"review\",\"expectedEpisodeVersion\":4,\"title\":\"Fixture approved title\",\"description\":\"Fixture final description\",\"categoryId\":\"25\",\"tags\":[],\"selfDeclaredMadeForKids\":false,\"containsSyntheticMedia\":false,\"disclosureRationale\":\"Original factual cards, no realistic synthetic evidence\",\"rightsAcknowledged\":true}"
         },
         {
           "method": "POST",
           "path": "/api/publication/approvals",
-          "body": "{\"workflowId\":\"550817b5-bf39-44dc-b5e0-582c717048f3\",\"runId\":\"479088b0-52e7-4292-b028-005abf22259e\",\"reviewNodeId\":\"review\",\"expectedEpisodeVersion\":4,\"title\":\"Fixture approved title\",\"description\":\"Fixture final description\",\"categoryId\":\"25\",\"tags\":[],\"selfDeclaredMadeForKids\":false,\"containsSyntheticMedia\":false,\"disclosureRationale\":\"Original factual cards, no realistic synthetic evidence\",\"rightsAcknowledged\":true}"
+          "body": "{\"workflowId\":\"31d8cf8c-442f-4428-979b-7c53fd0bab1c\",\"runId\":\"eabc3a0d-b88e-47b9-aa3b-5b9aa5ce98f6\",\"reviewNodeId\":\"review\",\"expectedEpisodeVersion\":4,\"title\":\"Fixture approved title\",\"description\":\"Fixture final description\",\"categoryId\":\"25\",\"tags\":[],\"selfDeclaredMadeForKids\":false,\"containsSyntheticMedia\":false,\"disclosureRationale\":\"Original factual cards, no realistic synthetic evidence\",\"rightsAcknowledged\":true}"
         },
         {
           "method": "POST",
-          "path": "/api/publication/approvals/62fdaf7d-f93b-4818-b087-e285fb30c532/publish",
+          "path": "/api/publication/approvals/86e7298c-295c-465d-bcc2-06791dc8950a/publish",
           "body": "{}"
         }
       ],
@@ -655,98 +661,128 @@
       "errors": []
     },
     {
-      "base": "http://127.0.0.1:64732",
+      "base": "http://127.0.0.1:58021",
       "writes": [
         {
           "method": "POST",
-          "path": "/api/workflows/f9bb6241-cf3d-42a0-bdbb-72f9341fe0a8/run",
-          "body": "{\"episodeId\":\"8cd3c910-7a5d-467e-8752-b2af749a014f\",\"selectedStages\":[\"script\",\"storyboard\"],\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":3}"
+          "path": "/api/workflows/2b614403-2bdc-418e-ad49-478332116f9d/plan",
+          "body": "{\"episodeId\":\"f0879816-a0d2-46f7-8512-f8484f004a10\",\"execution\":{\"mode\":\"all\",\"refresh\":false},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":3}"
         },
         {
           "method": "POST",
-          "path": "/api/workflows/f9bb6241-cf3d-42a0-bdbb-72f9341fe0a8/quote",
-          "body": "{\"episodeId\":\"8cd3c910-7a5d-467e-8752-b2af749a014f\",\"selectedStages\":[\"generate-1\",\"generate-2\",\"render\",\"review\"],\"disclosure\":{\"containsSyntheticMedia\":true,\"rationale\":\"Every realistic generated illustration requires explicit disclosure\"},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":4,\"resumeRunId\":\"8d353c8a-7777-4f65-8bf4-56b2c768ee51\"}"
+          "path": "/api/workflows/2b614403-2bdc-418e-ad49-478332116f9d/plan",
+          "body": "{\"episodeId\":\"f0879816-a0d2-46f7-8512-f8484f004a10\",\"execution\":{\"mode\":\"node\",\"targetNodeId\":\"generate-1\"},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":3}"
         },
         {
           "method": "POST",
-          "path": "/api/workflows/f9bb6241-cf3d-42a0-bdbb-72f9341fe0a8/quote",
-          "body": "{\"episodeId\":\"8cd3c910-7a5d-467e-8752-b2af749a014f\",\"selectedStages\":[\"generate-1\",\"generate-2\",\"render\",\"review\"],\"disclosure\":{\"containsSyntheticMedia\":false,\"rationale\":\"Every realistic generated illustration requires explicit disclosure\"},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":4,\"resumeRunId\":\"8d353c8a-7777-4f65-8bf4-56b2c768ee51\"}"
+          "path": "/api/workflows/2b614403-2bdc-418e-ad49-478332116f9d/quote",
+          "body": "{\"episodeId\":\"f0879816-a0d2-46f7-8512-f8484f004a10\",\"execution\":{\"mode\":\"all\",\"refresh\":false},\"disclosure\":{\"containsSyntheticMedia\":true,\"rationale\":\"Every realistic generated illustration requires explicit disclosure\"},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":3}"
         },
         {
           "method": "POST",
-          "path": "/api/workflows/f9bb6241-cf3d-42a0-bdbb-72f9341fe0a8/quote",
-          "body": "{\"episodeId\":\"8cd3c910-7a5d-467e-8752-b2af749a014f\",\"selectedStages\":[\"generate-1\",\"generate-2\",\"render\",\"review\"],\"disclosure\":{\"containsSyntheticMedia\":false,\"rationale\":\"Revised rationale is a different approval input\"},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":4,\"resumeRunId\":\"8d353c8a-7777-4f65-8bf4-56b2c768ee51\"}"
+          "path": "/api/workflows/2b614403-2bdc-418e-ad49-478332116f9d/quote",
+          "body": "{\"episodeId\":\"f0879816-a0d2-46f7-8512-f8484f004a10\",\"execution\":{\"mode\":\"all\",\"refresh\":false},\"disclosure\":{\"containsSyntheticMedia\":false,\"rationale\":\"Every realistic generated illustration requires explicit disclosure\"},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":3}"
         },
         {
           "method": "POST",
-          "path": "/api/workflows/f9bb6241-cf3d-42a0-bdbb-72f9341fe0a8/quote",
-          "body": "{\"episodeId\":\"8cd3c910-7a5d-467e-8752-b2af749a014f\",\"selectedStages\":[\"generate-1\",\"generate-2\",\"render\",\"review\"],\"disclosure\":{\"containsSyntheticMedia\":false,\"rationale\":\"Another rationale invalidates the prior unknown-cost waiver\"},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":4,\"resumeRunId\":\"8d353c8a-7777-4f65-8bf4-56b2c768ee51\"}"
+          "path": "/api/workflows/2b614403-2bdc-418e-ad49-478332116f9d/quote",
+          "body": "{\"episodeId\":\"f0879816-a0d2-46f7-8512-f8484f004a10\",\"execution\":{\"mode\":\"all\",\"refresh\":false},\"disclosure\":{\"containsSyntheticMedia\":false,\"rationale\":\"Revised rationale is a different approval input\"},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":3}"
         },
         {
           "method": "POST",
-          "path": "/api/workflows/f9bb6241-cf3d-42a0-bdbb-72f9341fe0a8/quote",
-          "body": "{\"episodeId\":\"8cd3c910-7a5d-467e-8752-b2af749a014f\",\"selectedStages\":[\"generate-1\",\"generate-2\",\"render\",\"review\"],\"disclosure\":{\"containsSyntheticMedia\":true,\"rationale\":\"Another rationale invalidates the prior unknown-cost waiver\"},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":4,\"resumeRunId\":\"8d353c8a-7777-4f65-8bf4-56b2c768ee51\"}"
+          "path": "/api/workflows/2b614403-2bdc-418e-ad49-478332116f9d/quote",
+          "body": "{\"episodeId\":\"f0879816-a0d2-46f7-8512-f8484f004a10\",\"execution\":{\"mode\":\"all\",\"refresh\":false},\"disclosure\":{\"containsSyntheticMedia\":false,\"rationale\":\"Another rationale invalidates the prior unknown-cost waiver\"},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":3}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/workflows/2b614403-2bdc-418e-ad49-478332116f9d/quote",
+          "body": "{\"episodeId\":\"f0879816-a0d2-46f7-8512-f8484f004a10\",\"execution\":{\"mode\":\"all\",\"refresh\":false},\"disclosure\":{\"containsSyntheticMedia\":true,\"rationale\":\"Another rationale invalidates the prior unknown-cost waiver\"},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":3}"
         }
       ],
       "external": [],
       "errors": []
     },
     {
-      "base": "http://127.0.0.1:64748",
+      "base": "http://127.0.0.1:58104",
       "writes": [],
       "external": [],
       "errors": []
     },
     {
-      "base": "http://127.0.0.1:64781",
+      "base": "http://127.0.0.1:58166",
       "writes": [
         {
           "method": "POST",
-          "path": "/api/workflows/15f5fc5c-8334-4d21-bbfe-aecee394dbd8/run",
-          "body": "{\"episodeId\":\"6008d611-bdf7-41b0-a05f-4dbab6d9c470\",\"selectedStages\":[\"trend\",\"news\",\"research\",\"script\",\"storyboard\",\"layout\"],\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":2}"
+          "path": "/api/workflows/d9d97d1e-c97e-47bb-8117-6b5c33e84ca2/plan",
+          "body": "{\"episodeId\":\"0034e803-cfd6-4213-ad9e-e7e5b18eda75\",\"execution\":{\"mode\":\"all\",\"refresh\":false},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":2}"
         },
         {
           "method": "POST",
-          "path": "/api/workflows/15f5fc5c-8334-4d21-bbfe-aecee394dbd8/quote",
-          "body": "{\"episodeId\":\"6008d611-bdf7-41b0-a05f-4dbab6d9c470\",\"selectedStages\":[\"generate\",\"render\",\"review\"],\"disclosure\":{\"containsSyntheticMedia\":true,\"rationale\":\"Realistic fixture illustrations need disclosure\"},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":4,\"resumeRunId\":\"83cbbb88-a90a-4f40-bcf1-322f077d3a7f\"}"
+          "path": "/api/workflows/d9d97d1e-c97e-47bb-8117-6b5c33e84ca2/plan",
+          "body": "{\"episodeId\":\"0034e803-cfd6-4213-ad9e-e7e5b18eda75\",\"execution\":{\"mode\":\"node\",\"targetNodeId\":\"generate\"},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":2}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/workflows/d9d97d1e-c97e-47bb-8117-6b5c33e84ca2/quote",
+          "body": "{\"episodeId\":\"0034e803-cfd6-4213-ad9e-e7e5b18eda75\",\"execution\":{\"mode\":\"all\",\"refresh\":false},\"disclosure\":{\"containsSyntheticMedia\":true,\"rationale\":\"Realistic fixture illustrations need disclosure\"},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":2}"
         }
       ],
       "external": [],
       "errors": []
     },
     {
-      "base": "http://127.0.0.1:64844",
+      "base": "http://127.0.0.1:58281",
       "writes": [
         {
           "method": "POST",
-          "path": "/api/workflows/0a6b5a58-5bc4-4320-a5eb-a0748865f4d7/run",
-          "body": "{\"episodeId\":\"87abfc90-6bd0-4027-8feb-f704426ce046\",\"selectedStages\":[\"trend\",\"news\",\"research\",\"script\",\"storyboard\",\"layout\",\"render\",\"review\"],\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":2}"
+          "path": "/api/workflows/b81d704e-c093-4c80-8e88-38006afc87f4/plan",
+          "body": "{\"episodeId\":\"d9066a96-a884-4b5f-bc6d-0220866f198e\",\"execution\":{\"mode\":\"all\",\"refresh\":false},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":2}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/workflows/b81d704e-c093-4c80-8e88-38006afc87f4/run",
+          "body": "{\"episodeId\":\"d9066a96-a884-4b5f-bc6d-0220866f198e\",\"execution\":{\"mode\":\"all\",\"refresh\":false},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":2}"
         }
       ],
       "external": [],
       "errors": []
     },
     {
-      "base": "http://127.0.0.1:64896",
+      "base": "http://127.0.0.1:58364",
       "writes": [
         {
           "method": "POST",
-          "path": "/api/workflows/a459cbb1-aaf2-48a4-a707-858558001eb0/run",
-          "body": "{\"episodeId\":\"5a718968-34d0-4030-8b9c-7bfb2ff1b825\",\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":3,\"selectedStages\":[\"render-2\"],\"startStage\":\"render-2\",\"resumeRunId\":\"20b47ff1-a451-4e06-b39a-4f76d25630c1\"}"
+          "path": "/api/workflows/3cf5d9d0-abfe-4db3-8b8f-ec665ff15460/plan",
+          "body": "{\"episodeId\":\"74b9c01b-3f43-474c-95c7-e770ec990b03\",\"execution\":{\"mode\":\"node\",\"targetNodeId\":\"render-2\"},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":3}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/workflows/3cf5d9d0-abfe-4db3-8b8f-ec665ff15460/run",
+          "body": "{\"episodeId\":\"74b9c01b-3f43-474c-95c7-e770ec990b03\",\"execution\":{\"mode\":\"node\",\"targetNodeId\":\"render-2\"},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":3}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/workflows/3cf5d9d0-abfe-4db3-8b8f-ec665ff15460/plan",
+          "body": "{\"episodeId\":\"74b9c01b-3f43-474c-95c7-e770ec990b03\",\"execution\":{\"mode\":\"node\",\"targetNodeId\":\"publish\"},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":3}"
+        },
+        {
+          "method": "POST",
+          "path": "/api/workflows/3cf5d9d0-abfe-4db3-8b8f-ec665ff15460/plan",
+          "body": "{\"episodeId\":\"74b9c01b-3f43-474c-95c7-e770ec990b03\",\"execution\":{\"mode\":\"node\",\"targetNodeId\":\"publish\"},\"expectedWorkflowVersion\":1,\"expectedEpisodeVersion\":3}"
         }
       ],
       "external": [],
       "errors": []
     },
     {
-      "base": "http://127.0.0.1:64931",
+      "base": "http://127.0.0.1:58508",
       "writes": [],
       "external": [],
       "errors": []
     }
   ],
   "boundary": "Temporary SQLite, ephemeral loopback HTTP, actual public app; fixture-only external transport. No live consent, credentials, generation or publication.",
-  "finishedAt": "2026-10-26T11:45:35.026Z",
+  "finishedAt": "2026-10-30T12:27:22.181Z",
   "counts": {
     "expected": 12,
     "executed": 12,
@@ -758,39 +794,39 @@
   "sources": [
     {
       "path": "public/app.js",
-      "sha256": "7a2d6bd2f448db21255ec6060d2606b106e5929f2e5731766276f164d31e462e"
+      "sha256": "5f9c8ab1a72d5a69cce1ad0b2c64e5bb5d55d2eadd3e5cfb1b2400ac9ff30198"
     },
     {
       "path": "public/workflow.js",
-      "sha256": "99a516fae3d8fd35949d4b933c2bf939d93668f6b4707f83a91fe87fc97dc444"
+      "sha256": "3f91ed5bd9b973c712a7df4e732d538dd814fb0e9c2cdddecac55afa3047b3a7"
     },
     {
       "path": "public/production-tools.js",
-      "sha256": "2b495ecb55b00584b5fa8dd8d6d6ad0721c08db4abacb04cca4c922d5809f4d4"
+      "sha256": "49d158b8c556320917e2f39590275346e582990efea00af2d67c7de5ac4eb498"
     },
     {
       "path": "public/styles.css",
-      "sha256": "b8874084867642c01d8d0774842bb14fa5e60ea6dd7b0f157bd20e3ff7fd00c1"
+      "sha256": "81858003e49ea442c6ad7e1ce2451c6a3cab70fde10f7550d307590ac7d30233"
     },
     {
       "path": "public/workspace.css",
-      "sha256": "4837314cd26613ef1b814ede10fd6dd237024da088781b37a9abe3831181a602"
+      "sha256": "89e2a20fd354557ed41d40187f250580ba7a65fb7c2ebcfde4e9aa057d294b82"
     },
     {
       "path": "server/app.mjs",
-      "sha256": "2557b4a19181820b71536846d19b6f1ebfcb2a56bc1d6d06051c44449c31bae7"
+      "sha256": "8bca8b5dc674c201bd4efee6dc0c20f863cd52e9a3d45af930f4689b3cb1fe82"
     },
     {
       "path": "server/publication.mjs",
-      "sha256": "9e8773fa72070f1344cda0870cc63a11b0ded59d5fb2d4cac0d78ca545e3a525"
+      "sha256": "6bbd6c1eb424d9e299df46370ebcd6dcffe81c4f6d2e4d1118591a516e686b4c"
     },
     {
       "path": "server/media-sources.mjs",
-      "sha256": "c67789ea91b376aaadfc3457a34f9662dac5f8d9dd97fbaf835056b713ea4056"
+      "sha256": "87ae6e89704990d2220b65d0a893b844b43274a5c3f8e1d56d1a3871b2e48fa4"
     },
     {
       "path": "tests/production-workspace-journey.test.mjs",
-      "sha256": "5d6d9dcc32b73c1105e664c311c78a19a0faa6a2f453de4b4cbcc26cfa384bb2"
+      "sha256": "fde591ce305858622f66c9708e2b5d5592927df5e8795b159a93a45b9c311bac"
     }
   ]
 }

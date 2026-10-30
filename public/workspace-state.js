@@ -126,7 +126,7 @@ export function normalizeLayout(value = {}) {
     width,
     height,
     inspectorWidth: bounded(input.inspectorWidth, 240, 480, 300),
-    sidebarWidth: bounded(input.sidebarWidth, 160, 400, 184),
+    sidebarWidth: bounded(input.sidebarWidth, 160, 400, 216),
     toolsMode,
   };
 }

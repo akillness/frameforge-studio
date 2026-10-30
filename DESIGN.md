@@ -8,42 +8,48 @@
 - **Jev review (pre-implementation, advisory)** — a real default-profile review of the scoped proposal returned `proposal_only` on an `unvalidated` tier (jev-1.13.0); there was no source diff to review. Treat this as a warning, not permission or a code verdict.
 - **Current rendered-product capture (observed after implementation)** — final overview, Studio, Workflow, and supporting views were captured after the last UI edit at 1440px, 768px, and 375px where applicable. The scoped evidence and screenshots are in `artifacts/ops-workspace/`; the browser run used isolated Korean fixtures, not production records. The final visual receipt reports 94/100 PASS with no listed differences.
 
+- **Bright redesign (2026-10-30)** — superseded the earlier warm-neutral palette and the shared dark default that the blog and, through `styles.css`, the workbench rendered. Jev API routing (`jeopi` profile, served `jev-1.14.0`, tier `unvalidated`) ranked `design-taste-frontend` highest (fit 0.44); its consistency locks, AA gates, em-dash ban and reduced-motion rules were applied, while its landing-page aesthetics were not, because it disclaims operational workbenches. Design read: operational production workbench, bright polished studio language, token-driven native CSS. Dials: DESIGN_VARIANCE 4, MOTION_INTENSITY 4, VISUAL_DENSITY 6. An advisory Jev review of the proposal returned `proposal_only` (evidence_supports 0.64 below its 0.80 threshold; receipt `062b43d9702d6a126a1ea7baae6999e50526bb3c8a4cb6b9be9d3c6b95dca5c7`), which is a warning, not approval. An independent vision critique of the prior screenshots drove the hierarchy fixes (one primary per surface, visible unsaved state, clearer disabled state, layered surfaces).
+
 ## 1. Atmosphere & identity
 
 - **Audience:** Korean-speaking producers who need to see what is being produced, inspect outputs and history, and understand the actual state of the local production system.
 - **Primary task:** scan current production records, find the next item requiring attention, and open its existing editor or job detail without losing provenance.
-- **Primary direction:** **Operational** — information density and trustworthy state over editorial drama. Borrow the concept's warm-neutral/blue visual signature only; do not copy its fictional project identity, wordmark, records, copy, or data model.
-- **Reads as:** composed, traceable, dependable.
+- **Primary direction:** **Operational** — information density and trustworthy state over editorial drama. Visual signature: bright cool-neutral surfaces with a single blue accent (section 2), evolved from the concept's queue-first hierarchy; do not copy its fictional project identity, wordmark, records, copy, or data model.
+- **Reads as:** bright, composed, traceable, dependable.
 - **Signature:** a real-data work queue paired with a compact provenance/operations rail; every count links to records that produce it.
 - **Scope:** add an operational overview to the current shared app shell and harmonize the existing Studio, Workflow, Trends, Templates, History, Knowledge, and Settings views. Keep all current editor and production actions intact. This is not a replacement product or a static mock.
 
 ## 2. Color
 
-Use semantic tokens; components must not introduce one-off palette values. Approximate visual budget: 70% warm ground/surface, 25% text/borders/secondary surfaces, 5% accent and semantic status colors. Status is never conveyed by color alone. All text/surface pairs must meet WCAG 2.2 AA contrast (4.5:1 normal text, 3:1 large text and essential UI graphics); verify actual rendered pairs before claiming a pass.
+Use semantic tokens; components must not introduce one-off palette values. Approximate visual budget: 72% bright cool ground/surface, 23% text/borders/secondary surfaces, 5% accent and semantic status colors. Status is never conveyed by color alone. All text/surface pairs must meet WCAG 2.2 AA contrast (4.5:1 normal text, 3:1 large text and essential UI graphics); verify actual rendered pairs before claiming a pass.
+
+The studio workbench (`index.html`) and the blog workspace (`blog.html`) share one bright theme declared once in `public/styles.css` `:root`. Page stylesheets may set density (the workbench raises `--control-height` to 40px) but never redeclare color or shape tokens.
 
 | Token | Value | Role |
 |---|---|---|
-| `--canvas` | `#f5f4ef` | Main application ground |
-| `--surface` | `#fffefa` | Primary content and panels |
-| `--surface-side` | `#eeede6` | Navigation/support surface |
-| `--surface-subtle` | `#f0f2e9` | Quiet inset, selected-neutral and callout surface |
-| `--ink` | `#242c35` | Primary text |
-| `--text-secondary` | `#46514f` | Secondary text; keep readable on both surfaces |
-| `--muted` | `#606966` | Supporting copy only after contrast verification |
-| `--line` | `#ddded5` | Dividers and subtle boundaries |
-| `--line-strong` | `#858b82` | Inputs and controls requiring clear boundaries |
-| `--accent` | `#2851c8` | Primary action, links, selected navigation |
-| `--accent-soft` | `#e9eefc` | Accent selection/background |
-| `--success` / `--success-soft` | `#326655` / `#edf3ed` | Confirmed completed/healthy state |
-| `--warning` / `--warning-soft` | `#8a5b22` / `#fbf1df` | Attention state |
-| `--danger` / `--danger-soft` | `#a34437` / `#faeee9` | Failed/destructive state |
-| `--focus` | `#173ea8` | Dedicated high-contrast focus ring; never rely on the surface accent alone |
+| `--canvas` | `#f6f7fb` | Main application ground and node-canvas base |
+| `--surface` | `#ffffff` | Panels, top bar, dialogs, node cards |
+| `--surface-side` | `#f1f3f9` | Navigation rail and dialog footers |
+| `--surface-subtle` | `#eef1f8` | Quiet inset, hover-neutral and callout surface |
+| `--ink` | `#1b2130` | Primary text; toast ground |
+| `--text-secondary` | `#485166` | Secondary text |
+| `--muted` | `#5b6478` | Supporting copy and placeholders |
+| `--line` | `#e1e5ee` | Dividers, panel and dialog boundaries |
+| `--line-control` | `#cdd3df` | Decorative card edges (node cards); never the only control boundary |
+| `--line-strong` | `#868fa3` | Inputs and controls requiring clear boundaries |
+| `--accent` | `#3451e0` | Primary action, links, selection, section labels |
+| `--accent-bright` / `--accent-strong` | `#4a66f0` / `#2c46cf` | Primary-action gradient top / hover and pressed |
+| `--accent-soft` | `#ebefff` | Accent selection/background |
+| `--on-accent` | `#ffffff` | Text on accent, gradient and ink grounds |
+| `--success` / `--success-soft` | `#1c7350` / `#e6f5ed` | Confirmed completed/healthy state |
+| `--warning` / `--warning-soft` | `#8f5600` / `#fff3dc` | Attention state, including the unsaved-changes chip |
+| `--danger` / `--danger-soft` | `#b93a2c` / `#fdecea` | Failed/destructive state |
+| `--focus` | `#1f36b8` | Dedicated high-contrast focus ring; never rely on the surface accent alone |
+| `--canvas-dot` | `#d5dbe7` | Decorative node-canvas grid dots only |
 
-The supporting-copy token was darkened from concept #68706e to #606966 for AA contrast on the warm sidebar, and placeholders use this text token rather than a control-boundary token.
+Measured 2026-10-30 from these values: ink on canvas 15.01:1, secondary on surface 7.94:1, muted on the rail 5.35:1, accent on surface 6.18:1, white on the primary gradient 4.72:1 (top) to 6.18:1 (bottom), danger on danger-soft 4.96:1, control boundary on canvas 3.03:1, focus ring on surface 9.22:1. `tests/workbench-theme-tokens.test.mjs` recomputes the essential pairs from the live rendered tokens on both pages.
 
-The control-boundary token was darkened from concept #a6aaa0 to #858b82 to meet the 3:1 essential-control contrast requirement. Existing editor preview media keeps authored content colors; UI chrome uses the semantic tokens. Legacy token names alias these values.
-
-The listed concept values are starting values, not a contrast certification. Adjust a token in this contract if a measured pair fails; do not patch a single component with a non-contract color. Light theme only for this scope; no dark theme or component-level theme branches.
+Existing editor preview media keeps authored content colors; UI chrome uses the semantic tokens. Legacy token names (`--bg`, `--border`, `--primary`, `--text`, `--raised`) alias these values. Adjust a token in this contract if a measured pair fails; do not patch a single component with a non-contract color. Bright theme only; no dark theme or component-level theme branches.
 
 ## 3. Typography
 
@@ -54,8 +60,8 @@ The listed concept values are starting values, not a contrast certification. Adj
 
 ## 4. Spacing & layout
 
-- **Base rhythm:** 4px; use 4, 8, 12, 16, 20, 24, 32, 40px. Panel radius 9px; control radius 5px; 1px dividers. Use no decorative framework grid or blanket card grid.
-- **Large desktop (≥1280px):** persistent 188px navigation; 64px top bar; fluid content capped at 1600px. Overview uses a 12-column asymmetric composition: queue takes the primary 8–9 columns, provenance/operations rail 3–4 columns. Summary figures are derived from the same data as their destination lists. Avoid four equal KPI cards when the information weights differ.
+- **Base rhythm:** 4px; use 4, 8, 12, 16, 20, 24, 32, 40px. One radius scale: `--radius-small` 6px (chips, avatars), `--radius-control` 8px (buttons, inputs), `--radius-inner` 10px (inset boxes, scene cards), `--radius-panel` 12px (panels, node cards, floating canvas controls), `--radius-dialog` 16px; status badges and pills are fully rounded. 1px dividers. Use no decorative framework grid or blanket card grid.
+- **Large desktop (≥1280px):** persistent 216px navigation (user-resizable 160-400px, stored browser-locally); 64px top bar; fluid content capped at 1600px. Overview uses a 12-column asymmetric composition: queue takes the primary 8–9 columns, provenance/operations rail 3–4 columns. Summary figures are derived from the same data as their destination lists. Avoid four equal KPI cards when the information weights differ.
 - **Tablet (700–1279px):** navigation may collapse to a 64–72px icon rail only when every icon retains an accessible name and tooltip; queue stays first, secondary rail stacks below or moves to a clearly labelled tab. Tables may scroll horizontally within their own labelled region; the document itself must not overflow.
 - **Mobile (<700px, QA at 375px):** use a compact header and labelled, horizontally scrollable navigation (minimum 44px touch targets). Stack panels; keep queue filters/actions reachable; use a responsive row/card presentation when a table would require unusably wide scrolling. No icon-only primary navigation. Dialogs fit the viewport and remain keyboard-operable.
 - **Scroll ownership:** document owns page scroll; long tables/lists may scroll in their own labelled region only when necessary. Never lock body scroll for routine view changes.
@@ -70,7 +76,7 @@ The listed concept values are starting values, not a contrast certification. Adj
 - **History/provenance:** use `events`, existing episode history, workflow history/runs, and stable entity/version IDs. Do not invent people or diff summaries. Restore remains the existing append-new-version flow with its concurrency guard; never rewrite history.
 - **Operations:** reflect `integrations`, trend collector state, and actual queued/running/completed/failed jobs. Distinguish configured, available, and exercised states. Do not show fictional backup, storage utilization, Tailscale, latency, or bridge health unless a current API explicitly reports it. Unknown and stale states are explicit.
 - **Actions:** existing Studio, Workflow, generation, narration, render, restore, and review controls retain their current confirmation/version/idempotency protections. Opening an overview or configuring a view performs no server write, provider call, render, upload, paid generation, or publication.
-- **Buttons/inputs:** default, hover, focus-visible, pressed, disabled, loading, and validation-error states. Button minimum height 40px; destructive actions remain secondary and explicit.
+- **Buttons/inputs:** default, hover, focus-visible, pressed, disabled, loading, and validation-error states. Exactly one gradient `.primary` action per surface (scene editor: 변경 저장; workflow page: 워크플로우 실행). Disabled controls show muted text on the subtle surface with a not-allowed cursor instead of an opacity fade, so they read as unavailable rather than broken. Button minimum height 40px; destructive actions remain secondary and explicit.
 - **Badges/status:** text label plus shape/icon; semantic color pair from §2. Progress has an accessible label and current value. Avoid relying on tiny dots alone.
 - **Tables/lists:** semantic headings/captions, keyboard-accessible sorting with `aria-sort`, stable row identity, empty/loading/error states, and explicit row action.
 - **Dialogs/menus:** native `<dialog>` or existing accessible pattern; labelled, keyboard close/cancel, focus contained/restored, no hidden action on selection.
@@ -78,13 +84,14 @@ The listed concept values are starting values, not a contrast certification. Adj
 
 ## 6. Motion & interaction
 
-- Motion is limited to state transitions and feedback: 120–180ms ease-out for hover/selection, 160–220ms for opening/closing a dialog. No bounce, scroll hijacking, parallax, or auto-advancing content.
+- Motion is limited to state transitions and feedback: 150-180ms `--ease-out` for hover, input focus border and elevation changes; 200ms scale-and-fade for opening a dialog; 220ms rise-and-fade for a toast. Hover elevation changes shadow only, never geometry, so pointer targets and measured layout stay still. No bounce, scroll hijacking, parallax, or auto-advancing content.
 - Respect `prefers-reduced-motion: reduce` by removing nonessential transitions/animations. No new motion dependency.
 - Focus, keyboard selection, filtering, sorting, pagination/scrolling, and dialog flows must work without a pointer. Do not steal focus during background polling or replace a focused editor field during refresh.
 
 ## 7. Depth & surface
 
-- Flat surfaces with clear 1px boundaries establish hierarchy. No glass, blur, gradient, or shadow on every card. A single restrained shadow is allowed for modal/dialog elevation; the main page uses color and spacing, not elevation, to organize information.
+- Layered bright surfaces establish hierarchy: white panels on the cool canvas with a 1px `--line` boundary and `--shadow-soft`; `--shadow-raised` for hovered cards and floating canvas controls (zoom, minimap); `--shadow-overlay` for dialogs and the toast. No glass or blur anywhere.
+- Gradient is reserved for three deliberate surfaces: the primary action (`--gradient-accent`), the brandmark tile, and the program-monitor stage (`--stage-surface`, a soft light radial wash that frames the dark media preview, which carries `--shadow-raised`). The node canvas uses a static 20px dot grid. Node cards carry their stage color (one saturated hue per stage type in `public/workflow.js` `TYPES`: teal, sky, indigo, violet, amber, orange, magenta, red, blue, green) as a pure-hue 4px top strip (decorative, not a text pair), a 12% header tint and an icon mixed 55% with ink; measured icon-on-tint contrast is at least 3.8:1 and header text at least 11.7:1; the selected node adds a 6px accent halo. Open disclosure sections keep ink titles and signal state with an accent chevron, not a recolored heading.
 - Keep the queue visually dominant and use the right rail as supporting evidence. Do not reproduce the concept screenshot as a fixed canvas.
 
 ## 8. Accessibility constraints & accepted debt

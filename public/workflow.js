@@ -3,16 +3,16 @@ import {workflowChanges,nodeChanges,changesHtml,displayValue,historyReason,creat
 import {createContextMenu,installInfoTooltips} from './context-menu.js';
 import {effectiveOutput, diffNodeOutputs, summarizeRun} from './run-diff.js';
 const TYPES = {
-  trend:{name:'트렌드 수집',icon:'↗',summary:'Google RSS · 관심 키워드',color:'#81cfa9'},
-  news:{name:'뉴스 검색',icon:'📰',summary:'키워드 · 뉴스 시나리오 소재',color:'#70d6ff'},
-  research:{name:'리서치 정리',icon:'⌕',summary:'소재와 출처 · 제작 맥락',color:'#87bded'},
-  script:{name:'대본 작성',icon:'✳',summary:'Studio / 외부 에이전트',color:'#c9f079'},
-  storyboard:{name:'스토리보드',icon:'▦',summary:'대본을 편집 가능한 장면으로',color:'#dfc48f'},
-  layout:{name:'레이아웃 연출',icon:'⊞',summary:'상단 이미지·중단 영상·HTML 오버레이 배치',color:'#ffd166'},
-  generate:{name:'Higgsfield 생성',icon:'✦',summary:'모델로 장면·슬롯 영상 / 이미지 생성',color:'#ec9ed0'},
-  render:{name:'영상 렌더',icon:'▶',summary:'FFmpeg 다중 레이어 · MP4 생성',color:'#ffac96'},
-  review:{name:'사람의 검토',icon:'✓',summary:'검토 대기 · 자동 게시 없음',color:'#c5b3ef'},
-  publish:{name:'플랫폼 공개',icon:'☁',summary:'승인된 후보 · 채널 OAuth · 공개 확인',color:'#a8e6cf'},
+  trend:{name:'트렌드 수집',icon:'↗',summary:'Google RSS · 관심 키워드',color:'#0f9d8a'},
+  news:{name:'뉴스 검색',icon:'📰',summary:'키워드 · 뉴스 시나리오 소재',color:'#0b8bd1'},
+  research:{name:'리서치 정리',icon:'⌕',summary:'소재와 출처 · 제작 맥락',color:'#5b5fe0'},
+  script:{name:'대본 작성',icon:'✳',summary:'Studio / 외부 에이전트',color:'#7c4ddb'},
+  storyboard:{name:'스토리보드',icon:'▦',summary:'대본을 편집 가능한 장면으로',color:'#c98a0b'},
+  layout:{name:'레이아웃 연출',icon:'⊞',summary:'상단 이미지·중단 영상·HTML 오버레이 배치',color:'#e0700f'},
+  generate:{name:'Higgsfield 생성',icon:'✦',summary:'모델로 장면·슬롯 영상 / 이미지 생성',color:'#d63f8c'},
+  render:{name:'영상 렌더',icon:'▶',summary:'FFmpeg 다중 레이어 · MP4 생성',color:'#e0484f'},
+  review:{name:'사람의 검토',icon:'✓',summary:'검토 대기 · 자동 게시 없음',color:'#3466e6'},
+  publish:{name:'플랫폼 공개',icon:'☁',summary:'승인된 후보 · 채널 OAuth · 공개 확인',color:'#139a68'},
 };
 const TYPE_ORDER = Object.keys(TYPES);
 const STATUS = {queued:'대기',pending:'대기',running:'실행 중',completed:'완료',succeeded:'완료',failed:'실패',cancelled:'취소됨',cancelling:'취소 요청됨',skipped:'건너뜀',awaiting_review:'사람의 검토 대기'};
@@ -1069,7 +1069,7 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
   }
   function stageDialogHtml() {
     const info=stageInfo();
-    return `<div class="wf-overlay-header"><div><span class="eyebrow">STAGE CONTROL</span><h2 id="wf-stage-title">선택 단계 실행</h2></div><button type="button" data-wf-action="close-overlay" aria-label="단계 실행 닫기">닫기</button></div><p id="wf-stage-status" aria-live="polite" data-stage-state="${info.state}"><strong>${escapeHtml(info.node ? nodeName(info.node) : '선택된 노드 없음')}</strong><br>${escapeHtml(info.text)}</p><p class="hint">필수 선행 출력과 현재 에피소드·워크플로우 버전을 확인한 뒤 요청합니다. 생성 단계는 비용 확인 후 실행됩니다.</p><div class="dialog-actions"><button type="button" data-wf-action="stage-start" id="wf-stage-start" ${info.state==='blocked'||info.state==='running'||!info.node?'disabled':''}>선택 단계 시작</button>${info.canResume?`<button type="button" class="primary" data-wf-action="resume-stage">실패 실행에서 재개</button>`:''}</div>`;
+    return `<div class="wf-overlay-header"><div><span class="eyebrow">STAGE CONTROL</span><h2 id="wf-stage-title">선택 단계 실행</h2></div><button type="button" data-wf-action="close-overlay" aria-label="단계 실행 닫기">닫기</button></div><p id="wf-stage-status" aria-live="polite" data-stage-state="${info.state}"><strong>${escapeHtml(info.node ? nodeName(info.node) : '선택된 노드 없음')}</strong><br>${escapeHtml(info.text)}</p><p class="hint">필수 선행 출력과 현재 에피소드·워크플로우 버전을 확인한 뒤 요청합니다. 생성 단계는 비용 확인 후 실행됩니다.</p><div class="dialog-actions"><button type="button" class="primary" data-wf-action="stage-start" id="wf-stage-start" ${info.state==='blocked'||info.state==='running'||!info.node?'disabled':''}>선택 단계 시작</button>${info.canResume?`<button type="button" class="primary" data-wf-action="resume-stage">실패 실행에서 재개</button>`:''}</div>`;
   }
   // "전체 실행" keep/refresh/cancel decision when the plan found already-completed nodes (contract 2.3).
   function runAllDialogHtml() {
@@ -1176,7 +1176,9 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
   function outputLinks(run) {
     const urls=[];
     for (const node of run.nodeRuns || []) { const output=node.output; if (output && typeof output==='object') { const url=output.outputUrl || output.job?.outputUrl; if (typeof url==='string' && /^\/api\/exports\/[a-zA-Z0-9_-]+\.mp4$/.test(url)) urls.push(url); } }
-    return [...new Set(urls)].map(url=>`<a href="${escapeHtml(url)}" download>완성 MP4 다운로드 ↓</a>`).join('');
+    const unique=[...new Set(urls)];
+    if (!unique.length) return '';
+    return `<span class="wf-output-links">${unique.map((url,index)=>`<a href="${escapeHtml(url)}" download>완성 MP4${unique.length>1?` ${index+1}`:''} 다운로드 ↓</a>`).join('')}</span>`;
   }
 
   function renderedOutput(run) {
