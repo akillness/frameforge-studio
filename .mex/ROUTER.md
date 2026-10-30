@@ -14,7 +14,7 @@ edges:
     condition: when preparing the local runtime
   - target: patterns/INDEX.md
     condition: when matching a task to an existing runbook
-last_updated: 2026-10-28
+last_updated: 2026-10-30
 ---
 
 # Current status and task routing
@@ -23,6 +23,7 @@ Constitution: root `AGENTS.md` and `.mex/AGENTS.md`. Map: `context/architecture.
 
 ## Current status — 2026-10-26
 
+- **2026-10-30 bright redesign deployment:** Commit `8f04a6e` replaces the shared dark default and warm-neutral palette with one bright token set for the workbench and blog (DESIGN.md section 2), layered surfaces, one primary action per surface, saturated node hues and a 216px default sidebar. Jev API routing (`jeopi`, served `jev-1.14.0`, unvalidated) picked `design-taste-frontend`; the advisory review was `proposal_only`. Same-session full suite 1262 tests: no new failure versus the pre-change baseline (45 pre-existing); hosted CI on `8f04a6e` failed only previously failing tests (45 versus 49 on `501248e`). Image `sha256:40ad69ba…` (runtime files 83/83 equal the commit) passed an isolated render/restart/persistence smoke, then replaced `sha256:b914037a…` (tagged `rollback-20261030-bright`) on the original volume after a byte-exact stopped-volume archive `ops/snapshots/production-bright-redesign-20261030T124542Z`. Pre/post audits are equal (634 rows, 30 media, 0 active, 3 known unknown); health, root and authenticated state 200, unauthenticated state/knowledge 401, tailnet health 200, bridge `/status` 200. No provider, paid generation, publication or owner visual acceptance was exercised; see [verification](../docs/verification.md).
 - Source uses one node workbench with native overlays and recoverable version-guarded archive. The former split A/B navigation is superseded; preserve hidden drafts, active save ownership, original versions, media and history. Blog work remains in the [separate authenticated blog tab](../public/blog.html).
 - Resolve current checkout identity from `harness/manifest.json` and `node scripts/version-harness.mjs verify`, never from old counts or release narratives. The preserved selection is immutable 1.7.2 with readiness not established; this is not a promoter claim or proof that the tested image bundles/deploys that selection.
 - Jeopi's explicitly selected `jeopi` Jev API profile was observed routing through backend `jev-1.14.0` in the current session; that tier is unvalidated, and the reviews currently observed are `proposal_only`, which is not automatic approval. No credentials are recorded here. Blog model drafting/publishing prerequisites remain blocked; Naver/Tistory lack an approved complete common publisher, Tistory lacks canonical drafting policy, GitHub needs its real checkout/editorial media and exact Git consent, and Antigravity is unobserved. All five schedules remain disabled.
