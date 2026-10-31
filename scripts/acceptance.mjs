@@ -23,7 +23,7 @@ episode = await api(`/api/episodes/${episode.id}`, { expectedVersion: episode.ve
   { ...episode.scenes[0], title: '검증된 이야기의 시작', text: '유행보다 먼저\n출처를 확인합니다', duration: 1, background: '#233e35', layout: 'center', kind: 'title' },
   { ...episode.scenes[1], title: '함께 만드는 제작실', text: '소재 → 연출 → 편집\n채널별로 쌓이는 기록', duration: 1, background: '#222d3f', layout: 'lower-third', kind: 'title' },
 ] }, 'PUT');
-const job = await api(`/api/episodes/${episode.id}/render`);
+const job = await api(`/api/episodes/${episode.id}/render`, { expectedVersion: episode.version });
 let completed;
 for (let i = 0; i < 90; i++) {
   const current = await api('/api/state', null, 'GET');

@@ -86,7 +86,7 @@ test('generated scene narration keeps its byte identity and explicit credit thro
   assert.ok(voiceUpload, 'generated narration must be registered as an upload');
   assert.equal(voiceUpload.sha256, hash(narration), 'registration binds original bytes before any rights operation');
   assert.deepEqual(await api(`/api/uploads/${voiceUpload.id}/rights`), []);
-  const denied = await request(`/api/episodes/${episode.id}/render`, 'POST', {});
+  const denied = await request(`/api/episodes/${episode.id}/render`, 'POST', { expectedVersion: episode.version });
   assert.equal(denied.status, 409, 'a narration without explicit rights cannot be rendered with music');
   const source = { origin: 'third-party', useAs: 'illustration', sha256: hash(narration), sourceUrl: 'https://example.invalid/narration', licenseId: 'CC-BY-4.0', attribution: 'Fixture Narrator' };
   const clearance = await api(`/api/uploads/${voiceUpload.id}/rights`, 'POST', source);

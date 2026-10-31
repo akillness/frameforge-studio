@@ -73,7 +73,8 @@ async function prepare(f, bytes) {
     scenes: [{ ...episode.scenes[0], kind: 'title', title: 'Fixture', text: '', duration: 0.5, background: '#123456', layout: 'center' }], music,
   });
   assert.equal(saved.status, 200);
-  const submitted = await f.request(`/api/episodes/${episode.id}/render`, 'POST', {});
+  const current = await saved.json();
+  const submitted = await f.request(`/api/episodes/${episode.id}/render`, 'POST', { expectedVersion: current.version });
   assert.equal(submitted.status, 202);
   const job = await submitted.json();
   await f.entered.promise;

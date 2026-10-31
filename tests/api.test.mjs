@@ -388,6 +388,21 @@ test('uploads use safe generated names and media supports byte ranges while reje
   assert.equal((await f.request(`/api/episodes/${created.id}`, 'PUT', { scenes: [{ ...created.scenes[0], kind: 'video', assetUrl: upload.url }] })).status, 400);
 });
 
+test('manual render and assistant chat reject omitted expectedVersion without side effects', async (t) => {
+  const f = await fixture(t);
+  const created = await episode(f);
+  const before = await (await f.request('/api/state')).json();
+  const render = await f.request(`/api/episodes/${created.id}/render`, 'POST', {});
+  assert.equal(render.status, 409);
+  assert.match((await render.json()).error, /Episode changed before export/i);
+  const chat = await f.request(`/api/episodes/${created.id}/chat`, 'POST', { agent: 'studio', message: 'Do not run without a version' });
+  assert.equal(chat.status, 409);
+  assert.match((await chat.json()).error, /Episode changed before assistant execution/i);
+  const after = await (await f.request('/api/state')).json();
+  assert.equal(after.jobs.length, before.jobs.length, 'missing render version cannot enqueue work');
+  assert.equal(after.events.length, before.events.length, 'missing chat version cannot record or execute a request');
+});
+
 test('async render queue records version and completion; failures stay failed', async (t) => {
   let count = 0;
   const f = await fixture(t, { renderer: async (episode, { dataDir, onProgress }) => {
