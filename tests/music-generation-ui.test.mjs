@@ -19,6 +19,15 @@ async function waitForSignal(signal, name) {
   } finally { clearTimeout(timer); }
 }
 
+async function waitForMusicModelOption(f) {
+  try {
+    await f.page.waitForFunction(() => [...document.querySelector('[aria-label="음악 생성 모델"]')?.options || []].some(option => option.value === 'music-fixture'));
+  } catch (error) {
+    error.message += `; music model request diagnostics=${JSON.stringify(f.browserRequests.slice(-10))}`;
+    throw error;
+  }
+}
+
 function wav(frequency) {
   const rate = 8000, bytes = Buffer.alloc(44 + rate * 2);
   bytes.write('RIFF', 0); bytes.writeUInt32LE(bytes.length - 8, 4); bytes.write('WAVEfmt ', 8);
@@ -60,8 +69,12 @@ async function fixture(t, { transport = 'api' } = {}) {
   const browser = await chromium.launch({ headless: true, executablePath });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1080 }, reducedMotion: 'reduce', serviceWorkers: 'block' });
   const page = await context.newPage(); page.setDefaultTimeout(5000);
-  const external = [], errors = [], writes = [], releases = [];
+  const external = [], errors = [], warnings = [], browserRequests = [], writes = [], releases = [];
   page.on('pageerror', error => errors.push(error.message));
+  page.on('console', message => { if (message.type() === 'warning' || message.type() === 'error') warnings.push(message.type()); });
+  page.on('request', request => browserRequests.push({ event: 'request', method: request.method(), path: new URL(request.url()).pathname }));
+  page.on('requestfailed', request => browserRequests.push({ event: 'failed', method: request.method(), path: new URL(request.url()).pathname }));
+  page.on('response', response => browserRequests.push({ event: 'response', method: response.request().method(), path: new URL(response.url()).pathname, status: response.status() }));
   await context.route('**/*', route => {
     const request = route.request(), url = new URL(request.url());
     if (url.origin !== base) { external.push(url.href); return route.abort(); }
@@ -91,7 +104,7 @@ async function fixture(t, { transport = 'api' } = {}) {
   await channelButton.click(); await page.locator(`[data-action=episode][data-id="${episode.id}"]`).click();
   await page.locator('[data-action=open-scene-editor]').first().click();
   const dialog = page.locator('#project-scene-dialog[open]'); await dialog.waitFor();
-  return { page, context, dialog, api, base, dataDir, episode, other, writes, release, releases, created, creates: () => creates };
+  return { page, context, dialog, api, base, dataDir, episode, other, writes, browserRequests, warnings, release, releases, created, creates: () => creates };
 }
 
 async function quote(f) {
@@ -101,7 +114,13 @@ async function quote(f) {
   await f.dialog.getByLabel('duration', { exact: true }).fill('12');
   const pending = f.page.waitForResponse(r => r.url() === `${f.base}/api/episodes/${f.episode.id}/generations/quote` && r.request().method() === 'POST');
   await f.dialog.getByRole('button', { name: '음악 생성 견적', exact: true }).click();
-  const response = await pending; assert.equal(response.status(), 200, await response.text());
+  let response;
+  try { response = await pending; } catch (error) {
+    const quoteState = await f.dialog.getByRole('button', { name: '음악 생성 견적', exact: true }).evaluate(button => ({ disabled: button.disabled, connected: button.isConnected })).catch(() => null);
+    error.message += `; quote diagnostics=${JSON.stringify({ quoteState, recent: f.browserRequests.slice(-12), warnings: f.warnings })}`;
+    throw error;
+  }
+  assert.equal(response.status(), 200, await response.text());
   const result = await response.json();
   assert.equal(result.credits, 2.82);
   assert.match(await f.dialog.innerText(), /2\.82/);
@@ -303,6 +322,109 @@ test('a delayed status response for an older job cannot replace the newer job', 
   await f.dialog.getByRole('status').filter({ hasText: second.id }).waitFor();
   assert.equal(await f.dialog.getByRole('status').filter({ hasText: first.id }).count(), 0);
   assert.equal(f.creates(), 2);
+});
+
+test('music quote stays disabled while the selected model schema is unresolved', async t => {
+  const f = await fixture(t);
+  await f.dialog.getByRole('button', { name: '음악 생성 열기', exact: true }).click();
+  const modelSelect = f.dialog.getByLabel('음악 생성 모델', { exact: true });
+  await f.page.waitForFunction(() => [...document.querySelector('[aria-label="음악 생성 모델"]')?.options || []].some(option => option.value === 'music-fixture'));
+  const endpoint = `${f.base}/api/generation/models?transport=api&model=music-fixture`;
+  let arrive, releaseSchema;
+  const requested = new Promise(resolve => { arrive = resolve; });
+  const gate = new Promise(resolve => { releaseSchema = resolve; });
+  f.releases.push(releaseSchema);
+  await f.page.route(endpoint, async route => {
+    const response = await route.fetch(); arrive(); await gate; await route.fulfill({ response });
+  }, { times: 1 });
+  await modelSelect.selectOption('music-fixture');
+  await waitForSignal(requested, 'music model schema');
+  const quoteButton = f.dialog.getByRole('button', { name: '음악 생성 견적', exact: true });
+  assert.equal(await quoteButton.isDisabled(), true, 'a quote cannot be requested against an unresolved schema');
+  assert.equal(f.browserRequests.filter(item => item.event === 'request' && item.path === `/api/episodes/${f.episode.id}/generations/quote`).length, 0);
+  releaseSchema();
+  await f.dialog.getByLabel('duration', { exact: true }).waitFor();
+  await f.dialog.getByLabel('음악 생성 프롬프트', { exact: true }).fill('Calm instrumental fixture');
+  await f.dialog.getByLabel('duration', { exact: true }).fill('12');
+  const pending = f.page.waitForResponse(r => r.url() === `${f.base}/api/episodes/${f.episode.id}/generations/quote` && r.request().method() === 'POST');
+  await quoteButton.click();
+  const response = await pending;
+  assert.equal(response.status(), 200, await response.text());
+  assert.equal((await response.json()).credits, 2.82);
+  assert.deepEqual(f.warnings, [], 'model/schema initialization emits no browser warning or error');
+});
+
+test('reopening during a schema request reloads it and ignores the old response', async t => {
+  const f = await fixture(t);
+  await f.dialog.getByRole('button', { name: '음악 생성 열기', exact: true }).click();
+  await waitForMusicModelOption(f);
+  const endpoint = `${f.base}/api/generation/models?transport=api&model=music-fixture`;
+  let arrive, releaseOld;
+  const oldRequested = new Promise(resolve => { arrive = resolve; });
+  const oldGate = new Promise(resolve => { releaseOld = resolve; });
+  f.releases.push(releaseOld);
+  let calls = 0;
+  await f.page.route(endpoint, async route => {
+    calls++;
+    const response = await route.fetch();
+    if (calls === 1) {
+      const schema = await response.json();
+      schema.parameters.find(field => field.name === 'duration').default = 19;
+      arrive(); await oldGate; await route.fulfill({ response, body: JSON.stringify(schema) });
+    } else await route.fulfill({ response });
+  });
+  await f.dialog.getByLabel('음악 생성 모델', { exact: true }).selectOption('music-fixture');
+  await waitForSignal(oldRequested, 'first music model schema');
+  await f.dialog.locator('[data-action=close-scene-editor]').click();
+  await f.page.locator('[data-action=open-scene-editor]').first().click(); await f.dialog.waitFor();
+  await f.page.waitForFunction(() => [...document.querySelector('[aria-label="음악 생성 모델"]')?.options || []].some(option => option.value === 'music-fixture'));
+  await f.dialog.getByLabel('음악 생성 모델', { exact: true }).selectOption('music-fixture');
+  await f.dialog.getByLabel('duration', { exact: true }).waitFor();
+  releaseOld();
+  await f.dialog.getByRole('button', { name: '음악 생성 견적', exact: true }).waitFor();
+  assert.equal(await f.dialog.getByLabel('duration', { exact: true }).inputValue(), '', 'the late response from the closed editor cannot replace the new schema defaults');
+  assert.equal(await f.dialog.getByRole('button', { name: '음악 생성 견적', exact: true }).isDisabled(), false, 'reopening cannot leave schemaLoading stuck');
+  assert.ok(calls >= 2, 'reopening issues a fresh schema request');
+});
+
+test('transport changes and same-model reselection ignore a late schema response', async t => {
+  const f = await fixture(t);
+  await f.dialog.getByRole('button', { name: '음악 생성 열기', exact: true }).click();
+  await f.page.waitForFunction(() => [...document.querySelector('[aria-label="음악 생성 모델"]')?.options || []].some(option => option.value === 'music-fixture'));
+  let arrive, releaseOld;
+  const oldRequested = new Promise(resolve => { arrive = resolve; });
+  const oldGate = new Promise(resolve => { releaseOld = resolve; });
+  f.releases.push(releaseOld);
+  let apiSchemaCalls = 0;
+  await f.page.route('**/api/generation/models?*', async route => {
+    const url = new URL(route.request().url());
+    if (!url.searchParams.has('model')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ id: 'music-fixture', name: 'Fixture music', type: 'audio' }]) });
+    const transport = url.searchParams.get('transport');
+    let defaultDuration;
+    if (transport === 'api') {
+      apiSchemaCalls++;
+      defaultDuration = apiSchemaCalls === 1 ? 19 : 12;
+      if (apiSchemaCalls === 1) { arrive(); await oldGate; }
+    } else defaultDuration = 8;
+    const schema = { id: 'music-fixture', type: 'audio', transport, parameters: [{ name: 'duration', type: 'integer', minimum: 1, maximum: 30, ...(defaultDuration === undefined ? {} : { default: defaultDuration }) }] };
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(schema) });
+  });
+  await f.dialog.getByLabel('음악 생성 모델', { exact: true }).selectOption('music-fixture');
+  await waitForSignal(oldRequested, 'stale API schema');
+  await f.dialog.getByLabel('음악 생성 연결', { exact: true }).selectOption('cli');
+  await waitForMusicModelOption(f);
+  await f.dialog.getByLabel('음악 생성 모델', { exact: true }).selectOption('music-fixture');
+  await f.dialog.getByLabel('duration', { exact: true }).waitFor();
+  assert.equal(await f.dialog.getByLabel('duration', { exact: true }).inputValue(), '8');
+  await f.dialog.getByLabel('음악 생성 연결', { exact: true }).selectOption('api');
+  await waitForMusicModelOption(f);
+  await f.dialog.getByLabel('음악 생성 모델', { exact: true }).selectOption('music-fixture');
+  await f.dialog.getByLabel('duration', { exact: true }).waitFor();
+  assert.equal(await f.dialog.getByLabel('duration', { exact: true }).inputValue(), '12');
+  releaseOld();
+  assert.equal(await f.dialog.getByLabel('duration', { exact: true }).inputValue(), '12', 'the prior API response cannot overwrite the reselected model schema');
+  assert.equal(await f.dialog.getByRole('button', { name: '음악 생성 견적', exact: true }).isDisabled(), false);
+  assert.equal(apiSchemaCalls, 2);
 });
 
 test('CLI transport with an unverified price cannot authorize a paid generation', async t => {

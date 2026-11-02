@@ -925,7 +925,7 @@ function mountMusicGeneration(dialog) {
   if (!owner || !section) return;
   let model = musicGenerationStates.get(owner);
   if (!model) {
-    model = {open:false,transport:'api',models:[],model:'',prompt:'',params:{},schema:null,quote:null,job:null,selected:'',rights:false,error:'',loading:false,submitting:false};
+    model = {open:false,transport:'api',models:[],model:'',prompt:'',params:{},schema:null,schemaLoading:false,quote:null,job:null,selected:'',rights:false,error:'',loading:false,submitting:false};
     musicGenerationStates.set(owner,model);
   }
   const host = document.createElement('div');
@@ -950,7 +950,7 @@ function mountMusicGeneration(dialog) {
     const job=model.job, outputs=Array.isArray(job?.outputs)?job.outputs:[];
     const unknown=blocked();
     const jobHtml=job ? `<div role="status" aria-live="polite">음악 작업 ${esc(job.id)} · ${esc(job.status)}${job.error?` · ${esc(job.error)}`:''}${job.status==='submission_unknown'?' · 제출 여부를 확인할 수 없습니다. 제공자 기록을 확인하기 전 다시 생성하지 마세요.':''}</div>${outputs.length ? `<fieldset><legend>생성 결과 선택</legend>${outputs.map((output,index)=>`<label><input type="radio" name="music-generation-output" aria-label="생성 결과 ${index+1}" value="${esc(output.uploadId)}" ${model.selected===output.uploadId?'checked':''}>생성 결과 ${index+1}</label>${/^\/api\/uploads\/[a-zA-Z0-9_-]+\.(mp3|wav|ogg)$/i.test(output.url || '')?`<audio controls preload="none" src="${esc(output.url)}" aria-label="생성 결과 ${index+1} 듣기"></audio>`:''}`).join('')}</fieldset><label><input type="checkbox" data-music-rights ${model.rights?'checked':''}>생성 음악 이용 권리 확인</label><p class="hint">권리 확인은 사용자의 확인 기록이며 공개 허가가 아닙니다. 음악 포함 프로젝트의 게시는 차단됩니다.</p><button type="button" data-music-action="apply" ${!model.selected || !model.rights || model.loading?'disabled':''}>선택한 음악 적용</button>`:''}${job.providerRequestId && ['manual_recovery','polling_failed','import_failed'].includes(job.status)?'<button type="button" data-music-action="recover">기존 작업 복구</button>':''}` : '';
-    const form=model.open ? `<div><label>음악 생성 연결<select aria-label="음악 생성 연결" data-music-transport><option value="api" ${model.transport==='api'?'selected':''}>API</option><option value="cli" ${model.transport==='cli'?'selected':''}>CLI</option></select></label><label>음악 생성 모델<select aria-label="음악 생성 모델" data-music-model><option value="">모델 선택</option>${model.models.map(item=>`<option value="${esc(item.id)}" ${item.id===model.model?'selected':''}>${esc(item.name || item.id)}</option>`).join('')}</select></label><label>음악 생성 프롬프트<textarea aria-label="음악 생성 프롬프트" data-music-prompt maxlength="10000">${esc(model.prompt)}</textarea></label>${model.schema ? (model.schema.parameters || []).filter(field=>field.name!=='prompt' && !/array|object/.test(field.type || '')).map(fieldHtml).join('') : '<p class="hint">음악 모델의 실제 설정을 불러오세요.</p>'}<button type="button" data-music-action="quote" ${model.loading || unknown?'disabled':''}>음악 생성 견적</button>${quoteValid()?`<div role="status">견적: ${esc(model.quote.credits)} 크레딧 · 유효 기간 ${esc(model.quote.expiresAt)}<p>제공자 견적이며 실제 청구액은 다를 수 있습니다. 승인하면 비용이 발생할 수 있습니다.</p><pre>${esc(JSON.stringify(model.quote.input,null,2))}</pre></div><button type="button" data-music-action="submit" ${model.loading || unknown?'disabled':''}>견적 승인 및 생성</button>`:''}${model.submitting?'<button type="button" disabled>제출 중 · 취소할 수 없음</button>':'<button type="button" data-music-action="cancel">생성 취소</button>'}</div>` : '<button type="button" data-music-action="open">음악 생성 열기</button>';
+    const form=model.open ? `<div><label>음악 생성 연결<select aria-label="음악 생성 연결" data-music-transport><option value="api" ${model.transport==='api'?'selected':''}>API</option><option value="cli" ${model.transport==='cli'?'selected':''}>CLI</option></select></label><label>음악 생성 모델<select aria-label="음악 생성 모델" data-music-model><option value="">모델 선택</option>${model.models.map(item=>`<option value="${esc(item.id)}" ${item.id===model.model?'selected':''}>${esc(item.name || item.id)}</option>`).join('')}</select></label><label>음악 생성 프롬프트<textarea aria-label="음악 생성 프롬프트" data-music-prompt maxlength="10000">${esc(model.prompt)}</textarea></label>${model.schema ? (model.schema.parameters || []).filter(field=>field.name!=='prompt' && !/array|object/.test(field.type || '')).map(fieldHtml).join('') : '<p class="hint">음악 모델의 실제 설정을 불러오세요.</p>'}<button type="button" data-music-action="quote" ${model.loading || model.schemaLoading || !model.schema || model.schema.id!==model.model || unknown?'disabled':''}>음악 생성 견적</button>${quoteValid()?`<div role="status">견적: ${esc(model.quote.credits)} 크레딧 · 유효 기간 ${esc(model.quote.expiresAt)}<p>제공자 견적이며 실제 청구액은 다를 수 있습니다. 승인하면 비용이 발생할 수 있습니다.</p><pre>${esc(JSON.stringify(model.quote.input,null,2))}</pre></div><button type="button" data-music-action="submit" ${model.loading || unknown?'disabled':''}>견적 승인 및 생성</button>`:''}${model.submitting?'<button type="button" disabled>제출 중 · 취소할 수 없음</button>':'<button type="button" data-music-action="cancel">생성 취소</button>'}</div>` : '<button type="button" data-music-action="open">음악 생성 열기</button>';
     host.innerHTML=`<section class="section-spacer" aria-label="음악 생성"><h4>Higgsfield 음악 생성</h4><p class="hint">견적과 승인 없이 생성하지 않습니다. 실제 제공자 가용성과 가격은 요청 시 확인합니다.</p>${unknown?'<p role="alert">이전 제출 결과를 확인할 수 없습니다. 중복 과금을 피하려면 제공자 기록을 먼저 확인하세요.</p>':''}${model.error?`<p role="alert">${esc(model.error)}</p>`:''}${form}${jobHtml}</section>`;
     updateButtons();
   };
@@ -974,18 +974,19 @@ function mountMusicGeneration(dialog) {
     }
   };
   const loadSchema = async () => {
-    const requested=model.model, transport=model.transport;
-    model.schema=null; model.params={}; model.quote=null;
-    if (!requested) { renderPanel(); return; }
+    const requested=model.model, transport=model.transport, epoch=model.schemaEpoch=(model.schemaEpoch || 0)+1;
+    model.schema=null; model.schemaLoading=Boolean(requested); model.params={}; model.quote=null;
+    renderPanel();
+    if (!requested) return;
     try {
       const schema=await api(`/api/generation/models?transport=${encodeURIComponent(transport)}&model=${encodeURIComponent(requested)}`);
-      if (!live() || model.model!==requested || model.transport!==transport) return;
+      if (!live() || model.schemaEpoch!==epoch || model.model!==requested || model.transport!==transport) return;
       if (schema.id!==requested || schema.type!=='audio' || schema.transport && schema.transport!==transport) throw new Error('선택한 모델은 확인된 음악 모델이 아닙니다.');
       model.schema=schema;
       for (const field of schema.parameters || []) if (field.name!=='prompt' && field.default!==undefined && field.default!==null) model.params[field.name]=field.default;
       model.error='';
-    } catch (error) { if (live() && model.model===requested && model.transport===transport) model.error=`모델 설정을 확인하지 못했습니다: ${error.message}`; }
-    renderPanel();
+    } catch (error) { if (live() && model.schemaEpoch===epoch && model.model===requested && model.transport===transport) model.error=`모델 설정을 확인하지 못했습니다: ${error.message}`; }
+    if (live() && model.schemaEpoch===epoch && model.model===requested && model.transport===transport) { model.schemaLoading=false; renderPanel(); }
   };
   const loadModels = async () => {
     const transport=model.transport;
@@ -1038,7 +1039,7 @@ function mountMusicGeneration(dialog) {
     else if (target.matches('[data-music-rights]')) { model.rights=target.checked; updateButtons(); }
   });
   host.addEventListener('change', event => {
-    if (event.target.matches('[data-music-transport]')) { model.transport=event.target.value; model.models=[]; model.model=''; model.schema=null; model.params={}; model.quote=null; model.requestId=null; model.error=''; renderPanel(); loadModels(); }
+    if (event.target.matches('[data-music-transport]')) { model.schemaEpoch=(model.schemaEpoch || 0)+1; model.transport=event.target.value; model.models=[]; model.model=''; model.schema=null; model.schemaLoading=false; model.params={}; model.quote=null; model.requestId=null; model.error=''; renderPanel(); loadModels(); }
     else if (event.target.matches('[data-music-model]')) { model.model=event.target.value; model.requestId=null; loadSchema(); }
   });
   host.addEventListener('click', async event => {
@@ -1102,6 +1103,7 @@ function mountMusicGeneration(dialog) {
     finally { if (model.operationEpoch===operation) { model.loading=false; model.submitting=false; model.renderCurrent?.(); } }
   });
   renderPanel();
+  if (model.model && (!model.schema || model.schemaLoading)) loadSchema();
   pollJob();
 }
 function inspectorHtml(scene) {
