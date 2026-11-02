@@ -45,7 +45,7 @@
 //       price is assumed anywhere.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile, readFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { createHash, randomUUID } from 'node:crypto';
@@ -91,16 +91,35 @@ async function fixture(t, options = {}) {
     probe: async () => ({ kind: 'image', width: 64, height: 64 }),
   });
   let renderCount = 0;
+  const renderInputs = [];
   const workflows = new WorkflowEngine({
     store,
     fetchTrends: options.fetchTrends || (async () => ({ trends: [], sources: [] })),
     runAgent: async () => { throw new Error('No provider configured in this fixture'); },
     render: async (episode) => {
       renderCount++;
+      renderInputs.push(structuredClone(episode));
       const filename = `plan-fixture-${renderCount}.mp4`;
+      const verifiedSceneAssets = [];
+      for (const scene of episode.scenes) {
+        const references = [
+          ...(scene.assetUrl ? [{ sceneId: scene.id, use: 'asset', assetUrl: scene.assetUrl }] : []),
+          ...(scene.audioUrl ? [{ sceneId: scene.id, use: 'audio', assetUrl: scene.audioUrl }] : []),
+          ...(scene.slots || []).filter(slot => slot.assetUrl).map(slot => ({ sceneId: scene.id, slotId: slot.id, use: 'asset', assetUrl: slot.assetUrl })),
+        ];
+        for (const reference of references) {
+          const upload = store.list('uploads').find(item => item.url === reference.assetUrl);
+          assert.ok(upload, 'the fixture renderer must receipt registered local media');
+          const bytes = await readFile(path.join(dataDir, 'uploads', upload.filename));
+          const sha256 = createHash('sha256').update(bytes).digest('hex');
+          assert.equal(sha256, upload.sha256, 'fixture render receipt must match bytes actually read');
+          assert.equal(bytes.length, upload.size, 'fixture render receipt must match the registered byte count');
+          verifiedSceneAssets.push({ ...reference, sha256, size: bytes.length });
+        }
+      }
       await mkdir(path.join(dataDir, 'exports'), { recursive: true });
       await writeFile(path.join(dataDir, 'exports', filename), 'fixture render bytes');
-      return { filename, outputUrl: `/api/exports/${filename}`, jobId: `render-job-${renderCount}`, episodeVersion: episode.version, sha256: createHash('sha256').update('fixture render bytes').digest('hex') };
+      return { filename, outputUrl: `/api/exports/${filename}`, jobId: `render-job-${renderCount}`, episodeVersion: episode.version, sha256: createHash('sha256').update('fixture render bytes').digest('hex'), verifiedSceneAssets };
     },
     validateAssets: (sceneList) => sceneList,
     generations: queue,
@@ -120,7 +139,7 @@ async function fixture(t, options = {}) {
     }
     throw new Error('Workflow run did not reach an expected terminal state in time');
   };
-  return { dataDir, store, queue, workflows, channel, calls, waitRun };
+  return { dataDir, store, queue, workflows, channel, calls, waitRun, renderInputs, get renderCount() { return renderCount; } };
 }
 
 /** Writes real bytes under <dataDir>/uploads and registers a matching store upload entity, so asset
@@ -139,6 +158,13 @@ async function realUpload(dataDir, store, bytes, { ext = 'png', type = 'image/pn
 
 function basicScene(id, overrides = {}) {
   return { id, title: id, text: '', duration: 4, background: '#101010', kind: 'title', layout: 'center', trimStart: 0, audioVolume: 1, narration: '', ...overrides };
+}
+
+function twoImageSlotsScene(id = 'scene-a') {
+  return basicScene(id, { slots: [
+    { id: 'slot-a', name: 'Slot A', role: 'image-gen', x: 0, y: 0, w: 50, h: 100, zIndex: 1, prompt: 'Generate slot A' },
+    { id: 'slot-b', name: 'Slot B', role: 'image-gen', x: 50, y: 0, w: 50, h: 100, zIndex: 2, prompt: 'Generate slot B' },
+  ] });
 }
 
 /** The smallest graph exercising a single generate node, with no optional trend/news ancestor. */
@@ -194,16 +220,22 @@ function sceneIdTargetingGraph(targetSceneId) {
   };
 }
 
-function parallelGenerateGraph() {
+function parallelGenerateGraph({ sceneIndexes = [0, 1], slotIds = [null, null] } = {}) {
+  const targetConfig = (index) => ({
+    model: index === 0 ? 'model-a' : 'model-b',
+    prompt: index === 0 ? 'Branch 1' : 'Branch 2',
+    sceneIndex: sceneIndexes[index],
+    ...(slotIds[index] ? { slotId: slotIds[index], targetMode: 'slot' } : {}),
+  });
   return {
     name: 'Two independent generate branches',
     nodes: [
       { id: 'script', type: 'script', x: 0, y: 0, config: { agent: 'existing' } },
       { id: 'storyboard', type: 'storyboard', x: 100, y: 0, config: {} },
-      { id: 'generate-1', type: 'generate', x: 200, y: -80, config: { model: 'model-a', prompt: 'Branch 1', sceneIndex: 0 } },
+      { id: 'generate-1', type: 'generate', x: 200, y: -80, config: targetConfig(0) },
       { id: 'render-1', type: 'render', x: 300, y: -80, config: {} },
       { id: 'review-1', type: 'review', x: 400, y: -80, config: {} },
-      { id: 'generate-2', type: 'generate', x: 200, y: 80, config: { model: 'model-b', prompt: 'Branch 2', sceneIndex: 1 } },
+      { id: 'generate-2', type: 'generate', x: 200, y: 80, config: targetConfig(1) },
       { id: 'render-2', type: 'render', x: 300, y: 80, config: {} },
       { id: 'review-2', type: 'review', x: 400, y: 80, config: {} },
     ],
@@ -449,8 +481,8 @@ test('independent generate branches persist separate jobs; a recoverable failure
     return { bytes: 23, contentType: 'image/png' };
   };
 
-  const episode = f.store.create('episodes', { channelId: f.channel.id, title: 'Parallel branch resume', topic: 'Independent job identity', category: 'information', status: 'draft', format: '9:16', version: 1, scenes: [basicScene('scene-a'), basicScene('scene-b')], notes: '' });
-  const workflow = ownedWorkflow(f, episode, parallelGenerateGraph());
+  const episode = f.store.create('episodes', { channelId: f.channel.id, title: 'Parallel branch resume', topic: 'Independent job identity', category: 'information', status: 'draft', format: '9:16', version: 1, scenes: [twoImageSlotsScene()], notes: '' });
+  const workflow = ownedWorkflow(f, episode, parallelGenerateGraph({ sceneIndexes: [0, 0], slotIds: ['slot-a', 'slot-b'] }));
   const allStages = ['script', 'storyboard', 'generate-1', 'render-1', 'review-1', 'generate-2', 'render-2', 'review-2'];
 
   const plan0 = await f.workflows.quote(workflow.id, episode.id, { selectedStages: allStages, disclosure });
@@ -463,6 +495,10 @@ test('independent generate branches persist separate jobs; a recoverable failure
   const jobB = f.store.list('generationJobs').find((job) => job.model === 'model-b');
   assert.equal(jobA.status, 'completed', 'branch 1 must have actually completed even though branch 2 failed');
   assert.equal(jobB.status, 'import_failed', "branch 2's job must land in a recoverable terminal state, not a silent loss of identity");
+  assert.equal(jobA.sceneId, 'scene-a');
+  assert.equal(jobB.sceneId, 'scene-a');
+  assert.equal(jobA.slotId, 'slot-a');
+  assert.equal(jobB.slotId, 'slot-b');
   const jobAOriginalId = jobA.id, jobBOriginalId = jobB.id;
 
   modelBRecovered = true;
@@ -480,7 +516,91 @@ test('independent generate branches persist separate jobs; a recoverable failure
   assert.equal(f.calls.create, 2, "resuming branch 2 after explicit recovery must never have issued a THIRD provider.create call");
   const resumedOutput = completed1.nodeRuns.find((node) => node.nodeId === 'generate-2').output;
   assert.equal(resumedOutput.generationJobId, jobBOriginalId, 'the resumed branch must reuse the exact original job ID, not mint a replacement');
+  const renderOutput = completed1.nodeRuns.find((node) => node.nodeId === 'render-2').output;
+  const renderedScene = renderOutput.sceneSnapshot.find(scene => scene.id === 'scene-a');
+  assert.equal(renderedScene?.slots?.find(slot => slot.id === 'slot-a')?.source?.generationJobId, jobAOriginalId, 'the independent completed branch remains in the resumed render');
+  assert.equal(renderedScene?.slots?.find(slot => slot.id === 'slot-b')?.source?.generationJobId, jobBOriginalId, 'the recovered branch is rendered from its original job');
+  const savedEpisode = f.store.get('episodes', episode.id);
+  assert.deepEqual(renderOutput.sceneSnapshot, savedEpisode.scenes, 'the rendered scene snapshot must exactly equal the saved episode, not an ordered guess at its composition');
+  assert.deepEqual(f.renderInputs.at(-1).scenes, savedEpisode.scenes, 'the renderer must receive precisely the saved scene composition');
+  const renderReceipts = renderOutput.verifiedSceneAssets;
+  assert.equal(renderReceipts.find(item => item.slotId === 'slot-a')?.sha256, renderedScene.slots.find(slot => slot.id === 'slot-a')?.source?.sha256, 'slot A receipt matches its persisted generated-source hash');
+  assert.equal(renderReceipts.find(item => item.slotId === 'slot-b')?.sha256, renderedScene.slots.find(slot => slot.id === 'slot-b')?.source?.sha256, 'slot B receipt matches its persisted generated-source hash');
+  assert.ok(jobA.appliedVersion < f.store.get('generationJobs', jobBOriginalId).appliedVersion, 'receipt history proves branch 1 was applied before recovered branch 2');
   assert.equal(f.store.get('generationJobs', jobAOriginalId).status, 'completed', "branch 1's completed job must remain untouched by branch 2's resume");
+});
+
+test('selected sibling generators that target the same scene and slot are rejected before estimates or provider submissions', async (t) => {
+  const f = await fixture(t, { estimates: { 'model-a': 2, 'model-b': 3 } });
+  const episode = f.store.create('episodes', { channelId: f.channel.id, title: 'Duplicate selected target', topic: 'Do not spend twice', category: 'information', status: 'draft', format: '9:16', version: 1, scenes: [twoImageSlotsScene()], notes: '' });
+  const workflow = ownedWorkflow(f, episode, parallelGenerateGraph({ sceneIndexes: [0, 0], slotIds: ['slot-a', 'slot-a'] }));
+  const allStages = ['script', 'storyboard', 'generate-1', 'render-1', 'review-1', 'generate-2', 'render-2', 'review-2'];
+
+  await assert.rejects(
+    f.workflows.quote(workflow.id, episode.id, { selectedStages: allStages, disclosure }),
+    (error) => error.status === 409 && /same scene\/slot/.test(error.message),
+    'two selected sibling jobs cannot race to overwrite the same saved target',
+  );
+  assert.equal(f.calls.estimate, 0, 'target collision is rejected before even quoting costs');
+  assert.equal(f.calls.create, 0, 'target collision must never submit paid generation');
+  assert.equal(f.store.get('episodes', episode.id).version, 1, 'rejected quote leaves saved episode version unchanged');
+});
+
+test('resuming an applied sibling on the same scene and slot fails closed without altering saved media or resubmitting', async (t) => {
+  const f = await fixture(t, { estimates: { 'model-a': 2, 'model-b': 3 } });
+  const episode = f.store.create('episodes', { channelId: f.channel.id, title: 'Applied sibling target conflict', topic: 'Preserve saved output', category: 'information', status: 'draft', format: '9:16', version: 1, scenes: [twoImageSlotsScene()], notes: '' });
+  const workflow = ownedWorkflow(f, episode, parallelGenerateGraph({ sceneIndexes: [0, 0], slotIds: ['slot-a', 'slot-a'] }));
+  const firstStages = ['script', 'storyboard', 'generate-1'];
+  const firstPlan = await f.workflows.quote(workflow.id, episode.id, { selectedStages: firstStages, disclosure });
+  const firstRun = f.workflows.start(workflow.id, episode.id, { allowGeneration: true, selectedStages: firstStages, generationPlanId: firstPlan.id, generationFingerprint: firstPlan.fingerprint, disclosure });
+  const firstDone = await f.waitRun(firstRun.id, ['completed', 'failed']);
+  assert.equal(firstDone.status, 'completed');
+  const jobA = f.store.list('generationJobs').find((job) => job.model === 'model-a');
+  assert.ok(jobA?.applied);
+  const savedBefore = f.store.get('episodes', episode.id);
+  const assetBefore = savedBefore.scenes[0].slots.find((slot) => slot.id === 'slot-a');
+
+  await assert.rejects(
+    f.workflows.quote(workflow.id, episode.id, { resumeRunId: firstRun.id, startStage: 'generate-2', selectedStages: ['generate-2'], disclosure }),
+    (error) => error.status === 409 && /already-applied sibling/.test(error.message),
+    'a different sibling may not replace a scene/slot already applied by another branch during resume',
+  );
+  const savedAfter = f.store.get('episodes', episode.id);
+  assert.equal(savedAfter.version, savedBefore.version);
+  assert.deepEqual(savedAfter.scenes, savedBefore.scenes);
+  assert.equal(savedAfter.scenes[0].slots.find((slot) => slot.id === 'slot-a').source.generationJobId, jobA.id);
+  assert.equal(f.store.list('generationJobs').length, 1, 'resume conflict creates no replacement paid job');
+  assert.equal(f.calls.estimate, 1, 'resume conflict is rejected before another quote estimate');
+  assert.equal(f.calls.create, 1, 'resume conflict never submits a duplicate paid generation');
+  assert.equal(f.renderCount, 0, 'no render is produced from an unresolved target conflict');
+  assert.equal(assetBefore.source.generationJobId, jobA.id);
+});
+
+test('resume rejects a retained receipt whose full scene composition differs from saved application history', async (t) => {
+  const f = await fixture(t, { estimates: { 'model-a': 2, 'model-b': 3 } });
+  const episode = f.store.create('episodes', { channelId: f.channel.id, title: 'Tampered composition receipt', topic: 'Require exact saved evidence', category: 'information', status: 'draft', format: '9:16', version: 1, scenes: [twoImageSlotsScene()], notes: '' });
+  const workflow = ownedWorkflow(f, episode, parallelGenerateGraph({ sceneIndexes: [0, 0], slotIds: ['slot-a', 'slot-b'] }));
+  const firstStages = ['script', 'storyboard', 'generate-1'];
+  const firstPlan = await f.workflows.quote(workflow.id, episode.id, { selectedStages: firstStages, disclosure });
+  const firstRun = f.workflows.start(workflow.id, episode.id, { allowGeneration: true, selectedStages: firstStages, generationPlanId: firstPlan.id, generationFingerprint: firstPlan.fingerprint, disclosure });
+  assert.equal((await f.waitRun(firstRun.id, ['completed', 'failed'])).status, 'completed');
+  const savedBefore = f.store.get('episodes', episode.id);
+  const persistedRun = f.store.get('workflowRuns', firstRun.id);
+  const tamperedNodes = persistedRun.nodeRuns.map((item) => {
+    if (item.nodeId !== 'generate-1') return item;
+    return { ...item, output: { ...item.output, scene: { ...item.output.scene, slots: item.output.scene.slots.map((slot) => slot.id === 'slot-b' ? { ...slot, name: 'Forged non-target composition' } : slot) } } };
+  });
+  f.store.save('workflowRuns', { ...persistedRun, nodeRuns: tamperedNodes });
+
+  await assert.rejects(
+    f.workflows.quote(workflow.id, episode.id, { resumeRunId: firstRun.id, startStage: 'generate-2', selectedStages: ['generate-2'], disclosure }),
+    (error) => error.status === 409 && /matching node receipt/.test(error.message),
+    'a target asset hash alone cannot authorize a forged non-target part of the composed scene snapshot',
+  );
+  assert.deepEqual(f.store.get('episodes', episode.id).scenes, savedBefore.scenes, 'receipt validation never changes the persisted episode');
+  assert.equal(f.calls.estimate, 1, 'tampered composition is rejected before a new quote estimate');
+  assert.equal(f.calls.create, 1, 'tampered composition never causes another paid submission');
+  assert.equal(f.renderCount, 0, 'tampered composition cannot reach the renderer');
 });
 
 // --- B4: selecting only non-generate stages must never touch the generation provider, and must not
@@ -556,3 +676,54 @@ function ownedWorkflow(f, episode, body) {
   const template = f.workflows.create(body);
   return f.store.createWorkflowCopy({ templateId: template.id, channelId: episode.channelId, episodeId: episode.id, expectedTemplateVersion: template.version });
 }
+
+
+test('recovering an already-applied generation preserves its job id and applied version without duplicate generation', async (t) => {
+  const f = await fixture(t, { estimates: { 'fixture-model': 1 } });
+  const episode = f.store.create('episodes', { channelId: f.channel.id, title: 'Applied job recovery', topic: 'Preserve receipt identity', category: 'information', status: 'draft', format: '9:16', version: 1, scenes: [basicScene('scene-a')], notes: '' });
+  const workflow = ownedWorkflow(f, episode, initialGraph());
+  const allStages = ['script', 'storyboard', 'generate', 'render', 'review'];
+  const plan0 = await f.workflows.quote(workflow.id, episode.id, { selectedStages: allStages, disclosure });
+  const run0 = f.workflows.start(workflow.id, episode.id, { allowGeneration: true, selectedStages: allStages, generationPlanId: plan0.id, generationFingerprint: plan0.fingerprint, disclosure });
+  const done0 = await f.waitRun(run0.id, ['completed', 'failed', 'awaiting_review']);
+  assert.equal(done0.status, 'awaiting_review');
+  const originalJob = f.store.list('generationJobs')[0];
+  assert.equal(originalJob.status, 'completed');
+  assert.equal(originalJob.applied, true);
+  const appliedVersion = originalJob.appliedVersion;
+  const appliedScene = f.store.history(episode.id).find((entry) => entry.version === appliedVersion).snapshot.scenes[0];
+  assert.equal(done0.nodeRuns.find((item) => item.nodeId === 'generate').output.episodeVersion, appliedVersion);
+
+  // Model a persisted interruption after the provider job was applied but before the
+  // workflow recorded a successful generate-node result. Keep the public recovery path:
+  // quote() and start() must recover the exact job rather than submit a replacement.
+  const current = f.store.get('episodes', episode.id);
+  const advanced = f.store.updateEpisode(current.id, { notes: 'Unrelated later edit' }, current.version, 'fixture:unrelated-edit');
+  const interrupted = f.store.get('workflowRuns', run0.id);
+  f.store.save('workflowRuns', {
+    ...interrupted,
+    status: 'failed',
+    episodeVersion: advanced.version,
+    nodeRuns: interrupted.nodeRuns.map((item) => {
+      if (item.nodeId === 'generate') {
+        const { generationIntent, ...withoutIntent } = item;
+        return { ...withoutIntent, status: 'failed', error: 'Simulated interruption after application' };
+      }
+      return item.nodeId === 'storyboard' ? { ...item, output: { ...item.output, scenes: advanced.scenes } } : item;
+    }),
+  });
+
+  const resumeStages = ['generate', 'render', 'review'];
+  const plan1 = await f.workflows.quote(workflow.id, episode.id, { resumeRunId: run0.id, startStage: 'generate', selectedStages: resumeStages, disclosure });
+  const run1 = f.workflows.start(workflow.id, episode.id, { allowGeneration: true, resumeRunId: run0.id, startStage: 'generate', selectedStages: resumeStages, generationPlanId: plan1.id, generationFingerprint: plan1.fingerprint, disclosure });
+  const recovered = await f.waitRun(run1.id, ['completed', 'failed', 'awaiting_review']);
+
+  assert.equal(recovered.status, 'awaiting_review', 'the recovered applied job must pass its receipt into render');
+  const generateOutput = recovered.nodeRuns.find((item) => item.nodeId === 'generate').output;
+  assert.equal(generateOutput.generationJobId, originalJob.id, 'recovery keeps the original generation job identity');
+  assert.equal(generateOutput.episodeVersion, appliedVersion, 'the receipt version remains the job application version, not the later episode version');
+  assert.deepEqual(generateOutput.scene, appliedScene, 'recovery exposes the scene snapshot from the exact applied history version');
+  assert.equal(f.store.get('episodes', episode.id).version, advanced.version, 'recovering an applied job does not apply it a second time');
+  assert.equal(f.calls.create, 1, 'recovering an already-applied job never submits another paid generation');
+  assert.equal(f.store.list('generationJobs').length, 1, 'recovery does not create a replacement job');
+});

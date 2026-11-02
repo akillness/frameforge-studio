@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { normalizeLayout, createWorkspaceStore } from '../public/workspace-state.js';
 
 const KEY = 'frameforge.workspace.v1';
-const custom = { presetId: 'custom', width: 1173, height: 673, inspectorWidth: 347, toolsMode: 'overlay' };
+const custom = { presetId: 'custom', width: 1173, height: 673, inspectorWidth: 347, sidebarWidth: 216, toolsMode: 'overlay' };
 function memory(raw = null) {
   const values = new Map(raw === null ? [] : [[KEY, raw]]);
   return { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };
@@ -20,11 +20,11 @@ for (const [id, width, height, toolsMode] of [
     const store = createWorkspaceStore({ storage: memory() });
     store.setLayout(custom);
     const { layout } = store.selectPreset(id);
-    assert.deepEqual(layout, { presetId: id, width, height, toolsMode, inspectorWidth: custom.inspectorWidth });
+    assert.deepEqual(layout, { presetId: id, width, height, toolsMode, inspectorWidth: custom.inspectorWidth, sidebarWidth: custom.sidebarWidth });
   });
 }
 
-for (const [field, min, max] of [['width', 320, 2560], ['height', 320, 1800], ['inspectorWidth', 240, 480]]) {
+for (const [field, min, max] of [['width', 320, 2560], ['height', 320, 1800], ['inspectorWidth', 240, 480], ['sidebarWidth', 160, 400]]) {
   for (const [name, input, expected] of [
     ['below minimum', min - 1, min], ['minimum', min, min], ['above minimum', min + 1, min + 1],
     ['maximum', max, max], ['above maximum', max + 1, max], ['round down', min + 0.49, min], ['round up', min + 0.5, min + 1],
@@ -161,6 +161,24 @@ test('unavailable and read-denied storage never prevent session profile switchin
     assert.deepEqual(store.selectProfile(saved.activeProfileId).layout, custom);
     assert.equal(store.reset().profiles[0].name, 'Session only');
   }
+});
+
+test('sidebar resizing stays bounded and survives presets, profiles and browser reload', () => {
+  const storage = memory();
+  const store = createWorkspaceStore({ storage });
+  store.setLayout({ sidebarWidth: 333 });
+  const savedId = store.saveProfile('Wide sidebar').activeProfileId;
+
+  store.setLayout({ sidebarWidth: 389 });
+  assert.equal(store.selectPreset('compact').layout.sidebarWidth, 389);
+  assert.equal(createWorkspaceStore({ storage }).getState().layout.sidebarWidth, 389);
+  assert.equal(store.selectProfile(savedId).layout.sidebarWidth, 333);
+
+  const minimum = store.setLayout({ sidebarWidth: 1 });
+  assert.equal(minimum.layout.sidebarWidth, 160);
+  const maximum = store.setLayout({ sidebarWidth: 401 });
+  assert.equal(maximum.layout.sidebarWidth, 400);
+  assert.equal(createWorkspaceStore({ storage }).getState().layout.sidebarWidth, 400);
 });
 
 test('profiles are isolated snapshots across editing, selection, reload and reset', () => {

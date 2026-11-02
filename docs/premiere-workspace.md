@@ -40,6 +40,12 @@ At narrow widths, the project actions wrap rather than requiring horizontal scro
 
 **Isolated verification:** `project-navigation-discovery.test.mjs` passed 1/1 in disposable Chromium at 1440×844 and 390×844, covering project identity, direct results/history/review entry, keyboard focus, and unsaved scene-draft preservation; it observed no page writes and blocked external/provider traffic. The responsible agent also reported `workflow-ux-mobile-history.test.mjs` passed for 390px connected-stage summaries and keyboard navigation, direct results/run-history entry, project-scoped result/history behavior, and review/publish dialog boundaries. `workflow-run-history-scope.test.mjs` was reported passed for project/channel filtering, pagination, scoped detail access, legacy response compatibility, and compact history records that omit result payloads. These are isolated fixture checks only; no full-suite, production database, deployment, paid generation, or publication check is established.
 
+## Workflow and mobile tooltip accessibility update — 2026-11-03
+
+The stacked mobile workflow shows input/output relationships as inline, keyboard-operable links to the connected stages; selecting a link brings that node into view. Information tooltips are positioned within the available viewport space. On coarse-pointer, no-hover devices they let touch hit-testing reach controls beneath them, while hover-capable devices retain tooltip pointer interaction, hover retention and scrolling.
+
+**Scoped verification:** the owner-observed `node --test tests/node-workbench.test.mjs` run passed **25/25, 0 failed, 0 skipped** with the specified Node 22 and Playwright module. The relevant regression coverage checks tooltip placement and hover/scroll behavior, touch hit-testing over controls, and 390px/430px portrait workbench navigation and draft/focus preservation. This is a scoped fixture-test result only; it does not establish full-suite/CI success, deployment or production behavior. No result from the unavailable workflow session is included.
+
 ## Historical original design-system packet — 2026-10-20
 
 **Scope:** the existing eight application views, channel navigation, Studio editing and workflow design. Shared controls remain dependency-free HTML/CSS and the existing delegated actions; no parallel component framework or backend was introduced.

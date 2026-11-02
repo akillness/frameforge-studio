@@ -597,6 +597,9 @@ body[data-workbench="project"] .wf-canvas:not([data-layout="stacked"]) { height:
   :root { --control-height: 44px; }
   .project-more { min-width: 44px; width: 44px; min-height: 44px; }
 }
+@media (hover: none) and (pointer: coarse) {
+  .ff-info-tooltip { pointer-events: none; }
+}
 @media (max-width: 899px) {
   .project-scene-dialog, .project-tool-dialog { scroll-padding-top: 152px; }
 }

@@ -163,9 +163,27 @@ test('full 10-stage workflow preserves slot generation and exact-node review bef
       const filename = `pipeline-export-${renderCount}.mp4`;
       const bytes = Buffer.from('rendered-mp4-binary-fixture');
       const sha256 = createHash('sha256').update(bytes).digest('hex');
+      const verifiedSceneAssets = [];
+      for (const scene of ep.scenes) {
+        const references = [
+          ...(scene.assetUrl ? [{ sceneId: scene.id, use: 'asset', assetUrl: scene.assetUrl }] : []),
+          ...(scene.audioUrl ? [{ sceneId: scene.id, use: 'audio', assetUrl: scene.audioUrl }] : []),
+          ...(scene.slots || []).filter(slot => slot.assetUrl).map(slot => ({ sceneId: scene.id, slotId: slot.id, use: 'asset', assetUrl: slot.assetUrl })),
+        ];
+        for (const reference of references) {
+          const matches = store.list('uploads').filter(upload => upload.url === reference.assetUrl);
+          assert.equal(matches.length, 1, 'the fixture renderer only receipts a uniquely registered upload');
+          const upload = matches[0], file = await readFile(path.join(dataDir, 'uploads', upload.filename));
+          const actualHash = createHash('sha256').update(file).digest('hex');
+          assert.equal(actualHash, upload.sha256, 'fixture render receipts must match bytes actually read');
+          assert.equal(file.length, upload.size, 'fixture render receipts must match the registered byte count');
+          verifiedSceneAssets.push({ ...reference, sha256: actualHash, size: file.length });
+        }
+      }
       await writeFile(path.join(dataDir, 'exports', filename), bytes);
-      const job = store.create('jobs', { episodeId: ep.id, episodeVersion: ep.version, status: 'completed', progress: 100, filename, outputUrl: `/api/exports/${filename}`, sha256 });
-      return { filename, outputUrl: `/api/exports/${filename}`, jobId: job.id, episodeVersion: ep.version, sha256 };
+      const sceneSnapshot = structuredClone(ep.scenes);
+      const job = store.create('jobs', { episodeId: ep.id, episodeVersion: ep.version, status: 'completed', progress: 100, filename, outputUrl: `/api/exports/${filename}`, sha256, sceneSnapshot, sceneIntegrity: structuredClone(verifiedSceneAssets), verifiedSceneAssets: structuredClone(verifiedSceneAssets) });
+      return { filename, outputUrl: `/api/exports/${filename}`, jobId: job.id, episodeVersion: ep.version, sha256, verifiedSceneAssets };
     },
     validateAssets: (sceneList) => scenes(sceneList),
     generations,
@@ -286,7 +304,7 @@ test('full 10-stage workflow preserves slot generation and exact-node review bef
       resumeRunId: completedRun.id,
       expectedEpisodeVersion: completedRun.episodeVersion,
     }),
-    (error) => error.status === 409 && /approved.*(?:review|candidate)|artifact/i.test(error.message),
+    (error) => error.status === 409 && error.message === 'review requires fresh evidence after an upstream stage is rerun',
   );
   assert.equal(workflows.listRuns(createdWf.id).length, runCountBeforeArtifactResume);
   assert.equal(renderCount, renderCountBeforeArtifactResume);

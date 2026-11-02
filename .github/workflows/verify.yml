@@ -35,8 +35,15 @@ jobs:
           fi
           ffmpeg -version
           ffprobe -version
+      - name: Test CI diagnostic scripts
+        run: |
+          node --test .github/scripts/ci-test-summary.test.mjs
+          bash .github/scripts/run-npm-tests.test.sh
       - name: Run API, workflow, security and harness regression tests
-        run: npm test
+        run: bash .github/scripts/run-npm-tests.sh
+      - name: Summarize npm test results safely
+        if: always()
+        run: node .github/scripts/ci-test-summary.mjs "$RUNNER_TEMP/frameforge-npm-test.tap" "$RUNNER_TEMP/frameforge-npm-test.exit" "$GITHUB_STEP_SUMMARY"
       - name: Verify blog tone, smartphone reflow and real touch controls
         run: node scripts/blog-workspace-browser-smoke.mjs
       - name: Verify immutable harness bundle

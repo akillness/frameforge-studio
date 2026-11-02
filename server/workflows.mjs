@@ -690,6 +690,31 @@ function normalizedSceneInput(scene) {
   }])[0];
 }
 
+function verifiedAppliedGeneration(store, episodeId, job, output) {
+  const version = job?.appliedVersion;
+  const history = Number.isSafeInteger(version)
+    ? store.history(episodeId).find((entry) => entry.version === version)
+    : null;
+  const savedScene = history?.snapshot?.scenes?.find((scene) => scene.id === job?.sceneId);
+  const receipt = job?.outputs?.[0];
+  const target = job?.slotId
+    ? savedScene?.slots?.find((slot) => slot.id === job.slotId)
+    : savedScene;
+  if (!job?.applied || job.status !== 'completed' || job.episodeId !== episodeId
+    || !Number.isSafeInteger(job.episodeVersion) || !Number.isSafeInteger(version) || version <= job.episodeVersion
+    || job.appliedSceneId !== job.sceneId || (job.appliedSlotId || null) !== (job.slotId || null)
+    || output?.generationJobId !== job.id || output.sceneId !== job.sceneId
+    || output.episodeVersion !== version || (output.slotId || null) !== (job.slotId || null)
+    || !history || history.reason !== `generation:${job.id}` || history.snapshot?.version !== version || !savedScene
+    || (output.scene && canonicalJson(output.scene) !== canonicalJson(savedScene))
+    || !Array.isArray(output.outputs) || canonicalJson(output.outputs) !== canonicalJson(job.outputs)
+    || !receipt || target?.assetUrl !== receipt.url
+    || target?.source?.generationJobId !== job.id || target?.source?.sha256 !== receipt.sha256) {
+    throw new HttpError(409, 'Applied generation has no matching node receipt');
+  }
+  return { scene: savedScene, target, receipt };
+}
+
 function nodeInput(candidate, nodeId) {
   const node = candidate.nodes.find((item) => item.nodeId === nodeId);
   if (!node) throw new HttpError(409, 'Selected node is absent from the approved generation plan');
@@ -1159,22 +1184,33 @@ export class WorkflowEngine {
         let connectedScenes = outputs.get(producer.id)?.scenes;
         const upstream = ancestors(workflow.edges, node.id);
         const superseded = ancestors(workflow.edges, producer.id);
-        const priorGenerations = selection.nodeRuns.filter((item) => item.type === 'generate' && item.reused && !superseded.has(item.nodeId) && (item.nodeId === node.id || upstream.has(item.nodeId)));
+        // Retained, completed sibling generators are not causal inputs to this node, but
+        // their applied scene changes are part of the saved episode snapshot. Reapply those
+        // exact receipts onto the reused storyboard/layout output before comparing it with
+        // the current episode; otherwise a recovered independent branch is rejected as an
+        // unexplained scene edit (or silently omitted by its downstream render).
+        const priorGenerations = selection.nodeRuns.filter((item) => item.type === 'generate'
+          && (item.reused === true || item.retainedStatus === 'completed')
+          && !superseded.has(item.nodeId)
+          && (item.nodeId === node.id || upstream.has(item.nodeId) || item.retainedStatus === 'completed'))
+          .sort((left, right) => {
+            const leftOutput = left.reused === true ? left.output : left.retainedOutput;
+            const rightOutput = right.reused === true ? right.output : right.retainedOutput;
+            return Number(leftOutput?.episodeVersion || 0) - Number(rightOutput?.episodeVersion || 0);
+          });
         for (const prior of priorGenerations) {
           if (!Array.isArray(connectedScenes)) throw new HttpError(409, 'Applied generation requires connected scene evidence');
-          const output = prior.output;
+          const output = prior.reused === true ? prior.output : prior.retainedOutput;
           const job = this.generations.get(output?.generationJobId);
-          const applied = output?.scene;
-          const target = job.slotId ? applied?.slots?.find((slot) => slot.id === job.slotId) : applied;
-          const receipt = job.outputs?.[0];
-          if (!job.applied || job.status !== 'completed' || job.episodeId !== episode.id
-            || job.sceneId !== output?.sceneId || job.appliedSceneId !== job.sceneId
-            || (job.slotId || null) !== (output.slotId || null) || (job.appliedSlotId || null) !== (job.slotId || null)
-            || !prior.generationIntent?.requestId || job.requestId !== prior.generationIntent.requestId
-            || canonicalJson(output.outputs) !== canonicalJson(job.outputs) || applied?.id !== job.sceneId
-            || !receipt || target?.assetUrl !== receipt.url || target?.source?.generationJobId !== job.id
-            || target?.source?.sha256 !== receipt.sha256 || !connectedScenes.some((scene) => scene.id === job.sceneId)) {
+          const { scene: applied, target, receipt } = verifiedAppliedGeneration(this.store, episode.id, job, output);
+          const selectedSceneId = node.config.sceneId || connectedScenes[node.config.sceneIndex ?? 0]?.id;
+          if (!prior.generationIntent?.requestId || job.requestId !== prior.generationIntent.requestId
+            || !connectedScenes.some((scene) => scene.id === job.sceneId)) {
             throw new HttpError(409, 'Applied generation has no matching node receipt');
+          }
+          if (prior.nodeId !== node.id && job.sceneId === selectedSceneId
+            && (job.slotId || null) === (node.config.slotId || null)) {
+            throw new HttpError(409, 'Generation target conflicts with an already-applied sibling branch');
           }
           connectedScenes = connectedScenes.map((scene) => {
             if (scene.id !== job.sceneId) return scene;
@@ -1191,6 +1227,12 @@ export class WorkflowEngine {
       }
     }
     const candidate = this.candidate(workflow, episode, options);
+    const generationTargets = new Set();
+    for (const input of candidate.nodes) {
+      const key = canonicalJson([input.sceneId, input.slotId || null]);
+      if (generationTargets.has(key)) throw new HttpError(409, 'Selected generation nodes target the same scene/slot');
+      generationTargets.add(key);
+    }
     // Bind both the saved starting point and every deterministic prepared scene snapshot.
     candidate.preparation = { episode: originalEpisode, stages: preparedStages };
     return { candidate, preparedStages };
@@ -1201,7 +1243,7 @@ export class WorkflowEngine {
     if (!approved || canonicalJson(episode.scenes.map(normalizedSceneInput)) !== canonicalJson(approved.map(normalizedSceneInput))) throw new HttpError(409, 'Script, storyboard or layout differs from the quoted input. Save the new input and obtain a fresh quote.');
   }
 
-  renderCandidate(workflow, node, episode, outputs) {
+  renderCandidate(workflow, node, episode, outputs, run) {
     const storyboard = optional(workflow, node, 'storyboard');
     const layout = optional(workflow, node, 'layout');
     // Availability-aware, mirroring stageSelection's render branch and prepareCandidate's
@@ -1213,20 +1255,33 @@ export class WorkflowEngine {
     const layoutUsable = layout && outputs.has(layout.id);
     const storyboardUsable = storyboard && outputs.has(storyboard.id);
     const latestInput = storyboardUsable && layoutUsable && ancestors(workflow.edges, storyboard.id).has(layout.id) ? storyboard : layoutUsable ? layout : storyboardUsable ? storyboard : null;
-    const connectedScenes = latestInput ? outputs.get(latestInput.id)?.scenes : episode.scenes;
+    const latestInputRun = latestInput && run?.nodeRuns?.find((item) => item.nodeId === latestInput.id);
+    // A reused producer may predate an already-applied generation on an independent branch.
+    // The current, version-pinned episode is the authoritative saved scene snapshot; using the
+    // older producer output here would erase that sibling asset from the rendered candidate.
+    const connectedScenes = latestInput && latestInputRun?.reused !== true ? outputs.get(latestInput.id)?.scenes : episode.scenes;
     if (!Array.isArray(connectedScenes) || !connectedScenes.length) throw new HttpError(409, 'Render requires completed scene evidence from its connected producer');
     let sceneList = structuredClone(connectedScenes);
     const upstream = ancestors(workflow.edges, node.id);
     const superseded = latestInput ? ancestors(workflow.edges, latestInput.id) : new Set();
     const generationNodeIds = [];
+    const generationTargets = new Set();
     for (const producer of orderedNodes(workflow)) {
       if (producer.type !== 'generate' || !upstream.has(producer.id) || superseded.has(producer.id)) continue;
       const output = outputs.get(producer.id);
       if (!output?.generationJobId) continue;
       const job = this.generations.get(output.generationJobId);
-      if (job.status !== 'completed' || !job.applied || job.episodeId !== episode.id) throw new HttpError(409, 'Connected generation is not an applied candidate for this production');
-      const snapshot = output.scene || this.store.history(episode.id).find((entry) => entry.version === job.appliedVersion)?.snapshot.scenes.find((scene) => scene.id === job.sceneId);
-      if (!snapshot || !sceneList.some((scene) => scene.id === job.sceneId)) throw new HttpError(409, 'Connected generation has no surviving scene snapshot');
+      const { scene: snapshot, target } = verifiedAppliedGeneration(this.store, episode.id, job, output);
+      const targetKey = canonicalJson([job.sceneId, job.slotId || null]);
+      if (generationTargets.has(targetKey)) throw new HttpError(409, 'Connected generation targets conflict on the same scene/slot');
+      generationTargets.add(targetKey);
+      const savedScene = episode.scenes.find((scene) => scene.id === job.sceneId);
+      const savedTarget = job.slotId ? savedScene?.slots?.find((slot) => slot.id === job.slotId) : savedScene;
+      const savedSceneFields = (scene) => ({ kind: scene?.kind, assetUrl: scene?.assetUrl, source: scene?.source, trimStart: scene?.trimStart, trimEnd: scene?.trimEnd, ...(scene?.kind === 'video' ? { duration: scene.duration } : {}) });
+      if (!sceneList.some((scene) => scene.id === job.sceneId) || !savedTarget
+        || canonicalJson(job.slotId ? savedTarget : savedSceneFields(savedScene)) !== canonicalJson(job.slotId ? target : savedSceneFields(target))) {
+        throw new HttpError(409, 'Connected generation differs from the saved episode target');
+      }
       sceneList = sceneList.map((scene) => {
         if (scene.id !== job.sceneId) return scene;
         if (!job.slotId) return structuredClone(snapshot);
@@ -1236,7 +1291,12 @@ export class WorkflowEngine {
       });
       generationNodeIds.push(producer.id);
     }
-    return { episode: { ...episode, scenes: this.validateAssets(scenes(sceneList)) }, generationNodeIds };
+    const renderedScenes = this.validateAssets(scenes(sceneList));
+    if (latestInputRun?.reused === true
+      && canonicalJson(renderedScenes) !== canonicalJson(this.validateAssets(scenes(episode.scenes)))) {
+      throw new HttpError(409, 'Rendered scene composition differs from the saved episode state');
+    }
+    return { episode: { ...episode, scenes: renderedScenes }, generationNodeIds };
   }
 
   async execute(id) {
@@ -1421,11 +1481,17 @@ export class WorkflowEngine {
               const applied = this.generations.apply(job.id, { expectedVersion: episode.version, sceneId: approved.sceneId, ...(approved.slotId ? { slotId: approved.slotId } : {}) });
               episode = applied.episode;
             }
+            const appliedJob = this.generations.get(job.id);
+            const appliedHistory = Number.isSafeInteger(appliedJob?.appliedVersion)
+              ? this.store.history(episode.id).find((entry) => entry.version === appliedJob.appliedVersion)
+              : null;
+            const appliedScene = appliedHistory?.snapshot?.scenes?.find((item) => item.id === approved.sceneId);
             const resultFingerprint = candidateFingerprint(nodeInput(currentCandidate(), node.id));
             if (!this.persistNode(id, node.id, { generationIntent: { ...intent, generationJobId: job.id, resultFingerprint } })) throw new HttpError(503, 'Applied generation receipt could not be durably linked; reconcile the existing job without reapplying');
-            output = { generationJobId: job.id, provider: 'higgsfield', model: job.model, transport: job.transport, status: completed.status, outputs: completed.outputs, sceneId: approved.sceneId, scene: episode.scenes.find((item) => item.id === approved.sceneId), episodeVersion: episode.version, ...(approved.slotId ? { slotId: approved.slotId } : {}) };
+            output = { generationJobId: appliedJob.id, provider: 'higgsfield', model: appliedJob.model, transport: appliedJob.transport, status: appliedJob.status, outputs: appliedJob.outputs, sceneId: approved.sceneId, scene: appliedScene, episodeVersion: appliedJob.appliedVersion, ...(approved.slotId ? { slotId: approved.slotId } : {}) };
+            verifiedAppliedGeneration(this.store, episode.id, appliedJob, output);
           } else if (node.type === 'render') {
-            const candidate = this.renderCandidate(workflow, node, episode, outputs);
+            const candidate = this.renderCandidate(workflow, node, episode, outputs, run);
             const sceneSnapshot = structuredClone(candidate.episode.scenes);
             output = { ...await this.render(candidate.episode), renderNodeId: node.id, generationNodeIds: candidate.generationNodeIds, sceneSnapshot };
           } else if (node.type === 'review') {

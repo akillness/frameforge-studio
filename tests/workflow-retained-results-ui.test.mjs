@@ -87,7 +87,8 @@ test('a skipped node displays retained evidence as historical, not as output pro
   const inspector = await f.results(workflow, 'a', second.id);
   const text = await inspector.innerText();
   assert.match(text, /retained-keyword/);
-  assert.match(text, /저장 결과 재사용/);
+  assert.match(text, /저장 결과 보존 · 이번 실행에서 사용하지 않음/);
+  assert.doesNotMatch(text, /저장 결과 재사용/);
 });
 
 test('a reused connected output is labeled as saved reuse rather than newly executed', async t => {

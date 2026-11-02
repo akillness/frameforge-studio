@@ -305,6 +305,37 @@ test('stale graph Save rejects the original expectedVersion and retains the exac
   assert.deepEqual((await f.api('/api/workflows')).find(w => w.id === f.workflow.id), concurrent);
 });
 
+test('hoverable info tooltips stay open and scrollable while the pointer is over them', async t => {
+  const f = await fixture(t), { page } = f;
+  await page.setViewportSize({ width: 390, height: 320 });
+  const trigger = page.locator('[data-action=project-tools][data-tooltip]');
+  await trigger.scrollIntoViewIfNeeded();
+  const text = Array.from({ length: 40 }, (_, index) => `Tooltip line ${index + 1}: explanatory content remains available while hovered.`).join('\n');
+  await trigger.evaluate((element, value) => element.setAttribute('data-tooltip', value), text);
+  const media = await page.evaluate(() => ({ coarse: matchMedia('(pointer: coarse)').matches, hover: matchMedia('(hover: hover)').matches }));
+  assert.equal(media.coarse, false, 'the desktop fixture uses a fine pointer');
+  assert.equal(media.hover, true, 'the desktop fixture supports hover');
+  await trigger.hover();
+  const tooltip = page.locator('.ff-info-tooltip[role=tooltip]');
+  await tooltip.waitFor({ state: 'visible' });
+  assert.equal(await tooltip.evaluate(element => getComputedStyle(element).pointerEvents), 'auto', 'hoverable devices retain tooltip pointer interaction');
+  const placement = await page.evaluate(() => {
+    const anchor = document.querySelector('[data-action=project-tools][data-tooltip]').getBoundingClientRect();
+    const bubble = document.querySelector('.ff-info-tooltip').getBoundingClientRect();
+    return {withinViewport: bubble.top >= 0 && bubble.bottom <= innerHeight, overlapsTrigger: bubble.left < anchor.right && bubble.right > anchor.left && bubble.top < anchor.bottom && bubble.bottom > anchor.top};
+  });
+  assert.equal(placement.withinViewport, true, 'a tall tooltip stays within the short viewport');
+  assert.equal(placement.overlapsTrigger, false, 'available-space placement keeps the tooltip from covering its trigger');
+  await tooltip.hover();
+  await page.mouse.wheel(0, 220);
+  await page.waitForFunction(() => document.querySelector('.ff-info-tooltip')?.scrollTop > 0);
+  assert.equal(await tooltip.isVisible(), true, 'pointerenter on the tooltip keeps it open during scrolling');
+  assert.ok(await tooltip.evaluate(element => element.scrollTop > 0), 'the visible tooltip itself remains scrollable');
+  await trigger.click();
+  await menu(page).waitFor({ state: 'visible' });
+  assert.deepEqual(f.writes, []);
+});
+
 test('touch more menus clamp to the viewport, restore focus, dismiss outside, and describe tooltips without writes', async t => {
   const f = await fixture(t, { touch: true }), { page } = f;
   const more = node(page, 'd').locator('[data-wf-action=node-menu]');
@@ -345,6 +376,7 @@ for (const { width, height } of [{ width: 390, height: 844 }, { width: 430, heig
   test(`${width}px portrait touch workbench keeps actions reachable and exact node and scene drafts through channel reselect without writes`, async t => {
     const f = await fixture(t, { touch: true, sceneTarget: true }), { page } = f;
     await page.setViewportSize({ width, height });
+    assert.equal(await page.evaluate(() => matchMedia('(pointer: coarse)').matches && matchMedia('(hover: none)').matches), true, 'the touch fixture exercises the non-hover coarse-pointer rule');
     const assertNoOverflow = async () => {
       const geometry = await page.evaluate(() => ({ viewport: innerWidth, client: document.documentElement.clientWidth, document: document.documentElement.scrollWidth, body: document.body.scrollWidth }));
       assert.equal(geometry.viewport, width, 'portrait viewport must not expand to fit desktop content');
@@ -420,7 +452,24 @@ for (const { width, height } of [{ width: 390, height: 844 }, { width: 430, heig
     assert.equal(await sceneDialog.locator('[data-scene=title]').inputValue(), sceneDraft, 'channel reselect and node context reopening retain the unsaved exact-scene draft');
     assert.equal(await sceneDialog.locator('#save-status').getAttribute('class'), 'unsaved');
     assert.equal(await sceneDialog.evaluate(element => element.contains(document.activeElement)), true, 'reopened scene editor owns focus');
-    await sceneDialog.locator('[data-action=close-scene-editor]').tap(); await sceneDialog.waitFor({ state: 'hidden' });
+    const closeSceneEditor = sceneDialog.locator('[data-action=close-scene-editor]');
+    await sceneDialog.locator('#save-button').focus();
+    const visibleTooltip = page.locator('.ff-info-tooltip[role=tooltip]');
+    await visibleTooltip.waitFor({ state: 'visible' });
+    const hitTest = await visibleTooltip.evaluate(tooltip => {
+      const target = document.querySelector('#project-scene-dialog[open] [data-action="close-scene-editor"]');
+      const targetRect = target.getBoundingClientRect();
+      tooltip.style.left = `${targetRect.left}px`;
+      tooltip.style.top = `${targetRect.top}px`;
+      const tooltipRect = tooltip.getBoundingClientRect();
+      const x = targetRect.left + targetRect.width / 2, y = targetRect.top + targetRect.height / 2;
+      const hit = document.elementFromPoint(x, y);
+      return {visible: tooltipRect.width > 0 && tooltipRect.height > 0, overlaps: x >= tooltipRect.left && x <= tooltipRect.right && y >= tooltipRect.top && y <= tooltipRect.bottom, targetReceivesPointer: hit === target || target.contains(hit)};
+    });
+    assert.equal(hitTest.visible, true, 'the real information tooltip is visible during the overlap check');
+    assert.equal(hitTest.overlaps, true, 'the visible tooltip overlaps the touch target at its hit-test point');
+    assert.equal(hitTest.targetReceivesPointer, true, 'a visible information tooltip cannot intercept touch-target hit testing');
+    await closeSceneEditor.tap(); await sceneDialog.waitFor({ state: 'hidden' });
     await assertNoOverflow();
     assert.deepEqual(f.writes, [], 'touch navigation, menus, draft edits and dismissal cannot save, delete, generate, render or publish');
     assert.deepEqual((await f.api('/api/workflows')).find(workflow => workflow.id === f.workflow.id), f.workflow, 'saved graph and version remain unchanged');

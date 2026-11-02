@@ -244,9 +244,11 @@ test('compact recent-runs history renders bounded diffs, counts and triggers wit
     assert.match(await diff.innerText(), /첫 실행/);
   });
 
-  await t.test('a cross-run kept node (R11, a) and a same-run reused node (R11, b) both render the same saved-reuse summary wording', async () => {
+  await t.test('a cross-run kept node and a same-run reused node have distinct provenance summaries', async () => {
     let dialog = await f.openNodeResults('a', f.runs[10].id); // R11: a kept (unselected, retained, unchanged since R10).
-    assert.match(await dialog.locator('#wf-overlay-result-inspector').innerText(), /저장 결과 재사용/);
+    let text = await dialog.locator('#wf-overlay-result-inspector').innerText();
+    assert.match(text, /저장 결과 보존 · 이번 실행에서 사용하지 않음/);
+    assert.doesNotMatch(text, /저장 결과 재사용/);
     dialog = await f.openNodeResults('b', f.runs[10].id); // R11: b reused (direct parent of selected c).
     assert.match(await dialog.locator('#wf-overlay-result-inspector').innerText(), /저장 결과 재사용/);
   });

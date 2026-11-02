@@ -247,12 +247,15 @@ export function installInfoTooltips(root = document) {
     if (!trigger || !tooltip) return;
     if (!valid(trigger)) { hide(); return; }
     const bounds = viewport(document);
-    prepareOverlay(tooltip, {...bounds, width: Math.min(360, bounds.width)});
     const anchor = trigger.getBoundingClientRect();
+    const aboveSpace = Math.max(0, anchor.top - bounds.top - TOOLTIP_GAP);
+    const belowSpace = Math.max(0, bounds.top + bounds.height - anchor.bottom - TOOLTIP_GAP);
+    const placeAbove = aboveSpace > belowSpace;
+    const availableHeight = placeAbove ? aboveSpace : belowSpace;
+    prepareOverlay(tooltip, {...bounds, width: Math.min(360, bounds.width), height: availableHeight});
     const rect = tooltip.getBoundingClientRect();
-    const above = anchor.top - TOOLTIP_GAP - rect.height;
-    placeOverlay(tooltip, anchor.left + (anchor.width - rect.width) / 2,
-      above >= bounds.top ? above : anchor.bottom + TOOLTIP_GAP, bounds);
+    const y = placeAbove ? anchor.top - TOOLTIP_GAP - rect.height : anchor.bottom + TOOLTIP_GAP;
+    placeOverlay(tooltip, anchor.left + (anchor.width - rect.width) / 2, y, bounds);
   }
   function show(target) {
     if (destroyed || activeMenu || windowBlurred || !valid(target) || target === dismissedTarget) return;
