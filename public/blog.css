@@ -5,6 +5,7 @@
 .blog-page :is(h1, h2, h3, h4, p, a, button, strong, span, small, code, summary, li, pre) { overflow-wrap: anywhere; }
 .blog-page :is(button, summary) { white-space: normal; }
 .blog-page :is(button, .blog-actions a):active { background: var(--accent-soft); }
+.blog-page .primary { background-color: var(--accent); }
 .blog-page .primary:active { background: var(--focus); }
 .blog-page label { margin: var(--space-3) 0 6px; color: var(--text-secondary); font-size: 12px; font-weight: 550; }
 .blog-page input[type="checkbox"] { flex: 0 0 18px; margin: 2px 0; }
