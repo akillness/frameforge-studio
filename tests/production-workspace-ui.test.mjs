@@ -420,3 +420,32 @@ test('closing or navigating away with an unsaved draft triggers the native unsav
   await page.reload({ waitUntil: 'commit' }).catch(() => {});
   check('an unsaved dirty draft triggers the native beforeunload confirmation when navigating away', dialogType === 'beforeunload', { dialogType });
 });
+
+test('hovered tooltip remains scrollable without intercepting adjacent channel clicks', async (t) => {
+  const fixture = await workspaceFixture(t);
+  const { page, api } = fixture;
+  const first = await api('/api/channels', 'POST', { name: '첫 번째 툴팁 채널', platform: 'youtube', category: 'information' });
+  const second = await api('/api/channels', 'POST', { name: '두 번째 툴팁 채널', platform: 'youtube', category: 'information' });
+  await page.reload();
+  await page.locator('#app .shell').waitFor();
+
+  const group = page.locator('.platform-group').filter({ has: page.locator(`[data-action=channel][data-id="${first.id}"]`) });
+  const summary = group.locator('summary');
+  await summary.evaluate((element) => element.setAttribute('data-tooltip', '스크롤 가능한 안내 문구입니다. '.repeat(500)));
+  await summary.hover();
+  const tooltip = page.locator('.ff-info-tooltip');
+  await tooltip.waitFor();
+  const dimensions = await tooltip.evaluate((element) => ({ scrollHeight: element.scrollHeight, clientHeight: element.clientHeight }));
+  assert.ok(dimensions.scrollHeight > dimensions.clientHeight, `tooltip must have scrollable content: ${JSON.stringify(dimensions)}`);
+
+  await tooltip.hover();
+  await page.mouse.wheel(0, 400);
+  await page.waitForFunction(() => document.querySelector('.ff-info-tooltip')?.scrollTop > 0);
+  assert.ok(await tooltip.isVisible(), 'hovering and scrolling the tooltip must keep it open');
+
+  if (!await group.evaluate((element) => element.open)) await summary.click();
+  await page.locator(`[data-action=channel][data-id="${first.id}"]`).click();
+  assert.equal(await page.locator(`[data-action=channel][data-id="${first.id}"]`).getAttribute('aria-current'), 'true');
+  await page.locator(`[data-action=channel][data-id="${second.id}"]`).click();
+  assert.equal(await page.locator(`[data-action=channel][data-id="${second.id}"]`).getAttribute('aria-current'), 'true');
+});

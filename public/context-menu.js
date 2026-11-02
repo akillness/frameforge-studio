@@ -217,6 +217,9 @@ export function installInfoTooltips(root = document) {
   let pointerTarget = null;
   let focusTarget = null;
   let tooltipHovered = false;
+  let tooltipBounds = null;
+  let pointerX = null;
+  let pointerY = null;
   let dismissedTarget = null;
   let hideTimer = null;
 
@@ -241,21 +244,84 @@ export function installInfoTooltips(root = document) {
     tooltip?.remove();
     tooltip = null;
     trigger = null;
+    tooltipBounds = null;
     tooltipHovered = false;
+  }
+  function updateTooltipPointerEvents() {
+    if (!tooltip || !tooltipBounds || pointerX === null || pointerY === null) return;
+    const inside = pointerX >= tooltipBounds.left && pointerX <= tooltipBounds.right
+      && pointerY >= tooltipBounds.top && pointerY <= tooltipBounds.bottom;
+    if (!inside) { tooltip.style.pointerEvents = ''; return; }
+    const underneath = document.elementsFromPoint(pointerX, pointerY)
+      .find(element => element !== tooltip && !tooltip.contains(element));
+    const control = underneath?.closest('button,a,summary,input,select,textarea,[tabindex]:not([tabindex="-1"])');
+    tooltip.style.pointerEvents = control ? 'none' : '';
   }
   function position() {
     if (!trigger || !tooltip) return;
     if (!valid(trigger)) { hide(); return; }
     const bounds = viewport(document);
     const anchor = trigger.getBoundingClientRect();
-    const aboveSpace = Math.max(0, anchor.top - bounds.top - TOOLTIP_GAP);
-    const belowSpace = Math.max(0, bounds.top + bounds.height - anchor.bottom - TOOLTIP_GAP);
-    const placeAbove = aboveSpace > belowSpace;
-    const availableHeight = placeAbove ? aboveSpace : belowSpace;
-    prepareOverlay(tooltip, {...bounds, width: Math.min(360, bounds.width), height: availableHeight});
+    const gap = TOOLTIP_GAP;
+    const width = Math.min(360, bounds.width);
+    const maxHeight = Math.min(280, bounds.height);
+    const belowSpace = Math.max(1, bounds.top + bounds.height - anchor.bottom - gap);
+    const aboveSpace = Math.max(1, anchor.top - bounds.top - gap);
+    const variants = [];
+    for (const side of ['below', 'above']) {
+      const availableHeight = Math.min(maxHeight, side === 'below' ? belowSpace : aboveSpace);
+      prepareOverlay(tooltip, {...bounds, width, height: availableHeight});
+      const rect = tooltip.getBoundingClientRect();
+      variants.push({side, width: rect.width, height: rect.height, maxHeight: availableHeight});
+    }
+    const controls = [...document.querySelectorAll('button,a,summary,input,select,textarea,[tabindex]:not([tabindex="-1"])')]
+      .filter(element => !tooltip.contains(element)
+        && !element.closest('[hidden],[inert]') && element.getClientRects().length > 0)
+      .map(element => ({
+        element,
+        rect: element.getBoundingClientRect(),
+        channel: element.matches('.platform-group button,.platform-group summary'),
+      }));
+    let best = null;
+    for (const variant of variants) {
+      const xs = [...new Set([
+        anchor.left + (anchor.width - variant.width) / 2,
+        anchor.right + gap,
+        anchor.left - variant.width - gap,
+        bounds.left,
+        bounds.left + (bounds.width - variant.width) / 2,
+        bounds.left + bounds.width - variant.width,
+      ])].map(x => Math.max(bounds.left, Math.min(x, bounds.left + bounds.width - variant.width)));
+      const minY = variant.side === 'below' ? anchor.bottom + gap : bounds.top;
+      const maxY = variant.side === 'below'
+        ? bounds.top + bounds.height - variant.height
+        : anchor.top - gap - variant.height;
+      if (maxY < minY) continue;
+      const ys = [...new Set([minY, maxY, minY + (maxY - minY) / 2])];
+      for (const left of xs) for (const top of ys) {
+        const placed = {left, top, right: left + variant.width, bottom: top + variant.height};
+        let collisions = 0;
+        for (const control of controls) {
+          const area = Math.max(0, Math.min(placed.right, control.rect.right) - Math.max(placed.left, control.rect.left))
+            * Math.max(0, Math.min(placed.bottom, control.rect.bottom) - Math.max(placed.top, control.rect.top));
+          collisions += area * (control.channel ? 100 : 1);
+        }
+        const distance = Math.abs((placed.left + placed.right - anchor.left - anchor.right) / 2)
+          + Math.abs((placed.top + placed.bottom - anchor.top - anchor.bottom) / 2);
+        const score = collisions * 10000 + distance;
+        if (!best || score < best.score) best = {...variant, left, top, score};
+      }
+    }
+    if (!best) {
+      const variant = variants[0];
+      best = {...variant, left: bounds.left, top: bounds.top};
+    }
+    prepareOverlay(tooltip, {...bounds, width, height: best.maxHeight});
+    tooltip.style.left = `${best.left}px`;
+    tooltip.style.top = `${best.top}px`;
     const rect = tooltip.getBoundingClientRect();
-    const y = placeAbove ? anchor.top - TOOLTIP_GAP - rect.height : anchor.bottom + TOOLTIP_GAP;
-    placeOverlay(tooltip, anchor.left + (anchor.width - rect.width) / 2, y, bounds);
+    tooltipBounds = {left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom};
+    updateTooltipPointerEvents();
   }
   function show(target) {
     if (destroyed || activeMenu || windowBlurred || !valid(target) || target === dismissedTarget) return;
@@ -332,6 +398,11 @@ export function installInfoTooltips(root = document) {
   root.addEventListener('pointerout', event => {
     pointerTarget = targetFor(event.relatedTarget);
     reconcile();
+  }, {...options, capture: true});
+  document.addEventListener('pointermove', event => {
+    pointerX = event.clientX;
+    pointerY = event.clientY;
+    updateTooltipPointerEvents();
   }, {...options, capture: true});
   root.addEventListener('focusin', event => {
     focusTarget = targetFor(event.target);

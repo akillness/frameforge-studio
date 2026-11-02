@@ -37,7 +37,7 @@ async function fixture(t, options = {}) {
   } });
   const app = createApp({ dataDir, loginToken: '', publicOrigin: '', generation,
     generationOptions: { pollIntervalMs: 2, download: async (url, file) => { assert.equal(url, 'https://images.higgs.ai/fixture.png'); await writeFile(file, PNG); return { bytes: PNG.length, contentType: 'image/png' }; } },
-    integrations: { integrationStatus: async () => ({ codex: { available: true } }), fetchTrends: unexpected, runAgent: async (_agent, prompt) => ({ message: 'External agent fixture', scenes: [options.agentScenes?.[prompt.includes('BRANCH_A') ? 'a' : 'b'] || scene(prompt.includes('BRANCH_A') ? 'branch-a' : 'branch-b')] }) },
+    integrations: { integrationStatus: async () => ({ codex: { available: true } }), fetchTrends: unexpected, runAgent: async (_agent, prompt) => { const key = prompt.includes('BRANCH_A') ? 'a' : 'b', custom = options.agentScenes?.[key]; return { message: 'External agent fixture', scenes: Array.isArray(custom) ? custom : [custom || scene(key === 'a' ? 'branch-a' : 'branch-b')] }; } },
     mediaOptions: { userAgent: '', fetchImpl: unexpected }, youtubeOptions: options.publication ? { clientId: 'fixture.apps.googleusercontent.com', clientSecret: 'fixture-only-secret', redirectUri: 'http://127.0.0.1/oauth/youtube/callback', fetchImpl: async raw => {
       const url = new URL(raw);
       if (url.origin === 'https://oauth2.googleapis.com' && url.pathname === '/token') return Response.json({ access_token: 'fixture-only-access', refresh_token: 'fixture-only-refresh', expires_in: 3600, scope: 'https://www.googleapis.com/auth/youtube.force-ssl', token_type: 'Bearer' });
@@ -135,6 +135,62 @@ test('two generation nodes in different slots of one scene complete with origina
   assert.deepEqual(output.generationNodeIds.sort(), ['gen-left', 'gen-right']);
   for (const slot of output.sceneSnapshot[0].slots) assert.equal(slot.source.generationJobId, jobs.get(slot.id));
   assert.equal(f.transport.filter(c => c.path === '/generation/create').length, 2, 're-render never pays twice');
+});
+
+test('resumed branch render overlays a retained sibling generation with verified provenance in its approval candidate', { timeout: 120000 }, async t => {
+  const options = { publication: true, agentScenes: {} }, f = await fixture(t, options);
+  await f.connect();
+  const slots = ['left', 'right'].map((id, i) => ({ id, role: 'image-gen', x: i * 50, y: 0, w: 50, h: 100, zIndex: i + 1, prompt: `Branch ${id}` }));
+  const sceneWithSlots = (id = 'shared-scene') => ({ ...scene(id), slots: structuredClone(slots) });
+  options.agentScenes.a = [sceneWithSlots(), scene('unrelated-scene')];
+  options.agentScenes.b = [{ ...sceneWithSlots(), title: 'Branch B composition', text: 'Branch B layout exact text', background: '#123456' }, scene('unrelated-scene')];
+  await f.api(`/api/episodes/${f.episode.id}`, 'PUT', { ...f.episode, scenes: [sceneWithSlots(), scene('unrelated-scene')], expectedVersion: f.episode.version });
+
+  const body = branchedGraph({ generate: true });
+  Object.assign(body.nodes.find(n => n.id === 'za-generate').config, { sceneId: 'shared-scene', slotId: 'left', targetMode: 'slot' });
+  const workflow = await f.own(body);
+  const preparation = body.nodes.filter(n => ['script', 'storyboard', 'layout'].includes(n.type)).map(n => n.id);
+  const prepRun = await f.wait((await f.api(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, selectedStages: preparation })).id);
+  assert.equal(prepRun.status, 'completed', JSON.stringify(prepRun));
+  const generationStages = ['y-layout-a', 'za-generate'];
+  const resumeOptions = { episodeId: f.episode.id, selectedStages: generationStages, resumeRunId: prepRun.id, disclosure };
+  const plan = await f.api(`/api/workflows/${workflow.id}/quote`, 'POST', resumeOptions);
+  const sourceRun = await f.wait((await f.api(`/api/workflows/${workflow.id}/run`, 'POST', { ...resumeOptions, allowGeneration: true, generationPlanId: plan.id, generationFingerprint: plan.fingerprint })).id);
+  assert.equal(sourceRun.status, 'completed', JSON.stringify(sourceRun));
+  const leftRecord = sourceRun.nodeRuns.find(n => n.nodeId === 'za-generate');
+  assert.equal(leftRecord.status, 'completed');
+  const leftJob = await f.api(`/api/generations/${leftRecord.output.generationJobId}`);
+  assert.equal(leftJob.applied, true);
+  assert.equal(leftJob.slotId, 'left');
+
+  const renderRun = await f.wait((await f.api(`/api/workflows/${workflow.id}/run`, 'POST', { episodeId: f.episode.id, selectedStages: ['zz-render-b', 'zzz-review-b'], startStage: 'zz-render-b', resumeRunId: sourceRun.id })).id);
+  assert.equal(renderRun.status, 'awaiting_review', renderRun.error);
+  const retained = renderRun.nodeRuns.find(n => n.nodeId === 'za-generate');
+  assert.equal(retained.output.generationJobId, leftJob.id);
+  const render = renderRun.nodeRuns.find(n => n.nodeId === 'zz-render-b');
+  const snapshot = render.output.sceneSnapshot;
+  assert.equal(snapshot[0].id, 'shared-scene');
+  assert.equal(snapshot[0].text, 'Branch B layout exact text');
+  const [left, right] = snapshot[0].slots;
+  assert.equal(left.assetUrl, leftJob.outputs[0].url);
+  assert.equal(left.source.origin, 'generated');
+  assert.equal(left.source.generationJobId, leftJob.id);
+  assert.equal(right.assetUrl ?? '', '');
+  assert.equal(right.source ?? null, null);
+  assert.deepEqual(render.output.generationNodeIds, []);
+  assert.equal(f.transport.filter(c => c.path === '/generation/create').length, 1, 'resumed render does not resubmit retained generation');
+
+  await f.api(`/api/workflows/${workflow.id}/runs/${renderRun.id}/review`, 'POST', { reviewNodeId: 'zzz-review-b', decision: 'approved', expectedEpisodeVersion: renderRun.episodeVersion, notes: 'Retained left asset with branch B layout' });
+  const approval = await f.api('/api/publication/approvals', 'POST', approvalBody(f, workflow, renderRun, 'zzz-review-b'));
+  assert.deepEqual(approval.manifest.candidate.nodes.map(n => n.nodeId), []);
+  const approvedScene = approval.manifest.candidate.scenes.find(s => s.sceneId === 'shared-scene');
+  assert.equal(approvedScene.slots.find(s => s.slotId === 'left').source.generationJobId, leftJob.id);
+  const approvedAsset = approval.manifest.candidate.assets.find(asset => asset.slotId === 'left');
+  assert.equal(approvedAsset.generation.id, leftJob.id);
+  assert.equal(approvedAsset.upload.generationJobId, leftJob.id);
+  assert.equal(approvedAsset.sha256, leftJob.outputs[0].sha256);
+  assert.equal(approval.manifest.candidate.scenes.find(s => s.sceneId === 'unrelated-scene').title, 'unrelated-scene');
+  assert.equal(approval.fingerprint, candidateFingerprint(approval.manifest));
 });
 
 const approvalBody = (f, workflow, run, reviewNodeId) => ({ workflowId: workflow.id, runId: run.id, reviewNodeId, expectedEpisodeVersion: run.episodeVersion, title: 'Exact selected branch', description: 'Exact rendered candidate', categoryId: '25', tags: [], selfDeclaredMadeForKids: false, containsSyntheticMedia: true, disclosureRationale: disclosure.rationale, rightsAcknowledged: true });

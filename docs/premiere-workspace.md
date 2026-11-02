@@ -46,6 +46,12 @@ The stacked mobile workflow shows input/output relationships as inline, keyboard
 
 **Scoped verification:** the owner-observed `node --test tests/node-workbench.test.mjs` run passed **25/25, 0 failed, 0 skipped** with the specified Node 22 and Playwright module. The relevant regression coverage checks tooltip placement and hover/scroll behavior, touch hit-testing over controls, and 390px/430px portrait workbench navigation and draft/focus preservation. This is a scoped fixture-test result only; it does not establish full-suite/CI success, deployment or production behavior. No result from the unavailable workflow session is included.
 
+## Regression verification update — 2026-11-03
+
+CI run `41494938905` reported **1287/1295 passed, 8 failed**; CI is not fully passing. Fixture tests verified connected-branch render output and receipt-based sibling-branch asset composition; conflicting scene/slot assets are rejected. This is fixture evidence only. `workflow-empty-state.test.mjs` passed **3/3**. `production-workspace-journey.test.mjs` and `production-workspace-ui.test.mjs` with `--test-concurrency=1` passed **21/21**; the parallel run passed **20/21**, and the cause is unresolved. These results do not establish deployment, actual generation or upload, or full CI success.
+
+**After the final tooltip changes:** Node 22/Playwright serial runs passed `node --test --test-concurrency=1 tests/node-workbench.test.mjs` (**25/25**) and `node --test --test-concurrency=1 tests/production-workspace-ui.test.mjs` (**9/9**). An earlier `node-workbench.test.mjs` run failed at **23/25** before the subsequent pass. The **21/21** result above predates these code changes and is a separate earlier result.
+
 ## Historical original design-system packet — 2026-10-20
 
 **Scope:** the existing eight application views, channel navigation, Studio editing and workflow design. Shared controls remain dependency-free HTML/CSS and the existing delegated actions; no parallel component framework or backend was introduced.

@@ -1255,11 +1255,9 @@ export class WorkflowEngine {
     const layoutUsable = layout && outputs.has(layout.id);
     const storyboardUsable = storyboard && outputs.has(storyboard.id);
     const latestInput = storyboardUsable && layoutUsable && ancestors(workflow.edges, storyboard.id).has(layout.id) ? storyboard : layoutUsable ? layout : storyboardUsable ? storyboard : null;
-    const latestInputRun = latestInput && run?.nodeRuns?.find((item) => item.nodeId === latestInput.id);
-    // A reused producer may predate an already-applied generation on an independent branch.
-    // The current, version-pinned episode is the authoritative saved scene snapshot; using the
-    // older producer output here would erase that sibling asset from the rendered candidate.
-    const connectedScenes = latestInput && latestInputRun?.reused !== true ? outputs.get(latestInput.id)?.scenes : episode.scenes;
+    // A resumed render must use the exact connected producer output, including its branch-local
+    // layout. The saved episode may contain a different sibling branch at the same version.
+    const connectedScenes = latestInput ? outputs.get(latestInput.id)?.scenes : episode.scenes;
     if (!Array.isArray(connectedScenes) || !connectedScenes.length) throw new HttpError(409, 'Render requires completed scene evidence from its connected producer');
     let sceneList = structuredClone(connectedScenes);
     const upstream = ancestors(workflow.edges, node.id);
@@ -1291,11 +1289,39 @@ export class WorkflowEngine {
       });
       generationNodeIds.push(producer.id);
     }
-    const renderedScenes = this.validateAssets(scenes(sceneList));
-    if (latestInputRun?.reused === true
-      && canonicalJson(renderedScenes) !== canonicalJson(this.validateAssets(scenes(episode.scenes)))) {
-      throw new HttpError(409, 'Rendered scene composition differs from the saved episode state');
+    // A resumed branch can share the saved scene with a completed generation from a sibling
+    // branch. Keep this render's branch-local composition, but carry forward only media fields
+    // backed by that sibling's verified applied receipt.
+    const retainedGenerations = (run?.nodeRuns || [])
+      .filter((item) => item.type === 'generate' && !upstream.has(item.nodeId) && item.retainedStatus === 'completed')
+      .sort((left, right) => {
+        const leftOutput = left.retainedOutput;
+        const rightOutput = right.retainedOutput;
+        return Number(leftOutput?.episodeVersion || 0) - Number(rightOutput?.episodeVersion || 0);
+      });
+    for (const prior of retainedGenerations) {
+      const output = prior.retainedOutput;
+      const job = this.generations.get(output?.generationJobId);
+      const { scene: appliedScene, target } = verifiedAppliedGeneration(this.store, episode.id, job, output);
+      const targetKey = canonicalJson([job.sceneId, job.slotId || null]);
+      if (generationTargets.has(targetKey)) throw new HttpError(409, 'Retained generation conflicts with a connected scene target');
+      generationTargets.add(targetKey);
+      const sceneIndex = sceneList.findIndex((scene) => scene.id === job.sceneId);
+      if (sceneIndex < 0) throw new HttpError(409, 'Retained generation has no matching render scene');
+      if (job.slotId) {
+        const slots = sceneList[sceneIndex].slots || [];
+        const slotIndex = slots.findIndex((slot) => slot.id === job.slotId);
+        if (slotIndex < 0) throw new HttpError(409, 'Retained generation target slot is missing from the render branch');
+        const media = Object.fromEntries(['assetUrl', 'mediaKind', 'source', 'trimStart', 'trimEnd']
+          .filter((key) => Object.hasOwn(target, key)).map((key) => [key, target[key]]));
+        sceneList[sceneIndex] = { ...sceneList[sceneIndex], slots: slots.map((slot, index) => index === slotIndex ? { ...slot, ...media } : slot) };
+      } else {
+        const media = Object.fromEntries(['kind', 'assetUrl', 'mediaKind', 'source', 'trimStart', 'trimEnd', 'duration']
+          .filter((key) => Object.hasOwn(appliedScene, key)).map((key) => [key, appliedScene[key]]));
+        sceneList[sceneIndex] = { ...sceneList[sceneIndex], ...media };
+      }
     }
+    const renderedScenes = this.validateAssets(scenes(sceneList));
     return { episode: { ...episode, scenes: renderedScenes }, generationNodeIds };
   }
 

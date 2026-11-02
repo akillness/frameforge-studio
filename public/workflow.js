@@ -792,7 +792,7 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
       const outgoing=outgoingEdges.map(edge=>nodeName(workflow.nodes.find(item=>item.id===edge.target))).filter(Boolean);
       const mobileLinks=`입력: ${incoming.join(', ') || '없음'} · 출력: ${outgoing.join(', ') || '없음'}`;
       const related=(edges,idKey,label)=>edges.length?edges.map(edge=>{const relatedNode=workflow.nodes.find(item=>item.id===edge[idKey]);return relatedNode?`<button type="button" class="wf-related-node" data-wf-action="select-node" data-id="${escapeHtml(relatedNode.id)}" aria-label="연결된 ${label} 단계 ${escapeHtml(nodeCardName(relatedNode))} 선택">${escapeHtml(nodeCardName(relatedNode))}</button>`:'';}).join(''):'<span class="wf-related-empty">없음</span>';
-      const mobileLinksHtml=`<div class="wf-mobile-links" aria-label="단계 연결 관계"><div><strong>입력: </strong><span>${related(incomingEdges,'source','입력')}</span></div> <span aria-hidden="true"> · </span><div><strong>출력: </strong><span>${related(outgoingEdges,'target','출력')}</span></div></div>`;
+      const mobileLinksHtml=`<div class="wf-mobile-links" aria-label="단계 연결 관계"><div><strong>입력: </strong><span>${related(incomingEdges,'source','입력')}</span></div> <span aria-hidden="true">· </span><div><strong>출력: </strong><span>${related(outgoingEdges,'target','출력')}</span></div></div>`;
       const displayName=nodeCardName(node),ordinal=nodeCardOrdinal(node);
       const description=`${type.summary} · ${displayName} · ${nodeSummary(node)} · ${mobileLinks}`;
       const cardState=nodeRunState(record,isNodeSkipped(node.id));
