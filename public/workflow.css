@@ -116,6 +116,10 @@
 .wf-grip { margin-left: auto; font-size: 17px; color: var(--line-strong); }
 .wf-node-content { padding: 9px 12px; }
 .wf-node-content p { font-size: 12px; color: var(--text-secondary); margin: 0 0 6px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+.wf-node-meta { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.wf-node-instance { min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font-size: 10px; font-weight: 600; }
+.wf-node-settings { flex: 0 0 auto; min-height: 30px; padding: 4px 8px; font-size: 11px; }
+.wf-node-settings:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .wf-node-status { display: inline-block; font-size: 11px; color: var(--muted); background: var(--surface-subtle); padding: 2px 8px; border: 1px solid var(--border); border-radius: 999px; font-weight: 600; }
 .wf-node-status.running, .wf-node-status.awaiting_review { color: var(--warning); border-color: var(--warning); background: var(--warning-soft); }
 .wf-node-status.completed, .wf-node-status.succeeded, .wf-node-status.approved { color: var(--success); border-color: var(--success); background: var(--success-soft); }
@@ -169,7 +173,14 @@
 .result-list li p { white-space: pre-wrap; margin: 6px 0 0; }
 .result-list small { color: var(--muted); }
 .result-copy { font-size: 12px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
-.node-result-media { display: block; width: 100%; max-height: 300px; object-fit: contain; background: var(--media-surface); margin: 12px 0; border-radius: var(--radius-control); }
+.node-result-preview { margin: 12px 0; min-width: 0; }
+.node-result-media { display: block; width: 100%; max-height: 300px; object-fit: contain; background: var(--media-surface); margin: 0; border-radius: var(--radius-control); }
+.node-result-preview figcaption { margin-top: 6px; font-size: 11px; overflow-wrap: anywhere; }
+.node-result-preview a { color: var(--accent); text-underline-offset: 2px; }
+.node-result-preview[data-media-state="error"] .node-result-media { display: none; }
+.node-result-media-error { margin: 8px 0; padding: 8px 10px; border: 1px solid var(--danger); border-radius: var(--radius-control); color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, var(--surface)); overflow-wrap: anywhere; font-size: 12px; }
+.wf-result-provenance { min-width: 0; max-width: 100%; color: var(--muted); overflow-wrap: anywhere; }
+.wf-result-source-run { flex: 0 1 auto; max-width: 100%; white-space: normal; }
 .wf-run { padding: 13px 17px; border-bottom: 1px solid var(--border); background: var(--surface); color: var(--text); }
 .wf-run.selected { background: var(--primary-soft); border-left: 3px solid var(--primary); padding-left: 14px; }
 .wf-run:last-child { border-bottom: 0; }
@@ -304,6 +315,8 @@
 #wf-stage-status[data-stage-state="running"] { border-color: var(--warning); background: var(--warning-soft); }
 #wf-stage-status[data-stage-state="blocked"] { border-color: var(--danger); background: var(--danger-soft); }
 #wf-stage-status[data-stage-state="completed"] { border-color: var(--success); background: var(--success-soft); }
+.wf-stage-explanation { margin: 0 20px 16px; padding: 12px 14px; border-inline-start: 3px solid var(--accent); background: var(--surface-subtle); color: var(--text-secondary); font-size: 12px; line-height: 1.7; }
+@media (max-width: 560px) { .wf-stage-explanation { margin-inline: var(--space-3); } }
 .wf-overlay > .hint { margin: 0 20px 18px; }
 .wf-overlay .dialog-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin: 0; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border); background: var(--surface-side); }
 @media (max-width: 560px) { .wf-minimap { right: 8px; bottom: 8px; width: 148px; height: 104px; } .wf-overlay { width: calc(100vw - 16px); max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); } .wf-overlay-header, .wf-overlay-body { padding: var(--space-3); } #wf-stage-status, .wf-overlay > .hint { margin-inline: var(--space-3); } }
@@ -359,6 +372,9 @@
 }
 
 .wf-mobile-links { display: none; }
+.wf-related-node { min-height: 28px; margin: 2px 4px 2px 0; padding: 3px 7px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--surface-subtle); color: var(--text-secondary); font-size: 10px; line-height: 1.35; overflow-wrap: anywhere; }
+.wf-related-node:hover, .wf-related-node:focus-visible { border-color: var(--accent); color: var(--accent); }
+.wf-related-empty { color: var(--muted); font-size: 10px; }
 #workflow-canvas[data-layout="stacked"] {
   display: flex;
   flex-direction: column;
@@ -376,7 +392,10 @@
 #workflow-canvas[data-layout="stacked"] .wf-node-header { grid-column: 1 / -1; grid-row: 1; cursor: pointer; touch-action: manipulation; }
 #workflow-canvas[data-layout="stacked"] .wf-node-content { grid-column: 1 / -1; grid-row: 2; padding: 8px 12px; }
 #workflow-canvas[data-layout="stacked"] .wf-node-content p { white-space: normal; overflow: visible; overflow-wrap: anywhere; margin-bottom: 5px; }
-#workflow-canvas[data-layout="stacked"] .wf-mobile-links { display: block; margin-left: 8px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+#workflow-canvas[data-layout="stacked"] .wf-mobile-links { display: grid; gap: 4px; margin-top: 5px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+#workflow-canvas[data-layout="stacked"] .wf-mobile-links > div { display: grid; grid-template-columns: 40px minmax(0,1fr); align-items: start; gap: 4px; }
+#workflow-canvas[data-layout="stacked"] .wf-mobile-links > div > span { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; }
+#workflow-canvas[data-layout="stacked"] .wf-related-node { min-height: 30px; }
 #workflow-canvas[data-layout="stacked"] .wf-port { position: static; grid-row: 3; display: flex; min-height: 40px; padding: 4px 12px; cursor: pointer; border-top: 1px solid var(--border); }
 #workflow-canvas[data-layout="stacked"] .wf-port.input { grid-column: 1; justify-content: flex-start; }
 #workflow-canvas[data-layout="stacked"] .wf-port.output { grid-column: 2; justify-content: flex-end; }

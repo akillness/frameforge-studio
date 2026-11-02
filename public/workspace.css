@@ -16,6 +16,9 @@
 .project-navigation > * { min-width: 0; max-width: 100%; }
 .project-context { display: grid; gap: 2px; flex: 1 1 200px; }
 .project-context strong { overflow-wrap: anywhere; }
+.project-identity-label { color: var(--text-secondary); font-size: 10px; }
+.project-identity-code { display: block; width: fit-content; max-width: 100%; color: var(--text-secondary); font-size: 11px; font-weight: 400; overflow-wrap: anywhere; }
+.project-id-short { display: block; min-width: 0; max-width: 100%; color: var(--text-secondary); font-size: 10px; line-height: 1.2; overflow-wrap: anywhere; }
 .project-modes, .project-sections { display: flex; flex-wrap: wrap; gap: 6px; }
 .project-navigation label { margin: 0; flex: 1 1 180px; }
 .project-navigation select { margin: 4px 0 0; width: 100%; min-width: 0; max-width: 100%; }
@@ -495,6 +498,7 @@ body[data-workbench="project"] .wf-canvas:not([data-layout="stacked"]) { height:
 .project-tool-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; margin-left: auto; }
 .project-tool-strip > * { min-width: 0; max-width: 100%; }
 .project-tool-strip button { font-size: 12px; }
+.project-tool-strip [data-section] { white-space: normal; overflow-wrap: anywhere; }
 .project-more { flex: 0 0 auto; display: inline-grid; place-items: center; min-width: 32px; width: 32px; min-height: 32px; padding: 0; color: var(--text-secondary); background: transparent; }
 .project-more:hover, .project-more[aria-expanded="true"] { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
 .project-context strong { font-size: 14px; }

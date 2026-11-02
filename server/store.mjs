@@ -166,10 +166,16 @@ export class Store {
       return next;
     }, expectedVersion, archived ? 'archived' : 'unarchived');
   }
-  listWorkflowRunHistory({ page = 1, limit = 20, query = '' } = {}) {
+  listWorkflowRunHistory({ page = 1, limit = 20, query = '', channelId = '', episodeId = '' } = {}) {
     const offset = (page - 1) * limit;
-    const where = query ? ' AND instr(lower(data), lower(?)) > 0' : '';
-    const params = query ? ['workflowRuns', query] : ['workflowRuns'];
+    const conditions = [], params = ['workflowRuns'];
+    if (episodeId) { conditions.push("json_extract(data, '$.episodeId') = ?"); params.push(episodeId); }
+    if (channelId) {
+      conditions.push("json_extract(data, '$.episodeId') IN (SELECT json_extract(data, '$.id') FROM entities WHERE kind = 'episodes' AND json_extract(data, '$.channelId') = ?)");
+      params.push(channelId);
+    }
+    if (query) { conditions.push('instr(lower(data), lower(?)) > 0'); params.push(query); }
+    const where = conditions.length ? ` AND ${conditions.join(' AND ')}` : '';
     const total = Number(this.db.prepare(`SELECT COUNT(*) AS count FROM entities WHERE kind = ?${where}`).get(...params).count);
     const rows = this.db.prepare(`SELECT data FROM entities WHERE kind = ?${where} ORDER BY json_extract(data, '$.createdAt') DESC, rowid DESC LIMIT ? OFFSET ?`).all(...params, limit, offset);
     const items = rows.map(({ data }) => {
@@ -186,7 +192,18 @@ export class Store {
         status: run.status,
         createdAt: run.createdAt,
         updatedAt: run.updatedAt,
-        nodeRuns: Array.isArray(run.nodeRuns) ? run.nodeRuns.map(({ nodeId, type, status }) => ({ nodeId, type, status })) : [],
+        nodeRuns: Array.isArray(run.nodeRuns) ? run.nodeRuns.map((node) => ({
+          nodeId: node.nodeId,
+          type: node.type,
+          status: node.status,
+          ...(node.reused === true ? { reused: true } : {}),
+          ...(node.reusedFrom ? { reusedFrom: node.reusedFrom } : {}),
+          ...(node.retainedOutput !== undefined && node.retainedOutput !== null ? { hasRetainedOutput: true } : {}),
+          ...(node.retainedFrom ? { retainedFrom: node.retainedFrom } : {}),
+          ...(node.staleFrom ? { staleFrom: node.staleFrom } : {}),
+          ...(node.skipReason ? { skipReason: node.skipReason } : {}),
+          ...(node.output !== undefined && node.output !== null ? { hasOutput: true } : {}),
+        })) : [],
       };
     });
     return { items, total, page, pageSize: limit, pageCount: Math.ceil(total / limit) };

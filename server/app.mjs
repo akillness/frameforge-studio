@@ -503,10 +503,31 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       const limit = readPositiveInteger('limit', 20, 100);
       const query = (requestUrl.searchParams.get('q') || '').trim();
       if (query.length > 200) throw new HttpError(400, 'Workflow run search query must be at most 200 characters');
-      return json(response, 200, store.listWorkflowRunHistory({ page, limit, query }));
+      const channelId = requestUrl.searchParams.get('channelId') || '';
+      const episodeId = requestUrl.searchParams.get('episodeId') || '';
+      if (channelId) store.get('channels', channelId);
+      if (episodeId) {
+        const episode = store.get('episodes', episodeId);
+        if (channelId && episode.channelId !== channelId) throw new HttpError(404, 'Workflow run history not found');
+      }
+      return json(response, 200, store.listWorkflowRunHistory({ page, limit, query, channelId, episodeId }));
     }
     const workflowRunDetail = /^\/api\/workflow-runs\/([^/]+)$/.exec(path);
-    if (request.method === 'GET' && workflowRunDetail) return json(response, 200, store.get('workflowRuns', decodeURIComponent(workflowRunDetail[1])));
+    if (request.method === 'GET' && workflowRunDetail) {
+      const run = store.get('workflowRuns', decodeURIComponent(workflowRunDetail[1]));
+      const channelId = requestUrl.searchParams.get('channelId') || '';
+      const episodeId = requestUrl.searchParams.get('episodeId') || '';
+      if (channelId) {
+        store.get('channels', channelId);
+        const runEpisode = store.get('episodes', run.episodeId);
+        if (runEpisode.channelId !== channelId) throw new HttpError(404, 'Workflow run not found');
+      }
+      if (episodeId) {
+        const episode = store.get('episodes', episodeId);
+        if ((channelId && episode.channelId !== channelId) || run.episodeId !== episodeId) throw new HttpError(404, 'Workflow run not found');
+      }
+      return json(response, 200, run);
+    }
     const workflowGet = /^\/api\/workflows\/([^/]+)\/(runs|history)$/.exec(path);
     if (request.method === 'GET' && workflowGet) return json(response, 200, workflowGet[2] === 'runs' ? workflows.listRuns(workflowGet[1]) : store.workflowHistory(workflowGet[1]));
     const history = /^\/api\/episodes\/([^/]+)\/history$/.exec(path);
