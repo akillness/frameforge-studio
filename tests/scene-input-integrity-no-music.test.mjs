@@ -80,8 +80,9 @@ async function submit(f, kind, bytes) {
   else if (kind === 'base-video') { scene.kind = 'video'; scene.assetUrl = asset.url; }
   else scene.slots = [{ id: 'integrity-slot', name: 'Fixture slot', role: 'video-bg', dataBinding: 'custom', x: 0, y: 0, w: 100, h: 100, zIndex: 1, assetUrl: asset.url, mediaKind: 'video' }];
   const saved = await f.request(`/api/episodes/${episode.id}`, 'PUT', { expectedVersion: episode.version, format: '1:1', scenes: [scene], music: null });
-  assert.equal(saved.status, 200, await saved.text());
-  const response = await f.request(`/api/episodes/${episode.id}/render`, 'POST', {});
+  assert.equal(saved.status, 200, await saved.clone().text());
+  const current = await saved.json();
+  const response = await f.request(`/api/episodes/${episode.id}/render`, 'POST', { expectedVersion: current.version });
   assert.equal(response.status, 202, await response.clone().text());
   const job = await response.json();
   await f.entered.promise;

@@ -97,7 +97,7 @@ export async function runContainerSmoke({ stage = 'render', baseUrl = process.en
     const channel = state.channels.find((item) => item.sample) || await api('/api/channels', 'POST', { name: 'CI 검증 전용 워크스페이스', category: 'information', platform: 'test' });
     let episode = await api('/api/episodes', 'POST', { channelId: channel.id, title: `CI Docker render ${marker}`, topic: '컨테이너 렌더링과 영속 저장소 검증', category: 'information' });
     episode = await api(`/api/episodes/${episode.id}`, 'PUT', { expectedVersion: episode.version, notes: marker, scenes: [{ ...episode.scenes[0], title: 'Docker render verification', text: '컨테이너 실동작 검증\n저장부터 영상 출력까지', duration: 1, background: '#234a3c', kind: 'title', layout: 'center' }] });
-    const job = await api(`/api/episodes/${episode.id}/render`, 'POST', {});
+    const job = await api(`/api/episodes/${episode.id}/render`, 'POST', { expectedVersion: episode.version });
     const deadline = Date.now() + 180_000;
     let finished;
     while (Date.now() < deadline) {

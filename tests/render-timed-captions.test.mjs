@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { execute } from '../server/process.mjs';
-import { renderEpisode } from '../server/render.mjs';
+import { buildSceneCompositionPlan, renderEpisode } from '../server/render.mjs';
 import { createApp } from '../server/app.mjs';
 
 const ffmpeg = process.env.FFMPEG_PATH || 'ffmpeg';
@@ -38,6 +38,17 @@ function changedPixels(a, b) {
   for (let i = 0; i < a.length; i++) if (Math.abs(a[i] - b[i]) > 12) count++;
   return count;
 }
+
+test('ASS subtitle wrapping keeps fitting words intact for timed, legacy and slot captions', () => {
+  const phrase = 'Subtitles clip overlongcaptions';
+  const timed = buildSceneCompositionPlan({ duration: 1, text: phrase, captions: [{ start: 0, end: 1, text: phrase }] }, 1080, 1920);
+  assert.match(timed.globalAss, /Subtitles clip\\Noverlongcaptions/);
+  assert.doesNotMatch(timed.globalAss, /overlongc\\\\Naptions/);
+  const legacy = buildSceneCompositionPlan({ duration: 1, text: phrase }, 1080, 1920);
+  assert.match(legacy.globalAss, /Subtitles clip\\Noverlongcaptions/);
+  const slot = buildSceneCompositionPlan({ duration: 1, captions: [{ start: 0, end: 1, text: phrase }], slots: [{ id: 'caption', role: 'subtitle-layer', x: 5, y: 70, w: 90, h: 20, zIndex: 1, style: { fontSize: 44 } }] }, 1080, 1920);
+  assert.match(slot.slotAss[0], /Subtitles clip\\Noverlongcaptions/);
+});
 
 test('timed captions are visible only inside the cue and an empty array suppresses legacy text', async t => {
   const root = await fixture(t); if (!root) return;

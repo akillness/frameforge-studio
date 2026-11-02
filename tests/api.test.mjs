@@ -92,6 +92,20 @@ test('validation rejects unknown channels, unsafe URLs and malformed scene struc
   assert.equal((await f.raw('/api/channels', { method: 'POST', body: '{}' })).status, 415);
 });
 
+test('new episode topics enforce the exact server limit and count UTF-16 code units', async (t) => {
+  const f = await fixture(t);
+  const state = await (await f.request('/api/state')).json();
+  const channelId = state.channels[0].id;
+  const accepted = await f.request('/api/episodes', 'POST', { channelId, title: '500 units', topic: 'x'.repeat(500) });
+  assert.equal(accepted.status, 201);
+  const emojiBoundary = await f.request('/api/episodes', 'POST', { channelId, title: 'Emoji boundary', topic: '😀'.repeat(250) });
+  assert.equal(emojiBoundary.status, 201, '250 surrogate pairs are exactly 500 server/UI code units');
+  assert.equal((await f.request('/api/episodes', 'POST', { channelId, title: '501 units', topic: 'x'.repeat(501) })).status, 400);
+  assert.equal((await f.request('/api/episodes', 'POST', { channelId, title: 'Emoji over limit', topic: '😀'.repeat(251) })).status, 400);
+  const after = await (await f.request('/api/state')).json();
+  assert.equal(after.episodes.filter(item => ['500 units', 'Emoji boundary', '501 units', 'Emoji over limit'].includes(item.title)).length, 2, 'rejected topics do not persist partial episodes');
+});
+
 test('templates and deterministic studio edits are durable; unavailable agents return explicit failure', async (t) => {
   const f = await fixture(t);
   const created = await episode(f);
@@ -99,11 +113,13 @@ test('templates and deterministic studio edits are durable; unavailable agents r
   const applied = await (await f.request(`/api/episodes/${created.id}/template`, 'POST', { templateId: state.templates[0].id })).json();
   assert.equal(applied.scenes.length, 3);
   assert.equal(applied.version, 2);
-  const chat = await (await f.request(`/api/episodes/${created.id}/chat`, 'POST', { agent: 'studio', message: '신뢰할 수 있는 출처를 소개하는 정보 영상' })).json();
+  const chat = await (await f.request(`/api/episodes/${created.id}/chat`, 'POST', { agent: 'studio', message: '신뢰할 수 있는 출처를 소개하는 정보 영상', expectedVersion: 2 })).json();
   assert.equal(chat.episode.scenes.length, 3);
   assert.equal(chat.episode.version, 3);
   assert.match(chat.message, /규칙 기반/);
-  assert.equal((await f.request(`/api/episodes/${created.id}/chat`, 'POST', { agent: 'codex', message: 'help' })).status, 503);
+  assert.equal((await f.request(`/api/episodes/${created.id}/chat`, 'POST', { agent: 'studio', message: 'stale assistant request', expectedVersion: 2 })).status, 409);
+  assert.equal((await (await f.request('/api/state')).json()).episodes.find(item => item.id === created.id).version, 3, 'stale assistant request cannot replace the new version');
+  assert.equal((await f.request(`/api/episodes/${created.id}/chat`, 'POST', { agent: 'codex', message: 'help', expectedVersion: 3 })).status, 503);
   const command = await (await f.request('/api/commands', 'POST', { message: '보고서를 갱신하세요', source: 'aside', sessionId: '9XBgVHBJYEGclLhz' })).json();
   await f.restart();
   const commands = await (await f.request('/api/commands')).json();
@@ -372,6 +388,21 @@ test('uploads use safe generated names and media supports byte ranges while reje
   assert.equal((await f.request(`/api/episodes/${created.id}`, 'PUT', { scenes: [{ ...created.scenes[0], kind: 'video', assetUrl: upload.url }] })).status, 400);
 });
 
+test('manual render and assistant chat reject omitted expectedVersion without side effects', async (t) => {
+  const f = await fixture(t);
+  const created = await episode(f);
+  const before = await (await f.request('/api/state')).json();
+  const render = await f.request(`/api/episodes/${created.id}/render`, 'POST', {});
+  assert.equal(render.status, 409);
+  assert.match((await render.json()).error, /Episode changed before export/i);
+  const chat = await f.request(`/api/episodes/${created.id}/chat`, 'POST', { agent: 'studio', message: 'Do not run without a version' });
+  assert.equal(chat.status, 409);
+  assert.match((await chat.json()).error, /Episode changed before assistant execution/i);
+  const after = await (await f.request('/api/state')).json();
+  assert.equal(after.jobs.length, before.jobs.length, 'missing render version cannot enqueue work');
+  assert.equal(after.events.length, before.events.length, 'missing chat version cannot record or execute a request');
+});
+
 test('async render queue records version and completion; failures stay failed', async (t) => {
   let count = 0;
   const f = await fixture(t, { renderer: async (episode, { dataDir, onProgress }) => {
@@ -383,7 +414,7 @@ test('async render queue records version and completion; failures stay failed', 
     return { filename, outputUrl: `/api/exports/${filename}` };
   } });
   const created = await episode(f);
-  const start = await f.request(`/api/episodes/${created.id}/render`, 'POST', {});
+  const start = await f.request(`/api/episodes/${created.id}/render`, 'POST', { expectedVersion: created.version });
   assert.equal(start.status, 202);
   const job = await start.json();
   const poll = async (id) => {
@@ -399,7 +430,9 @@ test('async render queue records version and completion; failures stay failed', 
   assert.equal(completed.status, 'completed');
   assert.equal(completed.episodeVersion, 1);
   assert.equal((await f.request(completed.outputUrl)).status, 200);
-  const failed = await (await f.request(`/api/episodes/${created.id}/render`, 'POST', {})).json();
+  assert.equal((await f.request(`/api/episodes/${created.id}/render`, 'POST', { expectedVersion: 0 })).status, 409, 'stale version cannot create a render job');
+  assert.equal((await (await f.request('/api/state')).json()).jobs.length, 1, 'stale request does not enqueue another job');
+  const failed = await (await f.request(`/api/episodes/${created.id}/render`, 'POST', { expectedVersion: created.version })).json();
   assert.equal((await poll(failed.id)).status, 'failed');
 });
 
@@ -427,7 +460,7 @@ test('late agent responses cannot overwrite concurrent edits and invalid bridge 
   const response = new Promise((resolve) => { release = resolve; });
   const f = await fixture(t, { integrations: { ...integrations, runAgent: async () => { announce(); return response; } } });
   const created = await episode(f);
-  const pending = f.request(`/api/episodes/${created.id}/chat`, 'POST', { agent: 'codex', message: 'edit the scene' });
+  const pending = f.request(`/api/episodes/${created.id}/chat`, 'POST', { agent: 'codex', message: 'edit the scene', expectedVersion: created.version });
   await started;
   await f.request(`/api/episodes/${created.id}`, 'PUT', { title: 'Concurrent editor wins', expectedVersion: 1 });
   release({ message: 'Updated', scenes: created.scenes });
@@ -437,7 +470,7 @@ test('late agent responses cannot overwrite concurrent edits and invalid bridge 
   assert.equal(state.episodes[0].version, 2);
   const invalid = await fixture(t, { integrations: { ...integrations, runAgent: async () => ({ message: 'Unsafe output', scenes: [{ ...created.scenes[0], assetUrl: 'file:///etc/passwd' }] }) } });
   const target = await episode(invalid);
-  assert.equal((await invalid.request(`/api/episodes/${target.id}/chat`, 'POST', { agent: 'codex', message: 'edit' })).status, 400);
+  assert.equal((await invalid.request(`/api/episodes/${target.id}/chat`, 'POST', { agent: 'codex', message: 'edit', expectedVersion: target.version })).status, 400);
   assert.equal((await (await invalid.request(`/api/episodes/${target.id}/history`)).json()).length, 1);
 });
 
@@ -446,7 +479,7 @@ test('restart marks unfinished render jobs as failed instead of claiming complet
   const wait = new Promise((resolve) => { finish = resolve; });
   const f = await fixture(t, { renderer: async () => { await wait; return { filename: 'delayed.mp4', outputUrl: '/api/exports/delayed.mp4' }; } });
   const created = await episode(f);
-  const job = await (await f.request(`/api/episodes/${created.id}/render`, 'POST', {})).json();
+  const job = await (await f.request(`/api/episodes/${created.id}/render`, 'POST', { expectedVersion: created.version })).json();
   await f.restart();
   const state = await (await f.request('/api/state')).json();
   assert.equal(state.jobs.find((item) => item.id === job.id).status, 'failed');

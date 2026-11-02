@@ -23,21 +23,34 @@ export function localMediaInputOptions(filename) {
   return ['-protocol_whitelist', 'file', '-format_whitelist', formats];
 }
 
+function wrapSubtitleLine(line, width) {
+  const limit = Math.max(1, Math.floor(Number(width) || 1));
+  const words = line.trim().split(/\s+/u).filter(Boolean);
+  const rows = [];
+  let row = '';
+  for (const word of words) {
+    const wordLength = Array.from(word).length;
+    if (wordLength > limit) {
+      if (row) { rows.push(row); row = ''; }
+      const chars = Array.from(word);
+      while (chars.length > limit) rows.push(chars.splice(0, limit).join(''));
+      row = chars.join('');
+      continue;
+    }
+    if (row && Array.from(row).length + 1 + wordLength > limit) { rows.push(row); row = word; }
+    else row = row ? `${row} ${word}` : word;
+  }
+  if (row) rows.push(row);
+  return rows.length ? rows : [''];
+}
+
 function subtitleText(text, width) {
   const cleaned = String(text || '').replace(/[{}\\]/g, '').replace(/\r/g, '');
-  return cleaned.split('\n').flatMap(line => {
-    const chars = Array.from(line), rows = [];
-    while (chars.length) rows.push(chars.splice(0, width).join(''));
-    return rows.length ? rows : [''];
-  }).join('\\N');
+  return cleaned.split('\n').flatMap(line => wrapSubtitleLine(line, width)).join('\\N');
 }
 
 function captionText(text, width) {
-  return text.replace(/\r/g, '').split('\n').flatMap((line) => {
-    const chars = Array.from(line), rows = [];
-    while (chars.length) rows.push(chars.splice(0, width).join('').replace(/\\/g, '\\\u200b').replace(/[{}]/g, '\\$&'));
-    return rows.length ? rows : [''];
-  }).join('\\N');
+  return String(text || '').replace(/\r/g, '').split('\n').flatMap((line) => wrapSubtitleLine(line, width).map(row => row.replace(/\\/g, '\\\u200b').replace(/[{}]/g, '\\$&'))).join('\\N');
 }
 
 function assTime(seconds) {

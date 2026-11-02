@@ -13,8 +13,8 @@ Single Node 22+ HTTP service, built-in node:sqlite, dependency-free browser ES m
 - POST /api/references {channelId?,title,url,category,notes} -> reference
 - POST /api/trends/refresh -> {trends,sources}; actual Google RSS fetch, explicit source errors, no invented current ranks
 - POST /api/trends {keyword,source,url,category?} -> trend (manual research capture)
-- POST /api/episodes/:id/chat {agent:'studio'|'codex'|'jeo'|'jeopi'|'hermes',message} -> {message,episode?,job?}; studio is clearly labeled deterministic storyboard assistant; others actual host bridge or explicit unavailable, never mock success
-- POST /api/episodes/:id/render -> job; actual FFmpeg async MP4, polls state jobs, exposes /api/exports/:filename
+- POST /api/episodes/:id/chat {expectedVersion,agent:'studio'|'codex'|'jeo'|'jeopi'|'hermes',message} -> {message,episode?,job?}; `expectedVersion` is required and must match the current active episode version or the request returns 409 without executing. Studio is the clearly labeled deterministic storyboard assistant; other agents use the actual host bridge or return explicit unavailable, never mock success.
+- POST /api/episodes/:id/render {expectedVersion} -> 202 job; `expectedVersion` is required and must match the current active episode version or the request returns 409 without enqueueing. Actual FFmpeg async MP4, polls state jobs, exposes /api/exports/:filename.
 - GET /api/speech/voices -> {available,provider:'windows-sapi',voices:[{id,name,language}],detail?,local?}; native Windows installed voices only, explicit unavailable on Linux
 - POST /api/episodes/:id/narration {voice,expectedVersion,sceneIds?,rate?} -> narration job (202); asynchronous local WAV generation, polls state narrationJobs
 - POST /api/uploads?name=<encoded filename> binary -> {id,name,url,type}; size limit, generated safe name
