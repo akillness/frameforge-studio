@@ -7,6 +7,7 @@ import { execute } from './process.mjs';
 import { HttpError } from './validation.mjs';
 import { loadBlogSources, blogSourceContext, requestBlogBridge } from './blog-sources.mjs';
 import { candidateFingerprint } from './graph.mjs';
+import { hasVerifiedReferenceEvidence } from '../public/blog-reference-policy.js';
 
 const naverAccounts = { banggujin: 9322, jelly_ggumi: 9323, jennie_p: 9324 };
 const digest = value => createHash('sha256').update(value).digest('hex');
@@ -237,7 +238,7 @@ export function createBlogAutomation({ env = process.env, home = homedir(), exec
       if (!remote && !issuedRoutes.has(routed?.receipt)) fail('The Jev receipt was not issued by this live host process; run explicit API routing again.');
       if (routed?.profile !== 'jeopi' || routed.backend !== 'api' || !routed.receipt || routed.status !== 'exercised') fail('An explicit successful current-host Jev API routing receipt is required before agent drafting.');
       const category = account.nextMenu?.name || account.menus?.[account.menuCursor];
-      if (reference?.status !== 'analyzed' || reference.category !== category || !['fans', 'neighbors', 'followers', 'subscribers'].includes(reference.metricEvidence?.kind) || !Number.isSafeInteger(reference.metricEvidence?.count) || reference.metricEvidence.count < 100000 || !/^[a-f0-9]{64}$/.test(reference.fingerprint || '') || !reference.analysis || !Array.isArray(reference.references) || !reference.references.length) throw new HttpError(409, 'A current same-category analyzed reference with an observed 100,000+ followers/subscribers metric and exact formatting plan is required before drafting.');
+      if (reference?.category !== category || !hasVerifiedReferenceEvidence(reference)) throw new HttpError(409, 'A current same-category reference with a verified public Naver fans/neighbors count of at least 10,000, same-author category evidence and measured article formatting is required before drafting.');
       const { blogReferenceContextFingerprint } = await import('./blog-references.mjs');
       if (reference.contextFingerprint !== blogReferenceContextFingerprint({ account, workspace, category })) throw new HttpError(409, 'Reference context changed with the persona/menu/source; analyze a current reference before drafting.');
       if (remote) return bridge('/blog/draft', { account, brief, workspace, routing: routed, agent, reference });

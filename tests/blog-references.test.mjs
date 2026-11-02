@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { analyzeBlogReferences, blogReferenceContextFingerprint } from '../server/blog-references.mjs';
+import { BLOG_REFERENCE_POLICY_VERSION, hasVerifiedReferenceEvidence } from '../public/blog-reference-policy.js';
 
 const PROFILE = 'https://in.naver.com/synthetic-author';
 const POST = 'https://blog.naver.com/synthetic-author/1234567890';
@@ -10,6 +11,7 @@ const OBSERVED = '2026-10-25T00:00:00.000Z';
 const account = { id: 'naver-banggujin', version: 7, persona: '양자 컴퓨팅 기술을 차분하게 설명하는 독립 작성자', keywords: ['양자 컴퓨팅'], menus: ['양자 컴퓨팅'], menuCursor: 0, nextMenu: { categoryNo: 42, name: '양자 컴퓨팅' } };
 const workspace = { version: 'synthetic-reference-source-v1', latest: true, sourceEvidence: [{ id: 'synthetic/plan', sha256: 'a'.repeat(64) }] };
 function profile({ count = '100,000', metric = '팬', owner = 'synthetic-author' } = {}) { return `<html><section class="hm-component-homeCover-profile-info"><h1>양자 컴퓨팅 전문 채널</h1><a data-role="fan" data-clickcode="homeCover.fanCount">${metric} ${count}</a></section><div class="hm-component-activeChannels-item" data-servicetype="NBLOG" data-channelurl="https://blog.naver.com/${owner}"><a class="hm-component-activeChannels-link" href="https://blog.naver.com/${owner}">공식 블로그</a></div></html>`; }
+function neighborProfile({ count = '16,227', owner = 'lovelybride' } = {}) { return `<html><section class="hm-component-homeCover-profile-info"><h1>공개 프로필</h1></section><div class="hm-component-activeChannels-item" data-servicetype="NBLOG" data-channelurl="https://blog.naver.com/${owner}"><a class="hm-component-activeChannels-link" href="https://blog.naver.com/${owner}"><span class="hm-component-activeChannels-subscriber">이웃 ${count}</span></a></div></html>`; }
 function article(topic = '양자 컴퓨팅') { return `<html><head><meta property="og:type" content="article"></head><body><article><h1>${topic}를 이해하는 글</h1><p>${`${topic}의 원리를 설명하는 독립적인 검증 문장입니다. `.repeat(6)}</p><h2>${topic}의 핵심</h2><p>${'근거와 적용 범위를 명확히 구분하고 과장 없이 설명합니다. '.repeat(5)}</p><img src="${IMAGE}" width="1200" height="800" alt="참고 그림"><h2>정리</h2><p>${'독자가 확인할 지점을 요약하고 출처를 남깁니다. '.repeat(4)}</p></article></body></html>`; }
 function options({ profileHtml = profile(), postHtml = article(), override, currentAccount = account, currentWorkspace = workspace } = {}) {
   const requested = [];
@@ -17,7 +19,7 @@ function options({ profileHtml = profile(), postHtml = article(), override, curr
 }
 
 for (const row of [
-  { name: '99999 is below the audience threshold', profileHtml: profile({ count: '99,999' }), code: 'REFERENCE_AUDIENCE_TOO_SMALL' },
+  { name: '9999 is below the audience threshold', profileHtml: profile({ count: '9,999' }), code: 'REFERENCE_AUDIENCE_TOO_SMALL' },
   { name: 'visits do not establish follower audience', profileHtml: profile({ metric: '방문자' }), code: 'REFERENCE_METRIC_UNVERIFIED' },
   { name: 'views do not establish follower audience', profileHtml: profile({ metric: '조회수' }), code: 'REFERENCE_METRIC_UNVERIFIED' },
   { name: 'likes do not establish follower audience', profileHtml: profile({ metric: '좋아요' }), code: 'REFERENCE_METRIC_UNVERIFIED' },
@@ -32,13 +34,14 @@ for (const row of [
   await assert.rejects(analyzeBlogReferences(f.args), error => error.code === row.code && error.status === 422);
 });
 
-test('exactly 100000 publicly observed fans qualifies with URL/time/hash provenance and original-asset-only guidance', async () => {
-  const f = options();
+test('exactly 10000 publicly observed fans qualifies with URL/time/hash provenance and original-asset-only guidance', async () => {
+  const f = options({ profileHtml: profile({ count: '10,000' }) });
   const result = await analyzeBlogReferences(f.args);
   assert.equal(result.status, 'analyzed');
   assert.equal(result.category, '양자 컴퓨팅');
+  assert.equal(result.policyVersion, 'blog-reference-policy-2');
   assert.equal(result.metricEvidence.kind, 'fans');
-  assert.equal(result.metricEvidence.count, 100000);
+  assert.equal(result.metricEvidence.count, 10000);
   assert.equal(result.metricEvidence.url, PROFILE);
   assert.equal(result.metricEvidence.observedAt, OBSERVED);
   assert.match(result.metricEvidence.sha256, /^[a-f0-9]{64}$/);
@@ -143,14 +146,53 @@ for (const row of [
   await assert.rejects(analyzeBlogReferences(f.args), error => error.status === 422 && error.code === 'REFERENCE_CATEGORY_UNVERIFIED');
 });
 
-for (const count of ['10만+', '100K+']) test(`explicit ${count} audience qualifies as a lower bound, never an exact count`, async () => {
+for (const [count, expected] of [['1만+', 10000], ['10만+', 100000], ['100K+', 100000]]) test(`explicit ${count} audience qualifies as a lower bound, never an exact count`, async () => {
   const result = await analyzeBlogReferences(options({ profileHtml: profile({ count }) }).args);
-  assert.equal(result.metricEvidence.count, 100000);
+  assert.equal(result.metricEvidence.count, expected);
   assert.equal(result.metricEvidence.precision, 'displayed-lower-bound');
   assert.ok(result.metricEvidence.excerpt.includes(count));
 });
-for (const count of ['10만', '100K']) test(`rounded ${count} without plus does not establish the threshold`, async () => {
+for (const count of ['1만', '10만', '100K']) test(`rounded ${count} without plus does not establish the threshold`, async () => {
   await assert.rejects(analyzeBlogReferences(options({ profileHtml: profile({ count }) }).args), error => error.status === 422 && error.code === 'REFERENCE_METRIC_UNVERIFIED');
+});
+
+test('a 16227 Naver neighbors metric qualifies only with linked-author category evidence and measured article structure', async () => {
+  const f = options({ profileHtml: neighborProfile() });
+  f.args.input.postUrls = ['https://blog.naver.com/lovelybride/1234567890'];
+  const result = await analyzeBlogReferences(f.args);
+  assert.equal(result.metricEvidence.kind, 'neighbors');
+  assert.equal(result.metricEvidence.count, 16227);
+  assert.equal(result.references[0].authorId, 'lovelybride');
+  assert.equal(result.references[0].categoryEvidence.status, 'supported-by-public-content');
+  assert.ok(result.references[0].measurements.paragraphs.count >= 2);
+  assert.equal(hasVerifiedReferenceEvidence(result), true);
+
+  const metricOnly = {
+    status: 'analyzed', policyVersion: BLOG_REFERENCE_POLICY_VERSION,
+    metricEvidence: { kind: 'neighbors', count: 16227, precision: 'exact-displayed', url: PROFILE, observedAt: OBSERVED, excerpt: '이웃 16,227', sha256: 'a'.repeat(64) },
+  };
+  assert.equal(hasVerifiedReferenceEvidence(metricOnly), false, 'a qualifying number alone is not a field or article measurement');
+  const noCategory = structuredClone(result);
+  delete noCategory.references[0].categoryEvidence;
+  assert.equal(hasVerifiedReferenceEvidence(noCategory), false, 'same-field evidence is required');
+  const noMeasurement = structuredClone(result);
+  delete noMeasurement.references[0].measurements;
+  assert.equal(hasVerifiedReferenceEvidence(noMeasurement), false, 'representative article measurements are required');
+  const stalePolicy = structuredClone(result);
+  stalePolicy.policyVersion = 'blog-reference-policy-1';
+  assert.equal(hasVerifiedReferenceEvidence(stalePolicy), false, 'old-policy references must be reanalyzed');
+  const noRights = structuredClone(result);
+  noRights.rightsStatement = 'Images are available for reuse.';
+  assert.equal(hasVerifiedReferenceEvidence(noRights), false, 'public reference access is not reuse permission');
+});
+
+for (const row of [
+  { name: 'an unrelated representative post has no same-category evidence', postHtml: article('웨딩 메이크업'), code: 'REFERENCE_CATEGORY_UNVERIFIED' },
+  { name: 'an unreadable representative post has no measured structure', postHtml: '<meta property="og:type" content="article"><article><h1>양자 컴퓨팅 대표 제목</h1><p>짧은 글</p></article>', code: 'REFERENCE_ARTICLE_UNREADABLE' },
+]) test(`a 16227 Naver neighbors count cannot pass when ${row.name}`, async () => {
+  const f = options({ profileHtml: neighborProfile(), postHtml: row.postHtml });
+  f.args.input.postUrls = ['https://blog.naver.com/lovelybride/1234567890'];
+  await assert.rejects(analyzeBlogReferences(f.args), error => error.status === 422 && error.code === row.code);
 });
 
 test('caller-supplied numeric popularity cannot replace actual official metric inspection', async () => {

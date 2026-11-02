@@ -6,6 +6,7 @@ import { fetchGoogleNews } from './workflows.mjs';
 import { createBlogAutomation } from './blog-automation.mjs';
 import { loadBlogSources } from './blog-sources.mjs';
 import { blogReferenceContextFingerprint } from './blog-references.mjs';
+import { BLOG_REFERENCE_POLICY_VERSION, hasVerifiedReferenceEvidence } from '../public/blog-reference-policy.js';
 
 const ACCOUNT_IDS = ['naver-banggujin', 'naver-jelly_ggumi', 'naver-jennie_p', 'tistory', 'github-jellyggumi'];
 const EDITABLE = ['persona', 'keywords', 'menus', 'publicUrl', 'editorUrl'];
@@ -202,7 +203,7 @@ export class BlogService {
   }
   currentDraft(draft, account, workspace) {
     if (draft.workspaceVersion !== workspace.version || draft.accountVersion !== account.version || draft.accountManifestHash !== candidateFingerprint(account)) throw new HttpError(409, 'Draft sources or account configuration changed. Save a new current draft before approval.');
-    if (!draft.referenceId) throw new HttpError(503, 'This manual scratch draft needs a current analyzed same-category reference with at least 100000 public followers or subscribers before owner approval');
+    if (!draft.referenceId) throw new HttpError(503, 'This manual scratch draft needs a current same-category reference with at least 10,000 verified public Naver fans/neighbors and measured article evidence before owner approval');
     const reference = this.currentReference(account, workspace, draft.referenceId);
     if (draft.referenceFingerprint !== reference.fingerprint || candidateFingerprint(draft.appliedFormattingPlan) !== candidateFingerprint(reference.analysis)) throw new HttpError(409, 'Draft reference analysis or applied formatting plan changed. Save a new current draft before approval.');
   }
@@ -225,17 +226,16 @@ export class BlogService {
     if (!reference || !account) return false;
     const menu = selectedMenu(account)?.name || '';
     const categoryNo = selectedMenu(account)?.categoryNo ?? null;
-    return this.find('referenceHead', account.id)?.referenceId === reference.id && reference.status === 'analyzed' && reference.accountId === account.id && reference.workspaceVersion === workspace.version && reference.menu === menu && reference.categoryNo === categoryNo && reference.category === menu && reference.contextFingerprint === blogReferenceContextFingerprint({ account, workspace });
+    return this.find('referenceHead', account.id)?.referenceId === reference.id && reference.status === 'analyzed' && reference.policyVersion === BLOG_REFERENCE_POLICY_VERSION && hasVerifiedReferenceEvidence(reference) && reference.accountId === account.id && reference.workspaceVersion === workspace.version && reference.menu === menu && reference.categoryNo === categoryNo && reference.category === menu && reference.contextFingerprint === blogReferenceContextFingerprint({ account, workspace });
   }
   currentReference(account, workspace, referenceId, { required = true } = {}) {
     const head = this.find('referenceHead', account.id);
     const reference = this.find('reference', referenceId || head?.referenceId || '');
     if (!this.referenceIsCurrent(reference, account, workspace)) {
       if (!required && !referenceId) return null;
-      throw new HttpError(reference ? 409 : 503, reference ? 'Reference analysis changed or no longer matches the current account, category and sources. Analyze and save the current formatting plan again.' : 'Analyze a same-category reference with at least 100000 publicly observed followers or subscribers before writing.');
+      throw new HttpError(reference ? 409 : 503, reference ? 'Reference analysis changed or no longer matches the current account, category and sources. Analyze and save the current formatting plan again.' : 'Analyze a same-category reference with at least 10,000 publicly observed Naver fans/neighbors before writing.');
     }
-    const metric = reference.metricEvidence;
-    if (!metric || !['fans', 'neighbors', 'followers', 'subscribers'].includes(metric.kind) || !Number.isFinite(metric.count) || metric.count < 100000 || !metric.url || !metric.sha256 || !metric.observedAt || !reference.fingerprint || !reference.contextFingerprint || !reference.references?.length || !reference.analysis) throw new HttpError(503, 'Reference lacks eligible public popularity and measured source-backed formatting evidence');
+    if (!hasVerifiedReferenceEvidence(reference)) throw new HttpError(503, 'Reference lacks an eligible 10,000+ public Naver fans/neighbors metric, same-author category proof and measured source-backed article formatting');
     return reference;
   }
   referenceFields(reference) {

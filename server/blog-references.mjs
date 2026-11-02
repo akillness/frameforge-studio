@@ -3,6 +3,7 @@ import { lookup } from 'node:dns/promises';
 import { request } from 'node:https';
 import { isIP } from 'node:net';
 import { HttpError } from './validation.mjs';
+import { BLOG_REFERENCE_POLICY_VERSION, MIN_REFERENCE_AUDIENCE } from '../public/blog-reference-policy.js';
 
 const HOSTS = new Set(['in.naver.com', 'blog.naver.com', 'm.blog.naver.com']);
 const MAX_BYTES = 2 * 1024 * 1024;
@@ -25,7 +26,7 @@ export function blogReferenceContextFingerprint({ account, workspace, category =
     account: { id: account?.id, accountId: account?.accountId, platform: account?.platform, persona: account?.persona, keywords: account?.keywords, menus: account?.menus, menuEntries: account?.menuEntries, menuCursor: account?.menuCursor, nextMenu: account?.nextMenu, publicUrl: account?.publicUrl, editorUrl: account?.editorUrl, sourceEvidence: account?.sourceEvidence },
     workspace: { version: workspace?.version, sourceEvidence: workspace?.sourceEvidence, sourceRoots: workspace?.sourceRoots },
     category,
-    analysisPolicyVersion: 'blog-reference-policy-1', topicalMappingVersion: CATEGORY_MAPPING.version,
+    analysisPolicyVersion: BLOG_REFERENCE_POLICY_VERSION, minimumAudience: MIN_REFERENCE_AUDIENCE, topicalMappingVersion: CATEGORY_MAPPING.version,
   }));
 }
 
@@ -267,9 +268,9 @@ function metric(document, observedAt) {
   }
   const verified = [...kinds.values()].filter((item) => item.precision !== 'displayed-approximate').sort((a, b) => b.count - a.count);
   const selected = verified[0];
-  if (!selected || selected.count < 100000) {
-    if ([...kinds.values()].some((item) => item.precision === 'displayed-approximate' && item.count >= 100000)) fail(422, 'REFERENCE_METRIC_UNVERIFIED', 'The abbreviated audience display has no explicit plus/lower-bound marker. Its rounding cannot prove at least 100000; choose an exact count or an explicit 100000+ public metric.');
-    fail(422, 'REFERENCE_AUDIENCE_TOO_SMALL', `The observed ${selected?.kind || 'audience'} count is ${selected?.count ?? 'below the threshold'}; a publicly observed count of at least 100000 is required.`);
+  if (!selected || selected.count < MIN_REFERENCE_AUDIENCE) {
+    if ([...kinds.values()].some((item) => item.precision === 'displayed-approximate' && item.count >= MIN_REFERENCE_AUDIENCE)) fail(422, 'REFERENCE_METRIC_UNVERIFIED', `The abbreviated audience display has no explicit plus/lower-bound marker. Its rounding cannot prove at least ${MIN_REFERENCE_AUDIENCE}; choose an exact count or an explicit ${MIN_REFERENCE_AUDIENCE}+ public metric.`);
+    fail(422, 'REFERENCE_AUDIENCE_TOO_SMALL', `The observed ${selected?.kind || 'audience'} count is ${selected?.count ?? 'below the threshold'}; a publicly observed count of at least ${MIN_REFERENCE_AUDIENCE} is required.`);
   }
   return selected;
 }
@@ -436,6 +437,6 @@ export async function analyzeBlogReferences({ account, workspace, input, inspect
   }
   const analysis = plans(references, account);
   const contextFingerprint = blogReferenceContextFingerprint({ account, workspace, category });
-  const fingerprint = digest(stable({ contextFingerprint, sources: sourceRegistry.map(({ url, sha256, kind }) => ({ url, sha256, kind })), metric: { kind: metricEvidence.kind, count: metricEvidence.count, sha256: metricEvidence.sha256 }, posts: references.map(({ authorId, measurements, categoryEvidence }) => ({ authorId, measurements, categoryEvidence })), analysis, rightsStatement: RIGHTS }));
-  return { category, metricEvidence, references, analysis, sourceRegistry, rightsStatement: RIGHTS, fingerprint, contextFingerprint, status: 'analyzed', observedAt };
+  const fingerprint = digest(stable({ policyVersion: BLOG_REFERENCE_POLICY_VERSION, minimumAudience: MIN_REFERENCE_AUDIENCE, contextFingerprint, sources: sourceRegistry.map(({ url, sha256, kind }) => ({ url, sha256, kind })), metric: { kind: metricEvidence.kind, count: metricEvidence.count, sha256: metricEvidence.sha256 }, posts: references.map(({ authorId, measurements, categoryEvidence }) => ({ authorId, measurements, categoryEvidence })), analysis, rightsStatement: RIGHTS }));
+  return { category, metricEvidence, references, analysis, sourceRegistry, rightsStatement: RIGHTS, fingerprint, contextFingerprint, policyVersion: BLOG_REFERENCE_POLICY_VERSION, status: 'analyzed', observedAt };
 }

@@ -31,7 +31,7 @@ async function fixture(t, overrides = {}) {
     trends: [{ keyword: query, source: '격리 검증 뉴스', url: 'https://example.com/news/verified', title: `${query} 확인된 기사` }],
     sources: [{ name: '격리 검증 뉴스', status: 'ok', query }],
   }));
-  const referenceOptions = { inspectImpl: async (url, { kind }) => ({ url, status: 200, headers: { 'content-type': 'text/html' }, html: kind === 'profile' ? '<section class="hm-component-homeCover-profile-info"><h1>테스트 전문 채널</h1><a data-role="fan" data-clickcode="homeCover.fanCount">팬 100,000</a></section><div class="hm-component-activeChannels-item" data-servicetype="NBLOG" data-channelurl="https://blog.naver.com/synthetic-author"><a class="hm-component-activeChannels-link" href="https://blog.naver.com/synthetic-author">공식 블로그</a></div>' : `<meta property="og:type" content="article"><article><h1>첫 메뉴 다음 메뉴 사용자 메뉴 · 테스트 전문 글</h1><p>${'첫 메뉴 다음 메뉴 사용자 메뉴 검증키워드 직접 저장을 근거에 따라 독립적으로 설명합니다. '.repeat(8)}</p><h2>분석과 정리</h2><p>${'원문의 문장을 복사하지 않고 구체적인 배치와 구조만 분석합니다. '.repeat(8)}</p></article>` }) };
+  const referenceOptions = { inspectImpl: async (url, { kind }) => ({ url, status: 200, headers: { 'content-type': 'text/html' }, html: kind === 'profile' ? '<section class="hm-component-homeCover-profile-info"><h1>테스트 전문 채널</h1><a data-role="fan" data-clickcode="homeCover.fanCount">팬 10,000</a></section><div class="hm-component-activeChannels-item" data-servicetype="NBLOG" data-channelurl="https://blog.naver.com/synthetic-author"><a class="hm-component-activeChannels-link" href="https://blog.naver.com/synthetic-author">공식 블로그</a></div>' : `<meta property="og:type" content="article"><article><h1>첫 메뉴 다음 메뉴 사용자 메뉴 · 테스트 전문 글</h1><p>${'첫 메뉴 다음 메뉴 사용자 메뉴 검증키워드 직접 저장을 근거에 따라 독립적으로 설명합니다. '.repeat(8)}</p><h2>분석과 정리</h2><p>${'원문의 문장을 복사하지 않고 구체적인 배치와 구조만 분석합니다. '.repeat(8)}</p></article>` }) };
   const options = { dataDir, loginToken: '', publicOrigin: '', blogOptions: { loadSources, automation, research, referenceOptions, now: () => instant }, ...overrides.app };
   let server;
   let base;
@@ -46,6 +46,18 @@ async function fixture(t, overrides = {}) {
 
 const state = f => f.ok('/api/blog/state');
 const refresh = f => f.ok('/api/blog/refresh', 'POST', {});
+
+test('the shared reference policy is browser-loadable and used by the workspace eligibility gate', async t => {
+  const f = await fixture(t);
+  const [policy, client] = await Promise.all([f.request('/blog-reference-policy.js'), f.request('/blog.js')]);
+  assert.equal(policy.status, 200);
+  assert.match(policy.headers.get('content-type') || '', /javascript/i);
+  assert.match(await policy.text(), /export function hasVerifiedReferenceEvidence/);
+  assert.equal(client.status, 200);
+  const clientSource = await client.text();
+  assert.match(clientSource, /hasVerifiedReferenceEvidence\(item\)/);
+  assert.match(clientSource, /item\.category === category/);
+});
 const account = async (f, id = IDS[0]) => (await state(f)).accounts.find(item => item.id === id);
 async function analyze(f, id = IDS[0]) {
   const current = await account(f, id);
@@ -87,6 +99,22 @@ test('blog reads and every mutation require a server-issued admin session; forei
   assert.deepEqual(f.effects, []);
   await f.ok('/api/logout', 'POST', {}, headers);
   assert.equal((await f.request('/api/blog/state', 'GET', undefined, headers)).status, 401);
+});
+
+test('the exact 10000 boundary is current server-side evidence for drafts and owner approval', async t => {
+  const f = await fixture(t);
+  await refresh(f);
+  const draft = await manual(f);
+  const persisted = await state(f);
+  const reference = persisted.references.find(item => item.id === draft.referenceId);
+  assert.equal(reference.policyVersion, 'blog-reference-policy-2');
+  assert.equal(reference.metricEvidence.count, 10000);
+  assert.equal(reference.current, true);
+  assert.ok(draft.appliedFormattingPlan);
+  assert.equal(draft.formatReview.status, 'needs-format-review');
+  const approval = await approve(f, draft);
+  assert.equal(approval.formatReviewed, true);
+  assert.deepEqual(f.effects, [], 'Approval must not publish or invoke external actions');
 });
 
 test('account and manual draft edits survive restart, reject stale writers, and never leak into another account', async t => {
@@ -274,7 +302,7 @@ test('manual scratch persists locally but cannot be approved until a current ana
   assert.equal((await f.request(`/api/blog/drafts/${draft.id}/approval`, 'POST', { expectedVersion: draft.version, approved: true, formatReviewed: true })).status, 503);
   const blockedPublish = await f.request(`/api/blog/drafts/${draft.id}/deploy`, 'POST', { expectedVersion: draft.version, approvalId: 'unapproved-scratch' });
   assert.equal(blockedPublish.status, 503);
-  assert.match((await blockedPublish.json()).error, /same-category reference.*100000/);
+  assert.match((await blockedPublish.json()).error, /same-category reference.*10,000/);
   assert.equal((await state(f)).drafts.find(item => item.id === draft.id).body, BODY);
   const reference = await analyze(f);
   const { draft: attached } = await f.ok(`/api/blog/drafts/${draft.id}`, 'PUT', { expectedVersion: draft.version, title: draft.title, body: draft.body, referenceId: reference.id });

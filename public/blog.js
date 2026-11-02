@@ -1,3 +1,5 @@
+import { hasVerifiedReferenceEvidence } from './blog-reference-policy.js';
+
 const $ = (selector) => document.querySelector(selector);
 const accountOrder = ['naver-banggujin', 'naver-jelly_ggumi', 'naver-jennie_p', 'tistory', 'github-jellyggumi'];
 const roleNames = { hermes: 'Hermes', aside: 'Aside', jeopi: 'jeopi', codex: 'Codex', antigravity: 'Antigravity' };
@@ -17,7 +19,9 @@ const draft = (id) => state.drafts.find((item) => item.id === id);
 const latestBrief = (id) => state.briefs.filter((item) => item.accountId === id && item.accountVersion === account(id)?.version && item.workspaceVersion === state.workspace.version).sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))[0] || null;
 const currentBrief = (id, view) => view.brief?.accountId === id && view.brief.accountVersion === account(id)?.version && view.brief.workspaceVersion === state.workspace.version ? { briefId: view.brief.id } : {};
 function currentReference(id = activeId) {
-  return state.references.find((item) => item.accountId === id && item.current === true && item.status === 'analyzed' && item.workspaceVersion === state.workspace.version && item.fingerprint && ['fans', 'neighbors', 'followers', 'subscribers'].includes(item.metricEvidence?.kind) && Number(item.metricEvidence.count) >= 100000) || null;
+  const selected = account(id);
+  const category = selected?.nextMenu?.name || selected?.menus?.[selected?.menuCursor] || '';
+  return state.references.find((item) => item.accountId === id && item.current === true && item.category === category && item.workspaceVersion === state.workspace.version && hasVerifiedReferenceEvidence(item)) || null;
 }
 const referenceFor = (id) => currentReference(id) ? { referenceId: currentReference(id).id } : {};
 const draftReferenceCurrent = (item) => Boolean(item && currentReference(item.accountId)?.id === item.referenceId && currentReference(item.accountId)?.fingerprint === item.referenceFingerprint);
@@ -160,7 +164,7 @@ function renderReferences() {
   const reference = eligible || state.references.filter((item) => item.accountId === activeId).sort((a, b) => String(b.observedAt || '').localeCompare(String(a.observedAt || '')))[0];
   $('#blog-reference-profile').value = view.referenceInput.profileUrl;
   $('#blog-reference-posts').value = view.referenceInput.postUrls;
-  $('#blog-reference-status').textContent = eligible ? '같은 주제 · 10만+ 검증됨' : reference ? '이전 분석 · 재검증 필요' : '검증한 레퍼런스 없음';
+  $('#blog-reference-status').textContent = eligible ? '같은 주제 · 1만+ 공개 팬/이웃 · 분야·대표글 측정 검증됨' : reference ? '이전 분석 · 재검증 필요' : '검증한 레퍼런스 없음';
   if (!reference) { $('#blog-reference-result').innerHTML = '<p class="hint">프로필과 대표 글을 실제로 검사한 뒤 자동 초안 작성과 최종 승인을 진행할 수 있습니다. 수동 메모 초안은 별도로 저장할 수 있습니다.</p>'; return; }
   const metric = reference.metricEvidence || {};
   const kind = { fans: '공개 팬', neighbors: '공개 이웃', followers: '공개 팔로워', subscribers: '공개 구독자' }[metric.kind] || '지표 미확인';
@@ -304,7 +308,7 @@ function controls() {
   $('#blog-config-state').textContent = view.configDirty ? `미저장 · 편집 시작 버전 ${view.configVersion}` : '저장된 규칙';
   $('#blog-draft-state').textContent = value.dirty ? '미저장 편집 있음' : saved ? '저장된 초안' : '수동 작성 가능';
   $('#blog-dirty-state').textContent = view.pending ? '요청 처리 중…' : view.conflict ? '버전 충돌 · 편집 보존됨' : view.configDirty || view.referenceDirty || view.scheduleDirty || [...view.editors.values()].some((item) => item.dirty) ? '이 계정에 미저장 변경 있음' : '저장 상태';
-  $('#blog-approval-state').textContent = approvalValid() ? `유효한 승인 ${value.approval.id} · 초안 v${saved.version} · 레퍼런스 ${saved.referenceId}. 배포는 별도 실행입니다.` : !currentReference() || view.referenceDirty ? '같은 주제·공개 10만+의 현재 레퍼런스 분석을 먼저 완료하세요. 수동 메모 저장은 가능하지만 승인·배포는 불가합니다.' : saved && !draftReferenceCurrent(saved) ? '초안에 현재 레퍼런스 구조 계획을 명시적으로 다시 저장한 뒤 전체 본문을 재검토하세요.' : saved && (saved.accountVersion !== account().version || saved.workspaceVersion !== state.workspace.version) ? '초안이 이전 계정·원본 버전을 참조합니다. 본문을 확인하고 명시적으로 다시 저장한 뒤 재검토하세요.' : !sourceReady() ? '이 계정의 최신 원본을 확인하지 못해 승인·배포가 차단되었습니다. 원본 충돌과 누락 근거를 확인하세요.' : '유효한 승인 없음 · 저장된 전체 본문을 다시 검토하고 승인하세요.';
+  $('#blog-approval-state').textContent = approvalValid() ? `유효한 승인 ${value.approval.id} · 초안 v${saved.version} · 레퍼런스 ${saved.referenceId}. 배포는 별도 실행입니다.` : !currentReference() || view.referenceDirty ? '같은 주제·공개 1만+ Naver 팬/이웃과 분야·대표글 측정 근거를 갖춘 현재 레퍼런스 분석을 먼저 완료하세요. 수동 메모 저장은 가능하지만 승인·배포는 불가합니다.' : saved && !draftReferenceCurrent(saved) ? '초안에 현재 레퍼런스 구조 계획을 명시적으로 다시 저장한 뒤 전체 본문을 재검토하세요.' : saved && (saved.accountVersion !== account().version || saved.workspaceVersion !== state.workspace.version) ? '초안이 이전 계정·원본 버전을 참조합니다. 본문을 확인하고 명시적으로 다시 저장한 뒤 재검토하세요.' : !sourceReady() ? '이 계정의 최신 원본을 확인하지 못해 승인·배포가 차단되었습니다. 원본 충돌과 누락 근거를 확인하세요.' : '유효한 승인 없음 · 저장된 전체 본문을 다시 검토하고 승인하세요.';
   $('#blog-account-panel').setAttribute('aria-busy', String(view.pending));
 }
 

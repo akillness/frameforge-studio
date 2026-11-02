@@ -67,7 +67,7 @@ async function canonicalFixture(t) {
   const loadSources = () => loadBlogSources({ root, env: {}, bridgeMode: false, fetchImpl: f.noFetch });
   const loaded = await loadSources();
   const account = loaded.accounts.find(item => item.id === 'naver-banggujin');
-  const reference = await analyzeBlogReferences({ account, workspace: loaded.workspace, input: { profileUrl: 'https://in.naver.com/synthetic-author', postUrls: ['https://blog.naver.com/synthetic-author/1234567890'] }, inspectImpl: async (url, { kind }) => ({ url, status: 200, headers: { 'content-type': 'text/html' }, html: kind === 'profile' ? '<section class="hm-component-homeCover-profile-info"><h1>검증 전문 채널</h1><a data-role="fan" data-clickcode="homeCover.fanCount">팬 100,000</a></section><div class="hm-component-activeChannels-item" data-servicetype="NBLOG" data-channelurl="https://blog.naver.com/synthetic-author"><a class="hm-component-activeChannels-link" href="https://blog.naver.com/synthetic-author">공식 블로그</a></div>' : `<meta property="og:type" content="article"><article><h1>검증 메뉴 전문 글</h1><p>${'검증 메뉴의 글쓰기 구조와 실제 관측 근거를 설명하는 문장입니다. '.repeat(8)}</p><h2>핵심</h2><p>${'이미지나 문장을 복사하지 않고 독립적으로 작성해야 하는 이유입니다. '.repeat(8)}</p></article>` }) });
+  const reference = await analyzeBlogReferences({ account, workspace: loaded.workspace, input: { profileUrl: 'https://in.naver.com/synthetic-author', postUrls: ['https://blog.naver.com/synthetic-author/1234567890'] }, inspectImpl: async (url, { kind }) => ({ url, status: 200, headers: { 'content-type': 'text/html' }, html: kind === 'profile' ? '<section class="hm-component-homeCover-profile-info"><h1>검증 전문 채널</h1><a data-role="fan" data-clickcode="homeCover.fanCount">팬 10,000</a></section><div class="hm-component-activeChannels-item" data-servicetype="NBLOG" data-channelurl="https://blog.naver.com/synthetic-author"><a class="hm-component-activeChannels-link" href="https://blog.naver.com/synthetic-author">공식 블로그</a></div>' : `<meta property="og:type" content="article"><article><h1>검증 메뉴 전문 글</h1><p>${'검증 메뉴의 글쓰기 구조와 실제 관측 근거를 설명하는 문장입니다. '.repeat(8)}</p><h2>핵심</h2><p>${'이미지나 문장을 복사하지 않고 독립적으로 작성해야 하는 이유입니다. '.repeat(8)}</p></article>` }) });
   return { ...f, loaded, loadSources, account, reference };
 }
 
@@ -87,6 +87,19 @@ for (const mode of ['missing', 'fabricated', 'verified']) {
     } else await assert.rejects(draft(), error => error.status === 503 && /evidence/i.test(error.message));
   });
 }
+
+test('a 16227 linked Naver neighbors number cannot reach the writer without same-category and measured-post evidence', async t => {
+  const f = await canonicalFixture(t);
+  const reference = structuredClone(f.reference);
+  reference.metricEvidence = { ...reference.metricEvidence, kind: 'neighbors', count: 16227, audienceOwnerId: 'synthetic-author' };
+  delete reference.references[0].categoryEvidence;
+  delete reference.references[0].measurements;
+  let effects = 0;
+  const automation = createBlogAutomation({ ...f, bridgeMode: false, fetchImpl: f.noFetch, executeImpl: async (_binary, args) => ({ stdout: JSON.stringify(args.includes('status') ? enabled : routed) }), draftRunner: async () => { effects++; return { title: 'unexpected', body: 'unexpected' }; } });
+  const routing = await automation.route('Write a synthetic blog');
+  await assert.rejects(automation.draft({ account: f.account, workspace: f.loaded.workspace, reference, brief: { sourceEvidence: [{ url: 'https://example.com/research/observed' }] }, routing, agent: 'hermes' }), error => error.status === 409 && /10,000/.test(error.message));
+  assert.equal(effects, 0, 'The evidence gate must run before any drafting agent call');
+});
 
 test('a missing research brief prevents the real agent boundary instead of generating a fallback article', async t => {
   const f = await canonicalFixture(t);

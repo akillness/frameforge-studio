@@ -52,7 +52,7 @@ const sharedTheme = async () => {
 const forbid = name => async () => { receipt.forbiddenEffects.push(name); throw Error(`Browser smoke prohibits ${name}`); };
 let sourceVersion = 'synthetic-browser-source-v1';
 let researchFailure = false;
-let referenceFans = '100,000';
+let referenceFans = '10,000';
 const app = createApp({ dataDir, loginToken: '', publicOrigin: '',
   integrations: { integrationStatus: async () => ({}), runAgent: forbid('non-blog-agent'), fetchTrends: forbid('non-blog-news') },
   speech: { listVoices: async () => ({ available: false, voices: [] }), synthesize: forbid('speech') },
@@ -170,7 +170,7 @@ try {
   const firstReference = await analyzeCurrent(IDS[0]);
   const referenceTimeText = await page.evaluate(value => new Date(value).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }), firstReference.metricEvidence.observedAt);
   await page.waitForFunction(expected => document.querySelector('#blog-reference-result').textContent.includes(expected), referenceTimeText);
-  check('actual reference analysis presents observed 100k metric and source timestamp without copying images', firstReference.metricEvidence.count === 100000 && (await page.locator('#blog-reference-result').innerText()).includes(referenceTimeText) && await page.locator('#blog-reference-result img').count() === 0);
+  check('actual reference analysis presents the exact 10,000 metric and source timestamp without copying images', firstReference.metricEvidence.count === 10000 && (await page.locator('#blog-reference-result').innerText()).includes(referenceTimeText) && await page.locator('#blog-reference-result img').count() === 0);
   check('exact displayed metric is not mislabeled as a rounded lower bound', firstReference.metricEvidence.precision === 'exact-displayed' && !(await page.locator('#blog-reference-result').innerText()).includes('표시 반올림 하한'));
   await page.locator(`[role=tab][data-account-id="${IDS[2]}"]`).click();
   await page.locator('#blog-title').fill('레퍼런스 없는 수동 메모');
@@ -184,7 +184,7 @@ try {
   const rounded = await analyzeCurrent(IDS[2]);
   await page.waitForFunction(() => document.querySelector('#blog-reference-result').textContent.includes('178,000 이상'));
   check('explicit rounded audience is honestly labeled a lower bound, not an exact count', rounded.metricEvidence.count === 178000 && rounded.metricEvidence.precision === 'displayed-lower-bound' && (await page.locator('#blog-reference-result').innerText()).includes('표시 반올림 하한'));
-  referenceFans = '100,000';
+  referenceFans = '10,000';
   await page.locator(`[role=tab][data-account-id="${IDS[0]}"]`).click();
   await page.locator('#blog-query').fill('브라우저 실제 조사 키워드');
   const researched = saveResponse(`/api/blog/accounts/${IDS[0]}/research`, 'POST');
@@ -277,7 +277,7 @@ try {
   const schedule = (await api()).schedules.find(item => item.accountId === IDS[0]);
   check('explicit schedule form saves account-specific Seoul cron without executing it', schedule.cron === '15 10 * * 1-5' && schedule.timezone === 'Asia/Seoul' && schedule.enabled === true && receipt.forbiddenEffects.length === 0);
   const currentAfterSchedule = (await api()).references.find(item => item.id === scheduledReference.id);
-  check('enabling a schedule preserves the current semantic reference without reanalysis', currentAfterSchedule?.current === true && (await page.locator('#blog-reference-status').innerText()).includes('10만+ 검증됨') && await page.locator('#blog-create-draft').isEnabled());
+  check('enabling a schedule preserves the current semantic reference without reanalysis', currentAfterSchedule?.current === true && (await page.locator('#blog-reference-status').innerText()).includes('1만+ 공개 팬/이웃 · 분야·대표글 측정 검증됨') && await page.locator('#blog-create-draft').isEnabled());
   researchFailure = true;
   await page.locator('#blog-query').fill('실패 경로를 확인하는 실제 요청');
   const failedResearch = saveResponse(`/api/blog/accounts/${IDS[0]}/research`, 'POST');
@@ -314,7 +314,7 @@ try {
   await page.locator('#blog-git-consent').check();
   await page.locator('#blog-body').fill('편집으로 이전 Git 제안 동의를 무효화합니다.');
   check('content edits clear Git consent as well as body approval', await page.locator('#blog-deploy-button').isDisabled() && !(await page.locator('#blog-git-consent').isChecked()));
-  referenceFans = '99,999';
+  referenceFans = '9,999';
   const retainedBody = await page.locator('#blog-body').inputValue();
   const rejectedReference = saveResponse(`/api/blog/accounts/${IDS[4]}/references`, 'POST');
   await page.locator('#blog-analyze-reference').click();
@@ -327,7 +327,7 @@ try {
   check('reference failure from Git account is not presented as another account failure', !(await page.locator('#blog-notice').innerText()).includes(rejectedError));
   await page.locator(`[role=tab][data-account-id="${IDS[4]}"]`).click();
   check('account switch after failed analysis preserves the exact unsaved Git draft', await page.locator('#blog-body').inputValue() === retainedBody);
-  referenceFans = '100,000';
+  referenceFans = '10,000';
   const beforeNavigation = await api(), mutationsBeforeNavigation = mutations.length;
   for (const width of [1440, 375, 320, 1024, 1600, 390, 430]) {
     await page.setViewportSize({ width, height: 1000 });
