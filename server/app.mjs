@@ -119,6 +119,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
   const sessions = new Map();
   const loginAttempts = new Map();
   const queue = [];
+  const activeRenders = new Map();
   const activeChats = new Map();
   let rendering = false;
   let closing = false;
@@ -131,7 +132,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
   async function processQueue() {
     if (rendering || closing || !queue.length) return;
     rendering = true;
-    const { job, episode, resolve: complete, reject: fail } = queue.shift();
+    const { job, episode, resolve: complete, reject: fail, renderKey } = queue.shift();
     const saveProgress = (status, progress, extra = {}) => store.save('jobs', { ...store.get('jobs', job.id), status, progress, updatedAt: new Date().toISOString(), ...extra });
     try {
       saveProgress('running', 1);
@@ -144,11 +145,29 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       if (!closing) { saveProgress('failed', 0, { error: error.code === 'MUSIC_INTEGRITY' ? 'Music upload integrity check failed.' : 'Rendering failed. Verify FFmpeg, media files and available disk space.' }); store.record('render.failed', { entityId: episode.id, jobId: job.id }); }
       console.error('Render failed:', error.message);
       fail?.(error);
-    } finally { rendering = false; if (!closing) setImmediate(processQueue); }
+    } finally {
+      if (activeRenders.get(renderKey)?.job.id === job.id) activeRenders.delete(renderKey);
+      rendering = false;
+      if (!closing) setImmediate(processQueue);
+    }
   }
 
-  function enqueueRender(episode, waitForCompletion = false) {
+  function enqueueRender(episode, waitForCompletion = false, source = 'manual') {
     store.assertEpisodeActive(episode.id);
+    if (!['manual', 'workflow'].includes(source)) throw new HttpError(400, 'Invalid render source');
+    const inputFingerprint = digest(JSON.stringify(episode)).toString('hex');
+    const activeForVersion = [...activeRenders.values()].filter((entry) => entry.job.episodeId === episode.id && entry.job.episodeVersion === episode.version);
+    if (activeForVersion.some((entry) => entry.source !== source)) throw new HttpError(409, `This project version already has an active ${activeForVersion.find((entry) => entry.source !== source).source} render`);
+    if (source === 'manual') {
+      const inFlight = activeForVersion.find((entry) => entry.source === 'manual');
+      if (inFlight) {
+        if (inFlight.inputFingerprint !== inputFingerprint) throw new HttpError(409, 'Manual render input changed for this episode version; refresh before retrying');
+        return waitForCompletion ? inFlight.completion : inFlight.job;
+      }
+    }
+    const persistedActive = store.list('jobs').filter((job) => job.episodeId === episode.id && job.episodeVersion === episode.version && ['queued', 'running'].includes(job.status));
+    const trackedJobIds = new Set(activeForVersion.map((entry) => entry.job.id));
+    if (persistedActive.some((job) => !trackedJobIds.has(job.id))) throw new HttpError(409, 'A render for this project version is already recorded as active; refresh its status before retrying');
     if (store.list('jobs').filter((job) => ['queued', 'running'].includes(job.status)).length >= 10) throw new HttpError(429, 'Render queue is full');
     // Freeze the actual branch input before the queued renderer can yield or mutate it.
     episode = structuredClone(episode);
@@ -158,9 +177,13 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     }
     const musicIntegrity = episode.music ? validateMusic(episodeMusic(episode.music)) : undefined;
     const sceneIntegrity = snapshotSceneIntegrity(episode.scenes);
-    const job = store.create('jobs', { episodeId: episode.id, episodeVersion: episode.version, sceneSnapshot: structuredClone(episode.scenes), sceneIntegrity, ...(episode.music ? { musicSnapshot: structuredClone(episode.music), musicIntegrity } : {}), status: 'queued', progress: 0 });
-    const completion = waitForCompletion ? new Promise((resolve, reject) => queue.push({ job, episode, resolve, reject })) : undefined;
-    if (!waitForCompletion) queue.push({ job, episode });
+    const job = store.create('jobs', { source, episodeId: episode.id, episodeVersion: episode.version, sceneSnapshot: structuredClone(episode.scenes), sceneIntegrity, ...(episode.music ? { musicSnapshot: structuredClone(episode.music), musicIntegrity } : {}), status: 'queued', progress: 0 });
+    const renderKey = source === 'manual' ? `${episode.id}:${episode.version}:manual` : `${episode.id}:${episode.version}:${job.id}`;
+    let resolveCompletion, rejectCompletion;
+    const completion = waitForCompletion ? new Promise((resolve, reject) => { resolveCompletion = resolve; rejectCompletion = reject; }) : null;
+    const entry = { job, source, completion, inputFingerprint };
+    activeRenders.set(renderKey, entry);
+    queue.push({ job, episode, renderKey, resolve: resolveCompletion, reject: rejectCompletion });
     setImmediate(processQueue);
     return waitForCompletion ? completion : job;
   }
@@ -317,7 +340,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
   const generationProvider = generation || createGenerationProvider();
   const generations = new GenerationQueue({ store, provider: generationProvider, ...generationOptions });
   const platformSessions = injectedPlatformSessions || new PlatformSessionManager({ store, ...(platformSessionOptions || {}) });
-  const workflows = new WorkflowEngine({ store, fetchTrends: refreshTrends, runAgent: async (...args) => (await adapter()).runAgent(...args), render: (episode) => enqueueRender(episode, true), validateAssets, generations, platformSessions, publication });
+  const workflows = new WorkflowEngine({ store, fetchTrends: refreshTrends, runAgent: async (...args) => (await adapter()).runAgent(...args), render: (episode) => enqueueRender(episode, true, 'workflow'), validateAssets, generations, platformSessions, publication });
   const speechProvider = speech || createSpeechProvider();
   const narration = new NarrationQueue({ store, ...speechProvider });
   const blog = new BlogService({ ...blogOptions, store });
@@ -503,10 +526,31 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       const limit = readPositiveInteger('limit', 20, 100);
       const query = (requestUrl.searchParams.get('q') || '').trim();
       if (query.length > 200) throw new HttpError(400, 'Workflow run search query must be at most 200 characters');
-      return json(response, 200, store.listWorkflowRunHistory({ page, limit, query }));
+      const channelId = requestUrl.searchParams.get('channelId') || '';
+      const episodeId = requestUrl.searchParams.get('episodeId') || '';
+      if (channelId) store.get('channels', channelId);
+      if (episodeId) {
+        const episode = store.get('episodes', episodeId);
+        if (channelId && episode.channelId !== channelId) throw new HttpError(404, 'Workflow run history not found');
+      }
+      return json(response, 200, store.listWorkflowRunHistory({ page, limit, query, channelId, episodeId }));
     }
     const workflowRunDetail = /^\/api\/workflow-runs\/([^/]+)$/.exec(path);
-    if (request.method === 'GET' && workflowRunDetail) return json(response, 200, store.get('workflowRuns', decodeURIComponent(workflowRunDetail[1])));
+    if (request.method === 'GET' && workflowRunDetail) {
+      const run = store.get('workflowRuns', decodeURIComponent(workflowRunDetail[1]));
+      const channelId = requestUrl.searchParams.get('channelId') || '';
+      const episodeId = requestUrl.searchParams.get('episodeId') || '';
+      if (channelId) {
+        store.get('channels', channelId);
+        const runEpisode = store.get('episodes', run.episodeId);
+        if (runEpisode.channelId !== channelId) throw new HttpError(404, 'Workflow run not found');
+      }
+      if (episodeId) {
+        const episode = store.get('episodes', episodeId);
+        if (channelId && episode.channelId !== channelId || run.episodeId !== episodeId) throw new HttpError(404, 'Workflow run not found');
+      }
+      return json(response, 200, run);
+    }
     const workflowGet = /^\/api\/workflows\/([^/]+)\/(runs|history)$/.exec(path);
     if (request.method === 'GET' && workflowGet) return json(response, 200, workflowGet[2] === 'runs' ? workflows.listRuns(workflowGet[1]) : store.workflowHistory(workflowGet[1]));
     const history = /^\/api\/episodes\/([^/]+)\/history$/.exec(path);
@@ -661,6 +705,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
           return json(response, 200, store.updateEpisode(id, { format: template.format, scenes: template.scenes.map((scene) => ({ ...scene, id: entity({}).id })) }, episode.version, `template:${template.id}`));
         }
         if (request.method === 'POST' && action === 'chat') {
+          if (!Number.isSafeInteger(body.expectedVersion) || body.expectedVersion !== episode.version) throw new HttpError(409, 'Episode changed before assistant execution. Refresh and review the current scenes.');
           const agent = choice(body.agent, ['studio', 'codex', 'jeo', 'jeopi', 'hermes'], 'agent');
           const message = text(body.message, 'message', 12000);
           store.record('chat.requested', { entityId: id, agent, message });
@@ -689,7 +734,8 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
           return json(response, 200, { message: reply, ...(updated ? { episode: updated } : {}) });
         }
         if (request.method === 'POST' && action === 'render') {
-          return json(response, 202, enqueueRender(episode));
+          if (!Number.isSafeInteger(body.expectedVersion) || body.expectedVersion !== episode.version) throw new HttpError(409, 'Episode changed before export. Refresh the project and confirm its current version.');
+          return json(response, 202, enqueueRender(episode, false, 'manual'));
         }
       }
       if (path.startsWith('/api/knowledge/')) throw new HttpError(400, 'Unsupported graph edit');

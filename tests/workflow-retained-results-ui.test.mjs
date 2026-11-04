@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { DatabaseSync } from 'node:sqlite';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -37,10 +38,16 @@ async function fixture(t) {
     await rm(dataDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     assert.deepEqual(external, []); assert.deepEqual(errors, []);
   });
+  const apiRaw = (path, method = 'GET', body) => context.request.fetch(base + path, { method, headers: { origin: base }, ...(body === undefined ? {} : { data: body }) });
   const api = async (path, method = 'GET', body) => {
-    const response = await context.request.fetch(base + path, { method, headers: { origin: base }, ...(body === undefined ? {} : { data: body }) });
+    const response = await apiRaw(path, method, body);
     assert.ok(response.ok(), `${method} ${path}: ${response.status()} ${await response.text()}`);
     return response.json();
+  };
+  const persistRun = run => {
+    const db = new DatabaseSync(join(dataDir, 'studio.sqlite'));
+    try { db.exec('PRAGMA busy_timeout=5000'); db.prepare('INSERT INTO entities(kind,id,data) VALUES (?,?,?) ON CONFLICT(kind,id) DO UPDATE SET data=excluded.data').run('workflowRuns', run.id, JSON.stringify(run)); }
+    finally { db.close(); }
   };
   const channel = await api('/api/channels', 'POST', { name: 'Results safety channel', platform: 'youtube', category: 'information' });
   let episode = await api('/api/episodes', 'POST', { channelId: channel.id, title: 'Results safety project', topic: 'Local fixture' });
@@ -69,7 +76,7 @@ async function fixture(t) {
     await dialog.locator('#wf-results-run').selectOption(runId);
     return dialog.locator('#wf-overlay-result-inspector');
   };
-  return { api, channel, get episode() { return episode; }, setEpisode(value) { episode = value; }, setup, run, results };
+  return { api, apiRaw, base, context, page, channel, persistRun, get episode() { return episode; }, setEpisode(value) { episode = value; }, setup, run, results };
 }
 
 test('a skipped node displays retained evidence as historical, not as output produced in the selected run', async t => {
@@ -87,7 +94,8 @@ test('a skipped node displays retained evidence as historical, not as output pro
   const inspector = await f.results(workflow, 'a', second.id);
   const text = await inspector.innerText();
   assert.match(text, /retained-keyword/);
-  assert.match(text, /저장 결과 재사용/);
+  assert.match(text, /이전 실행 결과 보존/);
+  assert.match(text, new RegExp(`출처 실행 ${first.id}`));
 });
 
 test('a reused connected output is labeled as saved reuse rather than newly executed', async t => {
@@ -107,6 +115,7 @@ test('a reused connected output is labeled as saved reuse rather than newly exec
   const text = await inspector.innerText();
   assert.match(text, /reused-keyword/);
   assert.match(text, /저장 결과 재사용/);
+  assert.match(text, new RegExp(`출처 실행 ${first.id}`));
 });
 
 test('slot names in persisted results render as text rather than executable markup', async t => {
@@ -125,4 +134,106 @@ test('slot names in persisted results render as text rather than executable mark
   assert.ok(rawText.includes('window.slotAttack=1'), 'the hostile payload must survive as plain text in the raw JSON dump');
   assert.equal(await inspector.locator('img').count(), 0);
   assert.equal(await inspector.page().evaluate(() => window.slotAttack), undefined);
+});
+
+
+test('node results show persisted errors and logs beside safe local media previews', async t => {
+  const f = await fixture(t);
+  const workflow = await f.setup([{ id: 'evidence', type: 'script', label: 'Evidence node', x: 50, y: 50, config: { agent: 'existing' } }]);
+  const completed = await f.run(workflow, 'evidence');
+  const run = {
+    ...completed,
+    status: 'failed',
+    error: 'Fixture run-level error',
+    nodeRuns: completed.nodeRuns.map(node => node.nodeId === 'evidence' ? {
+      ...node,
+      status: 'failed',
+      error: 'Fixture node failure',
+      logs: [{ level: 'warn', message: 'Fixture execution log' }],
+      output: { ...node.output, outputUrl: '/api/exports/fixture-preview.mp4', metadata: { sourceUrl: 'https://outside.invalid/not-a-preview.mp4' } },
+    } : node),
+  };
+  f.persistRun(run);
+  const inspector = await f.results(workflow, 'evidence', run.id);
+  await inspector.locator('[data-testid="node-result-logs"] summary').click();
+  const text = await inspector.innerText();
+  assert.match(text, /Fixture node failure/);
+  assert.match(text, /Fixture execution log/);
+  const video = inspector.locator('video.node-result-media');
+  assert.equal(await video.count(), 1);
+  assert.equal(await video.getAttribute('src'), '/api/exports/fixture-preview.mp4');
+  const missingMedia = inspector.locator('[data-media-error]');
+  await missingMedia.waitFor({ state: 'visible' });
+  assert.match(await missingMedia.innerText(), /찾지 못했습니다 \(HTTP 404\)/);
+  assert.match(await missingMedia.innerText(), /fixture-preview\.mp4/);
+  assert.equal(await inspector.locator('video[src^="https:"]').count(), 0);
+  const raw = inspector.locator('[data-testid="node-result-raw"]');
+  await raw.locator('summary').click();
+  const rawText = await raw.innerText();
+  assert.match(rawText, /Fixture node failure/);
+  assert.match(rawText, /Fixture execution log/);
+  await f.page.locator('#wf-results-dialog [data-wf-action="close-overlay"]').click();
+  const history = f.page.locator('#wf-run-history');
+  if (!await history.evaluate(element => element.open)) await history.locator('summary').click();
+  const historyRecord = history.locator(`[data-run-id="${run.id}"]`);
+  await historyRecord.waitFor();
+  await historyRecord.locator('summary').click();
+  const historyDetail = historyRecord.locator('[data-run-detail]');
+  await historyDetail.getByText('Fixture run-level error').waitFor();
+  assert.equal(await historyDetail.locator('video.node-result-media').count(), 1);
+});
+
+test('project run history remains available without a saved project graph', async t => {
+  const f = await fixture(t);
+  await f.page.goto(f.base);
+  const channelButton = f.page.locator(`[data-action=channel][data-id="${f.channel.id}"]`);
+  const group = channelButton.locator('xpath=ancestor::details[1]');
+  if (await group.count() && !await group.evaluate(element => element.open)) await group.locator('summary').click();
+  await channelButton.click();
+  await f.page.locator(`[data-action=episode][data-id="${f.episode.id}"]`).click();
+  await f.page.locator('#wf-run-history').waitFor();
+  assert.equal(await f.page.locator('#workflow-canvas').count(), 0);
+  assert.equal(await f.page.locator('#wf-select').inputValue(), '');
+  await f.page.locator('#wf-run-history summary').click();
+  await f.page.getByText('실행 기록 0개').waitFor();
+});
+
+test('channel-scoped run history and detail reject another project’s records', async t => {
+  const f = await fixture(t);
+  const workflow = await f.setup([{ id: 'scope-node', type: 'script', label: 'Scoped node', x: 50, y: 50, config: { agent: 'existing' } }]);
+  const run = await f.run(workflow, 'scope-node');
+  const otherChannel = await f.api('/api/channels', 'POST', { name: 'Other scope channel', platform: 'youtube', category: 'information' });
+  const otherEpisode = await f.api('/api/episodes', 'POST', { channelId: otherChannel.id, title: 'Other scope project', topic: 'Fixture only' });
+  const otherRun = { ...run, id: 'other-channel-run', workflowId: 'other-channel-workflow', episodeId: otherEpisode.id, episodeSnapshot: otherEpisode };
+  f.persistRun(otherRun);
+  const scoped = await f.api(`/api/workflow-runs?channelId=${f.channel.id}&episodeId=${f.episode.id}`);
+  assert.deepEqual(scoped.items.map(item => item.id), [run.id]);
+  const mismatch = await f.apiRaw(`/api/workflow-runs/${otherRun.id}?channelId=${f.channel.id}&episodeId=${f.episode.id}`);
+  assert.equal(mismatch.status(), 404);
+});
+
+
+test('legacy run snapshots without selected stages still expose their saved output', async t => {
+  const f = await fixture(t);
+  const workflow = await f.setup([{ id: 'legacy-node', type: 'script', label: 'Legacy result node', x: 50, y: 50, config: { agent: 'existing' } }]);
+  const completed = await f.run(workflow, 'legacy-node');
+  const legacy = { ...completed };
+  delete legacy.selectedStages;
+  f.persistRun(legacy);
+  const summary = await f.api(`/api/workflow-runs?channelId=${f.channel.id}&episodeId=${f.episode.id}`);
+  assert.equal(summary.items.length, 1);
+  assert.equal(summary.items[0].nodeRuns[0].hasOutput, true);
+  await f.page.goto(f.base);
+  const channelButton = f.page.locator(`[data-action=channel][data-id="${f.channel.id}"]`);
+  const group = channelButton.locator('xpath=ancestor::details[1]');
+  if (await group.count() && !await group.evaluate(element => element.open)) await group.locator('summary').click();
+  await channelButton.click();
+  await f.page.locator(`[data-action=episode][data-id="${f.episode.id}"]`).click();
+  const history = f.page.locator('#wf-run-history');
+  if (!await history.evaluate(element => element.open)) await history.locator('summary').click();
+  const historyRecord = history.locator(`[data-run-id="${legacy.id}"]`);
+  await historyRecord.waitFor();
+  await historyRecord.locator('summary').click();
+  await historyRecord.locator('[data-run-detail]').getByText('첫 장면 제목').waitFor();
+  assert.match(await historyRecord.innerText(), /이번 실행에서 출력 생성/);
 });

@@ -270,8 +270,10 @@ test('cold bound projects require an explicit shared-template copy before isolat
   const reloadResponse = f.page.waitForResponse(response => response.url() === `${f.base}/api/workflows` && response.request().method() === 'GET');
   await f.page.locator('[data-wf-action=reload]').click();
   await reloadResponse;
-  await f.page.locator('.wf-node[data-node-id="other-preview"]').waitFor();
-  await assertCanvas(f.page, otherTemplate);
+  assert.equal(await f.page.locator(`#wf-select option[value="${otherTemplate.id}"]`).count(), 1, 'the discovered shared template appears in the selector');
+  await assertBoundEmpty(f.page, a);
+  assert.equal(await f.page.locator('#wf-select').inputValue(), '', 'newly discovered templates require explicit selection');
+  assert.equal(await f.page.locator('#workflow-canvas').count(), 0, 'late template discovery does not preselect a shared graph');
   await selectTemplate(f.page, template);
   assert.deepEqual(f.writes, [], 'late template discovery and selection do not silently create a global template or project copy');
   assert.deepEqual(await f.api('/api/workflows'), beforeCopies);
@@ -386,7 +388,8 @@ test('a bound project cannot mutate or save an existing shared template preview'
   const history = await f.api(`/api/workflows/${template.id}/history`);
   await mountEditor(f, { episodes: [owner.episode], binding: { episodeId: owner.episode.id, channelId: owner.channel.id }, workflows: [template] });
   await loadAndRemount(f.page);
-  await assertCanvas(f.page, template);
+  await assertBoundEmpty(f.page, owner);
+  await selectTemplate(f.page, template);
   for (const action of ['new', 'preset-full-pipeline', 'save']) assert.equal(await f.page.locator(`[data-wf-action="${action}"]`).isDisabled(), true, `${action} cannot overwrite a shared template`);
   await f.page.locator('.wf-node-header[data-id="preview-a"]').focus();
   await f.page.keyboard.press('ArrowRight');
@@ -405,4 +408,57 @@ test('a bound project cannot mutate or save an existing shared template preview'
   assert.deepEqual((await f.api('/api/workflows')).find(item => item.id === template.id), template);
   assert.deepEqual(await f.api(`/api/workflows/${template.id}/history`), history);
   assert.deepEqual(await f.page.evaluate(() => window.editorToasts), []);
+});
+
+
+test('projects do not auto-select shared templates, and repeated generation cards open the intended settings with the keyboard without saving or running', async t => {
+  const f = await fixture(t), owner = await project(f, 'Repeated generation nodes');
+  const template = await f.api('/api/workflows', 'POST', {
+    name: 'Repeated generation template',
+    nodes: [
+      { id: 'script', type: 'script', label: '대본 작성', x: 40, y: 60, config: { agent: 'studio', prompt: '' } },
+      { id: 'storyboard', type: 'storyboard', label: '스토리보드', x: 340, y: 60, config: {} },
+      { id: 'generate-1', type: 'generate', label: 'Higgsfield 생성', x: 640, y: 60, config: { model: 'seedance1_5', sceneIndex: 0 } },
+      { id: 'generate-2', type: 'generate', label: 'Higgsfield 생성', x: 940, y: 60, config: { model: 'seedance1_5', sceneIndex: 0 } },
+      { id: 'generate-3', type: 'generate', label: 'Higgsfield 생성', x: 1240, y: 60, config: { model: 'seedance1_5', sceneIndex: 0 } },
+      { id: 'render', type: 'render', label: '영상 렌더', x: 1540, y: 60, config: {} },
+      { id: 'review', type: 'review', label: '검토', x: 1840, y: 60, config: {} },
+    ],
+    edges: [
+      { id: 'script-storyboard', source: 'script', target: 'storyboard' },
+      { id: 'storyboard-generate-1', source: 'storyboard', target: 'generate-1' },
+      { id: 'storyboard-generate-2', source: 'storyboard', target: 'generate-2' },
+      { id: 'storyboard-generate-3', source: 'storyboard', target: 'generate-3' },
+      { id: 'generate-1-render', source: 'generate-1', target: 'render' },
+      { id: 'generate-2-render', source: 'generate-2', target: 'render' },
+      { id: 'generate-3-render', source: 'generate-3', target: 'render' },
+      { id: 'render-review', source: 'render', target: 'review' },
+    ],
+  });
+  const binding = { episodeId: owner.episode.id, channelId: owner.channel.id };
+  await mountEditor(f, { episodes: [owner.episode], binding, workflows: [template] });
+  await assertBoundEmpty(f.page, owner);
+  await loadAndRemount(f.page);
+  await assertBoundEmpty(f.page, owner);
+  assert.equal(await f.page.locator('#wf-select').inputValue(), '', 'a bound project starts without a selected shared template');
+  assert.equal(await f.page.locator('#workflow-canvas').count(), 0, 'discovering a shared template does not auto-populate the project canvas');
+  await selectTemplate(f.page, template);
+  const owned = await copyTemplate(f, template, owner);
+
+  for (const ordinal of ['1/3', '2/3', '3/3']) {
+    assert.equal(await f.page.getByRole('button', { name: `Higgsfield 생성 · ${ordinal} 설정 열기`, exact: true }).count(), 1, `generation node ${ordinal} has a unique accessible settings action`);
+  }
+  const target = f.page.getByRole('button', { name: 'Higgsfield 생성 · 2/3 설정 열기', exact: true });
+  await target.focus();
+  await f.page.keyboard.press('Enter');
+  await f.page.locator('#wf-tools-dialog[open]').waitFor();
+  assert.equal(await f.page.locator('#wf-tools-dialog h3').textContent(), 'Higgsfield 생성 · 2/3');
+  assert.equal(await f.page.locator('#workflow-canvas .wf-node.selected').getAttribute('data-node-id'), 'generate-2', 'keyboard activation selects the exact repeated node before opening its settings');
+  assert.equal(await f.page.evaluate(() => window.editor.hasChanges()), false, 'opening node settings is read-only');
+  assert.equal(await f.page.locator('[data-wf-action=save]').isDisabled(), true, 'opening node settings does not create a draft or enable Save');
+  assert.deepEqual(f.writes.map(({ method, path }) => ({ method, path })), [
+    { method: 'POST', path: `/api/workflows/${template.id}/copies` },
+  ], 'only the explicitly approved project copy writes; direct settings access does not save or run');
+  assert.equal(owned.episodeId, owner.episode.id);
+  assert.equal(owned.channelId, owner.channel.id);
 });

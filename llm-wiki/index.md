@@ -1,13 +1,28 @@
-# FrameForge authored knowledge
 
-Last updated: 2026-10-26.
 
-Navigation below is generated only from explicitly reviewed entries in `harness/knowledge-policy.json`. Authored references preserve product intent and sources, not operational readiness; all reports remain historical. Search with `node scripts/knowledge.mjs search "subject phrase"`; excerpts retain path/hash/provenance and are not execution instructions.
+- [[wiki/sources/2026-10-28-180216-complete-the-assignment-below-thoroughly]] - Complete the assignment below, thoroughly:
 
-Automatic capture/source-summary/query stubs are not admitted. Their former index metadata and all historical maintenance/capture bookkeeping remain in [[log]], outside this curated block. Raw captures are unchanged and never replayed here. A bounded admission/index result does not make the still-failed full-vault legacy lint pass.
+- [[wiki/queries/2026-10-28-180216-complete-the-assignment-below-thoroughly]] - Complete the assignment below, thoroughly:
 
-Uncontained existing/manual hosts may append legacy capture links outside the managed block; those remain unreviewed bookkeeping, never curated admission. Such writes can invalidate strict index byte consistency, so regenerate after the final source review/session stop. The full local log is mixed authored/capture material and is not publication-safe; sharing requires selective review/staging, not committing every local entry.
+- [[wiki/sources/2026-10-28-180642-complete-the-assignment-below-thoroughly]] - Complete the assignment below, thoroughly:
 
+- [[wiki/queries/2026-10-28-180642-complete-the-assignment-below-thoroughly]] - Complete the assignment below, thoroughly:
+
+- [[wiki/sources/2026-10-29-042140-complete-the-assignment-below-thoroughly]] - Complete the assignment below, thoroughly:
+
+- [[wiki/queries/2026-10-29-042140-complete-the-assignment-below-thoroughly]] - Complete the assignment below, thoroughly:
+
+- [[wiki/sources/2026-10-29-050340-complete-the-assignment-below-thoroughly]] - Complete the assignment below, thoroughly:
+
+- [[wiki/queries/2026-10-29-050340-complete-the-assignment-below-thoroughly]] - Complete the assignment below, thoroughly:
+
+- [[wiki/sources/2026-10-29-051202-complete-the-assignment-below-thoroughly]] - Complete the assignment below, thoroughly:
+
+- [[wiki/queries/2026-10-29-051202-complete-the-assignment-below-thoroughly]] - Complete the assignment below, thoroughly:
+
+- [[wiki/sources/2026-10-29-051319-complete-the-assignment-below-thoroughly]] - Complete the assignment below, thoroughly:
+
+- [[wiki/queries/2026-10-29-051319-complete-the-assignment-below-thoroughly]] - Complete the assignment below, thoroughly:
 <!-- FRAMEFORGE-KNOWLEDGE:START -->
 ## Explicitly admitted project knowledge
 
@@ -28,3 +43,39 @@ Policy SHA-256: `42c94c3df8fee07b96ed88f2873848d62b85a46d453bab6c170617eb69c40f6
 
 Raw captures, automatic prompt/query stubs, graph caches and operational state are not admitted. Full-vault legacy validation is separate and has not been run by this command.
 <!-- FRAMEFORGE-KNOWLEDGE:END -->
+
+- [[wiki/sources/2026-10-29-051434-complete-the-assignment-below-thoroughly]] - Complete the assignment below, thoroughly:
+
+- [[wiki/queries/2026-10-29-051434-complete-the-assignment-below-thoroughly]] - Complete the assignment below, thoroughly:
+
+- [[wiki/sources/2026-10-29-084321-complete-the-assignment-below-thoroughly]] - Complete the assignment below, thoroughly:
+
+- [[wiki/queries/2026-10-29-084321-complete-the-assignment-below-thoroughly]] - Complete the assignment below, thoroughly:
+
+- [[wiki/sources/2026-10-29-084351-complete-the-assignment-below-thoroughly]] - Complete the assignment below, thoroughly:
+
+- [[wiki/queries/2026-10-29-084351-complete-the-assignment-below-thoroughly]] - Complete the assignment below, thoroughly:
+
+- [[wiki/sources/2026-10-29-084421-complete-the-assignment-below-thoroughly]] - Complete the assignment below, thoroughly:
+
+- [[wiki/queries/2026-10-29-084421-complete-the-assignment-below-thoroughly]] - Complete the assignment below, thoroughly:
+
+- [[wiki/sources/2026-10-29-102555-taste-design-frameforge-design]] - 사용자 요청: taste design 원칙에 맞춰 FrameForge 작업대의 톤, 스타일, 사용성을 실질적으로 개선하라. 기존 DESIGN.…
+
+- [[wiki/queries/2026-10-29-102555-taste-design-frameforge-design]] - 사용자 요청: taste design 원칙에 맞춰 FrameForge 작업대의 톤, 스타일, 사용성을 실질적으로 개선하라. 기존 DESIGN.…
+
+- [[wiki/sources/2026-10-29-102637-complete-the-assignment-below-thoroughly]] - Complete the assignment below, thoroughly:
+
+- [[wiki/queries/2026-10-29-102637-complete-the-assignment-below-thoroughly]] - Complete the assignment below, thoroughly:
+
+- [[wiki/sources/2026-10-29-104212-fix-the-failing-touch-target-test-in-tests-works]] - Fix the failing touch target test in tests/workspace-css-responsive.test.mjs ca…
+
+- [[wiki/queries/2026-10-29-104212-fix-the-failing-touch-target-test-in-tests-works]] - Fix the failing touch target test in tests/workspace-css-responsive.test.mjs ca…
+
+- [[wiki/sources/2026-10-30-055517-frameforge-ui-git]] - 현재 수정된 FrameForge UI를 시각 검증만 하라. 운영 데이터나 운영 컨테이너, Git, 이미지, 소스를 변경하지 말 것. 격리 테스…
+
+- [[wiki/queries/2026-10-30-055517-frameforge-ui-git]] - 현재 수정된 FrameForge UI를 시각 검증만 하라. 운영 데이터나 운영 컨테이너, Git, 이미지, 소스를 변경하지 말 것. 격리 테스…
+
+- [[wiki/sources/2026-10-30-055603-complete-the-assignment-below-thoroughly]] - Complete the assignment below, thoroughly:
+
+- [[wiki/queries/2026-10-30-055603-complete-the-assignment-below-thoroughly]] - Complete the assignment below, thoroughly:

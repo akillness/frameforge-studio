@@ -331,12 +331,14 @@ export function scenes(value) {
     const layout = choice(scene.layout, layouts, 'layout', 'center');
     const validatedSlots = sceneSlots(scene.slots);
     const captions = sceneCaptions(scene.captions, scene.duration);
+    const captionEffect = scene.captionEffect === undefined ? undefined : choice(scene.captionEffect, ['instant', 'typewriter'], 'caption effect');
     return {
       id,
       title: text(scene.title, 'scene title', 160, '장면'),
       text: optionalText(scene.text, 'scene text', 2000),
       duration: scene.duration,
       ...(captions !== undefined ? { captions } : {}),
+      ...(captionEffect !== undefined ? { captionEffect } : {}),
       background: scene.background,
       kind,
       layout,

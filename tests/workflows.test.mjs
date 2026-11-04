@@ -80,6 +80,10 @@ test('selected stage execution skips omitted stages while preserving the selecte
   assert.equal(started.status, 202);
   const run = await waitRun(f, (await started.json()).id);
   assert.equal(run.status, 'awaiting_review');
+  const renderOutput = run.nodeRuns.find((node) => node.type === 'render').output;
+  const renderJob = (await (await f.request('/api/state')).json()).jobs.find((job) => job.id === renderOutput.jobId);
+  assert.equal(renderJob.source, 'workflow', 'workflow render origin is persisted independently of manual export');
+  assert.equal(renderJob.episodeVersion, run.episodeVersion);
   assert.equal(run.nodeRuns.find((node) => node.type === 'trend').status, 'skipped');
   assert.equal(run.nodeRuns.find((node) => node.type === 'research').status, 'skipped');
   assert.deepEqual(run.nodeRuns.filter((node) => ['script', 'storyboard', 'render', 'review'].includes(node.type)).map((node) => node.status), ['completed', 'completed', 'completed', 'awaiting_review']);
@@ -655,6 +659,135 @@ test('a trend filter with no matches fails downstream stages rather than fabrica
   assert.equal(run.status, 'failed');
   assert.equal(run.nodeRuns[0].status, 'failed');
   assert.equal(f.renderCount(), 0);
+});
+
+test('one resumed workflow renders same-version parallel branches sequentially with exact snapshots and job lineage', async t => {
+  let signalFirst, signalSecond, releaseFirst, releaseSecond;
+  const firstStarted = new Promise(resolve => { signalFirst = resolve; });
+  const secondStarted = new Promise(resolve => { signalSecond = resolve; });
+  const firstGate = new Promise(resolve => { releaseFirst = resolve; });
+  const secondGate = new Promise(resolve => { releaseSecond = resolve; });
+  const observed = [];
+  const renderer = async (episode, { dataDir }) => {
+    const index = observed.length;
+    observed.push(structuredClone(episode));
+    if (index === 0) signalFirst();
+    if (index === 1) signalSecond();
+    await (index === 0 ? firstGate : secondGate);
+    const filename = `workflow-branch-${index}-${episode.id}.mp4`;
+    await writeFile(path.join(dataDir, 'exports', filename), `branch ${index}`);
+    return { filename, outputUrl: `/api/exports/${filename}` };
+  };
+  const f = await setup(t, { renderer });
+  t.after(() => { releaseFirst(); releaseSecond(); });
+  const nodes = [
+    { id: 'script', type: 'script', x: 50, y: 150, config: { agent: 'studio', prompt: 'Create a source-checked storyboard.' } },
+    { id: 'storyboard', type: 'storyboard', x: 240, y: 150, config: {} },
+    { id: 'layout-a', type: 'layout', x: 430, y: 50, config: { preset: 'top-image-mid-video' } },
+    { id: 'layout-b', type: 'layout', x: 430, y: 250, config: { preset: 'premiere-3tier' } },
+    { id: 'render-a', type: 'render', x: 640, y: 50, config: {} },
+    { id: 'render-b', type: 'render', x: 640, y: 250, config: {} },
+    { id: 'review-a', type: 'review', x: 850, y: 50, config: {} },
+    { id: 'review-b', type: 'review', x: 850, y: 250, config: {} },
+  ];
+  const edges = [
+    { id: 'edge-script-storyboard', source: 'script', target: 'storyboard' },
+    { id: 'edge-storyboard-layout-a', source: 'storyboard', target: 'layout-a' },
+    { id: 'edge-storyboard-layout-b', source: 'storyboard', target: 'layout-b' },
+    { id: 'edge-layout-a-render-a', source: 'layout-a', target: 'render-a' },
+    { id: 'edge-layout-b-render-b', source: 'layout-b', target: 'render-b' },
+    { id: 'edge-render-a-review-a', source: 'render-a', target: 'review-a' },
+    { id: 'edge-render-b-review-b', source: 'render-b', target: 'review-b' },
+  ];
+  const updated = await f.request(`/api/workflows/${f.workflow.id}`, 'PUT', { ...f.workflow, nodes, edges, expectedVersion: f.workflow.version });
+  assert.equal(updated.status, 200, await updated.clone().text());
+  const preparationResponse = await f.request(`/api/workflows/${f.workflow.id}/run`, 'POST', { episodeId: f.episode.id, selectedStages: ['script', 'storyboard', 'layout-a', 'layout-b'] });
+  assert.equal(preparationResponse.status, 202);
+  const preparation = await waitRun(f, (await preparationResponse.json()).id, ['completed', 'failed', 'cancelled']);
+  assert.equal(preparation.status, 'completed');
+  const branchA = preparation.nodeRuns.find(node => node.nodeId === 'layout-a').output.scenes;
+  const branchB = preparation.nodeRuns.find(node => node.nodeId === 'layout-b').output.scenes;
+  assert.notDeepEqual(branchA, branchB, 'connected layout branches produce distinct persisted scene snapshots');
+  const episodeVersion = preparation.episodeVersion;
+  const latestEpisode = (await (await f.request('/api/state')).json()).episodes.find(item => item.id === f.episode.id);
+  assert.equal(latestEpisode.version, episodeVersion);
+
+  const resume = await f.request(`/api/workflows/${f.workflow.id}/run`, 'POST', {
+    episodeId: f.episode.id,
+    selectedStages: ['render-a', 'review-a', 'render-b', 'review-b'],
+    resumeRunId: preparation.id,
+  });
+  assert.equal(resume.status, 202, await resume.clone().text());
+  const runId = (await resume.json()).id;
+  await firstStarted;
+  const duringFirst = (await (await f.request('/api/state')).json()).jobs.filter(job => job.source === 'workflow' && job.episodeId === f.episode.id && job.episodeVersion === episodeVersion);
+  assert.equal(duringFirst.length, 1, 'the engine waits for the first render before enqueueing its sibling');
+  assert.equal(duringFirst[0].status, 'running');
+  assert.deepEqual(duringFirst[0].sceneSnapshot, branchA);
+  const runWhileFirstBlocked = (await (await f.request(`/api/workflows/${f.workflow.id}/runs`)).json()).find(item => item.id === runId);
+  assert.equal(runWhileFirstBlocked.nodeRuns.find(node => node.nodeId === 'render-a').status, 'running');
+  assert.equal(runWhileFirstBlocked.nodeRuns.find(node => node.nodeId === 'render-b').status, 'queued');
+  const manual = await f.request(`/api/episodes/${f.episode.id}/render`, 'POST', { expectedVersion: episodeVersion });
+  assert.equal(manual.status, 409, 'manual rendering remains isolated from the workflow branch');
+
+  releaseFirst();
+  await secondStarted;
+  assert.equal(observed.length, 2, 'the sibling branch starts only after the first render completes');
+  assert.deepEqual(observed[0].scenes, branchA);
+  assert.deepEqual(observed[1].scenes, branchB);
+  const afterFirst = (await (await f.request('/api/state')).json()).jobs.filter(job => job.source === 'workflow' && job.episodeId === f.episode.id && job.episodeVersion === episodeVersion);
+  assert.equal(afterFirst.length, 2);
+  const jobA = afterFirst.find(job => JSON.stringify(job.sceneSnapshot) === JSON.stringify(branchA));
+  const jobB = afterFirst.find(job => JSON.stringify(job.sceneSnapshot) === JSON.stringify(branchB));
+  assert.ok(jobA);
+  assert.ok(jobB);
+  assert.notEqual(jobA.id, jobB.id);
+  assert.equal(jobA.episodeVersion, jobB.episodeVersion);
+  assert.equal(jobA.status, 'completed');
+  assert.equal(jobB.status, 'running');
+  releaseSecond();
+  const run = await waitRun(f, runId);
+  assert.equal(run.status, 'awaiting_review');
+  const renderA = run.nodeRuns.find(node => node.nodeId === 'render-a').output;
+  const renderB = run.nodeRuns.find(node => node.nodeId === 'render-b').output;
+  assert.equal(renderA.jobId, jobA.id);
+  assert.equal(renderB.jobId, jobB.id);
+  assert.equal(renderA.episodeVersion, episodeVersion);
+  assert.equal(renderB.episodeVersion, episodeVersion);
+  assert.deepEqual(renderA.sceneSnapshot, branchA);
+  assert.deepEqual(renderB.sceneSnapshot, branchB);
+  assert.equal(run.nodeRuns.find(node => node.nodeId === 'review-a').output.render.jobId, jobA.id);
+  assert.equal(run.nodeRuns.find(node => node.nodeId === 'review-b').output.render.jobId, jobB.id);
+});
+
+test('an active workflow render rejects a concurrent manual render for the same episode version', async t => {
+  let entered, release;
+  const rendering = new Promise(resolve => { entered = resolve; });
+  const gate = new Promise(resolve => { release = resolve; });
+  const renderer = async (episode, { dataDir, onProgress }) => {
+    entered();
+    onProgress?.(29);
+    await gate;
+    const filename = `workflow-collision-${episode.id}.mp4`;
+    await writeFile(path.join(dataDir, 'exports', filename), 'fixture only');
+    return { filename, outputUrl: `/api/exports/${filename}` };
+  };
+  const f = await setup(t, { renderer });
+  const start = await f.request(`/api/workflows/${f.workflow.id}/run`, 'POST', { episodeId: f.episode.id });
+  assert.equal(start.status, 202);
+  const { id: runId } = await start.json();
+  await rendering;
+  const currentEpisode = (await (await f.request('/api/state')).json()).episodes.find(item => item.id === f.episode.id);
+  const manual = await f.request(`/api/episodes/${f.episode.id}/render`, 'POST', { expectedVersion: currentEpisode.version });
+  assert.equal(manual.status, 409);
+  assert.match((await manual.json()).error, /active workflow render/i);
+  const state = await (await f.request('/api/state')).json();
+  assert.equal(state.jobs.length, 1);
+  assert.equal(state.jobs[0].source, 'workflow');
+  assert.equal(state.jobs[0].status, 'running');
+  assert.equal(state.jobs[0].episodeVersion, currentEpisode.version);
+  release();
+  assert.equal((await waitRun(f, runId)).status, 'awaiting_review');
 });
 
 test('DAG executes trend, research, storyboard mutation and shared render queue then awaits human review', async (t) => {

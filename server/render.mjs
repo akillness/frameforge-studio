@@ -23,21 +23,66 @@ export function localMediaInputOptions(filename) {
   return ['-protocol_whitelist', 'file', '-format_whitelist', formats];
 }
 
+function wrapSubtitleLine(line, width) {
+  const limit = Math.max(1, Math.floor(Number(width) || 1));
+  const words = line.trim().split(/\s+/u).filter(Boolean);
+  const rows = [];
+  let row = '';
+  for (const word of words) {
+    const wordLength = captionGraphemes(word).length;
+    if (wordLength > limit) {
+      if (row) { rows.push(row); row = ''; }
+      const chars = captionGraphemes(word);
+      while (chars.length > limit) rows.push(chars.splice(0, limit).join(''));
+      row = chars.join('');
+      continue;
+    }
+    if (row && captionGraphemes(row).length + 1 + wordLength > limit) { rows.push(row); row = word; }
+    else row = row ? `${row} ${word}` : word;
+  }
+  if (row) rows.push(row);
+  return rows.length ? rows : [''];
+}
+
 function subtitleText(text, width) {
   const cleaned = String(text || '').replace(/[{}\\]/g, '').replace(/\r/g, '');
-  return cleaned.split('\n').flatMap(line => {
-    const chars = Array.from(line), rows = [];
-    while (chars.length) rows.push(chars.splice(0, width).join(''));
-    return rows.length ? rows : [''];
-  }).join('\\N');
+  return cleaned.split('\n').flatMap(line => wrapSubtitleLine(line, width)).join('\\N');
 }
 
 function captionText(text, width) {
-  return text.replace(/\r/g, '').split('\n').flatMap((line) => {
-    const chars = Array.from(line), rows = [];
-    while (chars.length) rows.push(chars.splice(0, width).join('').replace(/\\/g, '\\\u200b').replace(/[{}]/g, '\\$&'));
-    return rows.length ? rows : [''];
-  }).join('\\N');
+  return String(text || '').replace(/\r/g, '').split('\n').flatMap((line) => wrapSubtitleLine(line, width).map(row => row.replace(/\\/g, '\\\u200b').replace(/[{}]/g, '\\$&'))).join('\\N');
+}
+
+function captionGraphemes(value) {
+  const text = String(value || '').normalize('NFC');
+  return typeof Intl.Segmenter === 'function'
+    ? [...new Intl.Segmenter('ko', { granularity: 'grapheme' }).segment(text)].map((part) => part.segment)
+    : Array.from(text);
+}
+
+function captionTypingDuration(cue, count) {
+  const span = Math.max(0.01, Number(cue.end) - Number(cue.start));
+  return Math.round(Math.min(1.8, Math.max(0.12, count * 0.045), span * 0.6) * 100) / 100;
+}
+
+function typedCaptionDialogues(cue, styleName, layer, align, position, charCols) {
+  const graphemes = captionGraphemes(cue.text);
+  if (!graphemes.length) return [];
+  const start = Math.round(cue.start * 100), end = Math.round(cue.end * 100);
+  const typing = Math.max(1, Math.min(end - start, Math.round(captionTypingDuration(cue, graphemes.length) * 100)));
+  const prefixes = new Map();
+  for (let index = 1; index <= graphemes.length; index++) {
+    const at = start + Math.min(typing, Math.floor((index - 1) * typing / graphemes.length));
+    prefixes.set(at, index);
+  }
+  const steps = [...prefixes.entries()].sort(([a], [b]) => a - b);
+  const positionTag = position ? `{\\an${align}\\pos(${position.x},${position.y})}` : '';
+  return steps.flatMap(([at, count], index) => {
+    const until = steps[index + 1]?.[0] ?? end;
+    if (until <= at) return [];
+    const text = captionText(graphemes.slice(0, count).join(''), charCols);
+    return [`Dialogue: ${layer},${assTime(at / 100)},${assTime(until / 100)},${styleName},,0,0,0,,${positionTag}${text}`];
+  });
 }
 
 function assTime(seconds) {
@@ -105,7 +150,10 @@ export function buildSceneCompositionPlan(scene, w, h) {
   const slotDialogues = new Map();
   if (captions !== undefined) {
     if (captionSlot < 0) {
-      for (const cue of captions) globalDialogues.push(`Dialogue: 0,${assTime(cue.start)},${assTime(cue.end)},Default,,0,0,0,,${captionText(cue.text, w > h ? 34 : 17)}`);
+      for (const cue of captions) {
+        if (scene.captionEffect === 'typewriter') globalDialogues.push(...typedCaptionDialogues(cue, 'Default', 0, alignment, null, w > h ? 34 : 17));
+        else globalDialogues.push(`Dialogue: 0,${assTime(cue.start)},${assTime(cue.end)},Default,,0,0,0,,${captionText(cue.text, w > h ? 34 : 17)}`);
+      }
     }
   } else if (!slots.length || (scene.text && !slots.some((slot) => ['subtitle-layer', 'text-overlay'].includes(slot.role) && slot.text))) {
     globalDialogues.push(`Dialogue: 0,0:00:00.00,0:10:00.00,Default,,0,0,0,,${subtitleText(scene.text, w > h ? 34 : 17)}`);
@@ -133,7 +181,10 @@ export function buildSceneCompositionPlan(scene, w, h) {
         const charCols = Math.max(8, Math.round((sw / w) * (w > h ? 36 : 18)));
         const slotAlign = slot.style?.align === 'left' ? 4 : slot.style?.align === 'right' ? 6 : 5;
         const textX = slotAlign === 4 ? sx + 12 : slotAlign === 6 ? sx + sw - 12 : cx;
-        const events = captions.map((cue) => `Dialogue: ${Math.max(1, Number(slot.zIndex) || index + 1)},${assTime(cue.start)},${assTime(cue.end)},${styleName},,0,0,0,,{\\an${slotAlign}\\pos(${textX},${cy})}${captionText(`${badgePrefix}${cue.text}`, charCols)}`);
+        const layer = Math.max(1, Number(slot.zIndex) || index + 1);
+        const events = captions.flatMap((cue) => scene.captionEffect === 'typewriter'
+          ? typedCaptionDialogues(cue, styleName, layer, slotAlign, { x: textX, y: cy }, charCols)
+          : [`Dialogue: ${layer},${assTime(cue.start)},${assTime(cue.end)},${styleName},,0,0,0,,{\\an${slotAlign}\\pos(${textX},${cy})}${captionText(cue.text, charCols)}`]);
         dialogues.push(...events);
         slotDialogues.set(index, events);
       }
@@ -157,7 +208,8 @@ export function buildSceneCompositionPlan(scene, w, h) {
       cy,
       hasAsset: Boolean(slot.assetUrl),
       backgroundColor: /^#[0-9a-fA-F]{6}$/.test(slot.style?.backgroundColor || '') ? slot.style.backgroundColor : null,
-      opacity: Math.max(0.1, Math.min(1, Number(slot.style?.opacity ?? 0.82))),
+      opacity: Math.max(0, Math.min(1, Number(slot.style?.opacity ?? 0.82))),
+      enable: index === captionSlot && captions !== undefined ? (captions.map((cue) => `between(t,${cue.start},${cue.end})`).join('+') || '0') : null,
     });
   });
 
@@ -391,7 +443,7 @@ export async function renderEpisode(episode, { dataDir, musicIntegrity, sceneInt
             currentLabel = visualLabel;
           } else if (box.backgroundColor) {
             const visualLabel = nextLabel();
-            chains.push(`[${currentLabel}]drawbox=x=${box.sx}:y=${box.sy}:w=${box.sw}:h=${box.sh}:color=${box.backgroundColor}@${box.opacity.toFixed(2)}:t=fill[${visualLabel}]`);
+            chains.push(`[${currentLabel}]drawbox=x=${box.sx}:y=${box.sy}:w=${box.sw}:h=${box.sh}:color=${box.backgroundColor}@${box.opacity.toFixed(2)}:t=fill${box.enable ? `:enable='${box.enable}'` : ''}[${visualLabel}]`);
             currentLabel = visualLabel;
           }
           if (box.textAss) {

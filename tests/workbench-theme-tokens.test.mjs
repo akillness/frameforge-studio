@@ -22,12 +22,12 @@ const executablePath = process.env.PLATFORM_CHROMIUM_PATH || process.env.CHROMIU
 const LIGHT_TOKENS = {
   canvas: '#f6f7fb', surface: '#ffffff', surfaceSide: '#f1f3f9', surfaceSubtle: '#eef1f8',
   ink: '#1b2130', textSecondary: '#485166', muted: '#5b6478',
-  line: '#e1e5ee', lineStrong: '#868fa3',
-  accent: '#3451e0', accentSoft: '#ebefff', onAccent: '#ffffff',
+  line: '#e1e5ee', lineControl: '#cdd3df', lineStrong: '#868fa3',
+  accent: '#3451e0', accentBright: '#4a66f0', accentStrong: '#2c46cf', accentSoft: '#ebefff', onAccent: '#ffffff',
   success: '#1c7350', successSoft: '#e6f5ed',
   warning: '#8f5600', warningSoft: '#fff3dc',
   danger: '#b93a2c', dangerSoft: '#fdecea',
-  focus: '#1f36b8',
+  focus: '#1f36b8', canvasDot: '#d5dbe7',
 };
 
 function hexToRgb(hex) {
@@ -36,7 +36,7 @@ function hexToRgb(hex) {
 }
 
 // Chromium reports a custom property's computed value as the raw declared text (e.g.
-// "#f5f4ef"), not normalized to rgb() the way a resolved color property like `color` would
+// "#f6f7fb"), not normalized to rgb() the way a resolved color property like `color` would
 // be. Normalize to "r,g,b" anyway so this assertion is not sensitive to incidental
 // whitespace or to a future token author switching the declared syntax to rgb()/hsl().
 function normalizeColor(value) {
@@ -117,12 +117,12 @@ async function fixture(t) {
         colorScheme: style.colorScheme,
         canvas: read('--canvas'), surface: read('--surface'), surfaceSide: read('--surface-side'), surfaceSubtle: read('--surface-subtle'),
         ink: read('--ink'), textSecondary: read('--text-secondary'), muted: read('--muted'),
-        line: read('--line'), lineStrong: read('--line-strong'),
-        accent: read('--accent'), accentSoft: read('--accent-soft'), onAccent: read('--on-accent'),
+        line: read('--line'), lineControl: read('--line-control'), lineStrong: read('--line-strong'),
+        accent: read('--accent'), accentBright: read('--accent-bright'), accentStrong: read('--accent-strong'), accentSoft: read('--accent-soft'), onAccent: read('--on-accent'),
         success: read('--success'), successSoft: read('--success-soft'),
         warning: read('--warning'), warningSoft: read('--warning-soft'),
         danger: read('--danger'), dangerSoft: read('--danger-soft'),
-        focus: read('--focus'),
+        focus: read('--focus'), canvasDot: read('--canvas-dot'),
       };
     });
   }
@@ -141,6 +141,7 @@ const CONTRAST_PAIRS = [
   ['ink', 'canvas', 4.5], ['ink', 'surface', 4.5], ['textSecondary', 'surface', 4.5], ['textSecondary', 'canvas', 4.5],
   ['muted', 'surface', 4.5], ['muted', 'surfaceSide', 4.5], ['muted', 'surfaceSubtle', 4.5],
   ['accent', 'surface', 4.5], ['accent', 'accentSoft', 4.5], ['onAccent', 'accent', 4.5],
+  ['onAccent', 'accentBright', 4.5], ['onAccent', 'accentStrong', 4.5], ['onAccent', 'focus', 4.5],
   ['success', 'successSoft', 4.5], ['warning', 'warningSoft', 4.5], ['danger', 'dangerSoft', 4.5],
   ['lineStrong', 'surface', 3], ['lineStrong', 'canvas', 3], ['focus', 'surface', 3], ['focus', 'surfaceSide', 3],
 ];

@@ -35,8 +35,28 @@ jobs:
           fi
           ffmpeg -version
           ffprobe -version
+      - name: Test CI diagnostic helpers
+        run: node --test .github/scripts/ci-test-summary.test.mjs
+      - name: Test npm test exit-code preservation
+        shell: bash
+        run: bash .github/scripts/run-npm-tests.test.sh
       - name: Run API, workflow, security and harness regression tests
-        run: npm test
+        shell: bash
+        run: bash .github/scripts/run-npm-tests.sh
+      - name: Summarize test failures without raw output
+        if: always()
+        shell: bash
+        run: |
+          node .github/scripts/ci-test-summary.mjs "$RUNNER_TEMP/frameforge-npm-test.tap" "$RUNNER_TEMP/frameforge-test-summary.md"
+          cat "$RUNNER_TEMP/frameforge-test-summary.md" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve sanitized test summary
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-summary-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/frameforge-test-summary.md
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Verify blog tone, smartphone reflow and real touch controls
         run: node scripts/blog-workspace-browser-smoke.mjs
       - name: Verify immutable harness bundle
@@ -85,9 +105,13 @@ jobs:
           path: artifacts/container-smoke.json
           if-no-files-found: warn
           retention-days: 14
-      - name: Show service logs on failure
+      - name: Show bounded studio logs on failure
         if: failure()
-        run: docker compose logs --no-color --tail 100 studio
+        shell: bash
+        run: |
+          echo "::group::Last 100 studio service log lines"
+          docker compose logs --no-color --tail 100 studio
+          echo "::endgroup::"
       - name: Remove the isolated CI service and volume
         if: always()
         run: docker compose down --volumes --remove-orphans

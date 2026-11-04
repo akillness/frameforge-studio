@@ -112,6 +112,15 @@ const appContextMenu = createContextMenu({onAction:(action, context) => { Promis
 const infoTooltips = installInfoTooltips(document);
 
 function activeEpisodes() { return state.episodes.filter(item => item.status !== 'archived'); }
+function projectIdentifierLabels(projects) {
+  const ids = projects.map(item => String(item.id || ''));
+  return new Map(projects.map((item,index) => {
+    const id = ids[index];
+    let length = Math.min(8,id.length);
+    while (length < id.length && ids.some((candidate,other) => other !== index && candidate.startsWith(id.slice(0,length)))) length++;
+    return [String(item.id),id.slice(0,length)];
+  }));
+}
 function activeProjectWork(targetId) {
   const context = workflowEditor.getActivity();
   if (context?.episodeId === targetId && context.hasActiveRun) return true;
@@ -197,7 +206,7 @@ function mountSceneEditor() {
   if (!dialog || !episode) return;
   const reason = projectEditReason();
   dialog.dataset.context = overlayKey('scene');
-  dialog.innerHTML = `<div class="project-dialog-header"><div><h2 id="project-scene-title">장면 편집 · ${esc(episode.title)}</h2><p role="status">${esc(reason || '장면 초안은 이 창에서 저장합니다. 닫아도 저장 전 편집은 보존됩니다.')}</p></div><div class="row"><button type="button" id="save-button" class="primary" data-action="save" data-tooltip="장면과 슬롯 초안을 원래 버전으로 저장합니다. Ctrl 또는 Command+S">변경 저장</button><button type="button" data-action="open-generation" data-tooltip="생성 설정을 엽니다. 비용 확인과 실행 동의는 별도입니다.">Higgsfield 장면 생성</button><button type="button" data-action="render" data-tooltip="장면 초안을 저장한 후 MP4 렌더를 명시적으로 시작합니다.">영상 내보내기</button><button type="button" class="icon-btn quiet" data-action="close-scene-editor" aria-label="장면 편집 닫기" data-tooltip="편집 초안을 보존하고 노드 캔버스로 돌아갑니다.">×</button></div></div><div class="studio-layout project-scene-body">${studioView()}</div>`;
+  dialog.innerHTML = `<div class="project-dialog-header"><div><h2 id="project-scene-title">장면 편집 · ${esc(episode.title)}</h2><p role="status">${esc(reason || '장면 초안은 이 창에서 저장합니다. 닫아도 저장 전 편집은 보존됩니다.')}</p></div><div class="row"><button type="button" id="save-button" class="primary" data-action="save" data-tooltip="장면과 슬롯 초안을 원래 버전으로 저장합니다. Ctrl 또는 Command+S">변경 저장</button><button type="button" data-action="open-generation" data-tooltip="생성 설정을 엽니다. 비용 확인과 실행 동의는 별도입니다.">Higgsfield 장면 생성</button><button type="button" data-action="render" ${activeRenderForVersion() ? 'disabled' : ''} aria-label="전체 프로젝트 MP4 내보내기" data-tooltip="현재 프로젝트의 모든 장면을 저장된 버전으로 FFmpeg 렌더링합니다. 워크플로 렌더와 별도로 표시됩니다.">전체 프로젝트 MP4</button><button type="button" class="icon-btn quiet" data-action="close-scene-editor" aria-label="장면 편집 닫기" data-tooltip="편집 초안을 보존하고 노드 캔버스로 돌아갑니다.">×</button></div></div><div class="studio-layout project-scene-body">${studioView()}</div>`;
   updatePreview(); updateSaveStatus(); applySessionControls(); applyProjectControls(); decorateTooltips();
   dialog.showModal(); restoreProjectOverlay(dialog);
   mountMusicGeneration(dialog);
@@ -445,6 +454,8 @@ function activeChannel() { return state.channels.find(channel => channel.id === 
 function liveEpisode(targetId = episode?.id) { return episode?.id === targetId ? episode : studioDrafts.get(targetId)?.episode || state.episodes.find(item => item.id === targetId); }
 function currentScene() { return episode?.scenes?.[sceneIndex]; }
 function duration() { return episode?.scenes?.reduce((sum, scene) => sum + Number(scene.duration || 0), 0) || 0; }
+function formattedDuration(value) { const seconds = Math.max(0, Math.round(Number(value) || 0)); return `${Math.floor(seconds / 60)}분 ${String(seconds % 60).padStart(2,'0')}초`; }
+function activeRenderForVersion() { return state.jobs?.find(job => job.episodeId === episode?.id && job.episodeVersion === episode?.version && ['queued','running'].includes(job.status)); }
 function time(value) { return `${String(Math.floor(value / 60)).padStart(2,'0')}:${String(Math.floor(value % 60)).padStart(2,'0')}`; }
 
 function trendItems() { return Array.isArray(state.trendKeywords) && state.trendKeywords.length ? state.trendKeywords : state.trends; }
@@ -504,16 +515,25 @@ function narrationJob() {
   // /api/state returns newest first, matching Store.list's descending row order.
   return (state.narrationJobs || []).find(job => job.episodeId === episode?.id);
 }
+function savedEpisodeDuration(item) { return item?.scenes?.reduce((sum, scene) => sum + Number(scene.duration || 0), 0) || 0; }
 function narrationStatusHtml() {
   const job = narrationJob();
-  if (pendingNarrations.has(episode?.id)) return '<p class="unsaved">음성 생성 결과가 준비되었습니다. 현재 초안은 그대로 보존했습니다.</p><button class="small" data-action="load-narration-result">초안 파일 보관 후 생성 결과 불러오기</button>';
-  if (!job) return '<p class="hint">원고가 비어 있으면 화면 텍스트를 읽습니다. 생성된 음성 길이에 맞춰 장면 길이가 늘어날 수 있습니다.</p>';
+  const latest = state.episodes?.find(item => item.id === episode?.id);
+  const currentSeconds = duration();
+  const savedSeconds = savedEpisodeDuration(latest);
+  if (pendingNarrations.has(episode?.id)) {
+    return `<p class="unsaved">음성 생성 결과가 준비되었습니다. 현재 초안은 그대로 보존했습니다.</p><p class="hint">현재 편집 초안 총 길이: ${formattedDuration(currentSeconds)} · 저장된 생성 결과 v${Number(latest?.version || job?.resultVersion || 0)} 총 길이: ${formattedDuration(savedSeconds)}</p><button class="small" data-action="load-narration-result">초안 파일 보관 후 생성 결과 불러오기</button>`;
+  }
+  if (!job) return `<p class="hint">저장 버전 v${Number(latest?.version || episode?.version || 0)} 실제 총 길이: ${formattedDuration(savedSeconds)} (${latest?.scenes?.length || 0}개 장면)${dirty ? ` · 편집 중 초안 ${formattedDuration(currentSeconds)}` : ''}. 내레이션 길이에 맞춰 장면 및 프로젝트 총 길이가 늘어날 수 있습니다.</p>`;
   const active = ['queued','running'].includes(job.status);
-  return `<div class="row"><span class="badge ${job.status === 'completed' ? 'lime' : ''}">${esc(active ? '음성 생성 중' : statusNames[job.status] || job.status)}</span>${active ? `<progress value="${Math.max(0,Math.min(100,Number(job.progress)||0))}" max="100" aria-label="음성 생성 진행률"></progress>` : ''}${job.resultVersion ? `<span class="hint">저장 버전 ${Number(job.resultVersion)}</span>` : ''}</div>${job.error ? `<p class="danger">${esc(job.error)}</p>` : ''}`;
+  const resultEpisode = state.episodes?.find(item => item.id === job.episodeId);
+  const resultSeconds = savedEpisodeDuration(resultEpisode);
+  return `<div class="row"><span class="badge ${job.status === 'completed' ? 'lime' : ''}">${esc(active ? '음성 생성 중' : statusNames[job.status] || job.status)}</span>${active ? `<progress value="${Math.max(0,Math.min(100,Number(job.progress)||0))}" max="100" aria-label="음성 생성 진행률"></progress>` : ''}${job.resultVersion ? `<span class="hint">저장 버전 ${Number(job.resultVersion)}</span>` : ''}</div>${job.status === 'completed' && resultEpisode ? `<p class="hint">생성 결과 v${Number(resultEpisode.version)} 실제 총 길이: ${formattedDuration(resultSeconds)} · ${resultEpisode.scenes.length}개 장면${resultEpisode.version !== episode?.version ? ` · 현재 선택 초안 v${Number(episode?.version)}와 결과 버전이 다릅니다` : ''}</p>` : `<p class="hint">저장 버전 v${Number(latest?.version || episode?.version || 0)} 실제 총 길이: ${formattedDuration(savedSeconds)}${dirty ? ` · 편집 중 초안 ${formattedDuration(currentSeconds)}` : ''}. 내레이션 길이에 따라 늘어날 수 있습니다.</p>`}${job.error ? `<p class="danger" role="alert">${esc(job.error)}</p>` : ''}`;
 }
 function narrationHtml() {
   const disabled = !speech.available || !speechVoice || ['queued','running'].includes(narrationJob()?.status);
-  return `<section class="panel narration-panel"><div class="panel-header"><h3>내레이션 음성 만들기</h3><span class="badge">${speech.available ? 'WINDOWS SAPI' : '연결 확인'}</span></div><div class="panel-body"><div class="two-cols"><label>목소리<select id="speech-voice" ${!speech.available ? 'disabled' : ''}>${speech.voices.length ? speech.voices.map(voice => `<option value="${esc(voice.id)}" ${voice.id === speechVoice ? 'selected' : ''}>${esc(voice.name)} · ${esc(voice.language)}</option>`).join('') : '<option>사용 가능한 목소리 없음</option>'}</select></label><label>말하기 속도 (−10 ~ 10)<input id="speech-rate" type="number" min="-10" max="10" step="1" value="${speechRate}" ${!speech.available ? 'disabled' : ''}></label></div><div class="narration-actions"><button data-action="narrate-scene" data-testid="narrate-scene" ${disabled ? 'disabled' : ''}>선택 장면 음성 만들기</button><button class="primary" data-action="narrate-all" data-testid="narrate-all" ${disabled ? 'disabled' : ''}>전체 장면 음성 만들기</button></div>${!speech.available ? `<p class="hint">${esc(speech.detail || '음성 엔진에 연결되지 않았습니다. 연결 후 사용할 수 있습니다.')}</p><button class="small quiet" data-action="refresh-speech">음성 연결 다시 확인</button>` : '<p class="hint">실제 음성 파일을 생성해 장면에 첨부합니다. 저장되지 않은 변경은 먼저 저장합니다.</p>'}<div id="narration-status" role="status" aria-live="polite">${narrationStatusHtml()}</div></div></section>`;
+  const saved = state.episodes?.find(item => item.id === episode?.id);
+  return `<section class="panel narration-panel"><div class="panel-header"><h3>내레이션 음성 만들기</h3><span class="badge">${speech.available ? 'WINDOWS SAPI' : '연결 확인'}</span></div><div class="panel-body"><div class="two-cols"><label>목소리<select id="speech-voice" ${!speech.available ? 'disabled' : ''}>${speech.voices.length ? speech.voices.map(voice => `<option value="${esc(voice.id)}" ${voice.id === speechVoice ? 'selected' : ''}>${esc(voice.name)} · ${esc(voice.language)}</option>`).join('') : '<option>사용 가능한 목소리 없음</option>'}</select></label><label>말하기 속도 (−10 ~ 10)<input id="speech-rate" type="number" min="-10" max="10" step="1" value="${speechRate}" ${!speech.available ? 'disabled' : ''}></label></div><p class="hint narration-duration-warning">생성 전 저장 버전 v${Number(saved?.version || episode?.version || 0)} 실제 총 길이: <strong>${formattedDuration(savedEpisodeDuration(saved))}</strong>${dirty ? ` · 현재 편집 초안 ${formattedDuration(duration())}` : ''} · 음성 길이에 맞춰 장면 길이와 프로젝트 총 길이가 늘어날 수 있습니다. 생성 후 서버 결과의 실제 총 길이를 다시 표시합니다.</p><div class="narration-actions"><button data-action="narrate-scene" data-testid="narrate-scene" ${disabled ? 'disabled' : ''}>선택 장면 음성 만들기</button><button class="primary" data-action="narrate-all" data-testid="narrate-all" ${disabled ? 'disabled' : ''}>전체 장면 음성 만들기</button></div>${!speech.available ? `<p class="hint">${esc(speech.detail || '음성 엔진에 연결되지 않았습니다. 연결 후 사용할 수 있습니다.')}</p><button class="small quiet" data-action="refresh-speech">음성 연결 다시 확인</button>` : '<p class="hint">실제 음성 파일을 생성해 장면에 첨부합니다. 저장되지 않은 변경은 먼저 저장합니다.</p>'}<div id="narration-status" role="status" aria-live="polite">${narrationStatusHtml()}</div></div></section>`;
 }
 
 async function startNarration(allScenes) {
@@ -653,12 +673,14 @@ function render() {
   view = 'workflow';
   document.body.dataset.workbench = 'project';
   const channel = activeChannel();
+  const channelProjects = activeEpisodes().filter(item=>item.channelId===channelId);
+  const projectIdLabels = projectIdentifierLabels(channelProjects);
   $('#app').innerHTML = `<div class="shell"><aside id="project-sidebar" class="sidebar" aria-label="워크스페이스 탐색">
     <div class="brand"><span class="brandmark" aria-hidden="true">F</span><div class="brand-copy">FRAME<small>PRODUCTION STUDIO</small></div></div>
     <div class="sidebar-sizing" role="group" aria-label="사이드바 크기"><button type="button" data-sidebar-size="decrease" aria-label="사이드바 좁게">−</button><button type="button" data-sidebar-size="increase" aria-label="사이드바 넓게">+</button></div><div class="sidebar-resize" role="separator" tabindex="0" aria-label="사이드바 너비 조절" aria-orientation="vertical" aria-valuemin="160" aria-valuemax="400" aria-valuenow="216" aria-controls="project-sidebar"></div>
     <div class="sidebar-label">제작 워크스페이스 <button type="button" class="icon-btn quiet project-more" data-action="sidebar-menu" aria-label="워크스페이스 메뉴" aria-haspopup="menu" data-tooltip="새 채널, 제작 현황, 보관 프로젝트와 설정 도구를 엽니다.">⋯</button></div>
     <section class="platform-browser" aria-label="플랫폼과 채널"><div class="sidebar-label">PLATFORMS <button class="icon-btn quiet" data-action="new-channel" aria-label="채널 추가" data-tooltip="새 채널 제작 공간을 등록합니다. 외부 계정 인증은 별도입니다.">+</button></div>${channelHierarchyHtml() || '<p class="hint platform-name">등록된 채널이 없습니다.</p>'}</section>
-    <section class="project-list" aria-label="채널 프로젝트"><div class="sidebar-label">PROJECTS <button type="button" class="icon-btn quiet" data-action="new-episode" aria-label="새 프로젝트" data-tooltip="현재 채널에 새 에피소드를 만듭니다.">+</button></div>${activeEpisodes().filter(item=>item.channelId===channelId).map(item=>`<div class="project-row"><button type="button" class="channel ${item.id===episode?.id?'active':''}" data-action="episode" data-id="${esc(item.id)}" data-tooltip="${esc(item.title)}의 노드 캔버스를 엽니다."><span class="channel-copy">${esc(studioDrafts.get(item.id)?.episode.title || item.title)}</span></button><button type="button" class="icon-btn quiet project-more" data-action="episode-menu" data-id="${esc(item.id)}" aria-label="${esc(item.title)} 프로젝트 메뉴" aria-haspopup="menu" data-tooltip="제목 변경, 버전 기록, 안전한 보관 메뉴입니다.">⋯</button></div>`).join('') || '<p class="hint">새 프로젝트를 만들어 시작하세요.</p>'}</section>
+    <section class="project-list" aria-label="채널 프로젝트"><div class="sidebar-label">PROJECTS <button type="button" class="icon-btn quiet" data-action="new-episode" aria-label="새 프로젝트" data-tooltip="현재 채널에 새 에피소드를 만듭니다.">+</button></div>${channelProjects.map(item=>{const title=studioDrafts.get(item.id)?.episode.title || item.title; const status=statusNames[item.status] || item.status; const version=Number(item.version); const projectId=projectIdLabels.get(String(item.id)) || String(item.id); const identity=`${status} · v${version} · ID ${projectId}`; return `<div class="project-row"><button type="button" class="channel ${item.id===episode?.id?'active':''}" data-action="episode" data-id="${esc(item.id)}" ${item.id===episode?.id?'aria-current="page"':''} aria-label="${esc(`${title} · ${identity} · 프로젝트 ID ${item.id}`)}" data-tooltip="${esc(`${title}의 노드 캔버스를 엽니다. 프로젝트 ID ${item.id}`)}"><span class="channel-copy"><span>${esc(title)}</span><small>${esc(identity)}</small></span></button><button type="button" class="icon-btn quiet project-more" data-action="episode-menu" data-id="${esc(item.id)}" aria-label="${esc(`${title} · ${identity} 프로젝트 메뉴`)}" aria-haspopup="menu" data-tooltip="제목 변경, 버전 기록, 안전한 보관 메뉴입니다.">⋯</button></div>`;}).join('') || '<p class="hint">새 프로젝트를 만들어 시작하세요.</p>'}</section>
     <a class="channel" href="/blog.html" target="_blank" rel="noopener" aria-label="블로그 운영실 새 탭에서 열기" data-testid="blog-workspace-link"><span class="nav-icon" aria-hidden="true">B</span><span class="channel-copy">블로그 운영실 ↗</span></a>
     <div class="sidebar-bottom"><button class="channel quiet" data-action="view" data-view="archived" data-tooltip="보관한 프로젝트와 기록을 확인하고 복구합니다."><span class="nav-icon" aria-hidden="true">▢</span><span class="channel-copy">보관된 프로젝트</span></button><button class="channel quiet" data-action="view" data-view="settings" data-tooltip="외부 플랫폼 연결과 설정을 확인합니다."><span class="nav-icon" aria-hidden="true">⚙</span><span class="channel-copy">연결 & 설정</span></button></div>
     </aside><div class="workspace"><header class="topbar"><div class="breadcrumb">${esc(platformNames[channel?.platform?.toLowerCase()] || channel?.platform || '워크스페이스')} <span aria-hidden="true"> / </span><strong>${esc(channel?.name || '채널 없음')}</strong><span aria-hidden="true"> / </span>프로젝트 노드</div><div class="row"><span class="badge" data-testid="session-capability">${canMutate()?'로그인됨':'로그인 확인 필요'}</span><button type="button" id="project-tools-menu" class="small" data-action="project-tools" aria-haspopup="menu" data-tooltip="장면 편집, 소스, 결과, 히스토리와 모든 제작 도구를 캔버스 위에서 엽니다.">제작 도구 ▾</button></div></header>
@@ -682,13 +704,16 @@ function render() {
 
 function projectNavigationHtml() {
   const context = projectContext();
+  const projects = activeEpisodes().filter(item => item.channelId === channelId);
+  const projectIdLabels = projectIdentifierLabels(projects);
+  const selectedProjectId = episode ? projectIdLabels.get(String(episode.id)) : '';
   const nodes = context.workflow?.nodes || [];
   const reason = episode ? projectEditReason(episode.id) : '';
   return `<section class="project-navigation" id="project-navigation" aria-label="프로젝트 작업대">
-    <div class="project-context"><span class="eyebrow">${esc(activeChannel()?.name || '채널을 선택하세요')}</span><strong>${esc(episode?.title || '선택된 프로젝트 없음')}</strong><span class="hint">${episode ? `원본 v${baseVersion ?? episode.version}${dirty ? ' · 장면 초안 편집 중' : ''}${reason ? ` · ${esc(reason)}` : ''}` : '새 프로젝트를 만들어 시작하세요.'}</span></div>
-    <label>현재 프로젝트<select id="project-episode" aria-label="현재 프로젝트" data-tooltip="프로젝트를 바꿔도 장면과 그래프의 저장 전 초안은 각각 보존됩니다."><option value="">프로젝트 선택</option>${activeEpisodes().filter(item => item.channelId === channelId).map(item => `<option value="${esc(item.id)}" ${item.id === episode?.id ? 'selected' : ''}>${esc(studioDrafts.get(item.id)?.episode.title || item.title)}</option>`).join('')}</select></label>
+    <div class="project-context"><span class="eyebrow">${esc(activeChannel()?.name || '채널을 선택하세요')}</span><strong>${esc(episode?.title || '선택된 프로젝트 없음')}</strong><span class="hint">${episode ? `ID ${esc(selectedProjectId || episode.id)} · 원본 v${baseVersion ?? episode.version}${dirty ? ' · 장면 초안 편집 중' : ''}${reason ? ` · ${esc(reason)}` : ''}` : '새 프로젝트를 만들어 시작하세요.'}</span></div>
+    <label>현재 프로젝트<select id="project-episode" aria-label="현재 프로젝트" data-tooltip="이름이 같은 프로젝트는 상태·버전·실제 ID로 구분합니다. 전환해도 저장 전 초안은 각각 보존됩니다."><option value="">프로젝트 선택</option>${projects.map(item => {const title=studioDrafts.get(item.id)?.episode.title || item.title; const idLabel=projectIdLabels.get(String(item.id)) || String(item.id); return `<option value="${esc(item.id)}" ${item.id === episode?.id ? 'selected' : ''}>${esc(title)} · ${esc(statusNames[item.status] || item.status)} · v${Number(item.version)} · ID ${esc(idLabel)}</option>`;}).join('')}</select></label>
     ${nodes.length ? `<label>노드 단계<select id="project-stage" aria-label="프로젝트 노드 단계" data-tooltip="노드 ID로 정확한 단계를 선택합니다. 선택만으로 실행하지 않습니다."><option value="">단계 선택</option>${nodes.map(node => `<option value="${esc(node.id)}" ${context.selectedNodeId === node.id ? 'selected' : ''}>${esc(node.label || node.type)} · ${esc(node.id)}</option>`).join('')}</select></label>` : '<p class="hint">템플릿에서 프로젝트 워크플로우를 연결하세요.</p>'}
-    <div class="project-tool-strip" role="group" aria-label="프로젝트 도구"><button type="button" data-action="open-scene-editor" aria-haspopup="dialog" data-tooltip="${esc(toolDescriptions.studio)}" ${episode?'':'disabled'}>장면 편집</button><button type="button" data-action="project-section" data-section="source" aria-haspopup="dialog" data-tooltip="${esc(toolDescriptions.source)}" ${episode?'':'disabled'}>소스</button><button type="button" data-action="project-section" data-section="delivery" aria-haspopup="dialog" data-tooltip="${esc(toolDescriptions.delivery)}" ${episode?'':'disabled'}>검토 · 공개</button><button type="button" class="icon-btn quiet project-more" data-action="project-menu" data-id="${esc(episode?.id)}" aria-label="프로젝트 메뉴" aria-haspopup="menu" data-tooltip="프로젝트 제목 변경, 버전 기록과 보관 메뉴입니다.">⋯</button></div>
+    <div class="project-tool-strip" role="group" aria-label="프로젝트 도구"><button type="button" data-action="open-scene-editor" aria-haspopup="dialog" data-tooltip="${esc(toolDescriptions.studio)}" ${episode?'':'disabled'}>장면 편집</button><button type="button" data-action="project-section" data-section="source" aria-haspopup="dialog" data-tooltip="${esc(toolDescriptions.source)}" ${episode?'':'disabled'}>소스</button><button type="button" data-action="project-section" data-section="delivery" aria-haspopup="dialog" data-tooltip="${esc(toolDescriptions.delivery)}" ${episode?'':'disabled'}>검토 · 공개</button><button type="button" data-action="project-section" data-section="results" aria-haspopup="dialog" data-tooltip="${esc(toolDescriptions.results)}" ${episode?'':'disabled'}>결과</button><button type="button" class="icon-btn quiet project-more" data-action="project-menu" data-id="${esc(episode?.id)}" aria-label="프로젝트 메뉴" aria-haspopup="menu" data-tooltip="프로젝트 제목 변경, 버전 기록과 보관 메뉴입니다.">⋯</button></div>
   </section>`;
 }
 
@@ -712,17 +737,17 @@ function buildDefaultSlots(preset, scene = {}) {
   const narration = scene.narration || bodyText;
   if (preset === 'premiere-3tier') {
     return [
-      { id: 'slot-top-banner', name: '상단 HTML 뉴스 배너 오버레이', role: 'html-overlay', dataBinding: 'news.headline', x: 4, y: 3, w: 92, h: 12, zIndex: 8, text: title, html: `<div class="pencil-card"><span class="pencil-badge">BREAKING</span><strong>${esc(title)}</strong></div>`, style: { backgroundColor: '#173ea8', textColor: '#ffffff', fontSize: 34, opacity: 0.92, borderRadius: 10, align: 'left', badge: 'NEWS' } },
+      { id: 'slot-top-banner', name: '상단 HTML 뉴스 배너 오버레이', role: 'html-overlay', dataBinding: 'news.headline', x: 4, y: 3, w: 92, h: 12, zIndex: 8, text: title, html: `<div class="pencil-card"><span class="pencil-badge">BREAKING</span><strong>${esc(title)}</strong></div>`, style: { backgroundColor: '#173ea8', textColor: '#ffffff', fontSize: 48, opacity: 0.94, borderRadius: 8, align: 'left', badge: 'NEWS' } },
       { id: 'slot-top-image', name: '상단 AI 이미지 & 텍스트 슬롯', role: 'image-gen', dataBinding: 'scene.imagePrompt', x: 4, y: 17, w: 92, h: 31, zIndex: 2, text: title, prompt: `${title} · 고해상도 인포그래픽 및 상황 일러스트`, style: { backgroundColor: '#242c35', textColor: '#ffffff', fontSize: 32, opacity: 0.85, borderRadius: 8, align: 'center' } },
       { id: 'slot-mid-video', name: '중단 Higgsfield 배경 영상 레이어', role: 'video-bg', dataBinding: 'scene.videoPrompt', x: 0, y: 50, w: 100, h: 50, zIndex: 1, prompt: `${bodyText} · 시네마틱 카메라 워크 배경 영상`, ...(scene.assetUrl && scene.kind === 'video' ? { assetUrl: scene.assetUrl, mediaKind: 'video' } : {}), style: { backgroundColor: '#121820', textColor: '#ffffff', fontSize: 28, opacity: 1, align: 'center' } },
-      { id: 'slot-mid-subtitle', name: '중단/하단 자막 오버레이 레이어', role: 'subtitle-layer', dataBinding: 'scene.narration', x: 6, y: 76, w: 88, h: 16, zIndex: 10, text: narration, style: { backgroundColor: '#0f1419', textColor: '#ffffff', fontSize: 42, opacity: 0.82, borderRadius: 8, align: 'center', badge: 'SUBTITLE' } },
+      { id: 'slot-mid-subtitle', name: '중단/하단 자막 오버레이 레이어', role: 'subtitle-layer', dataBinding: 'scene.narration', x: 6, y: 70, w: 88, h: 24, zIndex: 10, text: narration, style: { backgroundColor: '#111a22', textColor: '#ffffff', fontSize: 60, opacity: 0.86, borderRadius: 0, align: 'center' } },
     ];
   }
   return [
     { id: 'slot-top-image', name: '상단 이미지 생성 모듈', role: 'image-gen', dataBinding: 'scene.imagePrompt', x: 4, y: 4, w: 92, h: 34, zIndex: 2, text: title, prompt: `${title} · 핵심 시각 자료 이미지 생성`, ...(scene.assetUrl && scene.kind === 'image' ? { assetUrl: scene.assetUrl, mediaKind: 'image' } : {}), style: { backgroundColor: '#1e293b', textColor: '#ffffff', fontSize: 34, opacity: 0.9, borderRadius: 8, align: 'center' } },
     { id: 'slot-top-text', name: '상단 텍스트 레이아웃 오버레이', role: 'text-overlay', dataBinding: 'scene.title', x: 8, y: 7, w: 84, h: 12, zIndex: 6, text: title, style: { backgroundColor: '#2851c8', textColor: '#ffffff', fontSize: 38, opacity: 0.88, borderRadius: 6, align: 'center', badge: 'HEADLINE' } },
     { id: 'slot-mid-video', name: '중단 배경 영상 레이어 (Higgsfield)', role: 'video-bg', dataBinding: 'scene.videoPrompt', x: 0, y: 40, w: 100, h: 60, zIndex: 1, prompt: `${bodyText} · 역동적인 배경 영상 연출`, ...(scene.assetUrl && scene.kind === 'video' ? { assetUrl: scene.assetUrl, mediaKind: 'video' } : {}), style: { backgroundColor: '#0f172a', textColor: '#ffffff', fontSize: 30, opacity: 1, align: 'center' } },
-    { id: 'slot-mid-subtitle', name: '중단 영상 위 자막 레이어', role: 'subtitle-layer', dataBinding: 'scene.text', x: 6, y: 74, w: 88, h: 18, zIndex: 10, text: bodyText, html: `<div class="pencil-subtitle">${esc(bodyText)}</div>`, style: { backgroundColor: '#111827', textColor: '#ffffff', fontSize: 44, opacity: 0.84, borderRadius: 8, align: 'center', badge: 'CC' } },
+    { id: 'slot-mid-subtitle', name: '중단 영상 위 자막 레이어', role: 'subtitle-layer', dataBinding: 'scene.text', x: 6, y: 70, w: 88, h: 24, zIndex: 10, text: bodyText, html: `<div class="pencil-subtitle">${esc(bodyText)}</div>`, style: { backgroundColor: '#111a22', textColor: '#ffffff', fontSize: 60, opacity: 0.86, borderRadius: 0, align: 'center' } },
   ];
 }
 
@@ -759,12 +784,12 @@ function slotBuilderHtml(scene) {
     </div>
     <div class="row" style="flex-wrap:wrap;gap:6px;margin-bottom:10px">
       <button type="button" class="small quiet" data-action="add-slot" data-role="image-gen">＋ 이미지 모듈</button>
-      <button type="button" class="small quiet" data-action="add-slot" data-role="text-overlay">＋ 텍스트 모듈</button>
+      <button type="button" class="small quiet" data-action="add-slot" data-role="text-overlay">＋ 뉴스 카드</button>
       <button type="button" class="small quiet" data-action="add-slot" data-role="video-bg">＋ 배경영상 레이어</button>
       <button type="button" class="small quiet" data-action="add-slot" data-role="subtitle-layer">＋ 자막 레이어</button>
       <button type="button" class="small quiet" data-action="add-slot" data-role="html-overlay">＋ Pencil HTML 오버레이</button>
     </div>
-    ${slots.length ? `<div class="slot-pill-list" role="tablist" aria-label="장면 레이아웃 슬롯 목록">${slots.map(slot => `<button type="button" class="small ${active?.id === slot.id ? 'primary' : 'quiet'}" data-action="select-slot" data-slot-id="${esc(slot.id)}">${esc(slot.name)} · Z${slot.zIndex}</button>`).join('')}</div>` : '<p class="hint">위 템플릿 버튼을 눌러 상단 이미지·중단 배경영상·자막 슬롯을 구성하세요.</p>'}
+    ${slots.length ? `<div class="slot-pill-list" role="group" aria-label="장면 레이아웃 슬롯 목록">${slots.map(slot => `<button type="button" class="small ${active?.id === slot.id ? '' : 'quiet'}" aria-pressed="${active?.id === slot.id}" data-action="select-slot" data-slot-id="${esc(slot.id)}">${esc(slot.name)} · Z${slot.zIndex}</button>`).join('')}</div>` : '<p class="hint">위 템플릿 버튼을 눌러 상단 이미지·중단 배경영상·자막 슬롯을 구성하세요.</p>'}
     ${active ? `<div class="slot-inspector-card">
       <div class="row between"><strong>${esc(active.name)}</strong><button type="button" class="small quiet danger" data-action="delete-slot" data-slot-id="${esc(active.id)}">슬롯 삭제</button></div>
       <label>모듈 이름<input data-slot-field="name" maxlength="120" value="${esc(active.name)}"></label>
@@ -880,7 +905,7 @@ function studioView() {
   const scene = currentScene();
   html += `<div class="editor-grid"><div><div class="monitor-deck"><aside class="panel project-bin" aria-label="프로젝트 장면 목록"><div class="panel-header"><h3>프로젝트</h3><span class="badge">${episode.scenes.length}</span></div><div class="source-heading"><span class="eyebrow">PROJECT BIN</span><strong>${esc(episode.title)}</strong></div><div class="project-bin-list" id="project-bin-list">${sceneBinItems()}</div><p class="source-note">장면 선택은 미리보기와 편집 패널에 함께 반영됩니다.</p></aside><section class="panel program-monitor"><div class="panel-header"><div class="row"><span class="eyebrow">PROGRAM MONITOR</span><span class="badge">${esc(episode.format)}</span></div><span id="save-status" class="${dirty ? 'unsaved' : 'hint'}">${dirty ? '저장되지 않은 변경' : `버전 ${episode.version} · 저장됨`}</span></div><div class="preview-stage"><span class="stage-tag">LIVE CANVAS / ${esc(episode.category?.toUpperCase() || 'STUDIO')}</span><div id="preview" class="preview" data-format="${esc(episode.format)}" aria-label="현재 장면 미리보기"></div></div><div class="transport"><span class="time" id="play-time">${time(episode.scenes.slice(0,sceneIndex).reduce((sum,s) => sum + s.duration,0))} / ${time(duration())}</span><div class="row"><button class="icon-btn quiet" data-action="prev" aria-label="이전 장면">‹</button><button class="icon-btn primary" data-action="play" aria-label="${playing ? '미리보기 정지' : '미리보기 재생'}">${playing ? 'Ⅱ' : '▶'}</button><button class="icon-btn quiet" data-action="next" aria-label="다음 장면">›</button></div><span class="hint">${sceneIndex + 1} / ${episode.scenes.length} 장면</span></div></section></div>
     <section class="panel timeline"><div class="panel-header"><div><span class="eyebrow">SEQUENCE</span><h3>장면 타임라인</h3></div><span class="hint" id="total-duration">총 ${duration()}초</span></div><div class="timeline-body"><div class="ruler"><span>00:00</span><span>V1 · 장면 순서 / A · 첨부 오디오</span><span>${time(duration())}</span></div><div class="scenes" id="scenes">${sceneCards()}</div><div class="row between timeline-actions"><button class="small quiet" data-action="add-scene">＋ 장면 추가</button><div class="row"><button class="small quiet" data-action="save-template">템플릿으로 저장</button><button class="small quiet" data-action="view" data-view="templates">템플릿 불러오기 ↗</button></div></div></div></section>
-    <section class="panel section-spacer"><div class="panel-header"><h3>내보내기 작업</h3><span class="hint">FFmpeg · MP4</span></div><div id="jobs">${jobsHtml()}</div></section>
+    <section class="panel section-spacer"><div class="panel-header"><h3>수동 내보내기 · 워크플로 렌더와 별도</h3><span class="hint">FFmpeg · MP4</span></div><div id="jobs">${jobsHtml()}</div></section>
     </div>
     <div class="right-column"><section class="panel inspector"><div class="panel-header"><h3>장면 편집</h3><span class="badge">SCENE ${String(sceneIndex + 1).padStart(2,'0')}</span></div><div class="panel-body">${scene ? inspectorHtml(scene) : '<p>장면을 추가해 주세요.</p>'}</div></section>${narrationHtml()}${chatHtml()}</div></div><p class="footnote">변경 사항은 버전별로 기록됩니다. 영상 업로드 전 채널 연결과 콘텐츠 권리를 확인하세요.</p>`;
   return html;
@@ -892,7 +917,7 @@ function inspectorBaseHtml(scene) {
 
 function sceneWithCaptionsHtml(scene) {
   const cues = Array.isArray(scene.captions) ? scene.captions : [];
-  return `${inspectorBaseHtml(scene)}<section class="section-spacer" aria-label="장면별 시간 자막"><h4>장면별 시간 자막</h4><p class="hint">시간은 이 장면의 시작을 기준으로 합니다. ${scene.captions === undefined ? '자막을 추가하지 않으면 기존 장면 텍스트가 유지됩니다.' : '빈 자막 목록은 시간 자막을 표시하지 않습니다.'}</p>${cues.map((cue,index)=>`<fieldset class="caption-cue" aria-label="자막 ${index+1}"><legend>자막 ${index+1}</legend><div class="two-cols"><label for="caption-start-${index}">시작 (초)</label><input id="caption-start-${index}" aria-label="시작 (초)" type="number" step="any" min="0" data-caption="start" data-caption-index="${index}" value="${esc(cue.start)}"><label for="caption-end-${index}">종료 (초)</label><input id="caption-end-${index}" aria-label="종료 (초)" type="number" step="any" min="0" data-caption="end" data-caption-index="${index}" value="${esc(cue.end)}"></div><label for="caption-text-${index}">자막 내용</label><textarea id="caption-text-${index}" aria-label="자막 내용" data-caption="text" data-caption-index="${index}" maxlength="2000" rows="2">${esc(cue.text)}</textarea><button type="button" class="small quiet danger" data-action="delete-caption" data-index="${index}">자막 삭제</button></fieldset>`).join('')}<button type="button" class="small" data-action="add-caption" ${cues.length>=200?'disabled':''}>자막 추가</button></section>`;
+  return `${inspectorBaseHtml(scene)}<section class="section-spacer" aria-label="장면별 시간 자막"><h4>장면별 시간 자막</h4><p class="hint">시간은 이 장면의 시작을 기준으로 합니다. 기존 장면은 즉시 표시가 기본이며, 타이핑은 이 장면에서 선택할 때만 적용됩니다. ${scene.captions === undefined ? '자막을 추가하지 않으면 기존 장면 텍스트가 유지됩니다.' : '빈 자막 목록은 시간 자막을 표시하지 않습니다.'}</p><label for="caption-effect">자막 표시 효과<select id="caption-effect" data-scene="captionEffect"><option value="instant" ${scene.captionEffect !== 'typewriter' ? 'selected' : ''}>즉시 표시 · 기본</option><option value="typewriter" ${scene.captionEffect === 'typewriter' ? 'selected' : ''}>타이핑 · 프리뷰와 렌더에 적용</option></select></label>${cues.map((cue,index)=>`<fieldset class="caption-cue" aria-label="자막 ${index+1}"><legend>자막 ${index+1}</legend><div class="two-cols"><label for="caption-start-${index}">시작 (초)</label><input id="caption-start-${index}" aria-label="시작 (초)" type="number" step="any" min="0" data-caption="start" data-caption-index="${index}" value="${esc(cue.start)}"><label for="caption-end-${index}">종료 (초)</label><input id="caption-end-${index}" aria-label="종료 (초)" type="number" step="any" min="0" data-caption="end" data-caption-index="${index}" value="${esc(cue.end)}"></div><label for="caption-text-${index}">자막 내용</label><textarea id="caption-text-${index}" aria-label="자막 내용" data-caption="text" data-caption-index="${index}" maxlength="2000" rows="2">${esc(cue.text)}</textarea><button type="button" class="small quiet danger" data-action="delete-caption" data-index="${index}">자막 삭제</button></fieldset>`).join('')}<button type="button" class="small" data-action="add-caption" ${cues.length>=200?'disabled':''}>자막 추가</button></section>`;
 }
 
 function musicOptionsHtml(selected = '') {
@@ -1111,11 +1136,11 @@ function updatePreview() {
   const slots = Array.isArray(scene.slots) ? [...scene.slots].sort((a, b) => (Number(a.zIndex) || 0) - (Number(b.zIndex) || 0)) : [];
   if (slots.length) {
     const activeId = currentSlot()?.id;
-    const slotsHtml = slots.map(slot => {
+    const slotsHtml = slots.map((slot, slotIndex) => {
       const bg = safeColor(slot.style?.backgroundColor || '#1e293b');
       const opacity = Math.max(0, Math.min(1, Number(slot.style?.opacity ?? 0.85)));
       const radius = Math.max(0, Math.min(80, Number(slot.style?.borderRadius ?? 8)));
-      const fontSize = Math.max(16, Math.min(120, Math.round(Number(slot.style?.fontSize) || (slot.role === 'subtitle-layer' ? 44 : 36))));
+      const fontSize = Math.max(16, Math.min(120, Math.round(Number(slot.style?.fontSize) || (slot.role === 'subtitle-layer' ? 60 : 36))));
       const textColor = safeTextColor(slot.style?.textColor || '#ffffff');
       const align = safeAlign(slot.style?.align);
       const slotMedia = slot.assetUrl
@@ -1124,12 +1149,12 @@ function updatePreview() {
           : `<img src="${safeUrl(slot.assetUrl)}" alt="${esc(slot.name)}" class="slot-media">`)
         : '';
       const badge = slot.style?.badge ? `<span class="slot-badge">${esc(slot.style.badge)}</span>` : `<span class="slot-role-tag">${esc(slot.role)}</span>`;
-      const timedSlot = Array.isArray(scene.captions) && slots.findIndex(item => item.role === 'subtitle-layer') === slots.indexOf(slot);
+      const timedSlot = Array.isArray(scene.captions) && slots.findIndex(item => item.role === 'subtitle-layer') === slotIndex;
       const copyText = timedSlot ? '' : slot.text || (slot.dataBinding === 'scene.title' ? scene.title : slot.dataBinding === 'scene.narration' ? (scene.narration || scene.text) : slot.dataBinding === 'scene.text' ? scene.text : slot.prompt || '');
-      return `<div class="preview-slot ${activeId === slot.id ? 'selected' : ''} role-${esc(slot.role)}" data-slot-id="${esc(slot.id)}" style="left:${Number(slot.x)||0}%;top:${Number(slot.y)||0}%;width:${Number(slot.w)||50}%;height:${Number(slot.h)||25}%;z-index:${Number(slot.zIndex)||1};background:${bg};opacity:${opacity};border-radius:${radius}px;color:${textColor};text-align:${align}">
+      return `<div class="preview-slot ${activeId === slot.id ? 'selected' : ''}${timedSlot ? ' timed-caption-slot' : ''} role-${esc(slot.role)}" data-slot-id="${esc(slot.id)}" style="left:${Number(slot.x)||0}%;top:${Number(slot.y)||0}%;width:${Number(slot.w)||50}%;height:${Number(slot.h)||25}%;z-index:${Number(slot.zIndex)||1};--slot-background:${bg};--slot-opacity:${opacity};border-radius:${radius}px;color:${textColor};text-align:${align}">
         ${slotMedia}
         <div class="slot-overlay-content">
-          <div class="slot-header-meta">${badge}<small>${esc(slot.dataBinding)}</small></div>
+          ${timedSlot ? '' : `<div class="slot-header-meta">${badge}<small>${esc(slot.dataBinding)}</small></div>`}
           <div class="slot-copy" ${timedSlot ? 'data-preview-caption' : ''} style="font-size:${fontSize * 100 / exportWidth}cqw;color:${textColor};text-align:${align}">${esc(copyText)}</div>
         </div>
         <span class="slot-resize-handle" title="크기 조절">◢</span>
@@ -1154,12 +1179,12 @@ function sceneCards() {
 }
 function jobsHtml() {
   const jobs = state.jobs.filter(job => job.episodeId === episode?.id).slice().reverse();
-  if (!jobs.length) return '<div class="panel-body hint">영상을 내보내면 이곳에서 진행 상황과 다운로드를 확인할 수 있습니다.</div>';
-  return jobs.slice(0,6).map(job => `<div class="job-item"><span class="badge ${job.status === 'completed' ? 'lime' : ''}">${esc(statusNames[job.status] || job.status)}</span><span class="muted">${date(job.createdAt)}</span>${['queued','running'].includes(job.status) ? `<progress value="${Number(job.progress) || 0}" max="100" aria-label="렌더링 진행률"></progress>` : ''}${job.outputUrl ? `<a href="${safeUrl(job.outputUrl)}" download>MP4 다운로드 ↓</a><button type="button" class="small quiet" data-action="platform-session-interact" data-interact="attach-export" data-export-url="${esc(job.outputUrl)}">플랫폼 세션에 마운트 ↗</button>` : ''}${job.error ? `<span class="danger">${esc(job.error)}</span>` : ''}</div>`).join('');
+  if (!jobs.length) return '<div class="panel-body hint">수동 MP4 내보내기를 시작하면 프로젝트 버전별 상태·진행률과 결과를 확인할 수 있습니다. 워크플로 렌더는 별도 경로입니다.</div>';
+  return jobs.slice(0,6).map(job => `<div class="job-item" data-testid="render-job-${esc(job.id)}"><div class="row between"><strong>${job.source === 'workflow' ? '워크플로 렌더' : job.source === 'manual' ? '수동 장면 내보내기' : '렌더 출처 미상'}</strong><span class="badge ${job.status === 'completed' ? 'lime' : job.status === 'failed' ? 'coral' : ''}">${esc(statusNames[job.status] || job.status)}</span></div><span class="muted">${esc(episode?.title || '프로젝트')} · v${Number(job.episodeVersion || 0)} · ${date(job.createdAt)}</span>${['queued','running'].includes(job.status) ? `<progress value="${Math.max(0,Math.min(100,Number(job.progress)||0))}" max="100" aria-label="${job.source === 'workflow' ? '워크플로 렌더' : job.source === 'manual' ? '수동 내보내기' : '렌더'} 진행률"></progress><span class="hint">${job.status === 'queued' ? '대기 중' : `실제 FFmpeg 진행 ${Math.max(0,Math.min(100,Number(job.progress)||0))}%`}</span>` : ''}${job.outputUrl ? `<div class="row"><a href="${safeUrl(job.outputUrl)}" target="_blank" rel="noopener noreferrer">MP4 결과 다시 열기 ↗</a><a href="${safeUrl(job.outputUrl)}" download>MP4 다운로드 ↓</a><button type="button" class="small quiet" data-action="platform-session-interact" data-interact="attach-export" data-export-url="${esc(job.outputUrl)}">플랫폼 세션에 마운트 ↗</button></div>` : ''}${job.error ? `<span class="danger" role="alert">${esc(job.error)}</span>` : ''}</div>`).join('');
 }
 function chatHtml() {
   const messages = chatLogs.get(episode.id) || [];
-  return `<section class="panel"><div class="panel-header"><div class="row"><span style="color:var(--lime)">✳</span><h3>제작 어시스턴트</h3></div><span class="badge">AGENT</span></div><div class="panel-body"><div class="chat-log" id="chat-log">${messages.length ? messages.map(message => `<div class="chat-message ${message.role === 'user' ? 'user' : ''}"><span class="chat-name">${esc(message.role === 'user' ? 'YOU' : message.agent)}</span>${esc(message.text)}</div>`).join('') : '<div class="chat-message"><span class="chat-name">STUDIO ASSISTANT</span>소재를 장면으로 구성해 보세요. 스튜디오 어시스턴트는 규칙 기반으로 장면을 만들고, 외부 에이전트는 실제 연결 상태에 따라 실행됩니다.</div>'}</div><form id="chat-form" class="chat-form"><label style="margin:0">실행 에이전트<select name="agent"><option value="studio">Studio · 규칙 기반</option value="codex">Codex · 외부 에이전트</option><option value="jeo">JEO · 외부 에이전트</option><option value="jeopi">JEOPI · 외부 에이전트</option><option value="hermes">Hermes · 외부 에이전트</option></select></label><textarea name="message" aria-label="에이전트에게 요청" placeholder="이 소재로 3장면 스토리보드를 만들어줘" required maxlength="4000"></textarea><button class="primary" type="submit">작업 실행 ↗</button></form></div></section>`;
+  return `<section class="panel"><div class="panel-header"><div class="row"><span style="color:var(--lime)">✳</span><h3>제작 어시스턴트</h3></div><span class="badge">AGENT</span></div><div class="panel-body"><div class="chat-log" id="chat-log">${messages.length ? messages.map(message => `<div class="chat-message ${message.role === 'user' ? 'user' : ''}"><span class="chat-name">${esc(message.role === 'user' ? 'YOU' : message.agent)}</span>${esc(message.text)}</div>`).join('') : '<div class="chat-message"><span class="chat-name">STUDIO ASSISTANT</span>소재를 장면으로 구성해 보세요. 외부 에이전트는 실제 연결 상태에 따라 실행됩니다.</div>'}</div><form id="chat-form" class="chat-form"><label style="margin:0">실행 에이전트<select name="agent"><option value="studio">Studio · 규칙 기반</option><option value="codex">Codex · 외부 에이전트</option><option value="jeo">JEO · 외부 에이전트</option><option value="jeopi">JEOPI · 외부 에이전트</option><option value="hermes">Hermes · 외부 에이전트</option></select></label><p class="wf-review-warning" role="note">Studio는 일반 AI가 아닌 규칙 기반 도우미입니다. 실행하면 기존 장면을 정확히 3장면으로 교체하며, 입력 문구가 장면 내용과 작업 기록에 그대로 저장될 수 있습니다. 실행 전에 내용을 확인하세요.</p><textarea name="message" aria-label="에이전트에게 요청" placeholder="이 소재로 3장면 스토리보드를 만들어줘" required maxlength="4000"></textarea><button class="primary" type="submit">작업 실행 ↗</button></form></div></section>`;
 }
 
 function trendsView() {
@@ -1179,7 +1204,7 @@ function trendsView() {
     `<div class="source-note">${esc(sourceNote)}</div><div class="research-grid"><section class="panel"><div class="panel-header"><div><span class="eyebrow">COLLECTOR STATUS</span><h2>수집 상태</h2></div><span class="badge ${statusTone}">${esc(status)}</span></div><div class="panel-body"><div class="two-cols"><div><p class="hint">마지막 수집</p><strong>${lastRun?.completedAt ? date(lastRun.completedAt) : '아직 없음'}</strong></div><div><p class="hint">다음 수집</p><strong>${collector.nextDueAt ? date(collector.nextDueAt) : enabled ? '예약 대기' : '자동 수집 꺼짐'}</strong></div><div><p class="hint">수집 주기</p><strong>${esc(trendInterval(settings.intervalMs))}</strong></div><div><p class="hint">보존 기간</p><strong>${esc(trendDays(settings.retentionMs))}</strong><span class="hint"> · 오래된 트렌드 스냅샷만 정리</span></div></div>${lastRun?.error ? `<p class="danger" role="alert">${esc(lastRun.error)}</p>` : ''}<form id="trend-settings-form" class="section-spacer"><div class="two-cols"><label>자동 수집<input name="enabled" type="checkbox" ${enabled ? 'checked' : ''}></label><label>수집 주기 (시간)<input name="intervalHours" type="number" min="1" max="168" step="1" value="${intervalHours}"></label></div><button class="small" type="submit">설정 저장</button><p class="hint" style="margin-top:12px">자동 수집은 기본 꺼짐이며, 켜면 서버 재시작 후에도 설정을 유지합니다.</p></form></div></section><section class="panel"><div class="panel-header"><h2>인기 키워드</h2><span class="badge">최근 14일</span></div><div class="panel-body">${popular.length ? `<div class="row" style="flex-wrap:wrap">${popular.map(item => `<button class="small quiet" data-action="trend-popular" data-query="${esc(item.keyword)}">${esc(item.keyword)} · ${Number(item.count) || 0}</button>`).join('')}</div>` : '<p class="empty">최근 14일 동안 수집된 인기 키워드가 없습니다.</p>'}</div></section></div><section class="panel section-spacer"><div class="panel-header"><div><h2>소재 보관함</h2><p class="hint">${records.length}개 표시 · 검색 결과는 서버에서 제한됩니다.</p></div><form id="trend-search-form" class="row"><label class="sr-only" for="trend-query">키워드 검색</label><input id="trend-query" name="query" maxlength="300" placeholder="키워드 검색"><button class="small" type="submit">검색</button></form></div><div class="data-list">${records.length ? records.map(trend => `<div class="data-row"><div><h3>${esc(trend.keyword)}</h3><p>${esc(trend.source || '수동 기록')} · ${date(trend.capturedAt || trend.lastCapturedAt || trend.createdAt)} ${trend.selected ? ' · 선택됨' : ''}</p>${trend.url ? `<a class="hint" href="${safeUrl(trend.url)}" target="_blank" rel="noopener noreferrer">원문 확인 ↗</a>` : ''}${trendMediaHtml(trend) ? `<p>${trendMediaHtml(trend)}</p>` : ''}</div><div class="row"><button class="small quiet" data-action="trend-select" data-keyword="${esc(trend.keyword)}" data-selected="${trend.selected ? 'false' : 'true'}">${trend.selected ? '선택 해제' : '선택'}</button><button class="small" data-action="trend-episode" data-keyword="${esc(trend.keyword)}">에피소드로 만들기</button></div></div>`).join('') : '<div class="empty">아직 수집한 소재가 없습니다.<br>지금 수집하거나 관심 키워드를 직접 기록하세요.</div>'}</div></section><section class="panel section-spacer"><div class="panel-header"><h2>최근 수집 기록</h2><span class="badge">${runs.length}건</span></div>${runs.length ? runs.map(run => `<div class="data-row"><div><h3>${esc(run.status === 'completed' ? '수집 완료' : '수집 실패')}</h3><p>${date(run.completedAt || run.startedAt)} · ${Number(run.inserted) || 0}개 추가 · ${Number(run.pruned) || 0}개 정리</p></div><span class="badge ${run.status === 'completed' ? 'lime' : 'coral'}">${esc(run.status)}</span></div>`).join('') : '<div class="empty">아직 수집 실행 기록이 없습니다.</div>'}</section><section class="panel section-spacer"><div class="panel-header"><h2>키워드 직접 기록</h2></div><form class="panel-body" id="trend-form"><label>키워드<input name="keyword" required maxlength="300" placeholder="지금 사람들이 궁금해하는 것"></label><label>출처<select name="source"><option>Naver</option><option>Google</option><option>YouTube</option><option>직접 조사</option></select></label><label>원문 링크<input name="url" type="url" required placeholder="https://..."></label><button class="primary" type="submit">소재 저장</button><p class="hint" style="margin-top:14px">관심도와 사실 여부는 원문을 확인해 판단하세요.</p></form></section><section class="panel section-spacer"><div class="panel-header"><h2>연출 레퍼런스</h2><button class="small" data-action="new-reference">＋ 레퍼런스 추가</button></div>${state.references.length ? state.references.map(reference => `<div class="data-row"><div><h3>${esc(reference.title)}</h3><p>${esc(categoryNames[reference.category] || reference.category)} · ${esc(reference.notes)}</p></div><a href="${safeUrl(reference.url)}" target="_blank" rel="noopener noreferrer">원본 보기 ↗</a></div>`).join('') : '<div class="empty">같은 카테고리 크리에이터의 구도, 템포, 자막 스타일을 기록하세요.</div>'}</section>`;
 }
 function templatesView() {
-  return heading('템플릿', '장면 구조를 불러와 현재 에피소드에 적용합니다.', episode ? '<button data-action="save-template">현재 장면을 템플릿으로 저장</button>' : '') + `<div class="cards">${state.templates.map(template => `<article class="panel"><div class="template-art" style="background:${safeColor(template.scenes?.[0]?.background)}">${esc(template.scenes?.[0]?.text || template.name)}</div><div class="template-info"><div class="row between"><h2>${esc(template.name)}</h2><span class="badge">${esc(template.format)}</span></div><p>${esc(categoryNames[template.category] || template.category)} · ${template.scenes?.length || 0} 장면</p><button class="primary small" data-action="apply-template" data-id="${esc(template.id)}">${episode ? '현재 에피소드에 적용' : '에피소드를 먼저 선택하세요'}</button></div></article>`).join('')}</div><p class="footnote">템플릿을 적용하면 현재 장면이 변경됩니다. 적용 전 버전은 제작 히스토리에 남습니다.</p>`;
+  return heading('템플릿', '장면 구조를 불러와 현재 에피소드에 적용합니다.', episode ? '<button data-action="save-template">현재 장면을 템플릿으로 저장</button>' : '') + `<div class="cards">${state.templates.map(template => `<article class="panel"><div class="template-art" style="background:${safeColor(template.scenes?.[0]?.background)}">${esc(template.scenes?.[0]?.text || template.name)}</div><div class="template-info"><div class="row between"><h2>${esc(template.name)}</h2><span class="badge">${esc(template.format)}</span></div><p>${esc(categoryNames[template.category] || template.category)} · ${template.scenes?.length || 0} 장면</p><button class="small" data-action="apply-template" data-id="${esc(template.id)}">${episode ? '현재 에피소드에 적용' : '에피소드를 먼저 선택하세요'}</button></div></article>`).join('')}</div><p class="footnote">템플릿을 적용하면 현재 장면이 변경됩니다. 적용 전 버전은 제작 히스토리에 남습니다.</p>`;
 }
 function historyView() {
   const selected=history.find(item=>item.version===historyVersion) || history[0];
@@ -1582,15 +1607,41 @@ function updateSaveStatus() {
   if (status) {status.textContent=savePending?'저장 중…':dirty?'저장되지 않은 변경':`버전 ${episode?.version} · 저장됨`;status.className=dirty?'unsaved':'hint';status.setAttribute('role','status');}
   if ($('#save-button')) $('#save-button').disabled=savePending || !dirty || Boolean(projectEditReason());
 }
+function captionGraphemes(value) {
+  const text = String(value || '').normalize('NFC');
+  return typeof Intl.Segmenter === 'function'
+    ? [...new Intl.Segmenter('ko', {granularity:'grapheme'}).segment(text)].map(part => part.segment)
+    : Array.from(text);
+}
+function captionTypingDuration(cue, count) {
+  const span = Math.max(0.01, Number(cue.end) - Number(cue.start));
+  return Math.round(Math.min(1.8, Math.max(0.12, count * 0.045), span * 0.6) * 100) / 100;
+}
 function updatePreviewCaptions() {
   clearTimeout(previewCueTimer);
-  const scene = currentScene(), target = $('[data-preview-caption]', $('#preview') || document);
-  if (!target || !Array.isArray(scene?.captions)) return;
+  const scene = currentScene(), preview = $('#preview');
+  const targets = [...(preview?.querySelectorAll('[data-preview-caption]') || [])];
+  if (!targets.length || !Array.isArray(scene?.captions)) return;
   const elapsed = playing ? Math.max(0, (performance.now() - previewSceneStartedAt) / 1000) : 0;
-  const cues = scene.captions.filter(cue => typeof cue.text === 'string' && Number.isFinite(cue.start) && Number.isFinite(cue.end)).map(cue => ({text:cue.text,start:Math.round(cue.start * 100) / 100,end:Math.round(cue.end * 100) / 100}));
-  target.innerHTML = cues.filter(cue => elapsed >= cue.start && elapsed < cue.end).map(cue => `<div>${esc(cue.text)}</div>`).join('');
+  const cues = scene.captions.filter(cue => typeof cue.text === 'string' && Number.isFinite(cue.start) && Number.isFinite(cue.end)).map(cue => {
+    const graphemes = captionGraphemes(cue.text);
+    return {text:cue.text,start:Math.round(cue.start * 100) / 100,end:Math.round(cue.end * 100) / 100,graphemes,duration:captionTypingDuration(cue,graphemes.length)};
+  });
+  const active = cues.filter(cue => elapsed >= cue.start && elapsed < cue.end).map(cue => {
+    const visible = scene.captionEffect === 'typewriter'
+      ? Math.min(cue.graphemes.length,Math.max(1,Math.floor((elapsed - cue.start) / cue.duration * cue.graphemes.length) + 1))
+      : cue.graphemes.length;
+    return `<div class="caption-line">${esc(cue.graphemes.slice(0,visible).join(''))}</div>`;
+  }).join('');
+  for (const target of targets) {
+    target.innerHTML = active;
+    target.closest('.timed-caption-slot')?.classList.toggle('caption-active', active.length > 0);
+  }
   if (playing) {
-    const next = cues.flatMap(cue => [cue.start,cue.end]).filter(time => time > elapsed).reduce((nearest,time) => Math.min(nearest,time),Infinity);
+    const boundaries = cues.flatMap(cue => scene.captionEffect === 'typewriter'
+      ? [cue.start,cue.end,...Array.from({length:cue.graphemes.length},(_,index) => cue.start + cue.duration * (index + 1) / cue.graphemes.length)]
+      : [cue.start,cue.end]);
+    const next = boundaries.filter(time => time > elapsed + 0.002).reduce((nearest,time) => Math.min(nearest,time),Infinity);
     if (Number.isFinite(next)) previewCueTimer = setTimeout(updatePreviewCaptions,Math.max(1,Math.ceil((next - elapsed) * 1000)));
   }
 }
@@ -1647,7 +1698,7 @@ function playNext() {
 }
 
 function openModal(title, body, handler, submit = '만들기') {
-  $('#modal-content').innerHTML = `<h2>${title}</h2>${body}`;
+  $('#modal-content').innerHTML = `<h2>${title}</h2>${body}<p id="modal-error" class="danger" role="alert" tabindex="-1" hidden></p>`;
   projectToolRequest += 1;
   $('#modal-form button[type="submit"]').textContent = submit;
   modalHandler = handler;
@@ -1665,8 +1716,10 @@ function newChannel() {
 function newEpisode(topic = '') {
   if (!channelId) { newChannel(); return; }
   const targetChannelId = channelId;
-  openModal('새 에피소드 만들기', `<label>에피소드 제목<input name="title" required maxlength="200" value="${esc(topic)}" placeholder="이번 이야기의 제목"></label><label>소재 / 주제<textarea name="topic" required placeholder="어떤 이야기를 전달할까요?">${esc(topic)}</textarea></label><label>콘텐츠 유형<select name="category">${categoryOptions(activeChannel()?.category)}</select></label>`, async data => {
-    const created = await post('/api/episodes',{...data,channelId:targetChannelId});
+  openModal('새 에피소드 만들기', `<label>에피소드 제목<input name="title" required maxlength="200" value="${esc(topic)}" placeholder="이번 이야기의 제목"></label><label for="new-episode-topic">소재 / 주제</label><textarea id="new-episode-topic" name="topic" required minlength="1" maxlength="500" aria-describedby="new-episode-topic-help new-episode-topic-count" placeholder="어떤 이야기를 전달할까요?">${esc(topic)}</textarea><p id="new-episode-topic-help" class="hint">주제는 앞뒤 공백을 제외해 1~500자입니다. 입력한 내용은 이 프로젝트에 저장됩니다.</p><p id="new-episode-topic-count" class="hint" aria-live="polite">${topic.length}/500자</p><label>콘텐츠 유형<select name="category">${categoryOptions(activeChannel()?.category)}</select></label>`, async data => {
+    const normalizedTopic = data.topic.trim();
+    if (!normalizedTopic || normalizedTopic.length > 500) throw new Error('소재 / 주제는 앞뒤 공백을 제외해 1~500자로 입력하세요.');
+    const created = await post('/api/episodes',{...data,topic:normalizedTopic,channelId:targetChannelId});
     cacheEpisode(created);
     switchEpisode(created);
     closeProjectOverlays();
@@ -1727,11 +1780,11 @@ async function handleAction(button) {
   else if (action === 'restore-episode') restoreEpisode(Number(button.dataset.version));
   else if (action === 'save-history-draft') {await save(true);await loadHistory();render();}
   else if (action === 'view') { await openProjectTool(button.dataset.view); }
-  else if (action === 'project-section') { await openProjectTool(button.dataset.section === 'delivery' ? 'delivery' : 'source'); }
+  else if (action === 'project-section') { await openProjectTool(button.dataset.section); }
   else if (action === 'new-channel') newChannel();
   else if (action === 'new-episode') newEpisode();
   else if (action === 'channel') { stopPlayback(); closeProjectOverlays(); const targetChannelId = button.dataset.id; switchEpisode(activeEpisodes().find(item => item.id === channelEpisodes.get(targetChannelId) && item.channelId === targetChannelId) || activeEpisodes().find(item => item.channelId === targetChannelId) || null, targetChannelId); view = 'workflow'; render(); $('#main')?.focus(); }
-  else if (action === 'episode') { stopPlayback(); closeProjectOverlays(); switchEpisode(activeEpisodes().find(item => item.id === button.dataset.id) || null); render(); }
+  else if (action === 'episode') { stopPlayback(); closeProjectOverlays(); switchEpisode(activeEpisodes().find(item => item.id === button.dataset.id) || null); render(); $('#main')?.focus(); }
   else if (action === 'add-caption') { const scene=currentScene(); if (!scene) return; if (!Array.isArray(scene.captions)) scene.captions=[]; if (scene.captions.length>=200) throw new Error('장면 자막은 최대 200개입니다.'); scene.captions.push({start:0,end:Math.min(1,Number(scene.duration)),text:''}); markDirty(); render(); }
   else if (action === 'delete-caption') { const scene=currentScene(),index=Number(button.dataset.index); if (!Array.isArray(scene?.captions) || !Number.isInteger(index) || index<0 || index>=scene.captions.length) return; scene.captions.splice(index,1); markDirty(); render(); }
   else if (action === 'remove-music') { if (!episode) return; requireProjectEdit(); episode.music=null; clearPreviewMusic(); markDirty(); render(); }
@@ -1789,7 +1842,7 @@ async function handleAction(button) {
       text: role === 'subtitle-layer' ? (scene.narration || scene.text) : scene.title,
       ...(role === 'html-overlay' ? { html: `<div class="pencil-card"><span class="pencil-badge">OVERLAY</span><strong>${esc(scene.title)}</strong></div>` } : {}),
       ...(role === 'image-gen' || role === 'video-bg' ? { prompt: `${scene.title} · ${scene.text || episode.topic}` } : {}),
-      style: { backgroundColor: role === 'html-overlay' ? '#173ea8' : '#111827', textColor: '#ffffff', fontSize: role === 'subtitle-layer' ? 42 : 34, opacity: 0.85, borderRadius: 8, align: 'center', badge: role === 'html-overlay' ? 'HTML' : role === 'subtitle-layer' ? 'CC' : '' },
+      style: { backgroundColor: role === 'html-overlay' ? '#173ea8' : ['subtitle-layer','text-overlay'].includes(role) ? '#111a22' : '#111827', textColor: '#ffffff', fontSize: role === 'subtitle-layer' ? 60 : role === 'text-overlay' ? 48 : role === 'html-overlay' ? 48 : 34, opacity: role === 'subtitle-layer' ? 0.86 : role === 'text-overlay' ? 0.94 : 0.85, borderRadius: role === 'subtitle-layer' ? 0 : role === 'text-overlay' ? 14 : 8, align: role === 'text-overlay' ? 'left' : 'center', badge: role === 'text-overlay' ? 'NEWS' : role === 'html-overlay' ? 'HTML' : '' },
     };
     scene.slots.push(newSlot);
     if (!['top-image-mid-video','premiere-3tier','custom'].includes(scene.layout)) scene.layout = 'custom';
@@ -1902,7 +1955,7 @@ async function handleAction(button) {
   else if (action === 'refresh-commands') { await loadCommands(); render(); }
   else if (action === 'upload') { pendingSlotUploadId = null; $('#media-file').click(); }
   else if (action === 'remove-media') { delete currentScene().assetUrl; currentScene().kind = 'title'; markDirty(); render(); }
-  else if (action === 'render') { const targetId=episode?.id; await save(true); if (!targetId || episode?.id !== targetId) throw new Error('프로젝트가 바뀌었습니다. 내보내기 대상을 다시 확인하세요.'); const job = await post(`/api/episodes/${targetId}/render`); state.jobs.push(job); render(); toast('MP4 렌더링을 시작했습니다. 아래에서 진행 상황을 확인하세요.'); }
+  else if (action === 'render') { const targetId=episode?.id; if (activeRenderForVersion()) throw new Error('이 프로젝트 버전의 렌더가 이미 대기 중이거나 진행 중입니다. 출처와 상태를 확인하세요.'); await save(true); if (!targetId || episode?.id !== targetId) throw new Error('프로젝트가 바뀌었습니다. 내보내기 대상을 다시 확인하세요.'); const job = await post(`/api/episodes/${targetId}/render`,{expectedVersion:episode.version}); state.jobs=state.jobs.filter(item=>item.id!==job.id); state.jobs.push(job); render(); toast('수동 MP4 내보내기를 시작했습니다. 워크플로 렌더와 분리된 상태를 확인하세요.'); }
   else if (action === 'save-template') { if (!episode) return; openModal('내 템플릿 저장', `<label>템플릿 이름<input name="name" required value="${esc(episode.title)} 템플릿"></label><label>콘텐츠 유형<select name="category">${categoryOptions(episode.category)}</select></label>`, async data => { await post('/api/templates',{...data,format:episode.format,scenes:episode.scenes}); await refresh(); render(); toast('템플릿을 저장했습니다.'); },'저장'); }
   else if (action === 'apply-template') { if (!episode) { toast('프로젝트를 먼저 만들어 주세요.',true); return; } const targetId=episode.id,templateId=button.dataset.id; await save(true); if (episode?.id !== targetId) throw new Error('프로젝트가 바뀌었습니다. 적용 대상을 다시 확인하세요.'); const result=await post(`/api/episodes/${targetId}/template`,{templateId}); cacheEpisode(result); if (reconcileEpisode(result)) { sceneIndex = 0; view = 'workflow'; } closeProjectOverlays(); await refresh(); render(); toast('템플릿 적용 기록을 저장했습니다.'); }
   else if (action === 'refresh-trends') { const result = await post('/api/trends/refresh'); await refresh(); render(); const sources = Array.isArray(result.sources) ? result.sources : Object.values(result.sources || {}); const errors = sources.filter(source => source.error || source.ok === false || source.status === 'error'); toast(errors.length ? `수집 결과를 확인하세요: ${errors.map(source => source.error || source.message || '일부 출처 연결 실패').join(' · ')}` : `${result.trends?.length || 0}개의 트렌드를 수집했습니다.`,errors.length > 0); }
@@ -1969,6 +2022,7 @@ document.addEventListener('focusout', () => queueMicrotask(syncProjectToolsConte
 
 document.addEventListener('input', event => {
   const target = event.target;
+  if (target.id === 'new-episode-topic') { const count=$('#new-episode-topic-count'); if (count) count.textContent=`${target.value.length}/500자`; return; }
   if (target.matches('[data-scene],[data-caption],[data-music],[data-music-source],[data-episode],[data-slot-field],[data-slot-style]') && projectEditReason()) return;
   if (target.id === 'speech-voice') { speechVoice=target.value; return; }
   if (target.id === 'speech-rate') { if (target.checkValidity() && target.value !== '') speechRate=Number(target.value); return; }
@@ -2044,14 +2098,16 @@ document.addEventListener('submit', async event => {
     }
     else if (form.id === 'trend-search-form') { await loadTrendBrowser({query:data.query || ''}); render(); }
     else {
+      if (data.agent === 'studio' && !window.confirm('규칙 기반 Studio는 입력을 바탕으로 기존 장면을 정확히 3장면으로 교체합니다. 입력 내용이 장면 텍스트와 작업 기록에 그대로 저장될 수 있습니다. 이 변경을 진행할까요?')) return;
       const requestId = episode?.id;
       await save(true);
       if (!requestId || episode?.id !== requestId) throw new Error('프로젝트가 바뀌었습니다. 어시스턴트 대상을 다시 확인하세요.');
+      const expectedVersion = episode.version;
       const revision = editRevision;
       const messages = chatLogs.get(requestId) || [];
       messages.push({role:'user',text:data.message});
       chatLogs.set(requestId,messages);
-      const result = await post(`/api/episodes/${requestId}/chat`,data);
+      const result = await post(`/api/episodes/${requestId}/chat`,{...data,expectedVersion});
       messages.push({role:'assistant',agent:data.agent.toUpperCase(),text:result.message});
       if (result.episode) {
         cacheEpisode(result.episode);
@@ -2077,7 +2133,7 @@ $('#modal-form').addEventListener('submit', async event => {
   const button = $('button[type="submit"]',event.currentTarget);
   button.disabled = true;
   try { await modalHandler(Object.fromEntries(new FormData(event.currentTarget))); $('#modal').close(); }
-  catch (error) { toast(error.message,true); }
+  catch (error) { const message=$('#modal-error'); if (message) { message.textContent=error.message; message.hidden=false; message.focus(); } toast(error.message,true); }
   finally { button.disabled = false; }
 });
 
@@ -2285,6 +2341,7 @@ setInterval(async () => {
     }
     if ($('#jobs')) $('#jobs').innerHTML = jobsHtml();
     if ($('#narration-status')) $('#narration-status').innerHTML = narrationStatusHtml();
+    for (const button of document.querySelectorAll('[data-action="render"]')) button.disabled = Boolean(activeRenderForVersion());
     for (const button of document.querySelectorAll('[data-action="narrate-scene"],[data-action="narrate-all"]')) button.disabled = !speech.available || !speechVoice || ['queued','running'].includes(narrationJob()?.status);
     applyProjectControls(); syncProjectToolsContext();
   } catch { /* Foreground actions report errors; job polling preserves the current draft. */ }

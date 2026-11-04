@@ -85,6 +85,53 @@ function trendNodeGraph(name) {
   return { name, nodes: [{ id: nodeId, type: 'trend', x: 50, y: 50, config: {} }], edges: [] };
 }
 
+test('real Chromium shows Studio replacement disclosure and keeps the new-topic counter aligned with server limits', async t => {
+  const f = await workspaceFixture(t), { page, api, writes, externalRequests, pageErrors } = f;
+  const channel = await api('/api/channels', 'POST', { name: 'Studio disclosure fixture', platform: 'youtube', category: 'information' });
+  const episode = await api('/api/episodes', 'POST', { channelId: channel.id, title: 'Disclosure project', topic: 'Browser-only test' });
+  await page.reload();
+  await openChannel(page, channel.id);
+  const disclosure = page.locator('#chat-form .wf-review-warning');
+  const notice = await disclosure.innerText();
+  assert.match(notice, /규칙 기반/);
+  assert.match(notice, /정확히 3장면/);
+  assert.match(notice, /작업 기록에 그대로 저장/);
+  const prompt = '브라우저에서 확인한 규칙 기반 재구성';
+  await page.locator('#chat-form [name=message]').fill(prompt);
+  let cancelledPrompt;
+  page.once('dialog', async dialog => { cancelledPrompt = dialog.message(); await dialog.dismiss(); });
+  await page.locator('#chat-form button[type=submit]').click();
+  assert.match(cancelledPrompt, /정확히 3장면/);
+  assert.equal(writes.length, 0, 'declining the native confirmation sends no mutating request');
+  assert.equal((await api('/api/state')).episodes.find(item => item.id === episode.id).version, 1);
+  let chatResponsePromise = page.waitForResponse(response => response.request().method() === 'POST' && new URL(response.url()).pathname === `/api/episodes/${episode.id}/chat`);
+  page.once('dialog', async dialog => { assert.match(dialog.message(), /그대로 저장/); await dialog.accept(); });
+  await page.locator('#chat-form button[type=submit]').click();
+  const chatResponse = await chatResponsePromise;
+  assert.equal(chatResponse.status(), 200);
+  const afterChat = (await api('/api/state')).episodes.find(item => item.id === episode.id);
+  assert.equal(afterChat.version, 2);
+  assert.equal(afterChat.scenes.length, 3);
+  assert.ok(afterChat.scenes.some(scene => scene.text.includes(prompt)));
+  const chatWrite = writes.find(item => item.path.endsWith('/chat'));
+  assert.equal(JSON.parse(chatWrite.body).expectedVersion, 1, 'assistant request is tied to the version the browser saved');
+
+  await closeProjectOverlay(page);
+  await page.locator('[data-action=new-episode]').first().click();
+  const topic = page.locator('#new-episode-topic');
+  await topic.fill('😀'.repeat(250));
+  assert.equal(await topic.inputValue(), '😀'.repeat(250));
+  assert.equal((await page.locator('#new-episode-topic-count').innerText()).trim(), '500/500자', 'counter uses the server’s UTF-16 code-unit boundary');
+  await page.locator('#modal-form input[name=title]').fill('Browser topic boundary');
+  const createResponsePromise = page.waitForResponse(response => response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/episodes');
+  await page.locator('#modal-form button[type=submit]').click();
+  const createResponse = await createResponsePromise;
+  assert.equal(createResponse.status(), 201);
+  assert.ok((await api('/api/state')).episodes.some(item => item.title === 'Browser topic boundary' && item.topic === '😀'.repeat(250)));
+  assert.deepEqual(externalRequests, [], 'the browser test makes no provider or outside requests');
+  assert.deepEqual(pageErrors, []);
+});
+
 test('a hidden dirty graph alone protects a different clean active project from beforeunload and survives return', async t => {
   const f = await workspaceFixture(t), { page, api, writes } = f;
   const a = await api('/api/channels', 'POST', { name: 'Hidden graph A', platform: 'youtube', category: 'information' });

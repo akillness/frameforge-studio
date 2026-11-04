@@ -278,6 +278,59 @@ test('compact recent-runs history renders bounded diffs, counts and triggers wit
   });
 });
 
+// UX: the compact shared provenance phrase remains intact for compatibility, while the
+// supplemental text clarifies whether a prior output was merely retained or consumed this run.
+test('UX: source-run provenance is keyboard-reachable and fits a 320px result dialog without executing work', async t => {
+  const f = await fixture(t);
+  await f.open();
+  const sourceRunId = f.runs[9].id; // R10 is the exact source of both retained a and reused b in R11.
+  const requests = [];
+  f.page.on('request', request => requests.push({ method: request.method(), url: request.url() }));
+
+  for (const [nodeId, expectedDetail, expectedSourceOutput] of [
+    ['a', /이번 실행에서는 실행하지 않고 보존/, /fixture-trend-6/],
+    ['b', /이번 실행의 입력으로 사용/, /Reference (?:two|one)/],
+  ]) {
+    const dialog = await f.openNodeResults(nodeId, f.runs[10].id);
+    const inspector = dialog.locator('#wf-overlay-result-inspector');
+    const text = await inspector.innerText();
+    assert.match(text, /저장 결과 재사용/, 'preserve the shared legacy summary wording');
+    assert.match(text, expectedDetail, `${nodeId} must expose its distinct execution relationship`);
+    assert.match(text, new RegExp(`출처 실행 ${sourceRunId}`), 'the exact source run ID remains visible');
+    const sourceButton = inspector.locator(`[data-wf-action="select-run"][data-id="${sourceRunId}"]`);
+    await sourceButton.waitFor();
+    const desktopGeometry = await dialog.evaluate(element => ({
+      scrollWidth: element.scrollWidth,
+      clientWidth: element.clientWidth,
+      inspectorScrollWidth: element.querySelector('#wf-overlay-result-inspector').scrollWidth,
+      inspectorClientWidth: element.querySelector('#wf-overlay-result-inspector').clientWidth,
+    }));
+    assert.ok(desktopGeometry.scrollWidth <= desktopGeometry.clientWidth, `desktop dialog must not overflow: ${JSON.stringify(desktopGeometry)}`);
+    assert.ok(desktopGeometry.inspectorScrollWidth <= desktopGeometry.inspectorClientWidth, `desktop result content must not overflow: ${JSON.stringify(desktopGeometry)}`);
+
+    await f.page.setViewportSize({ width: 320, height: 800 });
+    const geometry = await dialog.evaluate(element => ({
+      width: element.getBoundingClientRect().width,
+      scrollWidth: element.scrollWidth,
+      clientWidth: element.clientWidth,
+      inspectorScrollWidth: element.querySelector('#wf-overlay-result-inspector').scrollWidth,
+      inspectorClientWidth: element.querySelector('#wf-overlay-result-inspector').clientWidth,
+    }));
+    assert.ok(geometry.width <= 320, `dialog width ${geometry.width} must fit a 320px viewport`);
+    assert.ok(geometry.scrollWidth <= geometry.clientWidth, `dialog must not overflow horizontally: ${JSON.stringify(geometry)}`);
+    assert.ok(geometry.inspectorScrollWidth <= geometry.inspectorClientWidth, `result content must not overflow horizontally: ${JSON.stringify(geometry)}`);
+
+    await sourceButton.focus();
+    assert.equal(await sourceButton.evaluate(element => document.activeElement === element), true, 'source navigation is keyboard-focusable');
+    await f.page.keyboard.press('Enter');
+    await f.page.waitForFunction(id => document.querySelector('#wf-results-run')?.value === id, sourceRunId);
+    assert.equal(await dialog.locator('#wf-results-run').inputValue(), sourceRunId, 'Enter selects the exact source run for this node');
+    assert.match(await inspector.innerText(), expectedSourceOutput, 'the source run view exposes that node’s original saved output');
+    await f.page.setViewportSize({ width: 1440, height: 1080 });
+  }
+  assert.deepEqual(requests.filter(item => /\/(?:run|plan|quote|skips)$/.test(new URL(item.url).pathname) && item.method !== 'GET'), [], 'provenance navigation must never execute or mutate a workflow');
+});
+
 // --- H1/H2: independent UI review fixes to the EXPANDED run-history detail -----------------
 // (loadRunHistoryDetail in public/workflow.js, section 2.5 "Expanded full history"). Separate
 // fixtures from the compact-row suite above: H1 needs a skip/fail/cascade-fail mix the 12-run

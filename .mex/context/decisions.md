@@ -9,7 +9,7 @@ edges:
   - target: context/conventions.md
     condition: when related context is needed
 grounds_to: []
-last_updated: 2026-10-25
+last_updated: 2026-10-28
 ---
 
 # Decisions
@@ -32,6 +32,7 @@ last_updated: 2026-10-25
 - Quote exact model/prompt/parameters immediately before paid confirmation using the official REST estimate endpoint; if unavailable, require explicit no-quote acknowledgement. Pass quoted workflow/episode versions through optional run guards, rejecting stale 409 before creating a run, so cross-tab edits cannot silently change the consented input.
 - Apply the white design to all seven existing views through the shared shell rather than introducing a second editor. Source design/API facts in `artifacts/white-studio-research.json`; keep configured status weaker than verified authentication/availability, and local fixtures weaker than live-provider proof. The 1.4.0 harness bundle remains immutable and unchanged.
 - Keep personal workspace layout client-owned: presets, bounded numeric dimensions, pointer/keyboard resizing and named profiles persist in browser storage only, so layout changes never mutate server episode/workflow data. Native dialog overlays move the existing inspector, narration and assistant panels; assistant unsent drafts remain episode-scoped transient state while inspector edits remain scene-scoped.
+- Let the server be the only authority for what a workflow action runs. The editor sends an `execution` intent (`node` with a target, or `all`) and shows the read-only `/plan` result; `/quote` and `/run` derive the same selection, so ancestors without reusable output run in graph order, completed ancestors are reused, a rerun marks its dependents stale, and a full run asks to keep or refresh completed nodes. The earlier client-built `selectedStages` without `resumeRunId` skipped connected research output for a real project; explicit legacy bodies stay strict for API clients. Per-node skip is persistent project state, not a version, history snapshot, hashed candidate evidence or publication binding input. Paid generation keeps its quote/consent gate: free preparation that must be saved first runs as a prepare-first prefix and the paid node is quoted afterwards, and a generate node invalidated by an upstream rerun is blocked (`generation_unresolved`) while its previous paid request is unsettled. Unsettled paid requests are guarded per workflow, episode and node across all runs, so an episode-version change or refresh that drops the resume source still blocks duplicate paid submission (source change, isolated fixture tests only). Ambiguous `submission_unknown` requests have no provider request ID, so the app has no recover, apply, confirm or abandon path; they stay blocked pending manual investigation and a separate product decision.
 These are the current implementation rationale and boundaries, not historical claims about unrecorded decisions.
 
 ## Production-workspace interview — 2026-10-24
