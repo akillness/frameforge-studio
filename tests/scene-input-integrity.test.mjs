@@ -104,8 +104,9 @@ async function submit(f, kind, original) {
     expectedVersion: episode.version, format: '1:1', scenes: [first, second],
     music: { assetUrl: music.url, start: 0, trimStart: 0, volume: 0.2, source: { origin: 'own' } },
   });
-  assert.equal(saved.status, 200, await saved.text());
-  const response = await f.request(`/api/episodes/${episode.id}/render`, 'POST', {});
+  assert.equal(saved.status, 200, await saved.clone().text());
+  const current = await saved.json();
+  const response = await f.request(`/api/episodes/${episode.id}/render`, 'POST', { expectedVersion: current.version });
   assert.equal(response.status, 202, await response.clone().text());
   const job = await response.json();
   await f.entered.promise;
