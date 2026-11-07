@@ -16,6 +16,9 @@ import { SourceMediaService } from './media-sources.mjs';
 import { YouTubeOAuth, YOUTUBE_OAUTH_COOKIE_NAME, YOUTUBE_OAUTH_CALLBACK_PATH, YOUTUBE_OAUTH_STATE_TTL_SECONDS } from './youtube-oauth.mjs';
 import { PublicationService } from './publication.mjs';
 import { BlogService } from './blog.mjs';
+import { createAgentOperations, OPERATIONS_VERSION, AGENT_INSTRUCTIONS } from './agent-ops.mjs';
+import { createMcpCore, validateHttpHeaders, rpcError, errorEnvelope, ERROR as MCP_ERROR } from './mcp.mjs';
+import { toOpenApi, toToolDefinitions } from './agent-docs.mjs';
 
 const PUBLIC_DIR = fileURLToPath(new URL('../public/', import.meta.url));
 const MAX_JSON = 1024 * 1024;
@@ -108,7 +111,7 @@ async function generationCall(operation) {
 }
 
 /** Dependency overrides are for local tests; production imports actual adapters. */
-export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), loginToken = process.env.LOGIN_TOKEN || '', publicOrigin = process.env.PUBLIC_ORIGIN, integrations, renderer, speech, generation, generationOptions, platformSessions: injectedPlatformSessions, platformSessionOptions, mediaOptions, youtubeOptions, publicationOptions, blogOptions } = {}) {
+export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), loginToken = process.env.LOGIN_TOKEN || '', publicOrigin = process.env.PUBLIC_ORIGIN, integrations, renderer, speech, generation, generationOptions, platformSessions: injectedPlatformSessions, platformSessionOptions, mediaOptions, youtubeOptions, publicationOptions, blogOptions, agentApiOptions } = {}) {
   if (loginToken && (typeof loginToken !== 'string' || loginToken.length < 16)) throw new Error('LOGIN_TOKEN must contain at least 16 characters');
   if (publicOrigin) {
     const parsed = new URL(publicOrigin);
@@ -233,6 +236,65 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     return json(response, 200, { authenticated: true, role: 'admin', canMutate: true }, { 'Set-Cookie': `frameforge_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${SESSION_AGE / 1000}${secure ? '; Secure' : ''}` });
   }
 
+  // Agent API: bearer auth is accepted only on /api/agent/* and /mcp; browsers never attach it.
+  function bearerSession(request) {
+    const header = request.headers.authorization;
+    if (!loginToken || typeof header !== 'string') return null;
+    const match = /^Bearer ([\x21-\x7e]+)$/.exec(header);
+    if (!match) return null;
+    const key = `bearer:${request.socket.remoteAddress}`;
+    const current = loginAttempts.get(key);
+    const attempt = !current || current.until < Date.now() ? { count: 0, until: Date.now() + 60_000 } : current;
+    if (attempt.count >= 10) throw new HttpError(429, 'Too many authentication attempts. Try again in one minute.');
+    if (!safeEqual(match[1], loginToken)) { loginAttempts.set(key, { ...attempt, count: attempt.count + 1 }); return null; }
+    loginAttempts.delete(key);
+    return { authenticated: true, role: 'admin', canMutate: true };
+  }
+
+  const agentWindows = new Map();
+  function agentRateLimit(response, mutating) {
+    const kind = mutating ? 'write' : 'read';
+    const limit = mutating ? 60 : 300;
+    const now = Date.now();
+    const window = agentWindows.get(kind);
+    if (!window || window.until <= now) { agentWindows.set(kind, { count: 1, until: now + 60_000 }); return; }
+    if (++window.count > limit) {
+      response.setHeader('Retry-After', String(Math.max(1, Math.ceil((window.until - now) / 1000))));
+      throw new HttpError(429, `Agent API ${kind} rate limit reached (${limit}/minute)`);
+    }
+  }
+
+  async function agentInvoke(response, name, body) {
+    if (Object.keys(body).some((key) => key !== 'arguments')) throw new HttpError(400, 'Body accepts only "arguments"');
+    if (!agentMutating.has(name)) return json(response, 404, { ok: false, status: 404, code: 'unknown_operation', error: `Unknown operation: ${name}` });
+    agentRateLimit(response, agentMutating.get(name));
+    try { return json(response, 200, { ok: true, result: await agentOps.invoke(name, body.arguments) }); }
+    catch (caught) {
+      let error = caught;
+      if (!(error instanceof HttpError)) { console.error(`Agent operation ${name} failed:`, error?.message); error = Object.assign(new HttpError(500, 'Operation failed. Check the local service logs.'), { code: 'operation_failed' }); }
+      const { error: detail } = errorEnvelope(error);
+      return json(response, error.status, { ok: false, error: detail.message, status: detail.status, ...(detail.code ? { code: detail.code } : {}), ...(Number.isInteger(detail.currentVersion) ? { currentVersion: detail.currentVersion } : {}) });
+    }
+  }
+
+  async function mcpHttp(request, response, session) {
+    response.setHeader('Cache-Control', 'no-store');
+    if (request.method !== 'POST') { response.setHeader('Allow', 'POST'); return json(response, 405, { error: 'The MCP endpoint accepts POST only' }); }
+    if (!session.authenticated) { response.setHeader('WWW-Authenticate', 'Bearer realm="frameforge-studio"'); return json(response, 401, { error: 'Authentication required: send Authorization: Bearer <token>' }); }
+    let message;
+    try { message = await readJson(request); }
+    catch (error) {
+      const status = error instanceof HttpError ? error.status : 400;
+      return json(response, status, rpcError(null, status === 400 ? MCP_ERROR.PARSE : MCP_ERROR.INVALID_REQUEST, error instanceof HttpError ? error.message : 'Invalid request'));
+    }
+    const checked = validateHttpHeaders(message, request.headers);
+    if (checked.status) return json(response, checked.status, checked.body);
+    if (message.method === 'tools/call' && typeof message.params?.name === 'string' && agentMutating.has(message.params.name)) agentRateLimit(response, agentMutating.get(message.params.name));
+    const { status, body } = await mcp.handle(message, { legacy: checked.legacy });
+    if (body === null) { response.writeHead(status); return response.end(); }
+    return json(response, status, body);
+  }
+
   function validateMusic(music) {
     if (!music) return;
     const matches = store.list('uploads').filter((item) => item.url === music.assetUrl);
@@ -344,6 +406,10 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
   const speechProvider = speech || createSpeechProvider();
   const narration = new NarrationQueue({ store, ...speechProvider });
   const blog = new BlogService({ ...blogOptions, store });
+  const agentOps = createAgentOperations({ store, workflows, enqueueRender, validateAssets, runAgent: async (...args) => (await adapter()).runAgent(...args), allowPaidGeneration: agentApiOptions?.allowPaidGeneration ?? process.env.AGENT_API_ALLOW_PAID_GENERATION === 'true' });
+  const agentCatalog = agentOps.catalog();
+  const agentMutating = new Map(agentCatalog.map((operation) => [operation.name, operation.mutating]));
+  const mcp = createMcpCore({ serverInfo: { name: 'frameforge-studio', title: 'FrameForge Studio', version: OPERATIONS_VERSION }, instructions: AGENT_INSTRUCTIONS, listTools: async () => agentCatalog, callTool: (name, args) => agentOps.invoke(name, args) });
   trendCollector.start();
 
   function assertNoActiveEpisodeWork(id) {
@@ -419,8 +485,11 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     assertSameOrigin(request, publicOrigin);
     if (request.method === 'GET' && path === '/api/health') return json(response, 200, { status: 'ok', service: 'frameforge-studio', authRequired: Boolean(loginToken), storage: 'sqlite', version: '1.0.0' });
     if (request.method === 'POST' && path === '/api/login') return login(request, response, await readJson(request));
-    const session = sessionState(request);
+    if (!loginToken && (path === '/mcp' || path.startsWith('/api/agent/')) && !['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(request.socket.remoteAddress)) throw new HttpError(403, 'Without LOGIN_TOKEN the agent API accepts loopback clients only');
+    let session = sessionState(request);
+    if (!session.authenticated && (path === '/mcp' || path.startsWith('/api/agent/'))) session = bearerSession(request) || session;
     if (request.method === 'GET' && path === '/api/session') return json(response, 200, session);
+    if (path === '/mcp') return mcpHttp(request, response, session);
     if (path.startsWith('/api/') && !session.authenticated) throw new HttpError(401, 'Login required');
     if (path.startsWith('/api/') && !['GET', 'HEAD', 'OPTIONS'].includes(request.method)) requireAdmin(session);
     if (path === '/api/blog' || path.startsWith('/api/blog/')) {
@@ -513,6 +582,13 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     if (request.method === 'GET' && path === '/api/knowledge') return json(response, 200, store.knowledge());
     if (request.method === 'GET' && path === '/api/commands') return json(response, 200, store.list('commands'));
     if (request.method === 'GET' && path === '/api/workflows') return json(response, 200, store.list('workflows'));
+    if (request.method === 'GET' && path === '/api/agent/operations') return json(response, 200, { version: OPERATIONS_VERSION, operations: agentCatalog });
+    if (request.method === 'GET' && path === '/api/agent/openapi.json') return json(response, 200, toOpenApi(agentCatalog, { serverUrl: publicOrigin || '/' }));
+    if (request.method === 'GET' && path === '/api/agent/tools') {
+      const tools = toToolDefinitions(agentCatalog, requestUrl.searchParams.get('format') || 'mcp');
+      if (!tools) throw new HttpError(400, 'format must be mcp, openai or anthropic');
+      return json(response, 200, { tools });
+    }
     if (request.method === 'GET' && path === '/api/workflow-runs') {
       const readPositiveInteger = (key, fallback, maximum) => {
         const raw = requestUrl.searchParams.get(key);
@@ -566,6 +642,8 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     }
     if (['POST', 'PUT'].includes(request.method) && path.startsWith('/api/')) {
       const body = await readJson(request);
+      const agentOperation = /^\/api\/agent\/operations\/([a-z0-9_]+)$/.exec(path);
+      if (request.method === 'POST' && agentOperation) return agentInvoke(response, agentOperation[1], body);
       const episodeArchive = /^\/api\/episodes\/([^/]+)\/(archive|unarchive)$/.exec(path);
       if (request.method === 'POST' && episodeArchive) {
         object(body);

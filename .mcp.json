@@ -7,7 +7,18 @@
     "frameforge-higgsfield": {
       "type": "stdio",
       "command": "node",
-      "args": ["--env-file=.env", "scripts/higgsfield-mcp.mjs"]
+      "args": [
+        "--env-file=.env",
+        "scripts/higgsfield-mcp.mjs"
+      ]
+    },
+    "frameforge-studio": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "--env-file=.env",
+        "scripts/frameforge-mcp.mjs"
+      ]
     }
   }
 }

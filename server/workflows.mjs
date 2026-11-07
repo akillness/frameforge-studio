@@ -46,6 +46,21 @@ function identifier(value, name) {
   return id;
 }
 
+/** Single source for the node catalog: the validator, the agent API and its docs all read these. */
+export const NODE_CONFIG_FIELDS = Object.freeze({
+  trend: ['query'],
+  news: ['query', 'keywords', 'maxArticles', 'source'],
+  research: ['limit'],
+  script: ['agent', 'prompt'],
+  storyboard: [],
+  layout: ['preset', 'topSlotRole', 'midSlotRole', 'enableSubtitles', 'enableHtmlOverlay', 'autoPrompts'],
+  generate: ['model', 'prompt', 'params', 'sceneId', 'sceneIndex', 'slotId', 'targetMode'],
+  render: [],
+  review: ['instructions'],
+  publish: ['channelId', 'platform', 'visibility', 'autoAttachExport', 'titleTemplate'],
+});
+export const STAGE_PREREQUISITES = Object.freeze({ storyboard: 'script', layout: 'storyboard', generate: 'storyboard', review: 'render', publish: 'review' });
+
 /** A bounded connected DAG. Roles may repeat; dependencies are resolved by node identity. */
 export function validateWorkflow(raw) {
   const body = object(raw);
@@ -61,18 +76,7 @@ export function validateWorkflow(raw) {
     nodeIds.add(id);
     for (const key of ['x', 'y']) if (typeof node[key] !== 'number' || !Number.isFinite(node[key]) || Math.abs(node[key]) > 100000) throw new HttpError(400, 'Node coordinates must be finite and within ±100000');
     const config = object(node.config ?? {});
-    const allowed = {
-      trend: ['query'],
-      news: ['query', 'keywords', 'maxArticles', 'source'],
-      research: ['limit'],
-      script: ['agent', 'prompt'],
-      storyboard: [],
-      layout: ['preset', 'topSlotRole', 'midSlotRole', 'enableSubtitles', 'enableHtmlOverlay', 'autoPrompts'],
-      generate: ['model', 'prompt', 'params', 'sceneId', 'sceneIndex', 'slotId', 'targetMode'],
-      render: [],
-      review: ['instructions'],
-      publish: ['channelId', 'platform', 'visibility', 'autoAttachExport', 'titleTemplate'],
-    }[type] || [];
+    const allowed = NODE_CONFIG_FIELDS[type] || [];
     if (Object.keys(config).some((key) => !allowed.includes(key))) throw new HttpError(400, `Unknown ${type} configuration field`);
     const normalized = type === 'script' ? { agent: choice(config.agent, AGENTS, 'script agent'), prompt: optionalText(config.prompt, 'script prompt', 12000) } : {};
     if (type === 'trend' && config.query !== undefined) normalized.query = optionalText(config.query, 'trend query', 200);
@@ -162,7 +166,7 @@ export function validateWorkflow(raw) {
   topologicalOrder(nodes, edges);
   // Structural validation requires connectivity; runtime resolution additionally rejects
   // multiple nearest producers with 409 rather than inventing a branch selection.
-  const requires = { storyboard: 'script', layout: 'storyboard', generate: 'storyboard', review: 'render', publish: 'review' };
+  const requires = STAGE_PREREQUISITES;
   for (const node of nodes) {
     const upstream = ancestors(edges, node.id);
     const required = requires[node.type];

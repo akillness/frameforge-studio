@@ -49,8 +49,8 @@ let musicUploads = [];
 const musicGenerationStates = new Map();
 const toolDescriptions = {overview:'채널과 전체 제작 현황을 확인합니다.',studio:'현재 프로젝트의 실제 장면·슬롯 초안을 편집합니다. 열기만으로 저장하지 않습니다.',workflow:'현재 프로젝트의 노드 캔버스로 돌아갑니다.',source:'소스 검색, 이용 권리와 출처를 확인합니다.',delivery:'완성 후보의 검토와 별도 공개 승인을 관리합니다. 열기만으로 공개하지 않습니다.',results:'렌더 결과와 서버 MP4, 플랫폼 브라우저를 확인합니다.',trends:'트렌드 수집 기록과 조사 도구를 엽니다.',templates:'기존 장면 템플릿을 확인합니다. 적용은 별도 명시적 동작입니다.',history:'원본 버전과 현재 초안을 비교합니다. 복원은 별도로 확인합니다.',knowledge:'채널·에피소드의 원본 관계와 지식을 확인합니다.',settings:'외부 연결과 작업 명령 기록을 확인합니다.',archived:'보관한 프로젝트를 확인하거나 원래 목록으로 복구합니다.'};
 const canMutate = () => state.session?.authenticated === true;
-const readActions = new Set(['view','channel','episode','project-section','scene','select-slot','select-platform-session','prev','next','play','reload','refresh-speech','refresh-commands','reload-history','history-version','refresh-knowledge','refresh-integrations','refresh-server-exports','trend-popular','ops-open','ops-history','project-tools','project-menu','episode-menu','channel-menu','tool-menu','sidebar-menu','open-scene-editor','close-scene-editor','close-project-tool','inspect-archived','graph-pan','graph-zoom-in','graph-zoom-out','graph-zoom-reset','graph-node-move','graph-node-reset']);
-const readWorkflowActions = new Set(['select-node','minimap-select','inspector-tab','select-run','inspect-run-node','zoom-in','zoom-out','fit','reload','refresh-history','history-version','refresh-runs','refresh-generation','refresh-generation-job','open-tools','open-results','open-stage-overlay','close-overlay','select-stage','close-confirm','close-dialog','node-menu','canvas-menu','node-tools','scene-editor','node-results','node-history','connections','open-add-node','open-workflow-settings','confirm-delete-node','input','output','recent-runs-more','history-versions-more','history-page','refresh-run-history','refresh-run-detail','restore-workflow','estimate-ack']);
+const readActions = new Set(['view','channel','episode','project-section','scene','select-slot','select-platform-session','prev','next','play','reload','refresh-speech','refresh-commands','reload-history','history-version','refresh-knowledge','refresh-integrations','refresh-server-exports','trend-popular','ops-open','ops-history','project-tools','project-menu','episode-menu','channel-menu','tool-menu','sidebar-menu','open-scene-editor','close-scene-editor','storyboard-toggle','storyboard-cancel','storyboard-propose','storyboard-keep','close-project-tool','inspect-archived','graph-pan','graph-zoom-in','graph-zoom-out','graph-zoom-reset','graph-node-move','graph-node-reset']);
+const readWorkflowActions = new Set(['select-node','minimap-select','inspector-tab','select-run','inspect-run-node','zoom-in','zoom-out','fit','reload','refresh-history','history-version','refresh-runs','refresh-generation','refresh-generation-job','open-tools','open-results','open-stage-overlay','close-overlay','select-stage','close-confirm','close-dialog','node-menu','canvas-menu','node-tools','scene-editor','node-results','node-history','connections','open-add-node','open-workflow-settings','confirm-delete-node','input','output','recent-runs-more','history-versions-more','history-page','refresh-run-history','refresh-run-detail','restore-workflow','estimate-ack','open-blueprint','blueprint-generate','blueprint-reset','open-quick-add']);
 const mutationForms = new Set(['modal-form','chat-form','trend-form','trend-settings-form','command-form','wf-connect-form']);
 function applySessionControls() {
   for (const control of document.querySelectorAll('[data-action],[data-wf-action],input,select,textarea,form button[type="submit"]')) {
@@ -157,8 +157,10 @@ function decorateTooltips() {
 function overlayKey(kind) { return `${episode?.id || 'workspace'}:${kind}:${kind === 'scene' ? currentScene()?.id || '' : ''}`; }
 function captureProjectOverlay() {
   for (const dialog of document.querySelectorAll('#project-scene-dialog[open],#project-tool-dialog[open]')) {
-    const fields = [...dialog.querySelectorAll('input:not([type="file"]),textarea,select')];
+    const fields = [...dialog.querySelectorAll('input:not([type="file"]):not([data-storyboard]),textarea:not([data-storyboard]),select:not([data-storyboard])')];
     const focused = fields.indexOf(document.activeElement);
+    const active = document.activeElement;
+    if (active?.dataset?.storyboard && dialog.contains(active)) storyboardFocus = {id:active.id,start:active.selectionStart ?? null,end:active.selectionEnd ?? null};
     const graphViewport = dialog.querySelector('#graph-viewport');
     overlaySnapshots.set(dialog.dataset.context, {fields:fields.map(field=>({value:field.value,checked:field.checked,preserve:!field.matches('[data-scene],[data-caption],[data-music],[data-music-source],[data-episode],[data-slot-field],[data-slot-style]')})),details:[...dialog.querySelectorAll('details')].map(item=>item.open),focused,start:focused < 0 ? null : fields[focused].selectionStart,end:focused < 0 ? null : fields[focused].selectionEnd,scrollTop:dialog.scrollTop,graphScrollLeft:graphViewport?.querySelector('.graph-node-dot') ? graphViewport.scrollLeft : null});
   }
@@ -166,7 +168,7 @@ function captureProjectOverlay() {
 function restoreProjectOverlay(dialog) {
   const snapshot = overlaySnapshots.get(dialog.dataset.context);
   if (!snapshot) return;
-  const fields = [...dialog.querySelectorAll('input:not([type="file"]),textarea,select')];
+  const fields = [...dialog.querySelectorAll('input:not([type="file"]):not([data-storyboard]),textarea:not([data-storyboard]),select:not([data-storyboard])')];
   fields.forEach((field,index)=>{ const saved=snapshot.fields[index]; if (saved?.preserve && !field.disabled) { field.value=saved.value; field.checked=saved.checked; } });
   [...dialog.querySelectorAll('details')].forEach((item,index)=>{ if (index < snapshot.details.length) item.open=snapshot.details[index]; });
   const focused = fields[snapshot.focused];
@@ -176,6 +178,7 @@ function restoreProjectOverlay(dialog) {
 function closeSceneEditor(restoreFocus = true) {
   projectToolRequest += 1;
   captureProjectOverlay(); stopPlayback(); sceneEditorOpen = false;
+  unbindStudioShortcuts(); storyboardFocus = null;
   const dialog = $('#project-scene-dialog');
   if (dialog?.open) dialog.close();
   if (dialog) dialog.innerHTML = '';
@@ -201,14 +204,305 @@ function bindProjectDialogs() {
     dialog.addEventListener('close',()=>{ if (!dialog.open && $(selector) === dialog && (selector === '#project-scene-dialog' ? sceneEditorOpen : activeTool)) close(); });
   }
 }
+// ── Studio shortcuts + AI storyboard draft panel (scene-editor dialog only) ──
+// Shortcuts bind on mount and unbind in closeSceneEditor; the storyboard panel is read-only until
+// '장면에 적용', which only stages an unsaved draft. Persistence stays with save(expectedVersion).
+const STORYBOARD_AGENTS = [['studio','Studio · 규칙 기반'],['codex','Codex · 외부 에이전트'],['jeo','JEO · 외부 에이전트'],['jeopi','JEOPI · 외부 에이전트'],['hermes','Hermes · 외부 에이전트']];
+const STORYBOARD_TONES = [['neutral','중립'],['energetic','활기찬'],['calm','차분한']];
+const STUDIO_ZONE_ACTIONS = new Set(['play','prev','next']);
+const STUDIO_SHORTCUT_KEYS = new Set(['space','k','j','l','ArrowLeft','ArrowRight','Home','End']);
+const storyboardDrafts = new Map();
+let storyboardFocus = null;
+let studioBindings = null;
+let studioLegendOpen = false;
+
+function selectScene(index, {keepPlaying = false, zone = 'timeline', scroll = false} = {}) {
+  const resume = keepPlaying && playing;
+  stopPlayback();
+  sceneIndex = index;
+  selectedSlotId = currentScene()?.slots?.[0]?.id || null;
+  if (resume) { playing = true; playNext(); startPreviewMusic(); }
+  render();
+  restoreStudioFocus(zone, scroll);
+}
+function togglePlayback(zone = '') {
+  if (playing) stopPlayback(); else { playing = true; playNext(); startPreviewMusic(); }
+  render();
+  restoreStudioFocus(zone);
+}
+// Where studio focus lives, so a re-render (which rebuilds the dialog) never strands it on the first dialog button.
+function studioFocusZone(target) {
+  if (!target || target === document.body || target === document.documentElement || target.id === 'project-scene-dialog' || target.id === 'program-monitor') return 'monitor';
+  if (target.closest?.('.project-bin')) return 'bin';
+  const action = target.closest?.('.transport [data-action]')?.dataset.action;
+  if (STUDIO_ZONE_ACTIONS.has(action)) return action;
+  return target.closest?.('.timeline') ? 'timeline' : '';
+}
+function revealInStrip(node) {
+  const strip = node?.parentElement;
+  if (!strip) return;
+  const item = node.getBoundingClientRect(), box = strip.getBoundingClientRect();
+  if (strip.scrollWidth > strip.clientWidth) strip.scrollLeft += item.left < box.left ? item.left - box.left : item.right > box.right ? item.right - box.right : 0;
+  if (strip.scrollHeight > strip.clientHeight) strip.scrollTop += item.top < box.top ? item.top - box.top : item.bottom > box.bottom ? item.bottom - box.bottom : 0;
+}
+function restoreStudioFocus(zone, scroll = false) {
+  if (!zone) return;
+  const dialog = $('#project-scene-dialog') || document;
+  if (scroll) { revealInStrip($('.scene-card.selected', dialog)); revealInStrip($('.project-bin [aria-current="true"]', dialog)); }
+  const selector = zone === 'monitor' ? '#program-monitor' : zone === 'bin' ? '.project-bin [aria-current="true"]' : STUDIO_ZONE_ACTIONS.has(zone) ? `.transport [data-action="${zone}"]` : '.scene-card.selected';
+  $(selector, dialog)?.focus({preventScroll:true});
+}
+function renderKeepingStudioFocus() {
+  const zone = sceneEditorOpen && $('#project-scene-dialog')?.open ? studioFocusZone(document.activeElement) : '';
+  render();
+  restoreStudioFocus(zone);
+}
+function studioShortcut(event) {
+  if (event.code === 'Space' || event.key === ' ') return 'space';
+  if (/^[a-z]$/i.test(event.key)) return event.key.toLowerCase();
+  if (/^Key[A-Z]$/.test(event.code)) return event.code.slice(3).toLowerCase();
+  return event.key;
+}
+const STUDIO_NAV_KEYS = new Set(['ArrowLeft','ArrowRight','Home','End']);
+// True when the focused control natively consumes this key, so the studio shortcut must not take it.
+function studioKeyOwned(target, key) {
+  if (target.closest('textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"],[role="combobox"],[role="spinbutton"],[role="listbox"],[role="menu"],[role="tablist"],[role="tab"],[role="slider"]')) return true;
+  const input = target.closest('input');
+  if (input) {
+    if (!/^(checkbox|radio|range|button|submit|reset|image|file|color)$/.test(input.type)) return true;
+    return (input.type === 'range' || input.type === 'radio') && STUDIO_NAV_KEYS.has(key);
+  }
+  const scroller = target.closest('[tabindex="0"]:not(#program-monitor)');
+  return Boolean(scroller && !scroller.matches('button,a,summary') && (scroller.scrollHeight > scroller.clientHeight || scroller.scrollWidth > scroller.clientWidth) && STUDIO_NAV_KEYS.has(key));
+}
+function onStudioKeydown(event) {
+  if (!sceneEditorOpen || !episode || event.defaultPrevented || event.isComposing) return;
+  if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+  const key = studioShortcut(event);
+  if (!STUDIO_SHORTCUT_KEYS.has(key)) return;
+  const dialog = $('#project-scene-dialog');
+  if (!dialog?.open) return;
+  const target = event.target instanceof Element ? event.target : document.body;
+  if (!dialog.contains(target) && target !== document.body && target !== document.documentElement) return;
+  if (document.querySelector('dialog[open]:not(#project-scene-dialog)')) return;
+  if (studioKeyOwned(target, key)) return;
+  const originZone = studioFocusZone(target);
+  // Space plays/pauses from the monitor, timeline, bin or transport; action buttons and inputs keep native behavior (WCAG 2.1.4).
+  const spaceAllowed = originZone === 'monitor' || originZone === 'bin' || originZone === 'timeline' || originZone === 'play';
+  if (key === 'space' && !spaceAllowed) return;
+  event.preventDefault();
+  if (key === 'space' || key === 'k') {
+    if (event.repeat || key === 'k' && !playing) return;
+    if (key === 'k') { stopPlayback(); render(); } else togglePlayback();
+    restoreStudioFocus(originZone);
+    return;
+  }
+  const last = episode.scenes.length - 1;
+  const delta = {j:-1,l:1,ArrowLeft:-1,ArrowRight:1}[key];
+  const next = Math.max(0, Math.min(last, delta === undefined ? key === 'Home' ? 0 : last : sceneIndex + delta));
+  if (next === sceneIndex) return;
+  selectScene(next, {keepPlaying:key === 'j' || key === 'l', zone: originZone, scroll:true});
+}
+function onStudioDialogClick(event) {
+  const summary = event.target.closest?.('.studio-shortcuts > summary');
+  if (summary) studioLegendOpen = !summary.parentElement.open;
+}
+function shortcutLegendHtml() {
+  return `<details class="studio-shortcuts" id="studio-shortcuts"${studioLegendOpen ? ' open' : ''}><summary>단축키</summary><ul class="studio-shortcut-list"><li><kbd>Space</kbd> 재생 / 일시정지 (모니터에 포커스가 있을 때)</li><li><kbd>K</kbd> 일시정지</li><li><kbd>J</kbd> · <kbd>L</kbd> 이전 / 다음 장면 (재생 중이면 계속 재생)</li><li><kbd>←</kbd> · <kbd>→</kbd> 이전 / 다음 장면</li><li><kbd>Home</kbd> · <kbd>End</kbd> 첫 / 마지막 장면</li><li><kbd>Ctrl</kbd> + <kbd>S</kbd> 변경 저장</li></ul><p class="hint">모니터를 클릭하거나 Tab으로 이동해 포커스를 두세요. 버튼·링크·입력란에서 Space는 그 컨트롤의 기본 동작이며, 입력란에 커서가 있을 때는 단축키가 동작하지 않습니다.</p></details>`;
+}
+function bindStudioShortcuts(dialog) {
+  studioBindings?.abort();
+  studioBindings = new AbortController();
+  const {signal} = studioBindings;
+  document.addEventListener('keydown', onStudioKeydown, {signal});
+  dialog.addEventListener('click', onStudioDialogClick, {signal});
+  dialog.addEventListener('input', onStoryboardField, {signal});
+  dialog.addEventListener('change', onStoryboardField, {signal});
+  const legend = $('#studio-shortcuts', dialog);
+  if (legend) legend.open = studioLegendOpen;
+}
+function unbindStudioShortcuts() {
+  studioBindings?.abort(); studioBindings = null;
+  for (const item of storyboardDrafts.values()) { abortStoryboard(item); item.confirming = false; }
+}
+function restoreStoryboardFocus() {
+  const wanted = storyboardFocus; storyboardFocus = null;
+  const node = wanted && document.getElementById(wanted.id);
+  if (!node || node.disabled) return;
+  node.focus({preventScroll:true});
+  if (wanted.start !== null && typeof node.setSelectionRange === 'function') { try { node.setSelectionRange(wanted.start, wanted.end); } catch { /* Non-text control. */ } }
+}
+
+function storyboardState(targetId = episode?.id) {
+  if (!targetId) return null;
+  let item = storyboardDrafts.get(targetId);
+  if (!item) {
+    item = {open:false,brief:String(liveEpisode(targetId)?.topic || '').slice(0,2000),count:4,tone:'neutral',agent:'studio',status:'idle',proposal:null,error:'',notice:'',confirming:false,controller:null};
+    storyboardDrafts.set(targetId, item);
+  }
+  return item;
+}
+function abortStoryboard(item) {
+  if (!item?.controller) return;
+  item.controller.abort(); item.controller = null;
+  if (item.status === 'loading') item.status = 'idle';
+}
+function storyboardEngine(engine) {
+  const name = String(engine || '');
+  if (name === 'rule-based') return {label:'규칙 기반 초안', hint:'정해진 규칙으로 나눈 초안입니다. AI가 생성한 결과가 아닙니다.'};
+  if (name.startsWith('agent:') && name.length > 6) return {label:`에이전트 초안 (${name.slice(6)})`, hint:`이 에피소드의 소재와 장면 텍스트가 호스트 에이전트(${name.slice(6)})로 전송되었습니다. 내용을 직접 검토하세요.`};
+  return {label:'출처 미상 초안', hint:'초안을 만든 방식을 확인할 수 없습니다. 적용 전에 내용을 검토하세요.'};
+}
+function storyboardAgentHint(agent) {
+  const name = (STORYBOARD_AGENTS.find(([value]) => value === agent)?.[1] || agent).split(' · ')[0];
+  return agent === 'studio' ? '서버의 정해진 규칙으로 장면을 나눕니다. 외부 에이전트를 호출하지 않습니다.' : `선택한 호스트 에이전트(${name})로 이 에피소드의 소재와 장면 텍스트가 전송됩니다.`;
+}
+function storyboardExcerpt(value, limit) {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  return text.length > limit ? `${text.slice(0, limit)}…` : text;
+}
+function storyboardSeconds(scenes) { return Math.round(scenes.reduce((sum, scene) => sum + (Number(scene.duration) || 0), 0) * 10) / 10; }
+function storyboardMediaScenes(scenes = episode?.scenes || []) {
+  return scenes.filter(scene => scene.assetUrl || scene.audioUrl || Array.isArray(scene.slots) && scene.slots.some(slot => slot.assetUrl)).length;
+}
+function storyboardProposalHtml(item) {
+  const proposal = item.proposal, engine = storyboardEngine(proposal.engine);
+  const stale = proposal.baseVersion !== episode.version;
+  const media = storyboardMediaScenes();
+  const warnings = [
+    dirty ? `<p class="hint"><strong>저장하지 않은 편집이 있습니다.</strong> '교체하고 적용'을 누르면 현재 초안의 장면 ${episode.scenes.length}개와 저장 전 장면 편집이 모두 사라집니다. 이 창에는 되돌리기가 없어 복구할 수 없습니다. 제목과 메모는 유지됩니다.</p>` : '',
+    media ? `<p class="hint"><strong>미디어가 연결된 장면 ${media}개</strong>의 이미지·영상·오디오·슬롯 미디어 연결이 이 초안에서 분리됩니다. 제안 장면에는 미디어가 없습니다.</p>` : '',
+    `<p class="hint">이미 저장된 v${baseVersion ?? episode.version}과 제작 히스토리는 그대로 남고, '변경 저장'을 누르기 전까지 서버는 바뀌지 않습니다.</p>`,
+  ].join('');
+  const confirm = `<div class="storyboard-confirm" role="group" aria-labelledby="storyboard-confirm-title"><p id="storyboard-confirm-title"><strong>교체 전에 확인해 주세요.</strong></p>${warnings}<div class="row"><button type="button" class="primary" data-action="storyboard-confirm">교체하고 적용</button><button type="button" data-action="storyboard-keep">돌아가기</button></div></div>`;
+  const apply = `<div class="row storyboard-apply-row"><button type="button" class="primary" data-action="storyboard-apply" data-tooltip="제안한 장면으로 저장 전 초안을 바꿉니다. 저장은 '변경 저장'을 눌러야 합니다.">장면에 적용</button></div><p class="hint">적용하면 현재 장면의 미디어·오디오·레이아웃 슬롯도 제안 장면으로 대체됩니다. 저장 전까지는 서버에 기록되지 않습니다.</p>`;
+  return `<div class="row between"><span class="badge storyboard-engine">${esc(engine.label)}</span><span class="hint">v${proposal.baseVersion} 기준</span></div><p class="hint">${esc(engine.hint)}</p>${stale ? `<p class="storyboard-error" role="alert"><strong>버전 불일치</strong> 이 초안은 v${proposal.baseVersion} 기준이고 현재 프로젝트는 v${episode.version}입니다. 새 초안을 만들어 주세요.</p>` : ''}<dl class="storyboard-compare"><div><dt>현재 초안</dt><dd>${episode.scenes.length}장면 · ${storyboardSeconds(episode.scenes)}초</dd></div><div><dt>제안</dt><dd>${proposal.scenes.length}장면 · ${storyboardSeconds(proposal.scenes)}초</dd></div></dl><ol class="storyboard-scenes" tabindex="0" aria-label="제안된 장면 (읽기 전용)">${proposal.scenes.map((scene, index) => `<li><div class="row between"><strong>${index + 1}. ${esc(scene.title)}</strong><span class="hint">${Number(scene.duration)}초</span></div><p>${esc(storyboardExcerpt(scene.text, 240))}</p>${typeof scene.narration === 'string' && scene.narration ? `<p class="hint">내레이션 · ${esc(storyboardExcerpt(scene.narration, 90))}</p>` : ''}</li>`).join('')}</ol>${proposal.rationale.length ? `<ul class="storyboard-rationale" aria-label="초안 근거">${proposal.rationale.map(line => `<li>${esc(line)}</li>`).join('')}</ul>` : ''}${item.confirming ? confirm : apply}`;
+}
+function storyboardResultHtml(item) {
+  const parts = [];
+  if (item.status === 'loading') parts.push(`<p class="storyboard-status"><span aria-hidden="true">◌</span> 초안을 만드는 중입니다…${item.agent === 'studio' ? '' : ' 외부 에이전트는 시간이 걸릴 수 있습니다. 취소하면 이 화면의 대기만 멈추며, 호스트에서 이미 시작된 작업은 계속될 수 있습니다.'}</p>`);
+  if (item.error) parts.push(`<p class="storyboard-error" role="alert"><strong>오류</strong> ${esc(item.error)}</p>`);
+  if (item.notice) parts.push(`<p class="storyboard-notice"><strong>적용됨</strong> ${esc(item.notice)}</p>`);
+  if (item.proposal) parts.push(storyboardProposalHtml(item));
+  if (!parts.length) parts.push('<p class="hint">아직 요청하지 않았습니다. \'초안 만들기\'를 누르기 전에는 아무것도 전송하지 않습니다.</p>');
+  return parts.join('');
+}
+function storyboardPanelHtml() {
+  const item = storyboardState();
+  if (!item?.open) return '';
+  const loading = item.status === 'loading';
+  const lock = loading ? ' disabled' : '';
+  const options = (list, current) => list.map(([value, label]) => `<option value="${esc(value)}"${value === current ? ' selected' : ''}>${esc(label)}</option>`).join('');
+  return `<section class="panel storyboard-panel" id="storyboard-panel" aria-labelledby="storyboard-title"><div class="panel-header"><h3 id="storyboard-title">AI 스토리보드 초안</h3><span class="badge">제안만 · 자동 저장 없음</span></div><div class="panel-body storyboard-body"><p class="hint">이 패널을 여는 것만으로는 요청도 저장도 일어나지 않습니다.</p><label for="storyboard-brief">장면 구성 요청</label><textarea id="storyboard-brief" data-storyboard="brief" maxlength="2000" rows="4" aria-describedby="storyboard-brief-count"${lock}>${esc(item.brief)}</textarea><p class="hint" id="storyboard-brief-count">${item.brief.length}/2000자</p><div class="two-cols"><label>장면 수<select id="storyboard-count" data-storyboard="count"${lock}>${[3,4,5,6,7,8].map(count => `<option value="${count}"${count === item.count ? ' selected' : ''}>${count}장면</option>`).join('')}</select></label><label>분위기<select id="storyboard-tone" data-storyboard="tone"${lock}>${options(STORYBOARD_TONES, item.tone)}</select></label></div><label>초안 작성 방식<select id="storyboard-agent" data-storyboard="agent" aria-describedby="storyboard-agent-hint"${lock}>${options(STORYBOARD_AGENTS, item.agent)}</select></label><p class="hint" id="storyboard-agent-hint">${esc(storyboardAgentHint(item.agent))}</p><div class="row storyboard-actions"><button type="button" data-action="storyboard-propose" aria-describedby="storyboard-result"${loading ? ' aria-disabled="true"' : ''} data-tooltip="요청을 서버에 보내 장면 초안을 받습니다. 아무것도 저장하지 않습니다.">${loading ? '만드는 중…' : '초안 만들기'}</button><button type="button" class="quiet" data-action="storyboard-cancel" data-tooltip="진행 중인 요청과 받은 초안을 버리고 패널을 닫습니다.">취소</button></div><div class="storyboard-result" id="storyboard-result" role="region" aria-label="초안 결과" aria-live="polite" aria-busy="${loading}" tabindex="-1">${storyboardResultHtml(item)}</div></div></section>`;
+}
+function syncStoryboardToggle() {
+  $('#storyboard-toggle')?.setAttribute('aria-expanded', String(Boolean(storyboardState()?.open)));
+}
+function renderStoryboard(focusSelector = '', onlyIfInside = false) {
+  const slot = $('#storyboard-slot');
+  syncStoryboardToggle();
+  if (!slot || !storyboardState()) return;
+  const active = document.activeElement;
+  const hadFocus = slot.contains(active) || !active || active === document.body;
+  slot.innerHTML = storyboardPanelHtml();
+  decorateTooltips(); applySessionControls(); applyProjectControls();
+  const node = focusSelector && (!onlyIfInside || hadFocus) ? $(focusSelector, slot) : null;
+  if (node && !node.disabled) node.focus({preventScroll:true});
+}
+function openStoryboard() {
+  const item = storyboardState();
+  if (!item) return;
+  item.open = true;
+  renderStoryboard('#storyboard-brief');
+}
+function closeStoryboard() {
+  const item = storyboardState();
+  if (!item) return;
+  abortStoryboard(item);
+  Object.assign(item, {open:false,status:'idle',proposal:null,error:'',notice:'',confirming:false});
+  renderStoryboard();
+  $('#storyboard-toggle')?.focus({preventScroll:true});
+}
+function onStoryboardField(event) {
+  const field = event.target?.closest?.('[data-storyboard]');
+  const item = field && storyboardState();
+  if (!item) return;
+  const key = field.dataset.storyboard;
+  if (key === 'brief') { item.brief = field.value.slice(0, 2000); const count = $('#storyboard-brief-count'); if (count) count.textContent = `${item.brief.length}/2000자`; }
+  else if (key === 'count') item.count = Math.min(8, Math.max(3, Number.parseInt(field.value, 10) || 4));
+  else if (key === 'tone' && STORYBOARD_TONES.some(([value]) => value === field.value)) item.tone = field.value;
+  else if (key === 'agent' && STORYBOARD_AGENTS.some(([value]) => value === field.value)) { item.agent = field.value; const hint = $('#storyboard-agent-hint'); if (hint) hint.textContent = storyboardAgentHint(item.agent); }
+}
+function normalizeStoryboardProposal(result, targetId) {
+  const valid = result && typeof result === 'object' && result.episodeId === targetId && Number.isInteger(result.baseVersion) && Array.isArray(result.scenes) && result.scenes.length >= 1 && result.scenes.length <= 60
+    && result.scenes.every(scene => scene && typeof scene === 'object' && typeof scene.id === 'string' && typeof scene.title === 'string' && typeof scene.text === 'string' && Number.isFinite(scene.duration) && scene.duration > 0);
+  if (!valid) throw new Error('서버가 올바르지 않은 초안을 돌려주었습니다. 장면을 만들어 내지 않고 중단합니다.');
+  return {episodeId:result.episodeId,baseVersion:result.baseVersion,engine:typeof result.engine === 'string' ? result.engine : '',scenes:clone(result.scenes),rationale:Array.isArray(result.rationale) ? result.rationale.filter(line => typeof line === 'string') : []};
+}
+async function proposeStoryboard() {
+  const item = storyboardState();
+  if (!item?.open || !episode || item.status === 'loading') return;
+  const targetId = episode.id, brief = item.brief.trim();
+  if (item.brief.length > 2000) { item.error = '요청은 2000자 이하여야 합니다.'; renderStoryboard('[data-action="storyboard-propose"]'); return; }
+  const controller = new AbortController();
+  Object.assign(item, {controller,status:'loading',proposal:null,error:'',notice:'',confirming:false});
+  renderStoryboard('[data-action="storyboard-propose"]');
+  const args = {episodeId:targetId,sceneCount:item.count,tone:item.tone,...(brief ? {brief} : {}),...(item.agent !== 'studio' ? {agent:item.agent} : {})};
+  try {
+    const data = await api('/api/agent/operations/episode_propose_storyboard', {method:'POST',body:JSON.stringify({arguments:args}),signal:controller.signal});
+    if (item.controller !== controller) return;
+    if (data?.ok !== true) throw new Error(data?.error || '초안을 받지 못했습니다.');
+    item.proposal = normalizeStoryboardProposal(data.result, targetId);
+    item.status = 'ready';
+  } catch (error) {
+    if (item.controller !== controller || error?.name === 'AbortError') return;
+    item.proposal = null; item.status = 'error'; item.error = error?.message || '초안을 만들지 못했습니다.';
+  } finally { if (item.controller === controller) item.controller = null; }
+  if (episode?.id === targetId && $('#storyboard-slot')) renderStoryboard('#storyboard-result', true);
+}
+function applyStoryboard(confirmed = false) {
+  const item = storyboardState(), proposal = item?.proposal;
+  if (!item || !episode || !proposal || item.status !== 'ready') return;
+  requireProjectEdit();
+  if (proposal.episodeId !== episode.id || proposal.baseVersion !== episode.version) {
+    item.confirming = false;
+    item.error = `이 초안은 v${proposal.baseVersion} 기준이고 현재 프로젝트는 v${episode.version}입니다. 낡은 초안은 적용하지 않습니다. 새 초안을 만들어 주세요.`;
+    renderStoryboard('#storyboard-result');
+    return;
+  }
+  // Replacing is destructive to the draft when it holds unsaved edits or detaches media. The confirmation is bound to the
+  // state it described: if that state changed before the user confirmed, ask again instead of applying.
+  const risk = `${dirty ? 1 : 0}:${storyboardMediaScenes()}`;
+  if (risk !== '0:0' && !(confirmed && item.confirming === risk)) { item.confirming = risk; item.error = ''; renderStoryboard('[data-action="storyboard-keep"]'); return; }
+  stopPlayback();
+  episode.scenes = clone(proposal.scenes);
+  sceneIndex = 0; selectedSlotId = null;
+  const musicLate = episode.music && Number(episode.music.start) >= duration();
+  Object.assign(item, {proposal:null,status:'idle',confirming:false,error:'',notice:`제안 ${episode.scenes.length}장면을 저장 전 초안에 반영했습니다. 아직 저장되지 않았습니다. '변경 저장'을 눌러야 새 버전으로 기록됩니다.${musicLate ? ' 배경 음악 시작 시간이 새 총 길이보다 늦어 저장 전에 조정해야 합니다.' : ''}`});
+  storyboardFocus = {id:'storyboard-result',start:null,end:null};
+  markDirty();
+  render();
+  toast('제안한 장면을 저장 전 초안에 반영했습니다. 저장하려면 변경 저장을 누르세요.');
+}
+function handleStoryboardAction(action) {
+  const item = episode && storyboardState();
+  if (!item) return;
+  if (action === 'storyboard-toggle') { if (item.open) closeStoryboard(); else openStoryboard(); }
+  else if (action === 'storyboard-cancel') closeStoryboard();
+  else if (action === 'storyboard-propose') proposeStoryboard().catch(error => toast(error.message, true));
+  else if (action === 'storyboard-apply') applyStoryboard(false);
+  else if (action === 'storyboard-confirm') applyStoryboard(true);
+  else if (action === 'storyboard-keep') { item.confirming = false; renderStoryboard('[data-action="storyboard-apply"]'); }
+}
 function mountSceneEditor() {
   const dialog = $('#project-scene-dialog');
   if (!dialog || !episode) return;
   const reason = projectEditReason();
   dialog.dataset.context = overlayKey('scene');
-  dialog.innerHTML = `<div class="project-dialog-header"><div><h2 id="project-scene-title">장면 편집 · ${esc(episode.title)}</h2><p role="status">${esc(reason || '장면 초안은 이 창에서 저장합니다. 닫아도 저장 전 편집은 보존됩니다.')}</p></div><div class="row"><button type="button" id="save-button" class="primary" data-action="save" data-tooltip="장면과 슬롯 초안을 원래 버전으로 저장합니다. Ctrl 또는 Command+S">변경 저장</button><button type="button" data-action="open-generation" data-tooltip="생성 설정을 엽니다. 비용 확인과 실행 동의는 별도입니다.">Higgsfield 장면 생성</button><button type="button" data-action="render" ${activeRenderForVersion() ? 'disabled' : ''} aria-label="전체 프로젝트 MP4 내보내기" data-tooltip="현재 프로젝트의 모든 장면을 저장된 버전으로 FFmpeg 렌더링합니다. 워크플로 렌더와 별도로 표시됩니다.">전체 프로젝트 MP4</button><button type="button" class="icon-btn quiet" data-action="close-scene-editor" aria-label="장면 편집 닫기" data-tooltip="편집 초안을 보존하고 노드 캔버스로 돌아갑니다.">×</button></div></div><div class="studio-layout project-scene-body">${studioView()}</div>`;
+  dialog.innerHTML = `<div class="project-dialog-header"><div><h2 id="project-scene-title">장면 편집 · ${esc(episode.title)}</h2><p role="status">${esc(reason || '장면 초안은 이 창에서 저장합니다. 닫아도 저장 전 편집은 보존됩니다.')}</p></div><div class="row"><button type="button" id="save-button" class="primary" data-action="save" data-tooltip="장면과 슬롯 초안을 원래 버전으로 저장합니다. Ctrl 또는 Command+S">변경 저장</button><button type="button" data-action="open-generation" data-tooltip="생성 설정을 엽니다. 비용 확인과 실행 동의는 별도입니다.">Higgsfield 장면 생성</button><button type="button" id="storyboard-toggle" data-action="storyboard-toggle" aria-expanded="${storyboardState()?.open ? 'true' : 'false'}" aria-controls="storyboard-slot" data-tooltip="장면 초안 제안 패널을 엽니다. 열기만으로 요청이나 저장을 하지 않습니다.">AI 스토리보드</button><button type="button" data-action="render" ${activeRenderForVersion() ? 'disabled' : ''} aria-label="전체 프로젝트 MP4 내보내기" data-tooltip="현재 프로젝트의 모든 장면을 저장된 버전으로 FFmpeg 렌더링합니다. 워크플로 렌더와 별도로 표시됩니다.">전체 프로젝트 MP4</button><button type="button" class="icon-btn quiet" data-action="close-scene-editor" aria-label="장면 편집 닫기" data-tooltip="편집 초안을 보존하고 노드 캔버스로 돌아갑니다.">×</button></div></div><div class="studio-layout project-scene-body">${studioView()}</div>`;
   updatePreview(); updateSaveStatus(); applySessionControls(); applyProjectControls(); decorateTooltips();
   dialog.showModal(); restoreProjectOverlay(dialog);
+  bindStudioShortcuts(dialog); restoreStoryboardFocus();
   mountMusicGeneration(dialog);
   loadMusicUploads(dialog);
 }
@@ -695,7 +989,7 @@ function render() {
   if (host) canvasContextObserver.observe(host,{childList:true,subtree:true});
   bindProjectDialogs();
   if (sceneEditorOpen && episode) mountSceneEditor();
-  else if (activeTool) mountProjectTool();
+  else { unbindStudioShortcuts(); if (activeTool) mountProjectTool(); }
   updateSaveStatus();
   applySessionControls();
   applyProjectControls();
@@ -903,11 +1197,11 @@ function studioView() {
   if (!episode) return '';
   let html = '';
   const scene = currentScene();
-  html += `<div class="editor-grid"><div><div class="monitor-deck"><aside class="panel project-bin" aria-label="프로젝트 장면 목록"><div class="panel-header"><h3>프로젝트</h3><span class="badge">${episode.scenes.length}</span></div><div class="source-heading"><span class="eyebrow">PROJECT BIN</span><strong>${esc(episode.title)}</strong></div><div class="project-bin-list" id="project-bin-list">${sceneBinItems()}</div><p class="source-note">장면 선택은 미리보기와 편집 패널에 함께 반영됩니다.</p></aside><section class="panel program-monitor"><div class="panel-header"><div class="row"><span class="eyebrow">PROGRAM MONITOR</span><span class="badge">${esc(episode.format)}</span></div><span id="save-status" class="${dirty ? 'unsaved' : 'hint'}">${dirty ? '저장되지 않은 변경' : `버전 ${episode.version} · 저장됨`}</span></div><div class="preview-stage"><span class="stage-tag">LIVE CANVAS / ${esc(episode.category?.toUpperCase() || 'STUDIO')}</span><div id="preview" class="preview" data-format="${esc(episode.format)}" aria-label="현재 장면 미리보기"></div></div><div class="transport"><span class="time" id="play-time">${time(episode.scenes.slice(0,sceneIndex).reduce((sum,s) => sum + s.duration,0))} / ${time(duration())}</span><div class="row"><button class="icon-btn quiet" data-action="prev" aria-label="이전 장면">‹</button><button class="icon-btn primary" data-action="play" aria-label="${playing ? '미리보기 정지' : '미리보기 재생'}">${playing ? 'Ⅱ' : '▶'}</button><button class="icon-btn quiet" data-action="next" aria-label="다음 장면">›</button></div><span class="hint">${sceneIndex + 1} / ${episode.scenes.length} 장면</span></div></section></div>
+  html += `<div class="editor-grid"><div><div class="monitor-deck"><aside class="panel project-bin" aria-label="프로젝트 장면 목록"><div class="panel-header"><h3>프로젝트</h3><span class="badge">${episode.scenes.length}</span></div><div class="source-heading"><span class="eyebrow">PROJECT BIN</span><strong>${esc(episode.title)}</strong></div><div class="project-bin-list" id="project-bin-list">${sceneBinItems()}</div><p class="source-note">장면 선택은 미리보기와 편집 패널에 함께 반영됩니다.</p></aside><section class="panel program-monitor" id="program-monitor" tabindex="0" role="group" aria-label="시퀀스 모니터"><div class="panel-header"><div class="row"><span class="eyebrow">PROGRAM MONITOR</span><span class="badge">${esc(episode.format)}</span></div><span id="save-status" class="${dirty ? 'unsaved' : 'hint'}">${dirty ? '저장되지 않은 변경' : `버전 ${episode.version} · 저장됨`}</span></div><div class="preview-stage"><span class="stage-tag">LIVE CANVAS / ${esc(episode.category?.toUpperCase() || 'STUDIO')}</span><div id="preview" class="preview" data-format="${esc(episode.format)}" aria-label="현재 장면 미리보기"></div></div><div class="transport"><span class="time" id="play-time">${time(episode.scenes.slice(0,sceneIndex).reduce((sum,s) => sum + s.duration,0))} / ${time(duration())}</span><div class="row"><button class="icon-btn quiet" data-action="prev" aria-label="이전 장면">‹</button><button class="icon-btn primary" data-action="play" aria-label="${playing ? '미리보기 정지' : '미리보기 재생'}">${playing ? 'Ⅱ' : '▶'}</button><button class="icon-btn quiet" data-action="next" aria-label="다음 장면">›</button></div><span class="hint">${sceneIndex + 1} / ${episode.scenes.length} 장면</span></div>${shortcutLegendHtml()}</section></div>
     <section class="panel timeline"><div class="panel-header"><div><span class="eyebrow">SEQUENCE</span><h3>장면 타임라인</h3></div><span class="hint" id="total-duration">총 ${duration()}초</span></div><div class="timeline-body"><div class="ruler"><span>00:00</span><span>V1 · 장면 순서 / A · 첨부 오디오</span><span>${time(duration())}</span></div><div class="scenes" id="scenes">${sceneCards()}</div><div class="row between timeline-actions"><button class="small quiet" data-action="add-scene">＋ 장면 추가</button><div class="row"><button class="small quiet" data-action="save-template">템플릿으로 저장</button><button class="small quiet" data-action="view" data-view="templates">템플릿 불러오기 ↗</button></div></div></div></section>
     <section class="panel section-spacer"><div class="panel-header"><h3>수동 내보내기 · 워크플로 렌더와 별도</h3><span class="hint">FFmpeg · MP4</span></div><div id="jobs">${jobsHtml()}</div></section>
     </div>
-    <div class="right-column"><section class="panel inspector"><div class="panel-header"><h3>장면 편집</h3><span class="badge">SCENE ${String(sceneIndex + 1).padStart(2,'0')}</span></div><div class="panel-body">${scene ? inspectorHtml(scene) : '<p>장면을 추가해 주세요.</p>'}</div></section>${narrationHtml()}${chatHtml()}</div></div><p class="footnote">변경 사항은 버전별로 기록됩니다. 영상 업로드 전 채널 연결과 콘텐츠 권리를 확인하세요.</p>`;
+    <div class="right-column"><div id="storyboard-slot" class="storyboard-slot">${storyboardPanelHtml()}</div><section class="panel inspector"><div class="panel-header"><h3>장면 편집</h3><span class="badge">SCENE ${String(sceneIndex + 1).padStart(2,'0')}</span></div><div class="panel-body">${scene ? inspectorHtml(scene) : '<p>장면을 추가해 주세요.</p>'}</div></section>${narrationHtml()}${chatHtml()}</div></div><p class="footnote">변경 사항은 버전별로 기록됩니다. 영상 업로드 전 채널 연결과 콘텐츠 권리를 확인하세요.</p>`;
   return html;
 }
 
@@ -1690,10 +1984,10 @@ function playNext() {
   }
   updatePreviewCaptions();
   playTimer = setTimeout(() => {
-    if (sceneIndex >= episode.scenes.length - 1) { stopPlayback(); render(); return; }
+    if (sceneIndex >= episode.scenes.length - 1) { stopPlayback(); renderKeepingStudioFocus(); return; }
     sceneIndex += 1;
     playNext();
-    render();
+    renderKeepingStudioFocus();
   }, Number(currentScene()?.duration || 3) * 1000);
 }
 
@@ -1742,6 +2036,7 @@ async function handleAction(button) {
   if (['project-tools','project-menu','episode-menu','channel-menu','tool-menu','sidebar-menu'].includes(action)) { openProjectMenu(button); return; }
   if (action === 'open-scene-editor') { openSceneEditor(); return; }
   if (action === 'close-scene-editor') { closeSceneEditor(); return; }
+  if (action.startsWith('storyboard-')) { handleStoryboardAction(action); return; }
   if (action === 'close-project-tool') { closeProjectTool(); return; }
   if (action === 'unarchive-project') { archiveProject(button.dataset.id,true); return; }
   if (action === 'inspect-archived') { await runProjectMenuAction('open-project',{targetId:button.dataset.id}); return; }
@@ -1942,10 +2237,10 @@ async function handleAction(button) {
     render();
     toast('서버 저장소(data/exports) MP4 목록을 새로고침했습니다.');
   }
-  else if (action === 'scene') { const fromBin=Boolean(button.closest('.project-bin')); stopPlayback(); sceneIndex = Number(button.dataset.index); selectedSlotId = currentScene()?.slots?.[0]?.id || null; render(); $(fromBin?'.project-bin [aria-current="true"]':'.scene-card.selected')?.focus({preventScroll:true}); }
+  else if (action === 'scene') selectScene(Number(button.dataset.index), {zone:button.closest('.project-bin') ? 'bin' : 'timeline'});
   else if (action === 'save') { await save(); render(); }
-  else if (action === 'prev' || action === 'next') { stopPlayback(); sceneIndex = Math.max(0,Math.min(episode.scenes.length - 1, sceneIndex + (action === 'prev' ? -1 : 1))); render(); }
-  else if (action === 'play') { if (playing) stopPlayback(); else { playing = true; playNext(); startPreviewMusic(); } render(); }
+  else if (action === 'prev' || action === 'next') { const zone = studioFocusZone(button); stopPlayback(); sceneIndex = Math.max(0,Math.min(episode.scenes.length - 1, sceneIndex + (action === 'prev' ? -1 : 1))); render(); restoreStudioFocus(zone); }
+  else if (action === 'play') togglePlayback(studioFocusZone(button));
   else if (action === 'add-scene') { stopPlayback(); episode.scenes.push({id:id(),title:`장면 ${episode.scenes.length + 1}`,text:'새로운 이야기를 담아보세요',duration:5,background:'#294434',kind:'title',layout:'center'}); sceneIndex = episode.scenes.length - 1; markDirty(); render(); }
   else if (action === 'duplicate-scene') { stopPlayback(); episode.scenes.splice(sceneIndex + 1,0,{...clone(currentScene()),id:id()}); sceneIndex++; markDirty(); render(); }
   else if (action === 'delete-scene') { if (episode.scenes.length === 1) { toast('최소 한 개의 장면이 필요합니다.',true); return; } stopPlayback(); episode.scenes.splice(sceneIndex,1); sceneIndex = Math.min(sceneIndex,episode.scenes.length - 1); markDirty(); render(); }

@@ -719,3 +719,45 @@ dialog::backdrop { background: var(--overlay-backdrop); }
   :root { --control-height: 44px; }
   .ff-context-menu__item { min-height: 44px; }
 }
+
+/* Studio authoring: shortcut legend under the monitor and the AI storyboard draft panel. Tokens only. */
+.studio-shortcuts { border-top: 1px solid var(--border); padding: var(--space-2) 15px; font-size: 12px; color: var(--text-secondary); }
+.studio-shortcuts > summary { cursor: pointer; min-height: var(--control-height); display: flex; align-items: center; width: fit-content; padding: 0 var(--space-2); border-radius: var(--radius-small); font-weight: 650; }
+.studio-shortcuts > summary:hover { background: var(--surface-subtle); }
+.studio-shortcut-list { margin: var(--space-1) 0 var(--space-2); padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-1) var(--space-3); }
+.studio-shortcut-list kbd { display: inline-block; min-width: 22px; padding: 1px 6px; border: 1px solid var(--line-control); border-bottom-width: 2px; border-radius: var(--radius-small); background: var(--surface-subtle); color: var(--ink); font: 600 11px ui-monospace, monospace; text-align: center; }
+.studio-shortcuts .hint { margin: 0; }
+.storyboard-slot:empty { display: none; }
+.storyboard-panel .panel-header { flex-wrap: wrap; gap: var(--space-2); }
+.storyboard-body { display: grid; gap: var(--space-2); }
+.storyboard-body > p { margin: 0; }
+.storyboard-body label { margin-bottom: 0; }
+.storyboard-body textarea { min-height: 96px; }
+.storyboard-actions { flex-wrap: wrap; }
+.storyboard-result { display: grid; gap: var(--space-2); padding: var(--space-3); border: 1px dashed var(--line-strong); border-radius: var(--radius-inner); background: var(--surface-subtle); min-width: 0; overflow-wrap: anywhere; }
+.storyboard-result[aria-busy="true"] { border-style: solid; border-color: var(--accent); }
+.storyboard-result > p { margin: 0; }
+.storyboard-status { color: var(--text-secondary); font-size: 12px; }
+.storyboard-error { padding: var(--space-2) var(--space-3); border: 1px solid var(--danger); border-radius: var(--radius-control); background: var(--danger-soft); color: var(--danger); font-size: 12px; }
+.storyboard-notice { padding: var(--space-2) var(--space-3); border: 1px solid var(--success); border-radius: var(--radius-control); background: var(--success-soft); color: var(--success); font-size: 12px; }
+.storyboard-engine { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-strong); }
+.storyboard-compare { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); margin: 0; }
+.storyboard-compare > div { padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--surface); }
+.storyboard-compare dt { font-size: 11px; color: var(--muted); letter-spacing: .4px; }
+.storyboard-compare dd { margin: 2px 0 0; font-weight: 650; font-variant-numeric: tabular-nums; }
+.storyboard-scenes { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; max-height: 320px; overflow: auto; }
+.storyboard-scenes > li { padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--surface); font-size: 12px; }
+.storyboard-scenes p { margin: var(--space-1) 0 0; white-space: pre-wrap; }
+.storyboard-rationale { margin: 0; padding-left: 18px; font-size: 12px; color: var(--text-secondary); }
+.storyboard-confirm { display: grid; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--warning); border-radius: var(--radius-control); background: var(--warning-soft); }
+.storyboard-confirm p { margin: 0; color: var(--warning); }
+.storyboard-apply-row { flex-wrap: wrap; }
+@media (pointer: coarse) {
+  .studio-shortcuts > summary { min-height: 44px; }
+  .storyboard-body :is(button, select, input) { min-height: 44px; }
+}
+@media (max-width: 520px) {
+  .storyboard-compare { grid-template-columns: minmax(0, 1fr); }
+}
+.right-column > .storyboard-slot:not(:empty) { grid-column: 1 / -1; min-width: 0; }
+.program-monitor:focus-visible { outline: 2px solid var(--focus); outline-offset: -3px; }

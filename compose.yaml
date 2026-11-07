@@ -22,6 +22,7 @@ services:
       YOUTUBE_CLIENT_SECRET: ${YOUTUBE_CLIENT_SECRET:-}
       YOUTUBE_REDIRECT_URI: ${YOUTUBE_REDIRECT_URI:-}
       YOUTUBE_OAUTH_TESTING: "${YOUTUBE_OAUTH_TESTING:-false}"
+      AGENT_API_ALLOW_PAID_GENERATION: "${AGENT_API_ALLOW_PAID_GENERATION:-false}"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:

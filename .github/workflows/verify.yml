@@ -27,6 +27,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Check JavaScript syntax
         run: npm run check
+      - name: Check generated agent API reference is current
+        run: node scripts/agent-docs.mjs --check
       - name: Ensure executable media security checks can run
         run: |
           if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then

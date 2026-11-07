@@ -421,3 +421,36 @@
   [data-testid="node-result-facts"] li { flex-direction: column; align-items: flex-start; gap: 2px; }
 }
 /* history-compact:end */
+
+/* node-canvas authoring: quick-add palette, AI blueprint dialog, tidy and status line. Shared tokens only. */
+.wf-visually-hidden { position: absolute !important; width: 1px !important; height: 1px !important; margin: -1px !important; padding: 0 !important; border: 0 !important; overflow: hidden !important; clip-path: inset(50%); white-space: nowrap; }
+.wf-authoring-status { min-height: 0; padding: 0 16px; font-size: 12px; line-height: 1.7; color: var(--text-secondary); }
+.wf-authoring-status:not(:empty) { padding: 10px 16px; border-top: 1px solid var(--border); background: var(--surface-subtle); }
+.wf-ai-open, .wf-tidy { min-height: 40px; }
+.wf-palette-list { list-style: none; margin: 0 0 var(--space-3); padding: 0; display: grid; gap: var(--space-1); max-height: 320px; overflow: auto; border: 1px solid var(--line); border-radius: var(--radius-inner); background: var(--surface); }
+.wf-palette-option { display: flex; align-items: center; gap: var(--space-3); min-height: 44px; padding: var(--space-2) var(--space-3); border-left: 4px solid var(--node-color, var(--accent)); cursor: pointer; color: var(--text); }
+.wf-palette-option:hover { background: var(--surface-subtle); }
+.wf-palette-option.active { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent); font-weight: 600; }
+.wf-palette-option.active .wf-palette-copy strong::before { content: "▸ "; }
+.wf-palette-icon { flex: none; width: 24px; text-align: center; font-size: 18px; line-height: 1; color: var(--text-secondary); }
+.wf-palette-copy { display: grid; min-width: 0; flex: 1; gap: 2px; }
+.wf-palette-copy small { color: var(--muted); font-size: 11px; line-height: 1.5; }
+#wf-add-node-dialog .wf-overlay-body > label, #wf-blueprint-dialog .wf-overlay-body > label { margin-bottom: var(--space-2); }
+#wf-add-node-dialog button, #wf-blueprint-dialog button { min-height: 40px; }
+.wf-ai-check { display: flex; align-items: center; gap: var(--space-2); min-height: 40px; margin-bottom: 0; color: var(--text); font-size: 13px; }
+.wf-ai-check input { margin: 0; }
+.wf-ai-result { margin: var(--space-3) 0; padding: var(--space-3); border: 1px dashed var(--line-control); border-radius: var(--radius-inner); background: var(--surface-subtle); min-height: 44px; }
+.wf-ai-result:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.wf-ai-result h3 { margin: var(--space-4) 0 var(--space-2); font-size: 13px; }
+.wf-ai-result ul, .wf-ai-result ol { margin: 0; padding-left: 20px; font-size: 12px; line-height: 1.7; }
+.wf-ai-stages { list-style: decimal; }
+.wf-ai-warnings li::marker { content: "⚠ "; color: var(--warning); }
+.wf-ai-warnings { color: var(--warning); }
+.wf-ai-alert { margin: var(--space-2) 0; padding: var(--space-3); border: 1px solid var(--warning); border-radius: var(--radius-inner); background: var(--warning-soft); color: var(--warning); font-size: 12px; line-height: 1.7; }
+.wf-ai-alert::before { content: "⚠ "; }
+.wf-ai-alert[hidden], #wf-add-node-dialog [hidden], #wf-blueprint-dialog [hidden] { display: none !important; }
+@media (pointer: coarse) {
+  .wf-ai-open, .wf-tidy, #wf-add-node-dialog button, #wf-blueprint-dialog button, .wf-ai-check { min-height: 44px; }
+}
+@media (max-width: 560px) { .wf-palette-option .badge { display: none; } }
+/* authoring:end */

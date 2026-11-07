@@ -203,18 +203,26 @@ async function waitForActiveElement(page, predicate, description) {
 // ===========================================================================
 // M1 - exact menu contents, order, labels; four open triggers for both menus
 // ===========================================================================
-test('M1: node context menu is exactly 5 one-line items in contract order; canvas menu is exactly 3; all four triggers open both', async t => {
+test('M1: node context menu is exactly 6 items in contract order with shortcut hints on 복제 and 노드 제거…; canvas menu is exactly 3; all four triggers open both', async t => {
   const f = await fixture(t), { page } = f;
-  const nodeItems = ['실행', '건너뛰기', '노드 설정 편집', '노드 추가…', '노드 제거…'];
+  const nodeItems = ['실행', '건너뛰기', '노드 설정 편집', '노드 추가…', '복제', '노드 제거…'];
+  const shortcutHints = { '복제': 'Ctrl/⌘ D', '노드 제거…': 'Delete' };
   const canvasItems = ['노드 추가…', '전체 실행', '그래프 저장'];
   for (const via of ['right-click', 'Shift+F10', 'ContextMenu', 'more']) {
     await openNodeMenu(page, 'script', via);
     const items = menu(page).getByRole('menuitem');
-    assert.equal(await items.count(), 5, `${via}: node menu must show exactly 5 items, not the old 9-item menu`);
+    assert.equal(await items.count(), 6, `${via}: node menu must show exactly 6 items (the 5 contract items plus 복제), not the old 9-item menu`);
     assert.deepEqual(await items.locator('.ff-context-menu__label').allInnerTexts(), nodeItems, `${via}: exact contract order and labels`);
-    // Fresh node, nothing run/dirty/skipped: every one of these 5 items is enabled
-    // and must be a single line with no long description.
-    for (const label of nodeItems) assert.equal(await item(page, label).locator('.ff-context-menu__description').count(), 0, `${via}: enabled "${label}" must be a single line with no long description`);
+    // Fresh node, nothing run/dirty/skipped: every one of these 6 items is enabled. Only the two
+    // shortcut-bearing items carry a description, and it is exactly the shortcut text (no long prose).
+    for (const label of nodeItems) {
+      const description = item(page, label).locator('.ff-context-menu__description');
+      assert.equal(await item(page, label).isDisabled(), false, `${via}: "${label}" is enabled on a fresh, unlocked node`);
+      if (shortcutHints[label]) {
+        assert.equal(await description.count(), 1, `${via}: "${label}" shows its shortcut hint`);
+        assert.equal(await description.innerText(), shortcutHints[label], `${via}: "${label}" hint is exactly the shortcut text`);
+      } else assert.equal(await description.count(), 0, `${via}: enabled "${label}" must be a single line with no description`);
+    }
     assert.match(await menu(page).locator('.ff-context-menu__title').innerText(), /^Script node ·/, `${via}: menu title keeps the "${'${name}'} · ${'${summary}'}" format`);
     await page.keyboard.press('Escape');
   }

@@ -1,0 +1,48 @@
+{
+  "observedAt": "2026-11-06T14:24:43.964Z",
+  "host": "jeopi",
+  "profile": "jeopi",
+  "runtimeMode": "advisory",
+  "hookTrust": "No automatic hook relied on",
+  "scope": "implementation PLAN only; no code existed at review time",
+  "verdict": "proposal_only",
+  "reason": "Below threshold or unfavorable in: evidence_supports (ans=no, conf=0.73); unrelated_changes (ans=no, conf=0.76); needs_clarification (ans=yes, conf=0.50)",
+  "threshold": 0.8,
+  "backend": {
+    "kind": "api",
+    "driver": "typesafe",
+    "model": "jev-1.14.0",
+    "configuredModel": "jev-latest",
+    "tier": "unvalidated",
+    "attestation": null
+  },
+  "answers": {
+    "addresses_task": {
+      "probability": 0.88,
+      "answer": "yes",
+      "confidence": 0.88
+    },
+    "evidence_supports": {
+      "probability": 0.27,
+      "answer": "no",
+      "confidence": 0.73
+    },
+    "unrelated_changes": {
+      "probability": 0.24,
+      "answer": "no",
+      "confidence": 0.76
+    },
+    "needs_clarification": {
+      "probability": 0.5,
+      "answer": "yes",
+      "confidence": 0.5
+    }
+  },
+  "usage": {
+    "input_tokens": 1487,
+    "output_tokens": 80
+  },
+  "receipt": "b8f8443dbeaf6072a9c6ae9b9536338fc661a6b74b24da02b3d9aecf1dd1d590",
+  "receiptVersion": 2,
+  "interpretation": "Advisory proposal_only on an unvalidated tier; not approval and not a block. evidence_supports=no is expected for a plan with no implementation. Evidence must come from tests and real-client checks. No retry was made to obtain a different verdict."
+}

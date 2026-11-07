@@ -20,6 +20,10 @@
 
 **Windows/Tailscale 운영 경로:** 이 PC의 `PUBLIC_ORIGIN`에 설정된 비공개 HTTPS 주소를 사용하며, 같은 tailnet과 접근 토큰이 필요합니다. 실제 주소는 로컬 설정에만 둡니다. [2026-10-25 이전 작업공간 배포 영수증](artifacts/production-workspace-deployment.json)은 당시 배포의 근거입니다. 새 단일 노드 작업대의 실제 Docker 전환은 별도 운영 영수증으로 확인해야 하며 로컬 검증이나 하니스 승격만으로 배포를 선언하지 않습니다.
 
+## 에이전트 API · MCP
+
+에이전트가 워크플로를 **함수처럼 호출**해 결과(장면, 실행 상태, MP4)를 가져옵니다. 같은 operation 레지스트리에서 REST(`/api/agent/*`), OpenAPI, LLM function-calling 정의, **MCP 2026-07-28** 도구(`/mcp` Streamable HTTP, `scripts/frameforge-mcp.mjs` stdio)가 생성되므로 서로 달라지지 않습니다. 모든 쓰기는 `expectedVersion`과 이력을 따르고, 검토 승인·게시·유료 생성(기본 꺼짐)은 에이전트에게 노출하지 않습니다. 규칙 기반 초안과 에이전트 초안은 응답의 `engine`으로 구분합니다. [API 문서](docs/agent-api.md) · [MCP 문서](docs/mcp.md)
+
 ## 이전 화면과 검증 기록
 
 ![흰색 제작실의 장면 편집 화면 — 로컬 QA 레코드](docs/assets/white-studio/studio-1440.png)
