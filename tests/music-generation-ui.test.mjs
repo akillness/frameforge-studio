@@ -96,7 +96,9 @@ async function fixture(t, { transport = 'api' } = {}) {
 
 async function quote(f) {
   await f.dialog.getByRole('button', { name: '음악 생성 열기', exact: true }).click();
+  const schemaLoaded = f.page.waitForResponse(r => r.url().includes('/api/generation/models') && r.url().includes('model='));
   await f.dialog.getByLabel('음악 생성 모델', { exact: true }).selectOption('music-fixture');
+  await schemaLoaded;
   await f.dialog.getByLabel('음악 생성 프롬프트', { exact: true }).fill('Calm instrumental fixture');
   await f.dialog.getByLabel('duration', { exact: true }).fill('12');
   const pending = f.page.waitForResponse(r => r.url() === `${f.base}/api/episodes/${f.episode.id}/generations/quote` && r.request().method() === 'POST');
