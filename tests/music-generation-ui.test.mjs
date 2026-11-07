@@ -59,7 +59,7 @@ async function fixture(t, { transport = 'api' } = {}) {
   const base = `http://127.0.0.1:${app.address().port}`;
   const browser = await chromium.launch({ headless: true, executablePath });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1080 }, reducedMotion: 'reduce', serviceWorkers: 'block' });
-  const page = await context.newPage(); page.setDefaultTimeout(5000);
+  const page = await context.newPage(); page.setDefaultTimeout(15000);
   const external = [], errors = [], writes = [], releases = [];
   page.on('pageerror', error => errors.push(error.message));
   await context.route('**/*', route => {

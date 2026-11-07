@@ -1156,7 +1156,7 @@ export class WorkflowEngine {
         episode = { ...episode, scenes: normalized };
         preparedStages[node.id] = normalized;
         outputs.set(node.id, { scenes: normalized });
-      } else if (node.type === 'generate') {
+      } else if (node.type === 'generate' && selection.selectedStages.includes(node.id)) {
         const storyboard = prerequisite(workflow, node, 'storyboard');
         const layout = optional(workflow, node, 'layout');
         const producer = layout && outputs.has(layout.id) && !ancestors(workflow.edges, storyboard.id).has(layout.id) ? layout : storyboard;
@@ -1189,7 +1189,12 @@ export class WorkflowEngine {
             return { ...scene, kind: applied.kind, assetUrl: applied.assetUrl, source: applied.source, trimStart: applied.trimStart, trimEnd: applied.trimEnd, ...(applied.kind === 'video' ? { duration: applied.duration } : {}) };
           });
         }
-        if (!Array.isArray(connectedScenes) || canonicalJson(this.validateAssets(scenes(connectedScenes))) !== canonicalJson(this.validateAssets(scenes(episode.scenes)))) {
+        const targetSceneId = node.config.sceneId || (node.config.sceneIndex !== undefined ? episode.scenes[node.config.sceneIndex]?.id : null);
+        const targetSceneConnected = targetSceneId ? connectedScenes.find((s) => s.id === targetSceneId) : null;
+        const targetSceneEpisode = targetSceneId ? episode.scenes.find((s) => s.id === targetSceneId) : null;
+        const targetSceneDiffers = targetSceneConnected && targetSceneEpisode && canonicalJson(targetSceneConnected) !== canonicalJson(targetSceneEpisode);
+        const wholeDiffers = !Array.isArray(connectedScenes) || canonicalJson(this.validateAssets(scenes(connectedScenes))) !== canonicalJson(this.validateAssets(scenes(episode.scenes)));
+        if (targetSceneDiffers || (wholeDiffers && !targetSceneId)) {
           throw new HttpError(409, 'Save the connected scene branch before quoting generation');
         }
       }
