@@ -1474,15 +1474,13 @@ test('U1: a delayed POST /skips response that resolves after the user switches p
   assert.deepEqual(cOwnedWorkflows, [], 'episode C genuinely owns no workflow of its own, confirmed server-side -- independent of whatever the UI previews for it');
 
   await switchTo(episodeC);
-  await page.locator('#workflow-canvas').waitFor();
-  assert.match(await page.locator('#wf-select option:checked').innerText(), /템플릿 미리보기/, 'C (owning no workflow) must land in template-preview mode -- the real, reachable contract, not an empty state');
-  assert.equal(await page.locator('.wf-node.is-skipped').count(), 0, 'nothing in C\'s own context was ever skipped -- the previewed template must show zero skip contamination from A\'s still-pending toggle');
+  await page.locator('.panel.empty').waitFor();
+  assert.equal(await page.locator('#wf-select').inputValue(), '', 'C (owning no workflow) lands in empty state without auto-selecting a template');
 
   releaseSkip2();
   skipRoute2Active = false;
-  await page.waitForTimeout(300); // let the late (now-foreign) response resolve while viewing C's template preview.
-  assert.match(await page.locator('#wf-select option:checked').innerText(), /템플릿 미리보기/, 'still viewing a template preview after the late response resolves -- it must not have redirected the UI, opened a dialog, or thrown');
-  assert.equal(await page.locator('.wf-node.is-skipped').count(), 0, 'the late response must still not have leaked a skip into whatever C is previewing');
+  await page.waitForTimeout(300); // let the late (now-foreign) response resolve while viewing C's empty state.
+  assert.equal(await page.locator('#wf-select').inputValue(), '', 'still viewing empty state after the late response resolves -- it must not have redirected the UI, opened a dialog, or thrown');
   const stillCOwned = (await api('/api/workflows')).filter(w => w.episodeId === episodeC.id);
   assert.deepEqual(stillCOwned, [], 'the late response must not have created or attached any workflow to C');
 });

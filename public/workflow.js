@@ -501,10 +501,7 @@ export function createWorkflowEditor({api,toast=()=>{},getEpisodes=()=>[],getEpi
     const owned=workflows.filter(owns);
     if(owned.length===1)selectGraph(owned[0]);
     else if(!project)selectGraph(workflows[0] || null);
-    else {
-      const template=workflows.find(item=>!item.episodeId&&!item.channelId) || null;
-      selectGraph(template);
-    }
+    else selectGraph(null);
   }
   function bindProject({episodeId:nextEpisodeId=null,channelId:nextChannelId=null}={}) {
     if(project?.episodeId===nextEpisodeId&&project?.channelId===nextChannelId)return getContext();
