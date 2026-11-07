@@ -718,6 +718,7 @@ dialog::backdrop { background: var(--overlay-backdrop); }
 @media (pointer: coarse) {
   :root { --control-height: 44px; }
   .ff-context-menu__item { min-height: 44px; }
+  .ff-info-tooltip { pointer-events: none; }
 }
 
 /* Studio authoring: shortcut legend under the monitor and the AI storyboard draft panel. Tokens only. */

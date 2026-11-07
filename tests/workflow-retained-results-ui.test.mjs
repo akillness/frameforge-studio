@@ -94,7 +94,7 @@ test('a skipped node displays retained evidence as historical, not as output pro
   const inspector = await f.results(workflow, 'a', second.id);
   const text = await inspector.innerText();
   assert.match(text, /retained-keyword/);
-  assert.match(text, /이전 실행 결과 보존/);
+  assert.match(text, /실행하지 않고 보존|이전 실행 결과 보존/);
   assert.match(text, new RegExp(`출처 실행 ${first.id}`));
 });
 

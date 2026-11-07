@@ -808,7 +808,7 @@ test('PR6: publish readiness correctly reports unsaved-episode-changes (not a fa
   await page.locator('#project-navigation [data-action=open-scene-editor]').click();
   const sceneDialog = page.locator('#project-scene-dialog');
   await sceneDialog.waitFor();
-  await sceneDialog.locator('summary').click();
+  await sceneDialog.locator('.inspector summary').click();
   await sceneDialog.locator('[data-episode=title]').fill('Edited mid-flight episode title');
   await page.keyboard.press('Escape');
   await sceneDialog.waitFor({ state: 'hidden' });

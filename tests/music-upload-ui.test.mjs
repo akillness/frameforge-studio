@@ -54,6 +54,7 @@ async function fixture(t) {
   const other = await api('/api/episodes', 'POST', { channelId: channel.id, title: 'Other audio project', topic: 'Separate project' });
   const template = await api('/api/workflows', 'POST', { name: 'Audio upload graph', nodes: [{ id: 'a', type: 'trend', label: 'A', x: 40, y: 50, config: {} }], edges: [] });
   await api(`/api/workflows/${template.id}/copies`, 'POST', { channelId: channel.id, episodeId: episode.id, expectedTemplateVersion: template.version });
+  await api(`/api/workflows/${template.id}/copies`, 'POST', { channelId: channel.id, episodeId: other.id, expectedTemplateVersion: template.version });
   await page.goto(base); await page.locator('#app .shell').waitFor();
   const channelButton = page.locator(`[data-action=channel][data-id="${channel.id}"]`), group = channelButton.locator('xpath=ancestor::details[1]');
   if (!await group.evaluate(element => element.open)) await group.locator('summary').click();

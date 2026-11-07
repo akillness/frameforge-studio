@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { normalizeLayout, createWorkspaceStore } from '../public/workspace-state.js';
 
 const KEY = 'frameforge.workspace.v1';
-const custom = { presetId: 'custom', width: 1173, height: 673, inspectorWidth: 347, toolsMode: 'overlay' };
+const custom = { presetId: 'custom', width: 1173, height: 673, inspectorWidth: 347, sidebarWidth: 216, toolsMode: 'overlay' };
 function memory(raw = null) {
   const values = new Map(raw === null ? [] : [[KEY, raw]]);
   return { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };
@@ -20,7 +20,7 @@ for (const [id, width, height, toolsMode] of [
     const store = createWorkspaceStore({ storage: memory() });
     store.setLayout(custom);
     const { layout } = store.selectPreset(id);
-    assert.deepEqual(layout, { presetId: id, width, height, toolsMode, inspectorWidth: custom.inspectorWidth });
+    assert.deepEqual(layout, { presetId: id, width, height, toolsMode, inspectorWidth: custom.inspectorWidth, sidebarWidth: custom.sidebarWidth });
   });
 }
 

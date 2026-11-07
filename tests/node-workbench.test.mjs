@@ -778,7 +778,7 @@ test('persisted node results survive fast nonlatest project remount and reject a
   const initialChannel = page.locator(`[data-action=channel]:not([data-id="${f.channel.id}"])`).first();
   const initialGroup = initialChannel.locator('xpath=ancestor::details[1]');
   if (!await initialGroup.evaluate(element => element.open)) await initialGroup.locator('summary').click();
-  await initialChannel.click(); await page.locator('#workflow-canvas').waitFor();
+  await initialChannel.click(); await page.locator('.shell').waitFor();
   await page.mouse.move(1000, 40); await page.keyboard.press('Escape');
   const holdHistory = async (workflow, run) => {
     let fetched, failed, release;

@@ -186,7 +186,12 @@ test('generated apply validates and actually renders a local illustration withou
   assert.doesNotThrow(() => media.validateAssets(result.episode.scenes));
   const episode = f.store.updateEpisode(f.episode.id, { scenes: result.episode.scenes.map(scene => ({ ...scene, duration: 1 })) }, result.episode.version);
   const sceneSnapshot = structuredClone(episode.scenes);
-  const rendered = await renderEpisode(episode, { dataDir: f.dataDir });
+  const uploads = f.store.list('uploads');
+  const sceneIntegrity = episode.scenes.filter(s => s.assetUrl).map(s => {
+    const u = uploads.find(item => item.url === s.assetUrl);
+    return { sceneId: s.id, use: 'asset', assetUrl: s.assetUrl, sha256: u.sha256, size: u.size };
+  });
+  const rendered = await renderEpisode(episode, { dataDir: f.dataDir, sceneIntegrity });
   const probe = await execute(process.env.FFPROBE_PATH || 'ffprobe', ['-v', 'error', '-show_entries', 'stream=codec_type,width,height', '-of', 'json', join(f.dataDir, 'exports', rendered.filename)]);
   const video = JSON.parse(probe.stdout).streams.find(stream => stream.codec_type === 'video');
   assert.equal(video.width, 1080); assert.equal(video.height, 1920);
@@ -195,8 +200,8 @@ test('generated apply validates and actually renders a local illustration withou
   const channel = f.store.save('channels', { ...f.channel, externalId: `UC${'A'.repeat(22)}`, platform: 'YouTube' });
   const template = f.store.create('workflows', defaultWorkflow());
   const workflow = f.store.createWorkflowCopy({ templateId: template.id, channelId: channel.id, episodeId: episode.id, expectedTemplateVersion: template.version });
-  const job = f.store.create('jobs', { ...rendered, episodeId: episode.id, episodeVersion: episode.version, status: 'completed', progress: 100, sceneSnapshot: structuredClone(sceneSnapshot) });
-  let run = f.store.create('workflowRuns', { workflowId: workflow.id, workflowVersion: workflow.version, episodeId: episode.id, episodeVersion: episode.version, status: 'approved', nodeRuns: [{ nodeId: 'render', type: 'render', status: 'completed', output: { jobId: job.id, outputUrl: job.outputUrl, sha256: job.sha256, episodeVersion: episode.version, sceneSnapshot: structuredClone(sceneSnapshot), generationNodeIds: [] } }, { nodeId: 'review', type: 'review', status: 'approved', output: {} }], reviews: {} });
+  const job = f.store.create('jobs', { ...rendered, episodeId: episode.id, episodeVersion: episode.version, status: 'completed', progress: 100, sceneSnapshot: structuredClone(sceneSnapshot), sceneIntegrity, verifiedSceneAssets: rendered.verifiedSceneAssets || sceneIntegrity });
+  let run = f.store.create('workflowRuns', { workflowId: workflow.id, workflowVersion: workflow.version, episodeId: episode.id, episodeVersion: episode.version, status: 'approved', nodeRuns: [{ nodeId: 'render', type: 'render', status: 'completed', output: { jobId: job.id, outputUrl: job.outputUrl, sha256: job.sha256, episodeVersion: episode.version, sceneSnapshot: structuredClone(sceneSnapshot), generationNodeIds: [], verifiedSceneAssets: rendered.verifiedSceneAssets || sceneIntegrity } }, { nodeId: 'review', type: 'review', status: 'approved', output: {} }], reviews: {} });
   const review = { decision: 'approved', workflowId: workflow.id, workflowVersion: workflow.version, runId: run.id, episodeId: episode.id, episodeVersion: episode.version, jobId: job.id, outputUrl: job.outputUrl, sha256: job.sha256 };
   run = f.store.save('workflowRuns', { ...run, reviews: { review } });
   const service = new PublicationService({ store: f.store, oauth: new YouTubeOAuth({ store: f.store, clientId: '', clientSecret: '', redirectUri: '' }), fetchImpl: async () => assert.fail('approval preview cannot contact provider') }); t.after(() => service.close());

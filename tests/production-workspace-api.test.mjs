@@ -192,12 +192,12 @@ test('copy requires an authenticated admin session like every other workflow wri
 
 function fastRenderer(filenamePrefix = 'pw-review-fixture') {
   let count = 0;
-  return async (episode, { dataDir: runDir }) => {
+  return async (episode, { dataDir: runDir, sceneIntegrity }) => {
     count += 1;
     const filename = `${filenamePrefix}-${count}.mp4`;
     const bytes = Buffer.from('fixture render bytes, not a real MP4');
     await writeFile(join(runDir, 'exports', filename), bytes);
-    return { filename, outputUrl: `/api/exports/${filename}`, sha256: createHash('sha256').update(bytes).digest('hex') };
+    return { filename, outputUrl: `/api/exports/${filename}`, sha256: createHash('sha256').update(bytes).digest('hex'), ...(sceneIntegrity !== undefined ? { verifiedSceneAssets: sceneIntegrity } : {}) };
   };
 }
 

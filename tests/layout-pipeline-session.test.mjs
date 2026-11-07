@@ -164,8 +164,13 @@ test('full 10-stage workflow preserves slot generation and exact-node review bef
       const bytes = Buffer.from('rendered-mp4-binary-fixture');
       const sha256 = createHash('sha256').update(bytes).digest('hex');
       await writeFile(path.join(dataDir, 'exports', filename), bytes);
-      const job = store.create('jobs', { episodeId: ep.id, episodeVersion: ep.version, status: 'completed', progress: 100, filename, outputUrl: `/api/exports/${filename}`, sha256 });
-      return { filename, outputUrl: `/api/exports/${filename}`, jobId: job.id, episodeVersion: ep.version, sha256 };
+      const uploads = store.list('uploads');
+      const sceneIntegrity = ep.scenes.flatMap(s => [
+        ...(s.assetUrl ? [{ sceneId: s.id, use: 'asset', assetUrl: s.assetUrl, sha256: uploads.find(u => u.url === s.assetUrl)?.sha256, size: uploads.find(u => u.url === s.assetUrl)?.size }] : []),
+        ...((s.slots || []).filter(sl => sl.assetUrl).map(sl => ({ sceneId: s.id, slotId: sl.id, use: 'asset', assetUrl: sl.assetUrl, sha256: uploads.find(u => u.url === sl.assetUrl)?.sha256, size: uploads.find(u => u.url === sl.assetUrl)?.size }))),
+      ]);
+      const job = store.create('jobs', { episodeId: ep.id, episodeVersion: ep.version, status: 'completed', progress: 100, filename, outputUrl: `/api/exports/${filename}`, sha256, sceneSnapshot: structuredClone(ep.scenes), sceneIntegrity, verifiedSceneAssets: sceneIntegrity });
+      return { filename, outputUrl: `/api/exports/${filename}`, jobId: job.id, episodeVersion: ep.version, sha256, sceneSnapshot: structuredClone(ep.scenes), verifiedSceneAssets: sceneIntegrity };
     },
     validateAssets: (sceneList) => scenes(sceneList),
     generations,
@@ -286,7 +291,7 @@ test('full 10-stage workflow preserves slot generation and exact-node review bef
       resumeRunId: completedRun.id,
       expectedEpisodeVersion: completedRun.episodeVersion,
     }),
-    (error) => error.status === 409 && /approved.*(?:review|candidate)|artifact/i.test(error.message),
+    (error) => error.status === 409 && (/approved.*(?:review|candidate)|artifact/i.test(error.message) || error.message.includes('fresh evidence')),
   );
   assert.equal(workflows.listRuns(createdWf.id).length, runCountBeforeArtifactResume);
   assert.equal(renderCount, renderCountBeforeArtifactResume);

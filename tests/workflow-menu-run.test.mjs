@@ -1108,7 +1108,7 @@ test('U7: a non-admin/read-only session keeps the read-only expanders working (r
   await page.locator('[data-wf-action="refresh-run-history"]').click();
   await page.locator('.wf-history-record').first().waitFor();
   const firstRunId = await page.locator('.wf-history-record').first().getAttribute('data-run-id');
-  await page.route(`${base}/api/workflow-runs/${firstRunId}`, route => route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'Fixture-forced failure' }) }), { times: 1 });
+  await page.route(`${base}/api/workflow-runs/${firstRunId}**`, route => route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'Fixture-forced failure' }) }), { times: 1 });
   await page.locator('.wf-history-record').first().locator('summary').click();
   await page.locator(`[data-wf-action="refresh-run-detail"][data-id="${firstRunId}"]`).waitFor();
   await page.locator(`[data-wf-action="refresh-run-detail"][data-id="${firstRunId}"]`).click();

@@ -21,12 +21,12 @@ const baseIntegrations = {
 async function setup(t, overrides = {}) {
   const dataDir = await mkdtemp(path.join(tmpdir(), 'frameforge-graph-'));
   let renderCount = 0;
-  const renderer = async (episode, { dataDir }) => {
+  const renderer = async (episode, { dataDir, sceneIntegrity }) => {
     renderCount++;
     const filename = `graph-fixture-${renderCount}.mp4`;
     const bytes = Buffer.from('fixture only');
     await writeFile(path.join(dataDir, 'exports', filename), bytes);
-    return { filename, outputUrl: `/api/exports/${filename}`, sha256: createHash('sha256').update(bytes).digest('hex') };
+    return { filename, outputUrl: `/api/exports/${filename}`, sha256: createHash('sha256').update(bytes).digest('hex'), ...(sceneIntegrity !== undefined ? { verifiedSceneAssets: sceneIntegrity } : {}) };
   };
   let server, base;
   const start = async () => { server = createApp({ dataDir, loginToken: '', publicOrigin: '', integrations: baseIntegrations, renderer, ...overrides }); await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve)); base = `http://127.0.0.1:${server.address().port}`; };
