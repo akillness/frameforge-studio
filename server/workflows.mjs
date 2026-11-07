@@ -1192,7 +1192,7 @@ export class WorkflowEngine {
         const targetSceneId = node.config.sceneId || (node.config.sceneIndex !== undefined ? episode.scenes[node.config.sceneIndex]?.id : null);
         const targetSceneConnected = targetSceneId ? connectedScenes.find((s) => s.id === targetSceneId) : null;
         const targetSceneEpisode = targetSceneId ? episode.scenes.find((s) => s.id === targetSceneId) : null;
-        const targetSceneDiffers = targetSceneConnected && targetSceneEpisode && canonicalJson(targetSceneConnected) !== canonicalJson(targetSceneEpisode);
+        const targetSceneDiffers = Boolean(targetSceneId && (!targetSceneConnected || !targetSceneEpisode || canonicalJson(targetSceneConnected) !== canonicalJson(targetSceneEpisode)));
         const wholeDiffers = !Array.isArray(connectedScenes) || canonicalJson(this.validateAssets(scenes(connectedScenes))) !== canonicalJson(this.validateAssets(scenes(episode.scenes)));
         if (targetSceneDiffers || (wholeDiffers && !targetSceneId)) {
           throw new HttpError(409, 'Save the connected scene branch before quoting generation');
