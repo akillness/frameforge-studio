@@ -51,7 +51,7 @@ const toolDescriptions = {overview:'채널과 전체 제작 현황을 확인합�
 const canMutate = () => state.session?.authenticated === true;
 const readActions = new Set(['view','channel','episode','project-section','scene','select-slot','select-platform-session','prev','next','play','reload','refresh-speech','refresh-commands','reload-history','history-version','refresh-knowledge','refresh-integrations','refresh-server-exports','trend-popular','ops-open','ops-history','project-tools','project-menu','episode-menu','channel-menu','tool-menu','sidebar-menu','open-scene-editor','close-scene-editor','storyboard-toggle','storyboard-cancel','storyboard-propose','storyboard-keep','close-project-tool','inspect-archived','graph-pan','graph-zoom-in','graph-zoom-out','graph-zoom-reset','graph-node-move','graph-node-reset']);
 const readWorkflowActions = new Set(['select-node','minimap-select','inspector-tab','select-run','inspect-run-node','zoom-in','zoom-out','fit','reload','refresh-history','history-version','refresh-runs','refresh-generation','refresh-generation-job','open-tools','open-results','open-stage-overlay','close-overlay','select-stage','close-confirm','close-dialog','node-menu','canvas-menu','node-tools','scene-editor','node-results','node-history','connections','open-add-node','open-workflow-settings','confirm-delete-node','input','output','recent-runs-more','history-versions-more','history-page','refresh-run-history','refresh-run-detail','restore-workflow','estimate-ack','open-blueprint','blueprint-generate','blueprint-reset','open-quick-add']);
-const mutationForms = new Set(['modal-form','chat-form','trend-form','trend-settings-form','command-form','wf-connect-form']);
+const mutationForms = new Set(['modal-form','chat-form','trend-form','trend-settings-form','command-form','discord-settings-form','wf-connect-form']);
 function applySessionControls() {
   for (const control of document.querySelectorAll('[data-action],[data-wf-action],input,select,textarea,form button[type="submit"]')) {
     const mutation = control.dataset.action ? !readActions.has(control.dataset.action) : control.dataset.wfAction ? !readWorkflowActions.has(control.dataset.wfAction) :
@@ -70,6 +70,7 @@ for (const type of ['click','input','change','submit']) document.addEventListene
 },true);
 let modalHandler;
 let commands = [];
+let discordState = null;
 let speech = {available:false,voices:[],detail:'음성 엔진을 확인하고 있습니다.'};
 let speechLoaded = false;
 let speechVoice = '';
@@ -560,7 +561,7 @@ async function openProjectTool(tool) {
   const targetId = episode?.id;
   const opener = document.activeElement;
   if (tool === 'history') await loadHistory();
-  if (tool === 'settings') await loadCommands();
+  if (tool === 'settings') await Promise.all([loadCommands(), loadDiscord()]);
   if (tool === 'trends') await loadTrendBrowser();
   if (request !== projectToolRequest || episode?.id !== targetId) return;
   closeProjectOverlays(); overlayOpener = opener; activeTool = tool; mountProjectTool();
@@ -872,12 +873,16 @@ async function loadCommands() {
   commands = Array.isArray(result) ? result : result.commands || [];
 }
 
+async function loadDiscord() {
+  try { discordState = await api('/api/integrations/discord'); } catch { discordState = state.integrations?.discord || null; }
+}
+
 function audioInspectorHtml(scene) {
   return `<div class="section-spacer"><div class="two-cols"><label>영상 시작점 (초)<input id="scene-trim-start" data-testid="scene-trim-start" type="number" data-scene="trimStart" min="0" max="36000" step="0.1" value="${Number(scene.trimStart) || 0}"></label><label>오디오 볼륨 (0–2)<input id="scene-audio-volume" data-testid="scene-audio-volume" type="number" data-scene="audioVolume" min="0" max="2" step="0.1" value="${scene.audioVolume ?? 1}"></label></div><p class="hint">영상 시작점부터 장면 길이만큼 사용합니다. 음성은 아래에서 생성하거나 파일로 첨부할 수 있습니다.</p><div class="row"><button class="small" data-action="upload-audio" data-testid="upload-audio">↑ 음성 / 음악</button>${scene.audioUrl ? '<button class="small quiet" data-action="remove-audio">오디오 제거</button>' : '<span class="hint">MP3 · WAV · OGG</span>'}</div>${scene.audioUrl ? `<audio id="scene-audio-preview" controls preload="metadata" src="${safeUrl(scene.audioUrl)}" aria-label="첨부한 장면 오디오 미리듣기" style="width:100%;height:32px;margin-top:12px"></audio>` : ''}</div>`;
 }
 
 function commandsHtml() {
-  return `<section class="panel section-spacer" id="commands-panel"><div class="panel-header"><h2>작업 명령함</h2><button class="small" data-action="refresh-commands">↻ 명령 새로고침</button></div><form class="panel-body" id="command-form" data-testid="command-form"><label>워크스페이스 명령<textarea name="message" id="command-message" required maxlength="4000" placeholder="채널, 에피소드, 작업 목적을 적어 주세요"></textarea></label><button class="primary" type="submit">명령 기록</button><p class="hint" style="margin-top:12px">웹에서 접수한 명령을 지속 기록합니다. 접수 자체는 에이전트 실행을 뜻하지 않으며, 실제 실행 작업은 스튜디오의 제작 어시스턴트를 이용하세요.</p></form><div id="command-list">${commands.length ? commands.map(command => `<div class="data-row"><div><h3>${esc(command.message)}</h3><p>${esc(command.source || 'web')} · ${date(command.createdAt)}</p></div><span class="badge">${esc(command.status || '접수됨')}</span></div>`).join('') : '<div class="panel-body hint">접수된 명령이 없습니다.</div>'}</div></section>`;
+  return `<section class="panel section-spacer" id="commands-panel"><div class="panel-header"><h2>작업 명령함</h2><div class="row"><button class="small" data-action="discord-sync">Discord 명령 가져오기</button><button class="small" data-action="refresh-commands">↻ 명령 새로고침</button></div></div><form class="panel-body" id="command-form" data-testid="command-form"><label>워크스페이스 명령<textarea name="message" id="command-message" required maxlength="4000" placeholder="채널, 에피소드, 작업 목적을 적어 주세요"></textarea></label><button class="primary" type="submit">명령 기록</button><p class="hint" style="margin-top:12px">웹 또는 Discord 채널에서 접수한 명령을 지속 기록합니다. 접수 자체는 에이전트 실행을 뜻하지 않으며, 실제 실행 작업은 스튜디오의 제작 어시스턴트를 이용하세요.</p></form><div id="command-list">${commands.length ? commands.map(command => `<div class="data-row"><div><h3>${esc(command.message)}</h3><p>${esc(command.source || 'web')}${command.authorName ? ` · ${esc(command.authorName)}` : ''} · ${date(command.createdAt)}</p></div><span class="badge">${esc(command.status || '접수됨')}</span></div>`).join('') : '<div class="panel-body hint">접수된 명령이 없습니다.</div>'}</div></section>`;
 }
 
 function stopWorkbench() {
@@ -1808,9 +1813,17 @@ function editGraphEdge(index) {
     await refreshAfterGraphEdit();
   },'원본에 저장');
 }
+function discordSettingsHtml() {
+  const d = discordState || state.integrations?.discord || {};
+  const events = d.notifyEvents || { workflow: true, review: true, render: true, publication: true };
+  const badgeTone = d.available ? 'lime' : d.configured ? '' : 'coral';
+  const badgeLabel = d.available ? '연결 확인됨' : d.configured ? '설정됨 · 확인 필요' : '미설정';
+  return `<section class="panel section-spacer" id="discord-settings-panel"><div class="panel-header"><div><h2>Discord 연동 (REST · Webhook)</h2><p class="hint">${esc(d.detail || '외부 봇 Gateway와 충돌 없이 REST/Webhook으로 알림을 보내고 명령을 가져옵니다.')}</p></div><span class="badge ${badgeTone}">${badgeLabel}</span></div><form class="panel-body" id="discord-settings-form"><div class="two-cols"><label>대상 채널 ID<input name="channelId" value="${esc(d.channelId || '')}" placeholder="예: 1483450881146880145"></label><label>명령 접두사<input name="commandPrefix" maxlength="32" value="${esc(d.commandPrefix || '!ff')}" placeholder="!ff"></label></div><label>허용 사용자 ID (쉼표 구분, 비우면 접두사 일치 사용자 모두 허용)<input name="allowedUserIds" value="${esc((d.allowedUserIds || []).join(', '))}" placeholder="예: 633281085282844672"></label><div class="row" style="flex-wrap:wrap;gap:14px;margin:10px 0"><label><input type="checkbox" name="enabled" ${d.enabled ? 'checked' : ''}> 자동 알림 활성화</label><label><input type="checkbox" name="evWorkflow" ${events.workflow !== false ? 'checked' : ''}> 워크플로</label><label><input type="checkbox" name="evReview" ${events.review !== false ? 'checked' : ''}> 검토</label><label><input type="checkbox" name="evRender" ${events.render !== false ? 'checked' : ''}> 렌더</label><label><input type="checkbox" name="evPublication" ${events.publication !== false ? 'checked' : ''}> 공개</label></div><p class="hint">${d.botUser?.username ? `봇: ${esc(d.botUser.username)} · ` : ''}${d.channelName ? `채널: #${esc(d.channelName)} · ` : ''}${d.lastVerifiedAt ? `마지막 확인: ${date(d.lastVerifiedAt)}` : '아직 연결 확인 전'}${d.lastError ? ` · 최근 오류: ${esc(d.lastError)}` : ''}</p><div class="row section-spacer" style="flex-wrap:wrap"><button class="primary" type="submit">Discord 설정 저장</button><button type="button" data-action="discord-verify">연결 확인</button><button type="button" data-action="discord-test">테스트 알림 보내기</button><button type="button" data-action="discord-sync">명령 가져오기</button></div></form></section>`;
+}
+
 function settingsView() {
   const entries = Array.isArray(state.integrations) ? state.integrations.map((item,index) => [item.name || item.id || index,item]) : Object.entries(state.integrations || {});
-  return heading('연결 상태', '외부 도구의 설정과 인증 상태를 확인합니다.') + `<div class="source-note">Studio는 로컬 규칙 기반 어시스턴트입니다. Codex · JEO · JEOPI · Hermes는 호스트 브리지가 연결되어야 실행됩니다. 채널 등록은 플랫폼 계정 인증이나 자동 업로드 연결을 의미하지 않습니다.</div><div class="status-grid">${entries.map(([name,raw]) => { const value = typeof raw === 'object' && raw !== null ? raw : {status:String(raw)}; const verified = value.available === true && value.authenticated !== false && ![value.status, value.authentication, value.authenticated].includes('configured'); const configured = value.configured === true || value.authentication === 'configured' || value.authenticated === 'configured' || value.status === 'configured'; const label = verified ? '사용 가능' : configured ? '설정됨 · 확인 필요' : esc(value.status || '연결 확인 필요'); const tone = verified ? 'lime' : configured ? '' : 'coral'; const detail = value.detail || value.message || value.reason || value.description || (verified ? '서버에서 사용 가능 상태를 확인했습니다.' : configured ? '설정은 있지만 실제 사용 가능 여부를 확인하지 못했습니다.' : '서버 환경 설정 또는 인증이 필요합니다.'); return `<article class="panel integration"><div class="row between"><h3>${esc(name)}</h3><span class="badge ${tone}">${label}</span></div><p>${esc(detail)}</p>${value.url ? `<a href="${safeUrl(value.url)}" target="_blank" rel="noopener noreferrer">연결 열기 ↗</a>` : ''}</article>`; }).join('')}</div><section class="panel section-spacer"><div class="panel-header"><h2>등록된 채널</h2><button class="small" data-action="new-channel">＋ 채널 추가</button></div>${state.channels.map(channel => `<div class="data-row"><div><h3>${esc(channel.name)}</h3><p>${esc(channel.platform)} · ${esc(channel.accountEmail || '계정 미연결')}<br>${channel.externalId ? `채널 ID: ${esc(channel.externalId)}` : '플랫폼 채널 ID 미등록'}</p></div><span class="badge">${esc(categoryNames[channel.category] || channel.category)}</span></div>`).join('')}</section><div class="row section-spacer"><button data-action="refresh-integrations">연결 상태 확인</button><a href="/api/health" target="_blank" rel="noopener noreferrer">서비스 상태 보기 ↗</a></div>`;
+  return heading('연결 상태', '외부 도구의 설정과 인증 상태를 확인합니다.') + `<div class="source-note">Studio는 로컬 규칙 기반 어시스턴트입니다. Codex · JEO · JEOPI · Hermes는 호스트 브리지가 연결되어야 실행됩니다. 채널 등록은 플랫폼 계정 인증이나 자동 업로드 연결을 의미하지 않습니다.</div><div class="status-grid">${entries.map(([name,raw]) => { const value = typeof raw === 'object' && raw !== null ? raw : {status:String(raw)}; const verified = value.available === true && value.authenticated !== false && ![value.status, value.authentication, value.authenticated].includes('configured'); const configured = value.configured === true || value.authentication === 'configured' || value.authenticated === 'configured' || value.status === 'configured'; const label = verified ? '사용 가능' : configured ? '설정됨 · 확인 필요' : esc(value.status || '연결 확인 필요'); const tone = verified ? 'lime' : configured ? '' : 'coral'; const detail = value.detail || value.message || value.reason || value.description || (verified ? '서버에서 사용 가능 상태를 확인했습니다.' : configured ? '설정은 있지만 실제 사용 가능 여부를 확인하지 못했습니다.' : '서버 환경 설정 또는 인증이 필요합니다.'); return `<article class="panel integration"><div class="row between"><h3>${esc(name)}</h3><span class="badge ${tone}">${label}</span></div><p>${esc(detail)}</p>${value.url ? `<a href="${safeUrl(value.url)}" target="_blank" rel="noopener noreferrer">연결 열기 ↗</a>` : ''}</article>`; }).join('')}</div>${discordSettingsHtml()}<section class="panel section-spacer"><div class="panel-header"><h2>등록된 채널</h2><button class="small" data-action="new-channel">＋ 채널 추가</button></div>${state.channels.map(channel => `<div class="data-row"><div><h3>${esc(channel.name)}</h3><p>${esc(channel.platform)} · ${esc(channel.accountEmail || '계정 미연결')}<br>${channel.externalId ? `채널 ID: ${esc(channel.externalId)}` : '플랫폼 채널 ID 미등록'}</p></div><span class="badge">${esc(categoryNames[channel.category] || channel.category)}</span></div>`).join('')}</section><div class="row section-spacer"><button data-action="refresh-integrations">연결 상태 확인</button><a href="/api/health" target="_blank" rel="noopener noreferrer">서비스 상태 보기 ↗</a></div>`;
 }
 
 function stashActiveDraft() {
@@ -2260,7 +2273,10 @@ async function handleAction(button) {
   else if (action === 'new-reference') { openModal('연출 레퍼런스 추가', `<label>레퍼런스 제목<input name="title" required placeholder="좋은 도입부, 자막, 장면 전환"></label><label>원본 링크<input name="url" type="url" required placeholder="https://..."></label><label>콘텐츠 유형<select name="category">${categoryOptions(activeChannel()?.category)}</select></label><label>참고할 연출 요소<textarea name="notes" placeholder="구도, 템포, 색감 등 참고할 점"></textarea></label>`, async data => { await post('/api/references',{...data,channelId}); await refresh(); render(); toast('레퍼런스를 기록했습니다.'); },'기록'); }
   else if (action === 'reload-history') { const targetId=episode?.id,revision=editRevision; await refresh(); if (episode?.id===targetId && editRevision===revision) {const latest=state.episodes.find(item=>item.id===targetId);if(latest)reconcileEpisode(latest);} await loadHistory(); render(); }
   else if (action === 'refresh-knowledge') { const knowledge = await api('/api/knowledge'); state.graph = knowledge.graph || knowledge; render(); toast('최신 지식을 불러왔습니다.'); }
-  else if (action === 'refresh-integrations') { state.integrations = await api('/api/integrations'); render(); toast('연결 상태를 확인했습니다.'); }
+  else if (action === 'refresh-integrations') { state.integrations = await api('/api/integrations'); await loadDiscord(); render(); toast('연결 상태를 확인했습니다.'); }
+  else if (action === 'discord-verify') { discordState = await post('/api/integrations/discord/verify', {}); state.integrations = await api('/api/integrations'); render(); toast('Discord 연결을 확인했습니다.'); }
+  else if (action === 'discord-test') { const res = await post('/api/integrations/discord/test', {}); await loadDiscord(); render(); toast(`Discord 테스트 알림 전송 완료 (ID ${res.messageId || '-'})`); }
+  else if (action === 'discord-sync') { const res = await post('/api/integrations/discord/sync', {}); await Promise.all([loadCommands(), loadDiscord()]); render(); toast(`Discord 명령 ${res.imported}건 가져옴 (${res.fetched}건 확인)`); }
 }
 
 function contextMenuAnchor(target) {
@@ -2375,7 +2391,7 @@ document.addEventListener('input', event => {
 });
 
 document.addEventListener('submit', async event => {
-  if (!['chat-form','trend-form','trend-settings-form','trend-search-form','command-form'].includes(event.target.id)) return;
+  if (!['chat-form','trend-form','trend-settings-form','trend-search-form','command-form','discord-settings-form'].includes(event.target.id)) return;
   event.preventDefault();
   const form = event.target;
   const data = Object.fromEntries(new FormData(form));
@@ -2384,6 +2400,12 @@ document.addEventListener('submit', async event => {
   try {
     if (form.id === 'chat-form') requireProjectEdit();
     if (form.id === 'command-form') { await post('/api/commands',{message:data.message,source:'web'}); await loadCommands(); render(); }
+    else if (form.id === 'discord-settings-form') {
+      discordState = await api('/api/integrations/discord', { method: 'PUT', body: JSON.stringify({ enabled: data.enabled === 'on', channelId: (data.channelId || '').trim(), commandPrefix: (data.commandPrefix || '!ff').trim(), allowedUserIds: (data.allowedUserIds || '').trim(), notifyEvents: { workflow: data.evWorkflow === 'on', review: data.evReview === 'on', render: data.evRender === 'on', publication: data.evPublication === 'on' } }) });
+      state.integrations = await api('/api/integrations');
+      render();
+      toast('Discord 설정을 저장했습니다.');
+    }
     else if (form.id === 'trend-form') { await post('/api/trends',data); await refresh(); render(); toast('키워드를 기록했습니다.'); }
     else if (form.id === 'trend-settings-form') {
       const intervalHours = Number(data.intervalHours);

@@ -153,3 +153,25 @@ test('MCP real stdio process emits only newline JSON-RPC for initialize, notific
   assert.equal(replies.length,2); assert.equal(replies[0].result.serverInfo.name,'frameforge-higgsfield-bridge');
   assert.deepEqual(replies[1].result.tools.map(t=>t.name),['higgsfield_models','higgsfield_create','higgsfield_status','higgsfield_recover','higgsfield_apply']);
 });
+test('Higgsfield MCP exposes standardized annotations and supports MCP 2026-07-28 discover and structuredContent', async () => {
+  const handle = createHiggsfieldMcp({
+    env: { FRAMEFORGE_TOKEN: 'fixture' },
+    fetchImpl: async (url) => url.pathname === '/api/login'
+      ? Response.json({ authenticated: true }, { headers: { 'set-cookie': `frameforge_session=${'c'.repeat(64)}; Path=/` } })
+      : Response.json({ id: 'gen-42', status: 'queued' }),
+  });
+  const meta = { 'io.modelcontextprotocol/protocolVersion': '2026-07-28', 'io.modelcontextprotocol/clientCapabilities': {} };
+  const discover = await handle({ jsonrpc: '2.0', id: 10, method: 'server/discover', params: { _meta: meta } });
+  assert.equal(discover.result.resultType, 'complete');
+  assert.ok(discover.result.supportedVersions.includes('2026-07-28'));
+  const list = await handle({ jsonrpc: '2.0', id: 11, method: 'tools/list', params: { _meta: meta } });
+  assert.equal(list.result.tools.length, 5);
+  for (const tool of list.result.tools) {
+    assert.ok(tool.title && tool.annotations, tool.name);
+    assert.equal(typeof tool.annotations.readOnlyHint, 'boolean');
+    assert.equal(typeof tool.annotations.destructiveHint, 'boolean');
+  }
+  const statusRes = await handle({ jsonrpc: '2.0', id: 12, method: 'tools/call', params: { name: 'higgsfield_status', arguments: { generationId: 'gen-42' }, _meta: meta } });
+  assert.equal(statusRes.result.resultType, 'complete');
+  assert.deepEqual(statusRes.result.structuredContent, { id: 'gen-42', status: 'queued' });
+});

@@ -246,6 +246,47 @@ export class Store {
     return next;
   }
 
+  getDiscordSettings() {
+    const row = this.db.prepare('SELECT value FROM settings WHERE key = ?').get('discord');
+    let stored = {};
+    try { stored = row ? JSON.parse(row.value) : {}; } catch { stored = {}; }
+    return stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+  }
+
+  saveDiscordSettings(patch = {}) {
+    if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new HttpError(400, 'Invalid Discord settings');
+    const next = { ...this.getDiscordSettings(), ...patch, updatedAt: now() };
+    this.db.prepare('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run('discord', JSON.stringify(next));
+    return next;
+  }
+
+  createDiscordCommand({ message, sessionId, externalMessageId, authorId, authorName, receivedAt } = {}) {
+    const idValue = boundedText(externalMessageId, 40);
+    if (!idValue) throw new HttpError(400, 'Discord message ID required');
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const existing = this.db.prepare("SELECT data FROM entities WHERE kind = 'commands' AND json_extract(data, '$.externalMessageId') = ?").get(idValue);
+      if (existing) {
+        this.db.exec('COMMIT');
+        return { created: false, command: JSON.parse(existing.data) };
+      }
+      const command = entity({
+        message: boundedText(message, 20000),
+        source: 'discord',
+        sessionId: boundedText(sessionId, 100),
+        externalMessageId: idValue,
+        authorId: boundedText(authorId, 40),
+        authorName: boundedText(authorName, 100),
+        receivedAt: trendDate(receivedAt, now()),
+        status: 'received',
+      });
+      this.save('commands', command);
+      this.record('commands.created', { entityId: command.id });
+      this.db.exec('COMMIT');
+      return { created: true, command };
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+  }
+
   collectTrendSnapshot(result = {}, { now: capturedNow = now(), runId } = {}) {
     const trends = Array.isArray(result.trends) ? result.trends : [];
     const sources = cloneJson(Array.isArray(result.sources) ? result.sources : [], 200000) || [];

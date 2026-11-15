@@ -10,6 +10,9 @@ import { DatabaseSync } from 'node:sqlite';
 import { createApp } from '../server/app.mjs';
 import { createAgentOperations } from '../server/agent-ops.mjs';
 import { validateSchema } from '../server/schema.mjs';
+import { Readable } from 'node:stream';
+import { consumeJsonLines } from '../server/mcp.mjs';
+import { createFrameForgeMcp } from '../scripts/frameforge-mcp.mjs';
 
 const TOKEN = 'agent-test-login-token-0123456789';
 const MODERN = '2026-07-28';
@@ -772,4 +775,68 @@ test('stdio and /mcp return the same machine-readable 409 for a real stale episo
   assert.equal(archived.isError, true);
   assert.deepEqual(archived._meta[META_ERROR], { status: 409, code: 'conflict' }, 'archived: conflict (not retryable) with no currentVersion, through stdio too');
   await client.close();
+});
+
+test('Streamable HTTP emits MCP-Protocol-Version and rejects oversized Content-Length before buffering', async (t) => {
+  const app = await startApp(t);
+  const modernRes = await mcp(app, modernMessage('ping'));
+  assert.equal(modernRes.status, 200);
+  assert.equal(modernRes.headers['mcp-protocol-version'], MODERN);
+
+  const legacyRes = await send(app, {
+    method: 'POST',
+    path: '/mcp',
+    headers: { 'content-type': 'application/json', ...bearer(), 'mcp-protocol-version': '2025-11-25' },
+    body: { jsonrpc: '2.0', id: 99, method: 'ping' },
+  });
+  assert.equal(legacyRes.status, 200);
+  assert.equal(legacyRes.headers['mcp-protocol-version'], '2025-11-25');
+
+  const hugeStatus = await new Promise((resolve, reject) => {
+    const req = http.request({ host: '127.0.0.1', port: app.port, method: 'POST', path: '/mcp', agent: false, headers: { 'content-type': 'application/json', ...bearer(), 'content-length': String(2 * 1024 * 1024) } }, (res) => {
+      res.resume();
+      resolve(res.statusCode);
+    });
+    req.on('error', reject);
+    req.write('{"jsonrpc":"2.0"');
+  });
+  assert.equal(hugeStatus, 413);
+});
+
+test('consumeJsonLines handles split chunks and oversized lines, and frameforge-mcp deduplicates concurrent catalog fetches', async () => {
+  const lines = [];
+  let tooLarge = 0;
+  const stream = Readable.from(['{"a":1}\n{"b":', '2}\n' + 'x'.repeat(80) + '\n{"c":3}']);
+  await consumeJsonLines(stream, {
+    maxLineBytes: 40,
+    onLine: (line) => lines.push(line),
+    onTooLarge: () => { tooLarge += 1; },
+  });
+  assert.deepEqual(lines, ['{"a":1}', '{"b":2}', '{"c":3}']);
+  assert.equal(tooLarge, 1);
+
+  let catalogFetches = 0;
+  const proxy = createFrameForgeMcp({
+    env: { FRAMEFORGE_URL: 'http://127.0.0.1:4310', FRAMEFORGE_TOKEN: TOKEN },
+    fetchImpl: async (url) => {
+      if (url.pathname === '/api/agent/operations') {
+        catalogFetches += 1;
+        await new Promise((r) => setTimeout(r, 25));
+        return Response.json({ version: '1.0.0', operations: createAgentOperations().catalog() });
+      }
+      if (url.pathname === '/api/agent/operations/workflow_node_types') {
+        return Response.json({ ok: true, result: await createAgentOperations().invoke('workflow_node_types', {}) });
+      }
+      return new Response('not found', { status: 404 });
+    },
+  });
+  const [r1, r2, r3] = await Promise.all([
+    proxy.handle(modernMessage('tools/list')),
+    proxy.handle(modernMessage('tools/list')),
+    proxy.handle(modernMessage('tools/call', { name: 'workflow_node_types', arguments: {} })),
+  ]);
+  assert.equal(catalogFetches, 1, 'concurrent startup requests must share a single catalog fetch');
+  assert.equal(r1.status, 200);
+  assert.equal(r2.status, 200);
+  assert.equal(r3.status, 200);
 });

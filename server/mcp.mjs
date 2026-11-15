@@ -54,10 +54,44 @@ export function validateHttpHeaders(message, headers) {
   return { status: 400, body: rpcError(id, ERROR.UNSUPPORTED_VERSION, 'Unsupported protocol version', { supported: [...SUPPORTED_VERSIONS], requested: header }) };
 }
 
-const toolDescriptor = ({ name, title, description, inputSchema, outputSchema, annotations }) => ({
+const toolDescriptor = ({ name, title, description, inputSchema, outputSchema, annotations }) => Object.freeze({
   name, title, description, inputSchema, outputSchema,
-  annotations: { title, readOnlyHint: annotations.readOnlyHint, destructiveHint: annotations.destructiveHint, idempotentHint: annotations.idempotentHint, openWorldHint: annotations.openWorldHint },
+  annotations: Object.freeze({ title, readOnlyHint: annotations.readOnlyHint, destructiveHint: annotations.destructiveHint, idempotentHint: annotations.idempotentHint, openWorldHint: annotations.openWorldHint }),
 });
+
+/**
+ * Cursor-offset newline-delimited JSON reader: avoids O(N) substring slicing per line and releases
+ * large backing string buffers immediately once a chunk boundary is drained.
+ */
+export async function consumeJsonLines(input, { maxLineBytes = 1024 * 1024, onLine, onTooLarge } = {}) {
+  let buffered = '';
+  input.setEncoding('utf8');
+  for await (const chunk of input) {
+    buffered += chunk;
+    let offset = 0;
+    let newline;
+    while ((newline = buffered.indexOf('\n', offset)) >= 0) {
+      const rawLine = buffered.slice(offset, newline);
+      offset = newline + 1;
+      if (Buffer.byteLength(rawLine, 'utf8') > maxLineBytes) {
+        onTooLarge?.();
+        continue;
+      }
+      const line = rawLine.trim();
+      if (line) onLine?.(line);
+    }
+    buffered = offset === buffered.length ? '' : buffered.slice(offset);
+    if (Buffer.byteLength(buffered, 'utf8') > maxLineBytes) {
+      buffered = '';
+      onTooLarge?.();
+    }
+  }
+  const tail = buffered.trim();
+  if (tail) {
+    if (Buffer.byteLength(tail, 'utf8') > maxLineBytes) onTooLarge?.();
+    else onLine?.(tail);
+  }
+}
 
 /**
  * @param options.serverInfo { name, title?, version }
@@ -68,6 +102,21 @@ const toolDescriptor = ({ name, title, description, inputSchema, outputSchema, a
  */
 export function createMcpCore({ serverInfo, instructions, listTools, callTool, log = (message) => console.error(message) }) {
   let legacySession = false; // stdio only: a handshake scopes legacy semantics to the process
+  const capabilities = Object.freeze({ tools: Object.freeze({ listChanged: false }) });
+  const discoverResult = Object.freeze({ supportedVersions: SUPPORTED_VERSIONS, capabilities, instructions });
+  let cachedCatalog;
+  let cachedDescriptors;
+  let cachedToolNames;
+
+  async function resolveCatalog() {
+    const catalog = await listTools();
+    if (catalog !== cachedCatalog) {
+      cachedCatalog = catalog;
+      cachedDescriptors = Object.freeze(catalog.map(toolDescriptor));
+      cachedToolNames = new Set(catalog.map((tool) => tool.name));
+    }
+    return { descriptors: cachedDescriptors, names: cachedToolNames };
+  }
 
   async function handle(message, context = {}) {
     if (!isObject(message) || message.jsonrpc !== '2.0' || typeof message.method !== 'string') return { status: 400, body: rpcError(isObject(message) ? message.id : null, ERROR.INVALID_REQUEST, 'Invalid request') };
@@ -82,7 +131,7 @@ export function createMcpCore({ serverInfo, instructions, listTools, callTool, l
       legacySession = true;
       const requested = typeof params.protocolVersion === 'string' ? params.protocolVersion : '';
       const protocolVersion = LEGACY_VERSIONS.includes(requested) ? requested : LEGACY_VERSIONS[0];
-      return { status: 200, body: { jsonrpc: '2.0', id, result: { protocolVersion, capabilities: { tools: { listChanged: false } }, serverInfo, instructions } } };
+      return { status: 200, body: { jsonrpc: '2.0', id, result: { protocolVersion, capabilities, serverInfo, instructions } } };
     }
     if (notification) return { status: 202, body: null };
 
@@ -102,12 +151,16 @@ export function createMcpCore({ serverInfo, instructions, listTools, callTool, l
 
     try {
       if (message.method === 'ping') return reply({});
-      if (message.method === 'server/discover' && modern) return reply({ supportedVersions: [...SUPPORTED_VERSIONS], capabilities: { tools: { listChanged: false } }, instructions }, true);
-      if (message.method === 'tools/list') return reply({ tools: (await listTools()).map(toolDescriptor) }, true);
+      if (message.method === 'server/discover' && modern) return reply(discoverResult, true);
+      if (message.method === 'tools/list') {
+        const { descriptors } = await resolveCatalog();
+        return reply({ tools: descriptors }, true);
+      }
       if (message.method === 'tools/call') {
         if (typeof params.name !== 'string' || !params.name) return { status: 400, body: rpcError(id, ERROR.INVALID_PARAMS, 'params.name is required') };
         if (params.arguments !== undefined && !isObject(params.arguments)) return { status: 400, body: rpcError(id, ERROR.INVALID_PARAMS, 'params.arguments must be an object') };
-        if (!(await listTools()).some((tool) => tool.name === params.name)) return { status: 200, body: rpcError(id, ERROR.INVALID_PARAMS, `Unknown tool: ${params.name}`) };
+        const { names } = await resolveCatalog();
+        if (!names.has(params.name)) return { status: 200, body: rpcError(id, ERROR.INVALID_PARAMS, `Unknown tool: ${params.name}`) };
         let result;
         try { result = await callTool(params.name, params.arguments ?? {}); }
         catch (error) {

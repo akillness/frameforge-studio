@@ -781,7 +781,7 @@ function reviewStatus(nodeRuns, workflow, selectedStages) {
 }
 
 export class WorkflowEngine {
-  constructor({ store, fetchTrends, runAgent, render, validateAssets, generations, platformSessions, publication, fetchImpl = fetch }) {
+  constructor({ store, fetchTrends, runAgent, render, validateAssets, generations, platformSessions, publication, onNotify, fetchImpl = fetch }) {
     this.store = store;
     this.fetchTrends = fetchTrends;
     this.fetchImpl = fetchImpl;
@@ -790,6 +790,7 @@ export class WorkflowEngine {
     this.validateAssets = validateAssets;
     this.generations = generations;
     this.publication = publication;
+    this.onNotify = onNotify;
     this.closed = false;
     this.activeExecutions = new Map();
     this.activeQuoteEpisodes = new Map();
@@ -1087,7 +1088,17 @@ export class WorkflowEngine {
       if (canonicalJson(current.job) !== canonicalJson(job) || canonicalJson(current.render) !== canonicalJson(render)
         || canonicalJson(makeCandidate()) !== canonicalJson(candidate)) throw new HttpError(409, 'Render evidence changed while preparing review');
     }
-    return this.store.commitWorkflowReview(workflowId, runId, reviewNodeId, { decision, notes, expectedEpisodeVersion, jobId: job.id, outputUrl: job.outputUrl, sha256 });
+    const reviewed = this.store.commitWorkflowReview(workflowId, runId, reviewNodeId, { decision, notes, expectedEpisodeVersion, jobId: job.id, outputUrl: job.outputUrl, sha256 });
+    Promise.resolve(this.onNotify?.('review', {
+      workflowId,
+      runId,
+      reviewNodeId,
+      episodeId: run.episodeId,
+      episodeTitle: run.episodeSnapshot?.title || '',
+      decision,
+      notes,
+    })).catch(() => {});
+    return reviewed;
   }
 
   current(id) {
@@ -1468,6 +1479,15 @@ export class WorkflowEngine {
       const finalStatus = failure ? 'failed' : reviewStatus(latest.nodeRuns, latest.workflowSnapshot, latest.selectedStages);
       this.store.save('workflowRuns', { ...latest, status: finalStatus, ...(failure ? { error: failure } : {}), completedAt: timestamp(), episodeVersion: episode.version, updatedAt: timestamp() });
       this.store.record(`workflow.${finalStatus}`, { entityId: workflow.id, runId: id, episodeId: episode.id, executed });
+      Promise.resolve(this.onNotify?.('workflow', {
+        workflowId: workflow.id,
+        workflowName: workflow.name,
+        episodeId: episode.id,
+        episodeTitle: episode.title,
+        runId: id,
+        status: finalStatus,
+        ...(failure ? { error: failure } : {}),
+      })).catch(() => {});
     } catch (error) {
       if (!this.current(id)) return;
       const message = error instanceof HttpError ? error.message : error.message?.includes('Trend source') ? error.message : 'Workflow step failed. Review integration availability and local service logs.';
@@ -1475,6 +1495,15 @@ export class WorkflowEngine {
       const failed = this.current(id);
       this.store.save('workflowRuns', { ...failed, nodeRuns: failed.nodeRuns.map((node) => node.status === 'queued' ? { ...node, status: 'skipped', error: 'An upstream stage failed' } : node) });
       this.store.record('workflow.failed', { entityId: id, nodeId: activeNode, error: message });
+      Promise.resolve(this.onNotify?.('workflow', {
+        workflowId: failed?.workflowId,
+        workflowName: failed?.workflowSnapshot?.name,
+        episodeId: failed?.episodeId,
+        episodeTitle: failed?.episodeSnapshot?.title,
+        runId: id,
+        status: 'failed',
+        error: message,
+      })).catch(() => {});
       console.error('Workflow step failed:', error.message);
     } finally {
       this.activeExecutions.delete(id);

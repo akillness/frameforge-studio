@@ -1,3 +1,4 @@
+import { buildDiscordIntegrationStatus } from './discord.mjs';
 import { randomUUID } from 'node:crypto';
 
 const agentNames = ['codex', 'jeo', 'jeopi', 'hermes'];
@@ -14,12 +15,13 @@ async function bridge(endpoint, body) {
   if (!response.ok) throw new Error(result.error || 'Bridge request failed');
   return result;
 }
-export async function integrationStatus() {
+export async function integrationStatus({ discord } = {}) {
   let agents = {};
   try { const result = (await bridge('/status')).agents; if (result && typeof result === 'object') agents = result; } catch { /* Explicit unavailable status below. */ }
   return {
     studio: { available: true, status: 'available', detail: '규칙 기반 스토리보드 도우미 · LLM 아님' },
     ...Object.fromEntries(agentNames.map(name => [name, agents[name] || { available: false, status: 'unavailable', detail: '호스트 에이전트 브리지 연결 필요' }])),
+    discord: discord || buildDiscordIntegrationStatus(),
     google: { available: true, status: 'configured', detail: 'Google Trends KR RSS · 새로고침 시 실제 응답 확인' },
     naver: { available: false, status: 'manual', detail: 'DataLab/검색 출처를 조사 후 URL과 키워드 기록. DataLab은 실시간 인기 순위 API가 아닙니다.' },
     aside: { available: true, status: 'external', detail: 'Aside 세션 9XBgVHBJYEGclLhz · ops/aside-inbox.jsonl 명령 수신' },

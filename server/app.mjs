@@ -19,6 +19,7 @@ import { BlogService } from './blog.mjs';
 import { createAgentOperations, OPERATIONS_VERSION, AGENT_INSTRUCTIONS } from './agent-ops.mjs';
 import { createMcpCore, validateHttpHeaders, rpcError, errorEnvelope, ERROR as MCP_ERROR } from './mcp.mjs';
 import { toOpenApi, toToolDefinitions } from './agent-docs.mjs';
+import { DiscordService } from './discord.mjs';
 
 const PUBLIC_DIR = fileURLToPath(new URL('../public/', import.meta.url));
 const MAX_JSON = 1024 * 1024;
@@ -42,6 +43,7 @@ function json(response, status, value, headers = {}) {
 
 async function readJson(request) {
   if (!(request.headers['content-type'] || '').toLowerCase().startsWith('application/json')) throw new HttpError(415, 'Content-Type must be application/json');
+  if (Number(request.headers['content-length']) > MAX_JSON) throw new HttpError(413, 'JSON body exceeds 1 MiB');
   const parts = [];
   let size = 0;
   for await (const part of request) {
@@ -111,7 +113,7 @@ async function generationCall(operation) {
 }
 
 /** Dependency overrides are for local tests; production imports actual adapters. */
-export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), loginToken = process.env.LOGIN_TOKEN || '', publicOrigin = process.env.PUBLIC_ORIGIN, integrations, renderer, speech, generation, generationOptions, platformSessions: injectedPlatformSessions, platformSessionOptions, mediaOptions, youtubeOptions, publicationOptions, blogOptions, agentApiOptions } = {}) {
+export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), loginToken = process.env.LOGIN_TOKEN || '', publicOrigin = process.env.PUBLIC_ORIGIN, integrations, renderer, speech, generation, generationOptions, platformSessions: injectedPlatformSessions, platformSessionOptions, mediaOptions, youtubeOptions, publicationOptions, blogOptions, agentApiOptions, discordOptions } = {}) {
   if (loginToken && (typeof loginToken !== 'string' || loginToken.length < 16)) throw new Error('LOGIN_TOKEN must contain at least 16 characters');
   if (publicOrigin) {
     const parsed = new URL(publicOrigin);
@@ -121,15 +123,21 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
   const store = new Store(resolve(dataDir));
   const sessions = new Map();
   const loginAttempts = new Map();
+  const pruneLoginAttempts = (nowMs) => {
+    if (loginAttempts.size <= 1024) return;
+    for (const [key, entry] of loginAttempts) if (entry.until < nowMs) loginAttempts.delete(key);
+  };
   const queue = [];
   const activeRenders = new Map();
   const activeChats = new Map();
   let rendering = false;
   let closing = false;
   const adapter = async () => integrations || await import('./integrations.mjs');
+  const discord = new DiscordService({ store, ...(discordOptions || {}) });
+  const notifyDiscord = (eventType, payload) => { void discord.notify(eventType, payload).catch((error) => console.error('Discord notification error:', error?.message || error)); };
   const integrationStatus = async () => {
-    try { return await (await adapter()).integrationStatus(); }
-    catch { return { studio: { available: true, status: 'available', detail: 'Deterministic storyboard assistant' }, bridge: { available: false, status: 'unavailable', detail: 'Integration status unavailable' } }; }
+    try { return await (await adapter()).integrationStatus({ discord: discord.status() }); }
+    catch { return { studio: { available: true, status: 'available', detail: 'Deterministic storyboard assistant' }, discord: discord.status(), bridge: { available: false, status: 'unavailable', detail: 'Integration status unavailable' } }; }
   };
 
   async function processQueue() {
@@ -143,11 +151,19 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       store.assertEpisodeActive(episode.id);
       const result = await render(episode, { dataDir: store.dataDir, sceneIntegrity: job.sceneIntegrity, ...(job.musicIntegrity ? { musicIntegrity: job.musicIntegrity } : {}), onProgress: (progress) => { if (!closing) saveProgress('running', Math.max(1, Math.min(99, Number(progress) || 1))); } });
       if (!/^\/api\/exports\/[a-zA-Z0-9_-]+\.mp4$/.test(result.outputUrl)) throw new Error('Renderer returned invalid output path');
-      if (!closing) { saveProgress('completed', 100, result); store.record('render.completed', { entityId: episode.id, jobId: job.id }); complete?.({ ...result, jobId: job.id, episodeVersion: episode.version, ...(episode.music ? { musicSnapshot: structuredClone(episode.music) } : {}) }); }
+      if (!closing) {
+        saveProgress('completed', 100, result);
+        store.record('render.completed', { entityId: episode.id, jobId: job.id });
+        if (job.source === 'manual') notifyDiscord('render', { status: 'completed', episodeId: episode.id, episodeTitle: episode.title, episodeVersion: episode.version, outputUrl: result.outputUrl });
+        complete?.({ ...result, jobId: job.id, episodeVersion: episode.version, ...(episode.music ? { musicSnapshot: structuredClone(episode.music) } : {}) });
+      }
     } catch (error) {
-      if (!closing) { saveProgress('failed', 0, { error: error.code === 'MUSIC_INTEGRITY' ? 'Music upload integrity check failed.' : 'Rendering failed. Verify FFmpeg, media files and available disk space.' }); store.record('render.failed', { entityId: episode.id, jobId: job.id }); }
-      console.error('Render failed:', error.message);
-      fail?.(error);
+      if (!closing) {
+        const renderError = error.code === 'MUSIC_INTEGRITY' ? 'Music upload integrity check failed.' : 'Rendering failed. Verify FFmpeg, media files and available disk space.';
+        saveProgress('failed', 0, { error: renderError });
+        store.record('render.failed', { entityId: episode.id, jobId: job.id });
+        if (job.source === 'manual') notifyDiscord('render', { status: 'failed', episodeId: episode.id, episodeTitle: episode.title, episodeVersion: episode.version, error: renderError });
+      }
     } finally {
       if (activeRenders.get(renderKey)?.job.id === job.id) activeRenders.delete(renderKey);
       rendering = false;
@@ -226,6 +242,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     if (attempt.count >= 10) throw new HttpError(429, 'Too many login attempts. Try again in one minute.');
     if (loginToken && (typeof body.token !== 'string' || !safeEqual(body.token, loginToken))) {
       loginAttempts.set(address, { ...attempt, count: attempt.count + 1 });
+      pruneLoginAttempts(Date.now());
       throw new HttpError(401, 'Invalid login token');
     }
     loginAttempts.delete(address);
@@ -246,7 +263,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     const current = loginAttempts.get(key);
     const attempt = !current || current.until < Date.now() ? { count: 0, until: Date.now() + 60_000 } : current;
     if (attempt.count >= 10) throw new HttpError(429, 'Too many authentication attempts. Try again in one minute.');
-    if (!safeEqual(match[1], loginToken)) { loginAttempts.set(key, { ...attempt, count: attempt.count + 1 }); return null; }
+    if (!safeEqual(match[1], loginToken)) { pruneLoginAttempts(Date.now()); loginAttempts.set(key, { ...attempt, count: attempt.count + 1 }); return null; }
     loginAttempts.delete(key);
     return { authenticated: true, role: 'admin', canMutate: true };
   }
@@ -291,6 +308,12 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     if (checked.status) return json(response, checked.status, checked.body);
     if (message.method === 'tools/call' && typeof message.params?.name === 'string' && agentMutating.has(message.params.name)) agentRateLimit(response, agentMutating.get(message.params.name));
     const { status, body } = await mcp.handle(message, { legacy: checked.legacy });
+    if (status === 200) {
+      const negotiated = checked.legacy
+        ? (body?.result?.protocolVersion || request.headers['mcp-protocol-version'] || '2025-11-25')
+        : '2026-07-28';
+      response.setHeader('MCP-Protocol-Version', negotiated);
+    }
     if (body === null) { response.writeHead(status); return response.end(); }
     return json(response, status, body);
   }
@@ -402,7 +425,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
   const generationProvider = generation || createGenerationProvider();
   const generations = new GenerationQueue({ store, provider: generationProvider, ...generationOptions });
   const platformSessions = injectedPlatformSessions || new PlatformSessionManager({ store, ...(platformSessionOptions || {}) });
-  const workflows = new WorkflowEngine({ store, fetchTrends: refreshTrends, runAgent: async (...args) => (await adapter()).runAgent(...args), render: (episode) => enqueueRender(episode, true, 'workflow'), validateAssets, generations, platformSessions, publication });
+  const workflows = new WorkflowEngine({ store, fetchTrends: refreshTrends, runAgent: async (...args) => (await adapter()).runAgent(...args), render: (episode) => enqueueRender(episode, true, 'workflow'), validateAssets, generations, platformSessions, publication, onNotify: notifyDiscord });
   const speechProvider = speech || createSpeechProvider();
   const narration = new NarrationQueue({ store, ...speechProvider });
   const blog = new BlogService({ ...blogOptions, store });
@@ -571,6 +594,7 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
     if (request.method === 'GET' && path === '/api/platform-sessions') return json(response, 200, platformSessions.listSessions());
     if (request.method === 'GET' && path === '/api/server-exports') return json(response, 200, await platformSessions.listServerExports());
     if (request.method === 'GET' && path === '/api/integrations') return json(response, 200, await integrationStatus());
+    if (request.method === 'GET' && path === '/api/integrations/discord') return json(response, 200, discord.status());
     if (request.method === 'GET' && path === '/api/speech/voices') return json(response, 200, await speechProvider.listVoices());
     if (request.method === 'GET' && path === '/api/generation/status') return json(response, 200, await (requestUrl.searchParams.has('transport') ? generations.providerFor(requestUrl.searchParams.get('transport')) : generationProvider).capability());
     if (request.method === 'GET' && path === '/api/generation/models') return json(response, 200, await generationCall(() => {
@@ -656,9 +680,17 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       }
       if (request.method === 'POST' && path === '/api/publication/approvals') return json(response, 201, await publication.approve(body, { ownerId: 'admin' }));
       const publicationPublish = /^\/api\/publication\/approvals\/([^/]+)\/publish$/.exec(path);
-      if (request.method === 'POST' && publicationPublish) return json(response, 202, await publication.publish(decodeURIComponent(publicationPublish[1]), { ownerId: 'admin' }));
+      if (request.method === 'POST' && publicationPublish) {
+        const published = await publication.publish(decodeURIComponent(publicationPublish[1]), { ownerId: 'admin' });
+        notifyDiscord('publication', { status: published.status, channelId: published.channelId, episodeId: published.episodeId, videoId: published.videoId, error: published.error });
+        return json(response, 202, published);
+      }
       const publicationResume = /^\/api\/publication\/intents\/([^/]+)\/resume$/.exec(path);
-      if (request.method === 'POST' && publicationResume) return json(response, 202, await publication.resume(decodeURIComponent(publicationResume[1]), { ownerId: 'admin' }));
+      if (request.method === 'POST' && publicationResume) {
+        const resumed = await publication.resume(decodeURIComponent(publicationResume[1]), { ownerId: 'admin' });
+        notifyDiscord('publication', { status: resumed.status, channelId: resumed.channelId, episodeId: resumed.episodeId, videoId: resumed.videoId, error: resumed.error });
+        return json(response, 202, resumed);
+      }
       const workflowQuote = /^\/api\/workflows\/([^/]+)\/quote$/.exec(path);
       if (request.method === 'POST' && workflowQuote) return json(response, 200, await workflows.quote(decodeURIComponent(workflowQuote[1]), body.episodeId, body));
       const workflowPlan = /^\/api\/workflows\/([^/]+)\/plan$/.exec(path);
@@ -762,6 +794,10 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
       }
       if (request.method === 'POST' && path === '/api/trends') return write('trends', { keyword: text(body.keyword, 'keyword', 300), source: text(body.source, 'source', 100), url: url(body.url), category: optionalText(body.category, 'category', 100), capturedAt: new Date().toISOString() });
       if (request.method === 'POST' && path === '/api/commands') return write('commands', { message: text(body.message, 'message', 20000), source: text(body.source, 'source', 100, 'studio'), sessionId: optionalText(body.sessionId, 'sessionId', 100), status: 'received' });
+      if (request.method === 'PUT' && path === '/api/integrations/discord') return json(response, 200, discord.updateSettings(body));
+      if (request.method === 'POST' && path === '/api/integrations/discord/verify') return json(response, 200, await discord.verify());
+      if (request.method === 'POST' && path === '/api/integrations/discord/test') return json(response, 200, await discord.sendTestNotification(body));
+      if (request.method === 'POST' && path === '/api/integrations/discord/sync') return json(response, 200, await discord.syncCommands(body));
       if (request.method === 'POST' && path === '/api/platform-sessions') return json(response, 201, await platformSessions.openSession(body));
       const platformSessionInteract = /^\/api\/platform-sessions\/([^/]+)\/interact$/.exec(path);
       if (request.method === 'POST' && platformSessionInteract) return json(response, 200, await platformSessions.interact(decodeURIComponent(platformSessionInteract[1]), body));

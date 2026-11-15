@@ -5,7 +5,7 @@
 // FRAMEFORGE_URL (HTTPS or loopback HTTP) and FRAMEFORGE_TOKEN (the studio LOGIN_TOKEN, sent as a
 // bearer token; omit it only for a loopback studio started without LOGIN_TOKEN).
 import { pathToFileURL } from 'node:url';
-import { createMcpCore, rpcError, ERROR } from '../server/mcp.mjs';
+import { createMcpCore, consumeJsonLines, rpcError, ERROR } from '../server/mcp.mjs';
 import { OPERATIONS_VERSION, AGENT_INSTRUCTIONS } from '../server/agent-ops.mjs';
 import { HttpError } from '../server/validation.mjs';
 
@@ -18,7 +18,7 @@ export function createFrameForgeMcp({ env = process.env, fetchImpl = fetch } = {
   if (origin.username || origin.password || origin.search || origin.hash || origin.pathname !== '/' || !(origin.protocol === 'https:' || (origin.protocol === 'http:' && loopback))) throw new Error('FRAMEFORGE_URL must be an HTTPS origin or loopback HTTP');
   const token = env.FRAMEFORGE_TOKEN || env.LOGIN_TOKEN || '';
   if (token && /[^\x21-\x7e]/.test(token)) throw new Error('FRAMEFORGE_TOKEN contains invalid characters');
-  let catalog; let catalogAt = 0;
+  let catalog; let catalogAt = 0; let catalogPending;
 
   async function request(route, init = {}, timeoutMs = 120_000) {
     let response;
@@ -26,7 +26,17 @@ export function createFrameForgeMcp({ env = process.env, fetchImpl = fetch } = {
       response = await fetchImpl(new URL(route, origin), { ...init, redirect: 'error', signal: AbortSignal.timeout(timeoutMs), headers: { accept: 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}), ...(init.body ? { 'content-type': 'application/json' } : {}) } });
     } catch { throw new HttpError(503, 'FrameForge studio could not be reached. Writes are never retried automatically; check state before repeating.'); }
     const chunks = []; let bytes = 0;
-    for await (const chunk of response.body || []) { bytes += chunk.length; if (bytes > 8 * 1024 * 1024) throw new HttpError(502, 'FrameForge response exceeds the 8 MiB limit'); chunks.push(chunk); }
+    try {
+      for await (const chunk of response.body || []) {
+        bytes += chunk.length;
+        if (bytes > 8 * 1024 * 1024) { response.body?.cancel().catch(() => {}); throw new HttpError(502, 'FrameForge response exceeds the 8 MiB limit'); }
+        chunks.push(chunk);
+      }
+    } catch (error) {
+      response.body?.cancel().catch(() => {});
+      if (error instanceof HttpError) throw error;
+      throw new HttpError(502, 'FrameForge response stream failed');
+    }
     let body;
     try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { throw new HttpError(502, `FrameForge returned a non-JSON response (HTTP ${response.status})`); }
     return { status: response.status, body };
@@ -34,10 +44,14 @@ export function createFrameForgeMcp({ env = process.env, fetchImpl = fetch } = {
 
   async function listTools() {
     if (catalog && Date.now() - catalogAt < CATALOG_TTL_MS) return catalog;
-    const { status, body } = await request('/api/agent/operations', {}, 15_000);
-    if (status !== 200 || !Array.isArray(body.operations)) throw new HttpError(status === 401 ? 401 : 502, status === 401 ? 'FrameForge rejected the token: set FRAMEFORGE_TOKEN to the studio LOGIN_TOKEN' : 'FrameForge did not return an operation catalog');
-    catalog = body.operations; catalogAt = Date.now();
-    return catalog;
+    if (catalogPending) return catalogPending;
+    catalogPending = (async () => {
+      const { status, body } = await request('/api/agent/operations', {}, 15_000);
+      if (status !== 200 || !Array.isArray(body.operations)) throw new HttpError(status === 401 ? 401 : 502, status === 401 ? 'FrameForge rejected the token: set FRAMEFORGE_TOKEN to the studio LOGIN_TOKEN' : 'FrameForge did not return an operation catalog');
+      catalog = body.operations; catalogAt = Date.now();
+      return catalog;
+    })();
+    try { return await catalogPending; } finally { catalogPending = undefined; }
   }
 
   async function callTool(name, args) {
@@ -63,19 +77,14 @@ export async function runFrameForgeMcp(input = process.stdin, output = process.s
     const { body } = await core.handle(message);
     if (body) write(body);
   }
-  let buffered = '';
-  input.setEncoding('utf8');
-  for await (const chunk of input) {
-    buffered += chunk;
-    if (buffered.length > MAX_LINE && !buffered.includes('\n')) { write(rpcError(null, ERROR.INVALID_REQUEST, 'Message exceeds 1 MiB')); buffered = ''; continue; }
-    let newline;
-    while ((newline = buffered.indexOf('\n')) >= 0) {
-      const line = buffered.slice(0, newline).trim(); buffered = buffered.slice(newline + 1);
-      if (!line) continue;
+  await consumeJsonLines(input, {
+    maxLineBytes: MAX_LINE,
+    onTooLarge: () => write(rpcError(null, ERROR.INVALID_REQUEST, 'Message exceeds 1 MiB')),
+    onLine: (line) => {
       const task = dispatch(line).catch(() => write(rpcError(null, ERROR.INTERNAL, 'Internal error'))).finally(() => pending.delete(task));
       pending.add(task);
-    }
-  }
+    },
+  });
   await Promise.allSettled([...pending]);
 }
 
