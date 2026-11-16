@@ -762,3 +762,86 @@ dialog::backdrop { background: var(--overlay-backdrop); }
 }
 .right-column > .storyboard-slot:not(:empty) { grid-column: 1 / -1; min-width: 0; }
 .program-monitor:focus-visible { outline: 2px solid var(--focus); outline-offset: -3px; }
+
+
+/* ==========================================================================
+   FRAMEFORGE STUDIO · ENHANCED UI & TYPOGRAPHY SYSTEM (2026.11)
+   - Improved readability: High-contrast typography & Pretendard font stack
+   - Intuitiveness: Channel persona color badges & active state elevation
+   - Functionality & Efficiency: Smooth hardware-accelerated micro-interactions
+   ========================================================================== */
+
+:root {
+  --ink: #0b1329;
+  --text-secondary: #273449;
+  --muted: #475569;
+  --line: #d8deeb;
+  --line-strong: #64748b;
+  --accent: #2563eb;
+  --accent-bright: #3b82f6;
+  --accent-strong: #1d4ed8;
+  --accent-soft: #eff6ff;
+  --shadow-soft: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-raised: 0 4px 6px -1px rgba(15, 23, 42, 0.1), 0 2px 4px -2px rgba(15, 23, 42, 0.06);
+  font-family: -apple-system, BlinkMacSystemFont, 'Pretendard Variable', Pretendard, 'Segoe UI', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Distinct Channel Persona Accents */
+.channel {
+  border-radius: var(--radius-control);
+  transition: all 0.15s cubic-bezier(0.2, 0.7, 0.2, 1);
+  font-weight: 500;
+}
+.channel:hover {
+  background: #f1f5f9;
+  transform: translateX(2px);
+}
+.channel.active {
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+  font-weight: 700;
+  box-shadow: inset 3px 0 0 #2563eb, 0 1px 3px rgba(37, 99, 235, 0.15) !important;
+}
+
+/* Channel Persona Visual Badges */
+.channel-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 999px;
+  letter-spacing: -0.01em;
+}
+.channel-badge-info { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.channel-badge-drama { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
+.channel-badge-reenact { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
+
+/* Enhanced Card & Timeline Focus */
+.scene-card, .timeline-track-item, .panel {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.scene-card:hover {
+  border-color: #94a3b8;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.07);
+}
+.scene-card.active, .scene-card[aria-selected='true'] {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 2px #eff6ff, 0 4px 14px rgba(37, 99, 235, 0.2) !important;
+}
+
+/* Buttons & Inputs */
+button.primary {
+  background: linear-gradient(180deg, #3b82f6, #2563eb);
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.15s ease;
+}
+button.primary:hover {
+  background: linear-gradient(180deg, #2563eb, #1d4ed8);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+  transform: translateY(-1px);
+}
