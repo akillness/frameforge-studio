@@ -35,3 +35,12 @@ For interactive Jeopi, use `node scripts/project-agent.mjs [--dry-run] -- <origi
 ## Product direction and interview
 - For product work, read `.mex/context/decisions.md`, especially the production-workspace interview contract and its acceptance criteria. Build on `docs/premiere-workspace.md`; distinguish agreed requirements and research proposals from implemented, verified behavior.
 - Ask one discriminating product question at a time. Turn agreed requirements into checkable acceptance criteria, then Codex design candidates and scoped code changes. Unsettled choices remain interview questions rather than implementation assumptions.
+
+<!-- JEO-WORKFLOWS:START -->
+## Workflow rules
+Every prompt: openspace route → rtk shell → semble search → jev (only after rtk and
+semble, if a profile is enabled) → then by query: knowledge → second-brain vault,
+code/memory → `.mex/`, semantic search → `zg query`, ontology → open-ontologies,
+harness changes → `.harness2/`. Full rules: `.agents/rules/jeo-workflows.md` (global copy
+`~/.agents/rules/jeo-workflows.md`).
+<!-- JEO-WORKFLOWS:END -->

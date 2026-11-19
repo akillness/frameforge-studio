@@ -36,7 +36,7 @@ export function url(value) {
 }
 
 export const formats = ['9:16', '16:9', '1:1'];
-export const layouts = ['center', 'lower-third', 'split', 'top-image-mid-video', 'premiere-3tier', 'custom'];
+export const layouts = ['center', 'lower-third', 'split', 'top-image-mid-video', 'premiere-3tier', 'cinematic-seamless', 'custom'];
 export const slotRoles = ['image-gen', 'video-bg', 'text-overlay', 'subtitle-layer', 'html-overlay'];
 export const slotDataBindings = ['scene.imagePrompt', 'scene.videoPrompt', 'scene.title', 'scene.text', 'scene.narration', 'trend.keyword', 'news.headline', 'custom'];
 
@@ -203,6 +203,29 @@ export function createPresetSlots(preset, scene = {}) {
   const title = scene.title || '핵심 장면';
   const bodyText = scene.text || '자막 및 핵심 메시지';
   const narration = scene.narration || bodyText;
+  if (preset === 'cinematic-seamless') {
+    return [
+      {
+        id: 'slot-full-video',
+        name: '풀스크린 시네마틱 배경 영상 (Higgsfield)',
+        role: 'video-bg',
+        dataBinding: 'scene.videoPrompt',
+        x: 0, y: 0, w: 100, h: 100, zIndex: 1,
+        prompt: scene.videoPrompt || `${bodyText} · 시네마틱 9:16 실사 연출`,
+        ...(scene.assetUrl && scene.kind === 'video' ? { assetUrl: scene.assetUrl, mediaKind: 'video' } : {}),
+        style: { backgroundColor: '#0f1419', textColor: '#f2f6f8', fontSize: 30, opacity: 1, align: 'center' },
+      },
+      {
+        id: 'slot-seamless-subtitle',
+        name: '하단 세이프존 음유 자막',
+        role: 'subtitle-layer',
+        dataBinding: 'scene.narration',
+        x: 6, y: 74, w: 88, h: 16, zIndex: 10,
+        text: narration,
+        style: { backgroundColor: '#0a0f1a', textColor: '#f2f6f8', fontSize: 44, opacity: 0, align: 'center' },
+      },
+    ];
+  }
   if (preset === 'premiere-3tier') {
     return [
       {

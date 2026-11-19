@@ -1,8 +1,8 @@
 import { HttpError, object, text, optionalText, choice, scenes, createPresetSlots } from './validation.mjs';
 import { starterScene } from './store.mjs';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
-import { lstat, open, realpath } from 'node:fs/promises';
+import { lstat, mkdir, open, stat, realpath, unlink, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { topologicalOrder, ancestors, descendants, resolvePrerequisite, resolveOptional, canonicalJson, candidateFingerprint, hardRequiredIds, HARD_DEPENDENCY } from './graph.mjs';
 import { validateGenerationInput } from './higgsfield.mjs';
@@ -14,6 +14,83 @@ const AGENTS = ['existing', 'studio', 'codex', 'jeo', 'jeopi', 'hermes'];
 const TERMINAL = ['completed', 'failed', 'cancelled', 'awaiting_review', 'approved', 'changes_requested'];
 const MAX_ACTIVE_RUNS = 4;
 const timestamp = () => new Date().toISOString();
+function computeDurationMs(startedAt, completedAt) {
+  if (!startedAt || !completedAt) return undefined;
+  const startMs = Date.parse(startedAt);
+  const endMs = Date.parse(completedAt);
+  return Number.isFinite(startMs) && Number.isFinite(endMs) ? Math.max(0, endMs - startMs) : undefined;
+}
+
+export function describeNodeActor(node) {
+  const type = node?.type;
+  const config = node?.config && typeof node.config === 'object' ? node.config : {};
+  if (type === 'trend') return { role: 'trend-collector', label: 'Trend Collector', mode: 'provider', tool: 'trend-collector' };
+  if (type === 'news') {
+    const source = config.source || 'google_news';
+    return { role: 'news-collector', label: source === 'trend_news' ? 'Saved Trend News' : 'News Collector', mode: source === 'trend_news' ? 'saved' : 'provider', tool: source };
+  }
+  if (type === 'research') return { role: 'research-aggregator', label: 'Research Context', mode: 'deterministic', tool: 'references-store' };
+  if (type === 'script') {
+    const agent = config.agent || 'studio';
+    const mode = agent === 'existing' ? 'saved' : agent === 'studio' ? 'deterministic' : 'provider';
+    const role = agent === 'existing' ? 'saved-script' : agent === 'studio' ? 'studio' : agent;
+    const label = agent === 'existing' ? 'Saved Script' : agent === 'studio' ? 'Studio Script' : `Script Agent (${agent})`;
+    const tool = agent === 'existing' ? 'episode-scenes' : agent === 'studio' ? 'studio-template' : agent;
+    return { role, label, mode, tool };
+  }
+  if (type === 'storyboard') return { role: 'studio', label: 'Storyboard Builder', mode: 'deterministic', tool: 'scene-normalizer' };
+  if (type === 'layout') {
+    const preset = config.preset || 'top-image-mid-video';
+    const narrating = config.enableNarration === true || (preset === 'cinematic-seamless' && config.enableNarration !== false);
+    return { role: 'studio', label: 'Layout Composer', mode: narrating ? 'provider' : 'deterministic', tool: preset };
+  }
+  if (type === 'generate') return { role: 'higgsfield', label: 'Higgsfield Generator', mode: 'provider', tool: config.model || 'generation-model' };
+  if (type === 'render') return { role: 'renderer', label: 'FFmpeg Renderer', mode: 'deterministic', tool: 'ffmpeg' };
+  if (type === 'review') return { role: 'human-reviewer', label: 'Human Reviewer', mode: 'gate', tool: 'human-approval' };
+  if (type === 'publish') return { role: 'channel-publisher', label: 'Channel Publisher', mode: 'provider', tool: config.platform || 'youtube' };
+  return { role: 'unknown', label: String(type || 'Unknown'), mode: 'deterministic', tool: 'unknown' };
+}
+
+function resolveHandoffStatus(sourceRun, targetRun) {
+  if (!sourceRun || !targetRun) return 'pending';
+  const s = sourceRun.status;
+  const t = targetRun.status;
+  if (s === 'failed') return 'failed';
+  if (t === 'skipped') return targetRun.skipReason ? 'skipped' : 'blocked';
+  if (s === 'skipped') return sourceRun.skipReason ? 'skipped' : 'blocked';
+  if (s === 'cancelled' || t === 'cancelled') return 'blocked';
+  if (s === 'awaiting_review' || s === 'changes_requested') return 'blocked';
+  if (s === 'running' || t === 'running') return 'running';
+  if (sourceRun.reused === true && ['completed', 'reused', 'awaiting_review', 'approved', 'changes_requested', 'queued', 'failed'].includes(t)) return 'reused';
+  if (['completed', 'reused', 'approved'].includes(s)) return t === 'queued' ? 'pending' : 'transferred';
+  return 'pending';
+}
+
+export function summarizeNodeHandoffs(workflow, run) {
+  const edges = Array.isArray(workflow?.edges) ? workflow.edges : [];
+  if (!edges.length) return [];
+  const nodes = Array.isArray(workflow?.nodes) ? workflow.nodes : [];
+  const nodeRuns = Array.isArray(run?.nodeRuns) ? run.nodeRuns : [];
+  const nodesById = new Map(nodes.map((node) => [node.id, node]));
+  const nodeRunsById = new Map(nodeRuns.map((nodeRun) => [nodeRun.nodeId, nodeRun]));
+  return edges.map((edge) => {
+    const sourceNode = nodesById.get(edge.source);
+    const targetNode = nodesById.get(edge.target);
+    const sourceRun = nodeRunsById.get(edge.source);
+    const targetRun = nodeRunsById.get(edge.target);
+    return {
+      edgeId: edge.id,
+      source: edge.source,
+      target: edge.target,
+      sourceType: sourceNode?.type || sourceRun?.type || null,
+      targetType: targetNode?.type || targetRun?.type || null,
+      status: resolveHandoffStatus(sourceRun, targetRun),
+      sourceStatus: sourceRun?.status || null,
+      targetStatus: targetRun?.status || null,
+      reusedFrom: sourceRun?.reused ? (sourceRun.reusedFrom || run?.resumedFrom || null) : null,
+    };
+  });
+}
 const safeHttpUrl = (value) => {
   try {
     const parsed = new URL(String(value || ''));
@@ -53,7 +130,7 @@ export const NODE_CONFIG_FIELDS = Object.freeze({
   research: ['limit'],
   script: ['agent', 'prompt'],
   storyboard: [],
-  layout: ['preset', 'topSlotRole', 'midSlotRole', 'enableSubtitles', 'enableHtmlOverlay', 'autoPrompts'],
+  layout: ['preset', 'topSlotRole', 'midSlotRole', 'enableSubtitles', 'enableHtmlOverlay', 'autoPrompts', 'enableNarration'],
   generate: ['model', 'prompt', 'params', 'sceneId', 'sceneIndex', 'slotId', 'targetMode'],
   render: [],
   review: ['instructions'],
@@ -94,7 +171,7 @@ export function validateWorkflow(raw) {
       normalized.limit = config.limit;
     }
     if (type === 'layout') {
-      normalized.preset = choice(config.preset, ['top-image-mid-video', 'premiere-3tier', 'split', 'custom'], 'layout preset', 'top-image-mid-video');
+      normalized.preset = choice(config.preset, ['top-image-mid-video', 'premiere-3tier', 'cinematic-seamless', 'split', 'custom'], 'layout preset', 'top-image-mid-video');
       if (config.topSlotRole !== undefined) normalized.topSlotRole = choice(config.topSlotRole, ['image-gen', 'text-overlay', 'html-overlay'], 'topSlotRole', 'image-gen');
       if (config.midSlotRole !== undefined) normalized.midSlotRole = choice(config.midSlotRole, ['video-bg', 'image-gen'], 'midSlotRole', 'video-bg');
       if (config.enableSubtitles !== undefined) {
@@ -108,6 +185,10 @@ export function validateWorkflow(raw) {
       if (config.autoPrompts !== undefined) {
         if (typeof config.autoPrompts !== 'boolean') throw new HttpError(400, 'layout autoPrompts must be boolean');
         normalized.autoPrompts = config.autoPrompts;
+      }
+      if (config.enableNarration !== undefined) {
+        if (typeof config.enableNarration !== 'boolean') throw new HttpError(400, 'layout enableNarration must be boolean');
+        normalized.enableNarration = config.enableNarration;
       }
     }
     if (type === 'review' && config.instructions !== undefined) normalized.instructions = optionalText(config.instructions, 'review instructions', 2000);
@@ -730,9 +811,10 @@ function storedNewsArticles(store, config) {
 
 function layoutScenes(episode, config, newsOutput) {
   const preset = config.preset || 'top-image-mid-video';
+  const resolvedPreset = ['premiere-3tier', 'cinematic-seamless'].includes(preset) ? preset : 'top-image-mid-video';
   return episode.scenes.map((scene, index) => {
     const headline = newsOutput?.articles?.[index]?.headline || newsOutput?.articles?.[0]?.headline || scene.title || episode.title;
-    let slots = Array.isArray(scene.slots) && scene.slots.length ? structuredClone(scene.slots) : createPresetSlots(preset === 'premiere-3tier' ? 'premiere-3tier' : 'top-image-mid-video', { ...scene, title: headline });
+    let slots = Array.isArray(scene.slots) && scene.slots.length ? structuredClone(scene.slots) : createPresetSlots(resolvedPreset, { ...scene, title: headline });
     slots = slots.map((slot) => slot.assetUrl && slot.assetUrl === scene.assetUrl && !slot.source && scene.source ? { ...slot, source: scene.source } : slot);
     if (config.enableSubtitles === false) slots = slots.filter((slot) => slot.role !== 'subtitle-layer');
     if (config.enableHtmlOverlay === false) slots = slots.filter((slot) => slot.role !== 'html-overlay');
@@ -745,7 +827,7 @@ function layoutScenes(episode, config, newsOutput) {
     }
     return {
       ...scene,
-      layout: preset === 'premiere-3tier' ? 'premiere-3tier' : 'top-image-mid-video',
+      layout: resolvedPreset,
       slots,
     };
   });
@@ -781,7 +863,7 @@ function reviewStatus(nodeRuns, workflow, selectedStages) {
 }
 
 export class WorkflowEngine {
-  constructor({ store, fetchTrends, runAgent, render, validateAssets, generations, platformSessions, publication, onNotify, fetchImpl = fetch }) {
+  constructor({ store, fetchTrends, runAgent, render, validateAssets, generations, platformSessions, publication, speechProvider, onNotify, fetchImpl = fetch }) {
     this.store = store;
     this.fetchTrends = fetchTrends;
     this.fetchImpl = fetchImpl;
@@ -790,13 +872,24 @@ export class WorkflowEngine {
     this.validateAssets = validateAssets;
     this.generations = generations;
     this.publication = publication;
+    this.speechProvider = speechProvider;
     this.onNotify = onNotify;
     this.closed = false;
     this.activeExecutions = new Map();
     this.activeQuoteEpisodes = new Map();
     if (!store.list('workflows').length) store.create('workflows', defaultWorkflow());
     for (const run of store.list('workflowRuns')) if (['queued', 'running'].includes(run.status)) {
-      store.save('workflowRuns', { ...run, status: 'failed', error: 'Server restarted before workflow completed', updatedAt: timestamp(), nodeRuns: run.nodeRuns.map((node) => ['running', 'queued'].includes(node.status) ? { ...node, status: 'failed', error: 'Execution interrupted by server restart' } : node) });
+      const completedAt = timestamp();
+      const durationMs = computeDurationMs(run.startedAt, completedAt);
+      store.save('workflowRuns', {
+        ...run, status: 'failed', error: 'Server restarted before workflow completed', completedAt,
+        ...(durationMs !== undefined ? { durationMs } : {}), updatedAt: completedAt,
+        nodeRuns: run.nodeRuns.map((node) => {
+          if (!['running', 'queued'].includes(node.status)) return node;
+          const nodeDurationMs = node.status === 'running' ? computeDurationMs(node.startedAt, completedAt) : undefined;
+          return { ...node, status: 'failed', error: 'Execution interrupted by server restart', ...(node.status === 'running' ? { completedAt, ...(nodeDurationMs !== undefined ? { durationMs: nodeDurationMs } : {}) } : {}) };
+        }),
+      });
     }
   }
 
@@ -958,7 +1051,7 @@ export class WorkflowEngine {
       selectedStages: selection.selectedStages, startStage: selection.startStage,
       ...(selection.source ? { resumeRunId: selection.source.id } : {}),
       candidate, preparedStages, fingerprint: candidateFingerprint(candidate), nodes, aggregate,
-      disclosure: options.disclosure, expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+      disclosure: options.disclosure, expiresAt: new Date(Date.now() + Math.min(60, Math.max(5, nodes.length * 10)) * 60 * 1000).toISOString(),
       deferredStages: derivedQuote.deferredStages, notice: derivedQuote.notice,
     });
   }
@@ -1009,7 +1102,17 @@ export class WorkflowEngine {
     const run = this.store.get('workflowRuns', id);
     if (run.workflowId !== workflowId) throw new HttpError(404, 'Workflow run not found');
     if (TERMINAL.includes(run.status)) throw new HttpError(409, 'Workflow run is already terminal');
-    const next = { ...run, status: 'cancelled', updatedAt: timestamp(), cancellation: 'Stops subsequent stages; an already running provider request or renderer may finish.', nodeRuns: run.nodeRuns.map((node) => ['queued', 'running'].includes(node.status) ? { ...node, status: 'cancelled' } : node) };
+    const completedAt = timestamp();
+    const durationMs = computeDurationMs(run.startedAt, completedAt);
+    const next = {
+      ...run, status: 'cancelled', completedAt, ...(durationMs !== undefined ? { durationMs } : {}), updatedAt: completedAt,
+      cancellation: 'Stops subsequent stages; an already running provider request or renderer may finish.',
+      nodeRuns: run.nodeRuns.map((node) => {
+        if (!['queued', 'running'].includes(node.status)) return node;
+        const nodeDurationMs = node.status === 'running' ? computeDurationMs(node.startedAt, completedAt) : undefined;
+        return { ...node, status: 'cancelled', ...(node.status === 'running' ? { completedAt, ...(nodeDurationMs !== undefined ? { durationMs: nodeDurationMs } : {}) } : {}) };
+      }),
+    };
     this.store.save('workflowRuns', next);
     this.store.record('workflow.cancelled', { entityId: workflowId, runId: id });
     return next;
@@ -1259,6 +1362,77 @@ export class WorkflowEngine {
     return { episode: { ...episode, scenes: this.validateAssets(scenes(sceneList)) }, generationNodeIds };
   }
 
+  async ensureSceneNarration(episode, stagedScenes, config = {}) {
+    const shouldNarrate = config.enableNarration === true || (config.preset === 'cinematic-seamless' && config.enableNarration !== false);
+    if (!this.speechProvider || !shouldNarrate) return stagedScenes;
+    const pending = stagedScenes.filter((scene) => !scene.audioUrl && (scene.narration || scene.text || '').trim());
+    if (!pending.length) return stagedScenes;
+    const capability = await this.speechProvider.listVoices().catch(() => ({ available: false, voices: [] }));
+    if (!capability?.available || !capability.voices?.length) return stagedScenes;
+    const preferred = capability.voices.find((v) => v.id === 'Microsoft Heami Desktop') || capability.voices.find((v) => String(v.language).startsWith('ko')) || capability.voices[0];
+    const root = path.resolve(this.store.dataDir);
+    const uploadRoot = await realpath(path.join(root, 'uploads'));
+    const work = path.join(root, 'narration-work', randomUUID());
+    await mkdir(work, { recursive: true });
+    const next = structuredClone(stagedScenes);
+    const synthesizedSceneIds = [], synthesizedUrls = [];
+    const providerName = capability.provider || 'windows-sapi';
+    try {
+      for (const item of pending) {
+        const speechText = (item.narration || item.text || '').trim();
+        const id = randomUUID(), filename = `${id}.wav`, outputPath = path.join(uploadRoot, filename);
+        const { duration } = await this.speechProvider.synthesize({ text: speechText, voice: preferred.id, rate: 0, outputPath, workDir: work });
+        if (!Number.isFinite(duration) || duration <= 0 || duration > 119.7) continue;
+        const info = await stat(outputPath);
+        const handle = await open(outputPath, 'r');
+        const hash = createHash('sha256');
+        try {
+          const buf = Buffer.allocUnsafe(64 * 1024);
+          let offset = 0;
+          while (offset < info.size) {
+            const { bytesRead } = await handle.read(buf, 0, Math.min(buf.length, info.size - offset), offset);
+            if (!bytesRead) break;
+            hash.update(buf.subarray(0, bytesRead));
+            offset += bytesRead;
+          }
+        } finally { await handle.close(); }
+        const sha256 = hash.digest('hex');
+        const url = `/api/uploads/${filename}`;
+        this.store.create('uploads', { id, filename, url, name: `${item.title} · narration.wav`, type: 'audio/wav', size: info.size, sha256, generated: true, provider: providerName, voice: preferred.id, duration });
+        synthesizedSceneIds.push(item.id);
+        synthesizedUrls.push(url);
+        const target = next.find((s) => s.id === item.id);
+        delete target.audioSource;
+        const sceneDur = Math.max(Number(target.duration) || 4, Math.ceil((duration + 0.2) * 10) / 10);
+        Object.assign(target, {
+          narration: speechText,
+          audioUrl: url,
+          audioVolume: 1,
+          duration: sceneDur,
+          ...(!target.captions?.length ? { captions: [{ start: 0, end: Math.round(duration * 100) / 100, text: target.text || speechText }] } : {}),
+        });
+      }
+      if (synthesizedUrls.length) {
+        this.store.create('narrationJobs', {
+          episodeId: episode.id,
+          episodeVersion: episode.version,
+          resultVersion: episode.version + 1,
+          sceneIds: synthesizedSceneIds,
+          provider: providerName,
+          voice: preferred.id,
+          rate: 0,
+          status: 'completed',
+          progress: 100,
+          audioUrls: synthesizedUrls,
+          completedAt: timestamp(),
+        });
+      }
+      return next;
+    } finally {
+      await rm(work, { recursive: true, force: true }).catch(() => {});
+    }
+  }
+
   async execute(id) {
     if (this.activeExecutions.has(id)) return;
     if (this.activeExecutions.size >= MAX_ACTIVE_RUNS) {
@@ -1311,8 +1485,27 @@ export class WorkflowEngine {
           assertCurrent();
           const requiredType = HARD_DEPENDENCY[node.type];
           if (requiredType && !outputs.has(prerequisite(workflow, node, requiredType).id)) throw new HttpError(409, `${node.id} has no completed connected ${requiredType} input`);
-          this.nodeUpdate(id, node.id, { status: 'running', startedAt: timestamp(), error: undefined });
-          const inputs = workflow.edges.filter((edge) => edge.target === node.id).map((edge) => ({ nodeId: edge.source, output: outputs.get(edge.source) }));
+          const startedAt = timestamp();
+          const executionMeta = describeNodeActor(node);
+          const currentRun = this.current(id);
+          const nodeRunsById = new Map((currentRun?.nodeRuns || []).map((item) => [item.nodeId, item]));
+          const nodesById = new Map(workflow.nodes.map((item) => [item.id, item]));
+          const incomingEdges = workflow.edges.filter((edge) => edge.target === node.id);
+          const upstreamInputs = incomingEdges.map((edge) => {
+            const sourceNode = nodesById.get(edge.source);
+            const sourceRun = nodeRunsById.get(edge.source);
+            return {
+              edgeId: edge.id,
+              sourceNodeId: edge.source,
+              sourceType: sourceNode?.type || sourceRun?.type || null,
+              status: sourceRun?.status || (outputs.has(edge.source) ? 'completed' : 'pending'),
+              reused: Boolean(sourceRun?.reused),
+              reusedFrom: sourceRun?.reused ? (sourceRun.reusedFrom || null) : null,
+            };
+          });
+          this.nodeUpdate(id, node.id, { status: 'running', startedAt, error: undefined, executionMeta, upstreamInputs });
+          this.store.record('workflow.node_started', { runId: run.id, workflowId: workflow.id, nodeId: node.id, nodeType: node.type, executionMeta });
+          const inputs = incomingEdges.map((edge) => ({ nodeId: edge.source, output: outputs.get(edge.source) }));
           let output;
           if (node.type === 'trend') {
             output = await this.fetchTrends(node.config.query);
@@ -1373,7 +1566,8 @@ export class WorkflowEngine {
             if (!storyboard?.scenes) throw new HttpError(409, 'layout requires completed scenes from its connected storyboard');
             const newsNode = optional(workflow, node, 'news');
             const newsOutput = newsNode ? outputs.get(newsNode.id) : undefined;
-            const stagedScenes = layoutScenes({ ...episode, scenes: storyboard.scenes }, node.config, newsOutput);
+            let stagedScenes = layoutScenes({ ...episode, scenes: storyboard.scenes }, node.config, newsOutput);
+            if (!run.generationPlan) stagedScenes = await this.ensureSceneNarration(episode, stagedScenes, node.config);
             const normalized = this.validateAssets(scenes(stagedScenes));
             if (run.generationPlan) this.assertApprovedScenes(run, workflow, { ...episode, scenes: normalized }, node.id);
             assertCurrent();
@@ -1464,20 +1658,29 @@ export class WorkflowEngine {
           if (!this.current(id)) return;
           assertCurrent();
           outputs.set(node.id, output);
-          this.nodeUpdate(id, node.id, { status: node.type === 'review' ? 'awaiting_review' : 'completed', output, completedAt: timestamp() }, { episodeVersion: episode.version });
+          const completedAt = timestamp();
+          const nodeStatusValue = node.type === 'review' ? 'awaiting_review' : 'completed';
+          const durationMs = computeDurationMs(startedAt, completedAt);
+          this.nodeUpdate(id, node.id, { status: nodeStatusValue, output, completedAt, ...(durationMs !== undefined ? { durationMs } : {}) }, { episodeVersion: episode.version });
+          this.store.record('workflow.node_completed', { runId: run.id, workflowId: workflow.id, nodeId: node.id, nodeType: node.type, status: nodeStatusValue, ...(durationMs !== undefined ? { durationMs } : {}) });
         } catch (error) {
           if (!this.current(id)) return;
           const message = error instanceof HttpError || error.message?.startsWith('Trend source') ? error.message : 'Workflow step failed. Review integration availability and local service logs.';
           failedNodes.add(node.id);
           failure ||= message;
-          this.nodeUpdate(id, node.id, { status: 'failed', error: message, completedAt: timestamp() }, { episodeVersion: episode.version });
-          this.store.record('workflow.node_failed', { entityId: workflow.id, runId: id, nodeId: node.id, error: message });
+          const completedAt = timestamp();
+          const failedNodeRun = this.current(id)?.nodeRuns?.find((item) => item.nodeId === node.id);
+          const durationMs = computeDurationMs(failedNodeRun?.startedAt, completedAt);
+          this.nodeUpdate(id, node.id, { status: 'failed', error: message, completedAt, ...(durationMs !== undefined ? { durationMs } : {}) }, { episodeVersion: episode.version });
+          this.store.record('workflow.node_failed', { entityId: workflow.id, runId: id, nodeId: node.id, nodeType: node.type, error: message, ...(durationMs !== undefined ? { durationMs } : {}) });
         }
       }
       const latest = this.current(id);
       if (!latest) return;
       const finalStatus = failure ? 'failed' : reviewStatus(latest.nodeRuns, latest.workflowSnapshot, latest.selectedStages);
-      this.store.save('workflowRuns', { ...latest, status: finalStatus, ...(failure ? { error: failure } : {}), completedAt: timestamp(), episodeVersion: episode.version, updatedAt: timestamp() });
+      const completedAt = timestamp();
+      const runDurationMs = computeDurationMs(latest.startedAt, completedAt);
+      this.store.save('workflowRuns', { ...latest, status: finalStatus, ...(failure ? { error: failure } : {}), completedAt, ...(runDurationMs !== undefined ? { durationMs: runDurationMs } : {}), episodeVersion: episode.version, updatedAt: completedAt });
       this.store.record(`workflow.${finalStatus}`, { entityId: workflow.id, runId: id, episodeId: episode.id, executed });
       Promise.resolve(this.onNotify?.('workflow', {
         workflowId: workflow.id,
@@ -1491,10 +1694,15 @@ export class WorkflowEngine {
     } catch (error) {
       if (!this.current(id)) return;
       const message = error instanceof HttpError ? error.message : error.message?.includes('Trend source') ? error.message : 'Workflow step failed. Review integration availability and local service logs.';
-      this.nodeUpdate(id, activeNode, { status: 'failed', error: message, completedAt: timestamp() }, { status: 'failed', error: message, completedAt: timestamp() });
+      const completedAt = timestamp();
+      const currentForFailure = this.current(id);
+      const activeNodeRun = currentForFailure?.nodeRuns?.find((item) => item.nodeId === activeNode);
+      const nodeDurationMs = computeDurationMs(activeNodeRun?.startedAt, completedAt);
+      const runDurationMs = computeDurationMs(currentForFailure?.startedAt, completedAt);
+      this.nodeUpdate(id, activeNode, { status: 'failed', error: message, completedAt, ...(nodeDurationMs !== undefined ? { durationMs: nodeDurationMs } : {}) }, { status: 'failed', error: message, completedAt, ...(runDurationMs !== undefined ? { durationMs: runDurationMs } : {}) });
       const failed = this.current(id);
       this.store.save('workflowRuns', { ...failed, nodeRuns: failed.nodeRuns.map((node) => node.status === 'queued' ? { ...node, status: 'skipped', error: 'An upstream stage failed' } : node) });
-      this.store.record('workflow.failed', { entityId: id, nodeId: activeNode, error: message });
+      this.store.record('workflow.failed', { entityId: id, runId: id, nodeId: activeNode, error: message });
       Promise.resolve(this.onNotify?.('workflow', {
         workflowId: failed?.workflowId,
         workflowName: failed?.workflowSnapshot?.name,

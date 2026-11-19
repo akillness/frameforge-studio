@@ -1,0 +1,46 @@
+{
+  "benchmarks": "on demand: need Vertex credentials, Docker and explicit approval",
+  "components": {
+    "c1_system_prompt": [
+      "AGENTS.md"
+    ],
+    "c2_guardrails": [
+      ".agents/rules"
+    ],
+    "c3_memory": [
+      ".mex"
+    ],
+    "c4_tool_guidance": [
+      ".agents/rules/jeo-workflows.md"
+    ],
+    "c5_subagents": [
+      ".claude/agents"
+    ],
+    "c6_skills": [
+      ".agents/skills",
+      ".claude/skills"
+    ],
+    "c7_scripts": [
+      "scripts"
+    ],
+    "c8_plugins_hooks": [
+      ".git/hooks/post-commit"
+    ]
+  },
+  "mode": "method",
+  "preflight_method": "ok",
+  "project": "C:\\Users\\bangg\\source\\repos\\frameforge-studio",
+  "updated": "2026-11-15T08:56:18Z",
+  "version": 1,
+  "workflow_status": {
+    "jev": "ok",
+    "mex": "ok",
+    "open-ontologies": "ok",
+    "openspace": "ok",
+    "refresh": "ok",
+    "rtk-semble": "ok",
+    "rules": "ok",
+    "second-brain": "pending",
+    "zvec": "ok"
+  }
+}

@@ -322,7 +322,7 @@ export class GenerationQueue {
           const current = this.get(id);
           if (current.status === 'downloading' && current.importLeaseToken) this.schedule(id, Math.max(0, Date.parse(current.importLeaseExpiresAt) - this.now()));
         }
-      } else if (['failed', 'nsfw', 'canceled', 'cancelled'].includes(result.status)) {
+      } else if (['failed', 'nsfw', 'canceled', 'cancelled', 'ip_detected', 'rejected', 'error'].includes(result.status)) {
         this.update(id, { status: result.status === 'cancelled' ? 'canceled' : result.status, providerStatus: result.status, error: 'Provider did not complete the requested generation.', completedAt: stamp() }, { activeOnly: true, expectedEpoch });
       } else if (['queued', 'pending', 'running', 'processing', 'in_progress'].includes(result.status)) {
         this.update(id, { status: 'in_progress', providerStatus: result.status, pollFailures: 0 }, { activeOnly: true, expectedEpoch });

@@ -1,0 +1,5 @@
+rules:
+- http:
+    hostnames: ["host.docker.internal"]
+    ports:
+      numbers: [8080, 8081]

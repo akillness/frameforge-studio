@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Store, entity, starterScene } from './store.mjs';
 import { TrendCollector } from './trend-collector.mjs';
 import { HttpError, object, text, optionalText, choice, url, scenes, formats, episodePatch, episodeMusic } from './validation.mjs';
-import { WorkflowEngine, validateWorkflow } from './workflows.mjs';
+import { WorkflowEngine, validateWorkflow, summarizeNodeHandoffs } from './workflows.mjs';
 import { NarrationQueue, createSpeechProvider } from './narration.mjs';
 import { GenerationQueue } from './generations.mjs';
 import { createGenerationProvider } from './generation-provider.mjs';
@@ -425,8 +425,8 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
   const generationProvider = generation || createGenerationProvider();
   const generations = new GenerationQueue({ store, provider: generationProvider, ...generationOptions });
   const platformSessions = injectedPlatformSessions || new PlatformSessionManager({ store, ...(platformSessionOptions || {}) });
-  const workflows = new WorkflowEngine({ store, fetchTrends: refreshTrends, runAgent: async (...args) => (await adapter()).runAgent(...args), render: (episode) => enqueueRender(episode, true, 'workflow'), validateAssets, generations, platformSessions, publication, onNotify: notifyDiscord });
   const speechProvider = speech || createSpeechProvider();
+  const workflows = new WorkflowEngine({ store, fetchTrends: refreshTrends, runAgent: async (...args) => (await adapter()).runAgent(...args), render: (episode) => enqueueRender(episode, true, 'workflow'), validateAssets, generations, platformSessions, publication, speechProvider, onNotify: notifyDiscord });
   const narration = new NarrationQueue({ store, ...speechProvider });
   const blog = new BlogService({ ...blogOptions, store });
   const agentOps = createAgentOperations({ store, workflows, enqueueRender, validateAssets, runAgent: async (...args) => (await adapter()).runAgent(...args), allowPaidGeneration: agentApiOptions?.allowPaidGeneration ?? process.env.AGENT_API_ALLOW_PAID_GENERATION === 'true' });
@@ -649,7 +649,36 @@ export function createApp({ dataDir = process.env.DATA_DIR || resolve('data'), l
         const episode = store.get('episodes', episodeId);
         if (channelId && episode.channelId !== channelId || run.episodeId !== episodeId) throw new HttpError(404, 'Workflow run not found');
       }
-      return json(response, 200, run);
+      const derivedDurationMs = run.startedAt && run.completedAt ? Math.max(0, Date.parse(run.completedAt) - Date.parse(run.startedAt)) : undefined;
+      const durationMs = run.durationMs ?? (Number.isFinite(derivedDurationMs) ? derivedDurationMs : undefined);
+      return json(response, 200, { ...run, handoffs: summarizeNodeHandoffs(run.workflowSnapshot, run), ...(durationMs !== undefined ? { durationMs } : {}) });
+    }
+    const workflowRunEvents = /^\/api\/workflow-runs\/([^/]+)\/events$/.exec(path);
+    if (request.method === 'GET' && workflowRunEvents) {
+      const runId = decodeURIComponent(workflowRunEvents[1]);
+      const run = store.get('workflowRuns', runId);
+      const channelId = requestUrl.searchParams.get('channelId') || '';
+      const episodeId = requestUrl.searchParams.get('episodeId') || '';
+      if (channelId) {
+        store.get('channels', channelId);
+        const runEpisode = store.get('episodes', run.episodeId);
+        if (runEpisode.channelId !== channelId) throw new HttpError(404, 'Workflow run not found');
+      }
+      if (episodeId) {
+        const episode = store.get('episodes', episodeId);
+        if ((channelId && episode.channelId !== channelId) || run.episodeId !== episodeId) throw new HttpError(404, 'Workflow run not found');
+      }
+      const events = [];
+      for (const entry of store.iterate('events')) {
+        if (entry?.runId === run.id || entry?.runId === runId || entry?.details?.runId === runId) events.push(entry);
+      }
+      events.reverse();
+      events.sort((a, b) => {
+        const left = String(a?.createdAt || '');
+        const right = String(b?.createdAt || '');
+        return left < right ? -1 : left > right ? 1 : 0;
+      });
+      return json(response, 200, { runId: run.id, events });
     }
     const workflowGet = /^\/api\/workflows\/([^/]+)\/(runs|history)$/.exec(path);
     if (request.method === 'GET' && workflowGet) return json(response, 200, workflowGet[2] === 'runs' ? workflows.listRuns(workflowGet[1]) : store.workflowHistory(workflowGet[1]));

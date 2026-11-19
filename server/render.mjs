@@ -170,8 +170,12 @@ export function buildSceneCompositionPlan(scene, w, h) {
     const styleName = `Slot${index}`;
     const fontSize = Math.max(16, Math.min(120, Math.round(Number(slot.style?.fontSize) || (slot.role === 'subtitle-layer' ? 44 : 36))));
     const primaryColor = hexToAssColor(slot.style?.textColor || '#ffffff', 0);
-    const backColor = hexToAssColor(slot.style?.backgroundColor || '#101010', 1 - Math.max(0, Math.min(1, Number(slot.style?.opacity ?? 0.8))));
-    styles.push(`Style: ${styleName},${font},${fontSize},${primaryColor},&H000000FF,&H00101010,${backColor},-1,0,0,0,100,100,0,0,1,3,1,5,20,20,20,1`);
+    const slotOpacity = Math.max(0, Math.min(1, Number(slot.style?.opacity ?? 0.8)));
+    const backColor = slotOpacity === 0 ? '&H700A0F1A' : hexToAssColor(slot.style?.backgroundColor || '#101010', 1 - slotOpacity);
+    const outlineColor = slotOpacity === 0 ? '&H600A0F1A' : '&H00101010';
+    const outlineWidth = slotOpacity === 0 ? 2 : 3;
+    const shadowDepth = slotOpacity === 0 ? 2.5 : 1;
+    styles.push(`Style: ${styleName},${font},${fontSize},${primaryColor},&H000000FF,${outlineColor},${backColor},-1,0,0,0,100,100,0,0,1,${outlineWidth},${shadowDepth},5,20,20,20,1`);
 
     const copySource = slot.text || (slot.html ? stripHtmlTags(slot.html) : '') || (slot.dataBinding === 'scene.title' ? scene.title : slot.dataBinding === 'scene.narration' ? (scene.narration || scene.text) : slot.dataBinding === 'scene.text' ? scene.text : '');
     const badgePrefix = slot.style?.badge ? `[${slot.style.badge}] ` : '';
@@ -387,9 +391,18 @@ export async function renderEpisode(episode, { dataDir, musicIntegrity, sceneInt
         if (!box.hasAsset) continue;
         const { source, mediaOptions } = verifiedScenes ? await streamFor(box.slot.assetUrl, { sceneId: scene.id, slotId: box.slot.id, use: 'asset' }) : await resolveVerifiedUpload(root, box.slot.assetUrl);
         const isImage = box.slot.mediaKind === 'image' || /\.(?:png|jpe?g|webp|gif)$/i.test(box.slot.assetUrl);
+        let clipDuration = null;
+        if (!isImage && !verifiedScenes) {
+          try {
+            const p = await execute(process.env.FFPROBE_PATH || 'ffprobe', ['-v', 'error', ...mediaOptions, '-show_entries', 'format=duration', '-of', 'csv=p=0', source], { timeout: 15000 });
+            const d = Number(p.stdout.trim());
+            if (Number.isFinite(d) && d > 0) clipDuration = d;
+          } catch {}
+        }
         slotInputs.push({
           ...box,
           isImage,
+          clipDuration,
           args: visualInputOptions(source, mediaOptions, isImage, box.slot.trimStart ?? 0, box.slot.trimEnd),
         });
       }
@@ -437,11 +450,20 @@ export async function renderEpisode(episode, { dataDir, musicIntegrity, sceneInt
             const inIdx = slotInputCounter++;
             const slotLabel = `slotv${stepCounter}`;
             const visualLabel = nextLabel();
+            const slotEntry = slotInputs[inIdx - 1];
             const padColor = box.backgroundColor || scene.background;
-            chains.push(`[${inIdx}:v]scale=${box.sw}:${box.sh}:force_original_aspect_ratio=decrease,pad=${box.sw}:${box.sh}:(ow-iw)/2:(oh-ih)/2:color=${padColor},setsar=1,fps=30,tpad=stop_mode=clone:stop_duration=${duration}[${slotLabel}]`);
+            const isFullCover = box.slot.role === 'video-bg' && box.sw === w && box.sh === h;
+            const scaleFilter = isFullCover
+              ? `scale=${box.sw}:${box.sh}:force_original_aspect_ratio=increase,crop=${box.sw}:${box.sh}`
+              : `scale=${box.sw}:${box.sh}:force_original_aspect_ratio=decrease,pad=${box.sw}:${box.sh}:(ow-iw)/2:(oh-ih)/2:color=${padColor}`;
+            const effectiveClipDur = slotEntry?.clipDuration && !box.slot.trimEnd ? Math.max(0.2, slotEntry.clipDuration - (box.slot.trimStart ?? 0)) : null;
+            const ptsStretch = effectiveClipDur && effectiveClipDur < duration - 0.1
+              ? `setpts=${Math.min(3.0, duration / effectiveClipDur).toFixed(6)}*PTS,`
+              : '';
+            chains.push(`[${inIdx}:v]${ptsStretch}${scaleFilter},setsar=1,fps=30,tpad=stop_mode=clone:stop_duration=${duration}[${slotLabel}]`);
             chains.push(`[${currentLabel}][${slotLabel}]overlay=x=${box.sx}:y=${box.sy}:eof_action=pass[${visualLabel}]`);
             currentLabel = visualLabel;
-          } else if (box.backgroundColor) {
+          } else if (box.backgroundColor && box.opacity > 0.01) {
             const visualLabel = nextLabel();
             chains.push(`[${currentLabel}]drawbox=x=${box.sx}:y=${box.sy}:w=${box.sw}:h=${box.sh}:color=${box.backgroundColor}@${box.opacity.toFixed(2)}:t=fill${box.enable ? `:enable='${box.enable}'` : ''}[${visualLabel}]`);
             currentLabel = visualLabel;

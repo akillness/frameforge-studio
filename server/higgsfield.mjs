@@ -6,7 +6,7 @@ import { isIP } from 'node:net';
 const API_ORIGIN = 'https://api.higgsfield.ai';
 const ID = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/;
 const ASSET_HOSTS = new Set(['images.higgs.ai', 'd8j0ntlcm91z4.cloudfront.net', 'd28lhcrx5qdowv.cloudfront.net']);
-const terminal = new Set(['completed', 'failed', 'nsfw', 'canceled', 'cancelled']);
+const terminal = new Set(['completed', 'failed', 'nsfw', 'canceled', 'cancelled', 'ip_detected', 'rejected', 'error']);
 
 // This API mapping is verified against the model-specific reference, not inferred
 // from the CLI catalog. CLI models remain independently discoverable in full.
@@ -72,7 +72,7 @@ export function normalizeHiggsfieldJob(raw, transport = 'api') {
   add(raw.video?.url, 'video');
   add(raw.audio?.url, 'audio');
   add(raw.result_url, raw.type || (/\.(mp4|mov)(\?|$)/i.test(raw.result_url || '') ? 'video' : /\.(wav|mp3|m4a)(\?|$)/i.test(raw.result_url || '') ? 'audio' : 'image'));
-  return { requestId, status: ['pending'].includes(status) ? 'queued' : ['processing','running'].includes(status) ? 'in_progress' : status === 'cancelled' ? 'canceled' : status, outputs, transport };
+  return { requestId, status: ['pending'].includes(status) ? 'queued' : ['processing','running'].includes(status) ? 'in_progress' : status === 'cancelled' ? 'canceled' : ['ip_detected', 'rejected', 'error'].includes(status) ? 'failed' : status, outputs, transport };
 }
 
 async function readBoundedJson(response) {

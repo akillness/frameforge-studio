@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SubstraOps · 로컬 AI 서빙 관제 &amp; 제어</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">SO</div>
+        <div>
+          <div class="brand-title">SubstraOps <span class="badge badge-accent">Tailscale Control Plane</span></div>
+          <div class="brand-sub">로컬 AI 서빙 · Agent Substrate · qev + 30B MoE 실시간 관제/제어</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div id="sse-pill" class="pill pill-muted">연결 중…</div>
+        <button id="btn-refresh" class="btn btn-secondary" type="button">새로고침</button>
+        <span class="tip" tabindex="0" data-tip="노드를 클릭하면 우측 인스펙터에서 제어·수정·로그 조회를 바로 실행할 수 있습니다. 각 항목 옆 ? 아이콘에 마우스를 올리면 설명이 표시됩니다.">?</span>
+      </div>
+    </header>
+
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="overview" type="button">관제 · 라이브 흐름</button>
+      <button class="tab" data-tab="substrate" type="button">에이전트 · Substrate CRUD</button>
+      <button class="tab" data-tab="engines" type="button">추론 엔진 · 파라미터 제어</button>
+      <button class="tab" data-tab="jeo" type="button">jeo-code · 라우팅 설정</button>
+    </nav>
+
+    <section id="kpi-strip" class="kpi-strip"></section>
+
+    <main>
+      <!-- TAB 1: OVERVIEW & LIVE FLOW -->
+      <section id="tab-overview" class="tab-panel active">
+        <div class="overview-grid">
+          <div class="card flow-card">
+            <div class="card-head">
+              <div>
+                <h2>실시간 에이전트 · 추론 흐름 토폴로지 <span class="tip" tabindex="0" data-tip="요청이 유입되면 엣지가 실시간으로 맥동하며, 병목이 감지된 노드는 주황/적색으로 강조됩니다. 노드를 클릭해 상세 제어하세요.">?</span></h2>
+                <p class="muted" id="flow-subtitle">kagent / jeo-code → Router → gVisor Sandbox → Egress → Host GPU/CPU</p>
+              </div>
+              <div class="legend">
+                <span class="dot dot-ok"></span>정상
+                <span class="dot dot-busy"></span>추론 중
+                <span class="dot dot-warn"></span>병목 주의
+                <span class="dot dot-crit"></span>장애/임계
+              </div>
+            </div>
+            <div id="topology-wrap" class="topology-wrap"></div>
+          </div>
+
+          <div class="side-stack">
+            <div class="card">
+              <div class="card-head">
+                <h2>병목 진단기 <span class="tip" tabindex="0" data-tip="VRAM 여유(WDDM 스필 위험), 슬롯 포화, 컨텍스트 85% 초과, C: 디스크, 파드 미준비, Egress 403 차단을 자동 감시합니다.">?</span></h2>
+                <span id="bn-count" class="badge">0건</span>
+              </div>
+              <div id="bottleneck-list" class="stack-list"></div>
+            </div>
+
+            <div class="card">
+              <div class="card-head">
+                <h2>선택 노드 인스펙터 <span class="tip" tabindex="0" data-tip="토폴로지 노드를 클릭하면 상태·슬롯·빠른 제어 버튼이 여기에 표시됩니다.">?</span></h2>
+                <span id="inspector-badge" class="badge badge-muted">전체 요약</span>
+              </div>
+              <div id="node-inspector"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head">
+              <h2>라이브 흐름 테스트 <span class="tip" tabindex="0" data-tip="실제 프롬프트를 보내 토폴로지 흐름, 응답 속도(tok/s), qev 판정, Actor E2E를 즉시 검증합니다.">?</span></h2>
+            </div>
+            <form id="live-test-form" class="inline-form">
+              <select id="test-target">
+                <option value="llm">Host 30B MoE LLM (:8081)</option>
+                <option value="qev">Host qev 판단기 (:8080)</option>
+                <option value="actor">Substrate Actor (local-ai/agent-1 E2E)</option>
+              </select>
+              <input id="test-prompt" type="text" value="Write a 3-line Python add(a,b) function." placeholder="테스트 프롬프트 입력" />
+              <input id="test-tokens" type="number" min="8" max="256" value="64" title="max_tokens" />
+              <button class="btn btn-primary" type="submit">실행 테스트</button>
+            </form>
+            <pre id="test-output" class="code-box">테스트 실행 결과가 여기에 표시됩니다.</pre>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h2>실시간 트래픽 · Egress 이벤트 <span class="tip" tabindex="0" data-tip="atenet-egress Envoy 액세스 로그와 대시보드 제어/테스트 이벤트를 최신순으로 표시합니다.">?</span></h2>
+            </div>
+            <div id="activity-feed" class="activity-feed"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: SUBSTRATE & KAGENT CRUD -->
+      <section id="tab-substrate" class="tab-panel">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head">
+              <h2>Atespaces &amp; kagent 상태 <span class="tip" tabindex="0" data-tip="Atespace는 Substrate의 격리 네임스페이스입니다. kagent CRD가 클러스터에 배포되면 자동으로 탐지되어 표시됩니다.">?</span></h2>
+              <button class="btn btn-primary btn-sm" id="btn-new-atespace" type="button">+ Atespace</button>
+            </div>
+            <div id="atespace-list" class="chip-grid"></div>
+            <div class="divider"></div>
+            <div id="kagent-panel"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h2>WorkerPools (워커 풀 관리) <span class="tip" tabindex="0" data-tip="gVisor/MicroVM 워커 파드 풀입니다. replicas와 CPU/Memory 한도를 즉시 수정하거나 새 풀을 생성할 수 있습니다.">?</span></h2>
+              <button class="btn btn-primary btn-sm" id="btn-new-wp" type="button">+ WorkerPool</button>
+            </div>
+            <div id="workerpool-list" class="table-wrap"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+          <div class="card-head">
+            <h2>Actors &amp; EgressPolicy 제어 <span class="tip" tabindex="0" data-tip="상태 보존형 AI 에이전트 인스턴스입니다. Suspend(메모리 스냅샷), Resume, Revert, Egress 방화벽 규칙 편집, 로그 확인 및 삭제가 가능합니다.">?</span></h2>
+            <button class="btn btn-primary btn-sm" id="btn-new-actor" type="button">+ Actor 생성</button>
+          </div>
+          <div id="actor-list" class="table-wrap"></div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+          <div class="card-head">
+            <h2>ActorTemplates (불변 템플릿) <span class="tip" tabindex="0" data-tip="Actor의 컨테이너 이미지(@sha256 다이제스트 고정), 환경변수, 자원 한도를 정의합니다. 수정이 필요할 때는 새 이름으로 생성하거나 삭제 후 재생성합니다.">?</span></h2>
+            <button class="btn btn-primary btn-sm" id="btn-new-template" type="button">+ Template 생성</button>
+          </div>
+          <div id="template-list" class="table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- TAB 3: HOST INFERENCE ENGINES -->
+      <section id="tab-engines" class="tab-panel">
+        <div id="engines-grid" class="grid-2"></div>
+      </section>
+
+      <!-- TAB 4: JEO-CODE & THREAD ROUTING -->
+      <section id="tab-jeo" class="tab-panel">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head">
+              <h2>jeo-code 커스텀 프로바이더 <span class="tip" tabindex="0" data-tip="~/.jeo/config.json의 customProviders를 추가·수정·프로브 테스트·삭제합니다.">?</span></h2>
+              <button class="btn btn-primary btn-sm" id="btn-new-provider" type="button">+ 프로바이더</button>
+            </div>
+            <div id="provider-list" class="table-wrap"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h2>Discord (윈코드) 쓰레드 모델 라우팅 <span class="tip" tabindex="0" data-tip="특정 Discord 쓰레드 ID에만 원하는 로컬/외부 모델을 바인딩합니다. 변경 후 '봇 재기동'을 눌러 반영하세요.">?</span></h2>
+              <div class="btn-row">
+                <button class="btn btn-secondary btn-sm" id="btn-restart-wincode" type="button">윈코드 봇 재기동</button>
+                <button class="btn btn-primary btn-sm" id="btn-new-threadmap" type="button">+ 쓰레드 매핑</button>
+              </div>
+            </div>
+            <div id="wincode-status" class="sub-banner"></div>
+            <div id="threadmap-list" class="table-wrap"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL DIALOG -->
+  <dialog id="modal" class="modal">
+    <form method="dialog" class="modal-card" id="modal-form">
+      <div class="modal-head">
+        <h3 id="modal-title">작업</h3>
+        <button class="btn btn-ghost btn-sm" id="modal-close" type="button">✕</button>
+      </div>
+      <div id="modal-body" class="modal-body"></div>
+      <div class="modal-foot" id="modal-foot"></div>
+    </form>
+  </dialog>
+
+  <div id="toast-box" class="toast-box"></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

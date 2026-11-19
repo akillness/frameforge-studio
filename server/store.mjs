@@ -192,6 +192,9 @@ export class Store {
         status: run.status,
         createdAt: run.createdAt,
         updatedAt: run.updatedAt,
+        ...(run.startedAt ? { startedAt: run.startedAt } : {}),
+        ...(run.completedAt ? { completedAt: run.completedAt } : {}),
+        ...(typeof run.durationMs === 'number' && Number.isFinite(run.durationMs) ? { durationMs: run.durationMs } : {}),
         nodeRuns: Array.isArray(run.nodeRuns) ? run.nodeRuns.map((node) => ({
           nodeId: node.nodeId,
           type: node.type,
@@ -203,6 +206,11 @@ export class Store {
           ...(node.staleFrom ? { staleFrom: node.staleFrom } : {}),
           ...(node.skipReason ? { skipReason: node.skipReason } : {}),
           ...(node.output !== undefined && node.output !== null ? { hasOutput: true } : {}),
+          ...(node.startedAt ? { startedAt: node.startedAt } : {}),
+          ...(node.completedAt ? { completedAt: node.completedAt } : {}),
+          ...(typeof node.durationMs === 'number' && Number.isFinite(node.durationMs) ? { durationMs: node.durationMs } : {}),
+          ...(node.executionMeta ? { executionMeta: node.executionMeta } : {}),
+          ...(Array.isArray(node.upstreamInputs) ? { upstreamInputs: node.upstreamInputs } : {}),
         })) : [],
       };
     });
@@ -212,7 +220,7 @@ export class Store {
     this.db.prepare('INSERT INTO entities(kind,id,data) VALUES (?,?,?) ON CONFLICT(kind,id) DO UPDATE SET data=excluded.data').run(kind, item.id, JSON.stringify(item));
     return item;
   }
-  record(type, details = {}) { return this.save('events', entity({ type, ...details })); }
+  record(type, details = {}) { return this.save('events', entity({ ...details, type })); }
   *iterate(kind) {
     for (const row of this.db.prepare('SELECT data FROM entities WHERE kind = ? ORDER BY rowid DESC').iterate(kind)) yield JSON.parse(row.data);
   }

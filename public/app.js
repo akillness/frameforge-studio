@@ -1034,6 +1034,12 @@ function buildDefaultSlots(preset, scene = {}) {
   const title = scene.title || '핵심 장면';
   const bodyText = scene.text || '자막 및 핵심 메시지';
   const narration = scene.narration || bodyText;
+  if (preset === 'cinematic-seamless') {
+    return [
+      { id: 'slot-full-video', name: '풀스크린 시네마틱 배경 영상 (Higgsfield)', role: 'video-bg', dataBinding: 'scene.videoPrompt', x: 0, y: 0, w: 100, h: 100, zIndex: 1, prompt: scene.videoPrompt || `${bodyText} · 시네마틱 9:16 실사 연출`, ...(scene.assetUrl && scene.kind === 'video' ? { assetUrl: scene.assetUrl, mediaKind: 'video' } : {}), style: { backgroundColor: '#0f1419', textColor: '#f2f6f8', fontSize: 30, opacity: 1, align: 'center' } },
+      { id: 'slot-seamless-subtitle', name: '하단 세이프존 음유 자막', role: 'subtitle-layer', dataBinding: 'scene.narration', x: 6, y: 74, w: 88, h: 16, zIndex: 10, text: narration, style: { backgroundColor: '#0a0f1a', textColor: '#f2f6f8', fontSize: 44, opacity: 0, align: 'center' } },
+    ];
+  }
   if (preset === 'premiere-3tier') {
     return [
       { id: 'slot-top-banner', name: '상단 HTML 뉴스 배너 오버레이', role: 'html-overlay', dataBinding: 'news.headline', x: 4, y: 3, w: 92, h: 12, zIndex: 8, text: title, html: `<div class="pencil-card"><span class="pencil-badge">BREAKING</span><strong>${esc(title)}</strong></div>`, style: { backgroundColor: '#173ea8', textColor: '#ffffff', fontSize: 48, opacity: 0.94, borderRadius: 8, align: 'left', badge: 'NEWS' } },
@@ -1078,6 +1084,7 @@ function slotBuilderHtml(scene) {
     <div class="row" style="flex-wrap:wrap;gap:6px;margin:8px 0">
       <button type="button" class="small" data-action="apply-layout-preset" data-preset="top-image-mid-video">상단 이미지 + 중단 영상·자막</button>
       <button type="button" class="small" data-action="apply-layout-preset" data-preset="premiere-3tier">프리미어 3단 + HTML 배너</button>
+      <button type="button" class="small" data-action="apply-layout-preset" data-preset="cinematic-seamless">시네마틱 풀스크린 + 음유 자막</button>
       <button type="button" class="small quiet" data-action="apply-layout-preset" data-preset="top-image-mid-video" data-scope="all">전체 씬 일괄 적용</button>
       ${slots.length ? '<button type="button" class="small quiet" data-action="apply-layout-preset" data-preset="clear">단일 레이아웃 초기화</button>' : ''}
     </div>
@@ -2121,7 +2128,7 @@ async function handleAction(button) {
         delete target.slots;
         target.layout = 'center';
       } else {
-        target.layout = preset === 'premiere-3tier' ? 'premiere-3tier' : 'top-image-mid-video';
+        target.layout = ['premiere-3tier', 'cinematic-seamless'].includes(preset) ? preset : 'top-image-mid-video';
         target.slots = buildDefaultSlots(preset, target);
       }
     }
@@ -2153,7 +2160,7 @@ async function handleAction(button) {
       style: { backgroundColor: role === 'html-overlay' ? '#173ea8' : ['subtitle-layer','text-overlay'].includes(role) ? '#111a22' : '#111827', textColor: '#ffffff', fontSize: role === 'subtitle-layer' ? 60 : role === 'text-overlay' ? 48 : role === 'html-overlay' ? 48 : 34, opacity: role === 'subtitle-layer' ? 0.86 : role === 'text-overlay' ? 0.94 : 0.85, borderRadius: role === 'subtitle-layer' ? 0 : role === 'text-overlay' ? 14 : 8, align: role === 'text-overlay' ? 'left' : 'center', badge: role === 'text-overlay' ? 'NEWS' : role === 'html-overlay' ? 'HTML' : '' },
     };
     scene.slots.push(newSlot);
-    if (!['top-image-mid-video','premiere-3tier','custom'].includes(scene.layout)) scene.layout = 'custom';
+    if (!['top-image-mid-video','premiere-3tier','cinematic-seamless','custom'].includes(scene.layout)) scene.layout = 'custom';
     selectedSlotId = newSlot.id;
     markDirty();
     render();

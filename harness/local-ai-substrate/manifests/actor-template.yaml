@@ -1,0 +1,35 @@
+metadata:
+  atespace: local-ai
+  name: local-ai-agent
+workerSelector:
+  matchLabels:
+    workload: local-ai-agent
+containers:
+- name: agent
+  image: localhost:5001/local-ai-agent@sha256:843540812e6e51d280d91b5c60a85eeb473581f802193570f955d9619499c589
+  command: ["python3", "/app/server.py"]
+  env:
+  - name: QEV_URL
+    value: http://host.docker.internal:8080/v1/systemone
+  - name: QEV_MODEL
+    value: labqoat/qev-0.8b-GGUF:text-Q8_0
+  - name: LLM_URL
+    value: http://host.docker.internal:8081/v1/chat/completions
+  - name: LLM_MODEL
+    value: qwen3-coder-30b-a3b
+  wakeupProbe:
+    httpGet:
+      path: /readyz
+      port: 80
+  volumeMounts:
+  - name: data
+    mountPath: /home/agent
+resources:
+  limits:
+    cpuMillicores: 1000
+    memoryBytes: 268435456
+snapshotConfig:
+  preferredFidelity: SNAPSHOT_FIDELITY_MEMORY
+volumes:
+- name: data
+  durableDir: {}

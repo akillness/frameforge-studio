@@ -4,7 +4,7 @@
 // existing Store / WorkflowEngine rules; nothing here relaxes version guards or consent gates.
 import { HttpError, text, episodePatch, scenes as validateScenes } from './validation.mjs';
 import { starterScene } from './store.mjs';
-import { validateWorkflow, TYPES, NODE_CONFIG_FIELDS, STAGE_PREREQUISITES } from './workflows.mjs';
+import { validateWorkflow, TYPES, NODE_CONFIG_FIELDS, STAGE_PREREQUISITES, summarizeNodeHandoffs } from './workflows.mjs';
 import { applyGraphOps, blueprintFor, storyboardFor, autoLayout, PATCH_OP_NAMES, MAX_PATCH_OPS, BLUEPRINT_STYLES, STORYBOARD_TONES } from './graph-patch.mjs';
 import { validateSchema } from './schema.mjs';
 
@@ -97,9 +97,24 @@ function runSummary(run) {
     id: run.id, workflowId: run.workflowId, workflowVersion: run.workflowVersion, episodeId: run.episodeId, episodeVersion: run.episodeVersion,
     status: run.status, terminal: TERMINAL_RUN.includes(run.status), awaitingReview: run.status === 'awaiting_review',
     selectedStages: run.selectedStages || [],
-    nodeRuns: (run.nodeRuns || []).map((node) => ({ nodeId: node.nodeId, type: node.type, status: node.status, ...(node.reused ? { reused: true } : {}), ...(typeof node.error === 'string' ? { error: node.error } : {}), ...(typeof node.output?.exportUrl === 'string' ? { exportUrl: node.output.exportUrl } : {}) })),
+    nodeRuns: (run.nodeRuns || []).map((node) => ({
+      nodeId: node.nodeId,
+      type: node.type,
+      status: node.status,
+      ...(node.reused ? { reused: true } : {}),
+      ...(typeof node.error === 'string' ? { error: node.error } : {}),
+      ...(typeof node.output?.exportUrl === 'string' ? { exportUrl: node.output.exportUrl } : {}),
+      ...(typeof node.durationMs === 'number' && Number.isFinite(node.durationMs) ? { durationMs: node.durationMs } : {}),
+      ...(node.executionMeta ? { executionMeta: node.executionMeta } : {}),
+      ...(Array.isArray(node.upstreamInputs) ? { upstreamInputs: node.upstreamInputs } : {}),
+    })),
+    handoffs: summarizeNodeHandoffs(run.workflowSnapshot, run),
     ...(render ? { exportUrl: render } : {}),
     ...(run.generationPlanId ? { generationPlanId: run.generationPlanId } : {}),
+    ...(run.resumedFrom ? { resumedFrom: run.resumedFrom } : {}),
+    ...(run.startedAt ? { startedAt: run.startedAt } : {}),
+    ...(run.completedAt ? { completedAt: run.completedAt } : {}),
+    ...(typeof run.durationMs === 'number' && Number.isFinite(run.durationMs) ? { durationMs: run.durationMs } : {}),
     ...(run.createdAt ? { createdAt: run.createdAt } : {}), ...(run.updatedAt ? { updatedAt: run.updatedAt } : {}),
   };
 }

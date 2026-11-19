@@ -1,0 +1,15 @@
+{
+  "routes": {
+    "<MESSENGER_SESSION_ROUTE_SHA256>": {
+      "threadId": "<DISCORD_THREAD_ID>",
+      "threadName": "\ud30c\uc774\uc708\ub85c\uceec\ubaa8\ub378",
+      "provider": "local-llm",
+      "modelId": "qwen3-coder-30b-a3b",
+      "name": "Qwen3-Coder-30B-A3B",
+      "baseUrl": "http://127.0.0.1:8081/v1",
+      "api": "openai-completions",
+      "contextWindow": 49152,
+      "maxTokens": 8192
+    }
+  }
+}
