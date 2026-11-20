@@ -171,7 +171,7 @@ function renderTopology(snap) {
     { id: "substrate", x: 215, y: 120, w: 165, h: 112, title: "② Router · gVisor", l1: `Actors: ${running} 실행 / ${actors.length - running} 대기`, l2: `WorkerPool: ${(sub.workerpools || []).reduce((a, w) => a + (w.readyReplicas || 0), 0)} Ready`, l3: "스냅샷 · 상태보존", sev: nodeSeverity(snap, "substrate") === "crit" ? "crit" : nodeSeverity(snap, "workers"), busy: running > 0 || recentFlow },
     { id: "egress", x: 416, y: 120, w: 158, h: 112, title: "③ atenet-egress", l1: `정책 수: ${Object.keys(sub.egressPolicies || {}).length}개`, l2: "허용: :8080, :8081", l3: hasDenied ? "403 차단 감지!" : "Zero-Trust 정상", sev: hasDenied ? "warn" : "ok", busy: recentFlow || qevBusy || llmBusy },
     { id: "qev", x: 612, y: 34, w: 196, h: 102, title: "④ qev 판단기 (:8080)", l1: `${qev?.online ? "READY" : "OFFLINE"} · 32k ctx`, l2: `활성 슬롯: ${(qev?.slots || []).filter(s => s.processing).length}/${qev?.slots?.length || 0}`, l3: `CUDA FA=${qev?.flags?.flashAttn || "-"}`, sev: nodeSeverity(snap, "qev"), busy: qevBusy },
-    { id: "llm", x: 612, y: 204, w: 196, h: 114, title: "⑤ 30B MoE (:8081)", l1: `${llm?.online ? "READY" : "OFFLINE"} · ${Math.round((llm?.nCtxSlot || 0) / 1024)}k×${llm?.slots?.length || 0}`, l2: `활성 슬롯: ${(llm?.slots || []).filter(s => s.processing).length}/${llm?.slots?.length || 0}`, l3: `-ncmoe ${llm?.flags?.ncmoe ?? "-"} · ${llm?.flags?.cacheTypeK || ""}`, sev: nodeSeverity(snap, "llm"), busy: llmBusy },
+    { id: "llm", x: 612, y: 204, w: 196, h: 114, title: "⑤ Qwen3.8-35B MoE (:8081)", l1: `${llm?.online ? "READY" : "OFFLINE"} · ${Math.round((llm?.nCtxSlot || 0) / 1024)}k×${llm?.slots?.length || 0}`, l2: `활성 슬롯: ${(llm?.slots || []).filter(s => s.processing).length}/${llm?.slots?.length || 0}`, l3: `-ncmoe ${llm?.flags?.ncmoe ?? "-"} · ${llm?.flags?.cacheTypeK || ""}`, sev: nodeSeverity(snap, "llm"), busy: llmBusy },
     { id: "gpu", x: 844, y: 105, w: 186, h: 144, title: "⑥ 호스트 GPU · RAM", l1: gpu ? `VRAM ${gpu.usedMiB}/${gpu.totalMiB}M` : "GPU N/A", l2: gpu ? `여유 ${gpu.freeMiB}M (${gpu.tempC}°C)` : "", l3: `RAM 여유 ${host.ram?.freeGB ?? "-"} GB`, sev: nodeSeverity(snap, "gpu") !== "ok" ? nodeSeverity(snap, "gpu") : nodeSeverity(snap, "host"), busy: qevBusy || llmBusy || (gpu?.utilPct || 0) > 15 },
   ];
 
@@ -235,7 +235,7 @@ function renderBottlenecks(snap) {
 
 function renderInspector(snap) {
   const id = state.selectedNode || "llm";
-  const titles = { clients: "클라이언트 · 에이전트", substrate: "Substrate Router & Actors", egress: "atenet-egress 방화벽", qev: "qev (:8080)", llm: "30B MoE (:8081)", gpu: "호스트 GPU · RAM · 디스크" };
+  const titles = { clients: "클라이언트 · 에이전트", substrate: "Substrate Router & Actors", egress: "atenet-egress 방화벽", qev: "qev (:8080)", llm: "Qwen3.8-35B MoE (:8081)", gpu: "호스트 GPU · RAM · 디스크" };
   $("#inspector-badge").textContent = titles[id] || id;
   const box = $("#node-inspector");
   const h = snap.host || {};
@@ -561,7 +561,7 @@ function renderEngines(snap) {
     <div class="card">
       <div class="card-head">
         <div>
-          <h2>${kind === "qev" ? "qev 판단기 (:8080)" : "Qwen3-Coder-30B-A3B MoE (:8081)"} <span class="tip" tabindex="0" data-tip="${kind === "qev" ? "Jev 라우팅·리뷰용 0.8B 결정 모델입니다." : "30.5B MoE 주력 추론 모델입니다. -ncmoe로 RAM 오프로드 레이어 수를 조절해 8GB VRAM 스필을 방지합니다."}">?</span></h2>
+          <h2>${kind === "qev" ? "qev 판단기 (:8080)" : "Qwen3.8-35B-A3B MoE (:8081)"} <span class="tip" tabindex="0" data-tip="${kind === "qev" ? "Jev 라우팅·리뷰용 0.8B 결정 모델입니다." : "30.5B MoE 주력 추론 모델입니다. -ncmoe로 RAM 오프로드 레이어 수를 조절해 8GB VRAM 스필을 방지합니다."}">?</span></h2>
           <p class="muted mono">${esc(e.modelId)} · PID ${esc(e.pid ?? "-")}</p>
         </div>
         <span class="badge ${e.online ? "badge-ok" : "badge-crit"}">${esc(e.status)}</span>
@@ -695,10 +695,10 @@ function openProviderModal(p = null) {
   openModal(p ? `프로바이더 수정: ${p.id}` : "새 커스텀 프로바이더 추가", `
     <div class="form-grid">
       <label>Provider ID<input id="m-p-id" value="${esc(p?.id || "")}" ${p ? "disabled" : ""} placeholder="e.g. local-llm" /></label>
-      <label>Label<input id="m-p-lbl" value="${esc(p?.label || "")}" placeholder="Windows Local 30B MoE" /></label>
+      <label>Label<input id="m-p-lbl" value="${esc(p?.label || "")}" placeholder="Windows Local Qwen3.8-35B MoE" /></label>
       <label class="full">Base URL<input id="m-p-url" value="${esc(p?.baseUrl || "http://127.0.0.1:8081/v1")}" /></label>
-      <label>Default Model<input id="m-p-def" value="${esc(p?.defaultModel || "qwen3-coder-30b-a3b")}" /></label>
-      <label>Models (쉼표 구분)<input id="m-p-mods" value="${esc((p?.models || ["qwen3-coder-30b-a3b"]).join(", "))}" /></label>
+      <label>Default Model<input id="m-p-def" value="${esc(p?.defaultModel || "qwen3.8-35b-a3b")}" /></label>
+      <label>Models (쉼표 구분)<input id="m-p-mods" value="${esc((p?.models || ["qwen3.8-35b-a3b"]).join(", "))}" /></label>
     </div>`, [
     { label: "취소", onClick: d => d.close() },
     { label: "저장", cls: "btn-primary", onClick: async d => {
@@ -713,7 +713,7 @@ function openProviderModal(p = null) {
 }
 $("#btn-new-provider").onclick = () => openProviderModal();
 
-function openThreadModal(tid = "", mid = "local-llm/qwen3-coder-30b-a3b") {
+function openThreadModal(tid = "", mid = "local-llm/qwen3.8-35b-a3b") {
   openModal("Discord 쓰레드 모델 바인딩", `
     <div class="form-grid">
       <label class="full">Discord Thread ID<input id="m-tm-tid" value="${esc(tid)}" placeholder="e.g. 1572915955917660180" /></label>

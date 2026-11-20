@@ -1,16 +1,16 @@
 {
   "customProviders": {
     "local-llm": {
-      "label": "Windows Local 30B MoE",
+      "label": "Windows Local Qwen3.8-35B-A3B",
       "baseUrl": "http://127.0.0.1:8081/v1",
       "protocol": "openai",
       "models": [
-        "qwen3-coder-30b-a3b"
+        "qwen3.8-35b-a3b"
       ],
-      "defaultModel": "qwen3-coder-30b-a3b"
+      "defaultModel": "qwen3.8-35b-a3b"
     }
   },
   "discordThreadModelsExample": {
-    "<DISCORD_THREAD_ID>": "local-llm/qwen3-coder-30b-a3b"
+    "<DISCORD_THREAD_ID>": "local-llm/qwen3.8-35b-a3b"
   }
 }
