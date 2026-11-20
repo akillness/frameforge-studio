@@ -110,6 +110,12 @@ function parseCmdFlags(cmdText) {
     loadMode: get("--load-mode", "auto"),
     cacheRam: get("--cache-ram") !== null ? Number(get("--cache-ram")) : 1024,
     metricsEnabled: /\s--metrics(?:\s|$)/.test(cmdText),
+    specType: get("--spec-type", null),
+    specDraftNMax: get("--spec-draft-n-max") !== null ? Number(get("--spec-draft-n-max")) : null,
+    ngld: get("-ngld") !== null ? Number(get("-ngld")) : null,
+    prio: get("--prio") !== null ? Number(get("--prio")) : null,
+    poll: get("--poll") !== null ? Number(get("--poll")) : null,
+    reasoning: get("--reasoning", null),
   };
 }
 
@@ -140,6 +146,12 @@ function buildCmdText(kind, cfg) {
   if (cfg.ubatchSize) parts.push(`-ub ${Math.max(64, Number(cfg.ubatchSize))}`);
   parts.push(`--load-mode ${["none", "auto", "mmap"].includes(cfg.loadMode) ? cfg.loadMode : "none"}`);
   if (cfg.cacheRam !== undefined && cfg.cacheRam !== null) parts.push(`--cache-ram ${Math.max(0, Number(cfg.cacheRam))}`);
+  if (cfg.specType) parts.push(`--spec-type ${cfg.specType}`);
+  if (cfg.specDraftNMax) parts.push(`--spec-draft-n-max ${Number(cfg.specDraftNMax)}`);
+  if (cfg.ngld !== null && cfg.ngld !== undefined) parts.push(`-ngld ${Number(cfg.ngld)}`);
+  if (cfg.prio !== null && cfg.prio !== undefined) parts.push(`--prio ${Number(cfg.prio)}`);
+  if (cfg.poll !== null && cfg.poll !== undefined) parts.push(`--poll ${Number(cfg.poll)}`);
+  if (cfg.reasoning) parts.push(`--reasoning ${cfg.reasoning}`);
   if (cfg.metricsEnabled) parts.push("--metrics");
   return `@echo off\r\nstart "" /B ${parts.join(" ")}\r\n`;
 }
@@ -540,6 +552,12 @@ async function restartLlamaEngine(kind, flags) {
     ...(merged.ubatchSize ? ["-ub", String(merged.ubatchSize)] : []),
     "--load-mode", merged.loadMode || "none",
     "--cache-ram", String(merged.cacheRam ?? 1024),
+    ...(merged.specType ? ["--spec-type", String(merged.specType)] : []),
+    ...(merged.specDraftNMax ? ["--spec-draft-n-max", String(merged.specDraftNMax)] : []),
+    ...(merged.ngld !== null && merged.ngld !== undefined ? ["-ngld", String(merged.ngld)] : []),
+    ...(merged.prio !== null && merged.prio !== undefined ? ["--prio", String(merged.prio)] : []),
+    ...(merged.poll !== null && merged.poll !== undefined ? ["--poll", String(merged.poll)] : []),
+    ...(merged.reasoning ? ["--reasoning", String(merged.reasoning)] : []),
     ...(merged.metricsEnabled ? ["--metrics"] : []),
   ];
   const argLiteral = args.map(a => `'${String(a).replace(/'/g, "''")}'`).join(",");
