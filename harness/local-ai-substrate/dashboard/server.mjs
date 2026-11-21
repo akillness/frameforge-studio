@@ -108,7 +108,7 @@ function parseCmdFlags(cmdText) {
     cacheTypeK: get("-ctk", "f16"),
     cacheTypeV: get("-ctv", "f16"),
     loadMode: get("--load-mode", "auto"),
-    cacheRam: get("--cache-ram") !== null ? Number(get("--cache-ram")) : 1024,
+    cacheRam: get("--cache-ram") !== null ? Number(get("--cache-ram")) : (kind === "llm" ? 8192 : 1024),
     metricsEnabled: /\s--metrics(?:\s|$)/.test(cmdText),
     specType: get("--spec-type", null),
     specDraftNMax: get("--spec-draft-n-max") !== null ? Number(get("--spec-draft-n-max")) : null,
