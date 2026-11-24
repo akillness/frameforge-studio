@@ -116,6 +116,7 @@ function parseCmdFlags(cmdText) {
     prio: get("--prio") !== null ? Number(get("--prio")) : null,
     poll: get("--poll") !== null ? Number(get("--poll")) : null,
     reasoning: get("--reasoning", null),
+    reasoningBudget: get("--reasoning-budget") !== null ? Number(get("--reasoning-budget")) : null,
   };
 }
 
@@ -123,8 +124,8 @@ function buildCmdText(kind, cfg) {
   const exe = "E:\\llama-cpp-cuda\\llama-server.exe";
   const model = kind === "qev"
     ? (cfg.modelPath || "E:\\models\\qev-0.8b-text-Q8_0.gguf")
-    : (cfg.modelPath || "E:\\models\\Qwen3.8-35B-A3B-Q4_K_M.gguf");
-  const alias = cfg.alias || (kind === "qev" ? "labqoat/qev-0.8b-GGUF:text-Q8_0" : "qwen3.8-35b-a3b");
+    : (cfg.modelPath || "E:\\models\\Qwen3.8-9B-Q4_K_M.gguf");
+  const alias = cfg.alias || (kind === "qev" ? "labqoat/qev-0.8b-GGUF:text-Q8_0" : "qwen3.8-9b");
   const port = kind === "qev" ? 8080 : 8081;
   const parts = [
     `"${exe}"`,
@@ -152,6 +153,7 @@ function buildCmdText(kind, cfg) {
   if (cfg.prio !== null && cfg.prio !== undefined) parts.push(`--prio ${Number(cfg.prio)}`);
   if (cfg.poll !== null && cfg.poll !== undefined) parts.push(`--poll ${Number(cfg.poll)}`);
   if (cfg.reasoning) parts.push(`--reasoning ${cfg.reasoning}`);
+  if (cfg.reasoningBudget !== null && cfg.reasoningBudget !== undefined) parts.push(`--reasoning-budget ${Number(cfg.reasoningBudget)}`);
   if (cfg.metricsEnabled) parts.push("--metrics");
   return `@echo off\r\nstart "" /B ${parts.join(" ")}\r\n`;
 }
@@ -375,7 +377,7 @@ function analyzeBottlenecks(host, sub) {
   const issues = [];
   const gpu = host.gpu;
   if (gpu) {
-    if (gpu.freeMiB < 350) {
+    if (gpu.freeMiB < 250) {
       issues.push({
         id: "vram-critical",
         severity: "critical",
@@ -384,7 +386,7 @@ function analyzeBottlenecks(host, sub) {
         detail: "RTX 2060 SUPER 8GB 한계에 도달해 WDDM 공유 RAM 스필(속도 급락) 위험이 높습니다.",
         hint: "MoE -ncmoe 값을 48로 올리거나 -c 컨텍스트/슬롯(-np)을 줄여 800 MiB 이상 여유를 확보하세요.",
       });
-    } else if (gpu.freeMiB < 750) {
+    } else if (gpu.freeMiB < 450) {
       issues.push({
         id: "vram-tight",
         severity: "warn",
@@ -536,8 +538,8 @@ async function restartLlamaEngine(kind, flags) {
   const newCmd = buildCmdText(kind, merged);
   await fs.writeFile(cmdFile, newCmd, "utf-8");
 
-  const model = merged.modelPath || (kind === "qev" ? "E:\\models\\qev-0.8b-text-Q8_0.gguf" : "E:\\models\\Qwen3.8-35B-A3B-Q4_K_M.gguf");
-  const alias = merged.alias || (kind === "qev" ? "labqoat/qev-0.8b-GGUF:text-Q8_0" : "qwen3.8-35b-a3b");
+  const model = merged.modelPath || (kind === "qev" ? "E:\\models\\qev-0.8b-text-Q8_0.gguf" : "E:\\models\\Qwen3.8-9B-Q4_K_M.gguf");
+  const alias = merged.alias || (kind === "qev" ? "labqoat/qev-0.8b-GGUF:text-Q8_0" : "qwen3.8-9b");
   const args = [
     "-m", model, "--alias", alias, "--host", "0.0.0.0", "--port", String(port),
     "-ngl", String(merged.ngl ?? 99),
@@ -558,6 +560,7 @@ async function restartLlamaEngine(kind, flags) {
     ...(merged.prio !== null && merged.prio !== undefined ? ["--prio", String(merged.prio)] : []),
     ...(merged.poll !== null && merged.poll !== undefined ? ["--poll", String(merged.poll)] : []),
     ...(merged.reasoning ? ["--reasoning", String(merged.reasoning)] : []),
+    ...(merged.reasoningBudget !== null && merged.reasoningBudget !== undefined ? ["--reasoning-budget", String(merged.reasoningBudget)] : []),
     ...(merged.metricsEnabled ? ["--metrics"] : []),
   ];
   const argLiteral = args.map(a => `'${String(a).replace(/'/g, "''")}'`).join(",");
@@ -657,7 +660,7 @@ finally:
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "qwen3.8-35b-a3b",
+          model: "qwen3.8-9b",
           messages: [{ role: "user", content: prompt }],
           max_tokens: maxTokens,
           temperature: 0.2,
@@ -760,7 +763,7 @@ spec:
             { name: "QEV_URL", value: "http://host.docker.internal:8080/v1/systemone" },
             { name: "QEV_MODEL", value: "labqoat/qev-0.8b-GGUF:text-Q8_0" },
             { name: "LLM_URL", value: "http://host.docker.internal:8081/v1/chat/completions" },
-            { name: "LLM_MODEL", value: "qwen3.8-35b-a3b" },
+            { name: "LLM_MODEL", value: "qwen3.8-9b" },
           ],
           wakeupProbe: { httpGet: { path: b.readyPath || "/readyz", port: Number(b.port || 80) } },
           volumeMounts: [{ name: "data", mountPath: "/home/agent" }],

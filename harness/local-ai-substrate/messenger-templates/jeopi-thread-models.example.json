@@ -4,12 +4,13 @@
       "threadId": "<DISCORD_THREAD_ID>",
       "threadName": "\ud30c\uc774\uc708\ub85c\uceec\ubaa8\ub378",
       "provider": "local-llm",
-      "modelId": "qwen3.8-35b-a3b",
-      "name": "Qwen3.8-35B-A3B",
+      "modelId": "qwen3.8-9b",
+      "name": "Qwen3.8-9B",
       "baseUrl": "http://127.0.0.1:8081/v1",
       "api": "openai-completions",
-      "contextWindow": 65536,
-      "maxTokens": 8192
+      "contextWindow": 32768,
+      "maxTokens": 8192,
+      "reasoning": true
     }
   }
 }

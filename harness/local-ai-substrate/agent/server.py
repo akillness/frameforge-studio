@@ -8,7 +8,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 QEV_URL = os.environ.get("QEV_URL", "http://host.docker.internal:8080/v1/systemone")
 QEV_MODEL = os.environ.get("QEV_MODEL", "labqoat/qev-0.8b-GGUF:text-Q8_0")
 LLM_URL = os.environ.get("LLM_URL", "http://host.docker.internal:8081/v1/chat/completions")
-LLM_MODEL = os.environ.get("LLM_MODEL", "qwen3.8-35b-a3b")
+LLM_MODEL = os.environ.get("LLM_MODEL", "qwen3.8-9b")
 
 STATE = {"turn_count": 0, "history": []}
 

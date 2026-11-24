@@ -6,7 +6,7 @@ workerSelector:
     workload: local-ai-agent
 containers:
 - name: agent
-  image: localhost:5001/local-ai-agent@sha256:efe9868d3805ced4d709b62cdf4e893fe104e98f6b35348dce4c8260f4412855
+  image: localhost:5001/local-ai-agent@sha256:65aecddb43f150aee891d7c1b7db693b1bcace52671ed00503af8caf1cb43144
   command: ["python3", "/app/server.py"]
   env:
   - name: QEV_URL
@@ -16,7 +16,7 @@ containers:
   - name: LLM_URL
     value: http://host.docker.internal:8081/v1/chat/completions
   - name: LLM_MODEL
-    value: qwen3.8-35b-a3b
+    value: qwen3.8-9b
   wakeupProbe:
     httpGet:
       path: /readyz
