@@ -1,16 +1,17 @@
 {
   "customProviders": {
     "local-llm": {
-      "label": "Windows Local Qwen3.8-9B (Reasoning Fast)",
+      "label": "Windows Local Qwen3.5-9B (64k Full-GPU)",
       "baseUrl": "http://127.0.0.1:8081/v1",
       "protocol": "openai",
       "models": [
-        "qwen3.8-9b"
+        "qwen3.5-9b"
       ],
-      "defaultModel": "qwen3.8-9b"
+      "defaultModel": "qwen3.5-9b",
+      "thinkingFormat": "qwen"
     }
   },
   "discordThreadModelsExample": {
-    "<DISCORD_THREAD_ID>": "local-llm/qwen3.8-9b"
+    "<DISCORD_THREAD_ID>": "local-llm/qwen3.5-9b"
   }
 }

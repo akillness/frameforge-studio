@@ -98,7 +98,7 @@ function parseCmdFlags(cmdText) {
     port: Number(get("--port", 0)) || null,
     ngl: Number(get("-ngl", 0)),
     ncmoe: get("-ncmoe") !== null ? Number(get("-ncmoe")) : null,
-    ctxSize: Number(get("-c", 32768)),
+    ctxSize: Number(get("-c", 65536)),
     slots: Number(get("-np", 1)),
     threads: Number(get("-t", 4)),
     threadsBatch: get("-tb") !== null ? Number(get("-tb")) : null,
@@ -124,8 +124,8 @@ function buildCmdText(kind, cfg) {
   const exe = "E:\\llama-cpp-cuda\\llama-server.exe";
   const model = kind === "qev"
     ? (cfg.modelPath || "E:\\models\\qev-0.8b-text-Q8_0.gguf")
-    : (cfg.modelPath || "E:\\models\\Qwen3.8-9B-Q4_K_M.gguf");
-  const alias = cfg.alias || (kind === "qev" ? "labqoat/qev-0.8b-GGUF:text-Q8_0" : "qwen3.8-9b");
+    : (cfg.modelPath || "E:\\models\\Qwen3.5-9B-Q3_K_M.gguf");
+  const alias = cfg.alias || (kind === "qev" ? "labqoat/qev-0.8b-GGUF:text-Q8_0" : "qwen3.5-9b");
   const port = kind === "qev" ? 8080 : 8081;
   const parts = [
     `"${exe}"`,
@@ -538,8 +538,8 @@ async function restartLlamaEngine(kind, flags) {
   const newCmd = buildCmdText(kind, merged);
   await fs.writeFile(cmdFile, newCmd, "utf-8");
 
-  const model = merged.modelPath || (kind === "qev" ? "E:\\models\\qev-0.8b-text-Q8_0.gguf" : "E:\\models\\Qwen3.8-9B-Q4_K_M.gguf");
-  const alias = merged.alias || (kind === "qev" ? "labqoat/qev-0.8b-GGUF:text-Q8_0" : "qwen3.8-9b");
+  const model = merged.modelPath || (kind === "qev" ? "E:\\models\\qev-0.8b-text-Q8_0.gguf" : "E:\\models\\Qwen3.5-9B-Q3_K_M.gguf");
+  const alias = merged.alias || (kind === "qev" ? "labqoat/qev-0.8b-GGUF:text-Q8_0" : "qwen3.5-9b");
   const args = [
     "-m", model, "--alias", alias, "--host", "0.0.0.0", "--port", String(port),
     "-ngl", String(merged.ngl ?? 99),
@@ -660,7 +660,7 @@ finally:
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "qwen3.8-9b",
+          model: "qwen3.5-9b",
           messages: [{ role: "user", content: prompt }],
           max_tokens: maxTokens,
           temperature: 0.2,
@@ -763,7 +763,7 @@ spec:
             { name: "QEV_URL", value: "http://host.docker.internal:8080/v1/systemone" },
             { name: "QEV_MODEL", value: "labqoat/qev-0.8b-GGUF:text-Q8_0" },
             { name: "LLM_URL", value: "http://host.docker.internal:8081/v1/chat/completions" },
-            { name: "LLM_MODEL", value: "qwen3.8-9b" },
+            { name: "LLM_MODEL", value: "qwen3.5-9b" },
           ],
           wakeupProbe: { httpGet: { path: b.readyPath || "/readyz", port: Number(b.port || 80) } },
           volumeMounts: [{ name: "data", mountPath: "/home/agent" }],
